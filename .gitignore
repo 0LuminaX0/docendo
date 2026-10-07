@@ -1,4 +1,5 @@
 node_modules/
+!.env.example
 .env
 .env.*
 # raw downloads (large, copyrighted); chunks are derived and kept
@@ -9,5 +10,4 @@ topics/*/review.html
 next-env.d.ts
 *.tsbuildinfo
 .vercel
-!.env.example
 .e2e/
