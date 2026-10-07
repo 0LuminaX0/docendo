@@ -7,11 +7,15 @@ import type { Mood } from "@/lib/client/store";
 
 const PHASES = ["Watch", "Teach Kai", "Exercises"] as const;
 
-export function Header({ phase, right, demo, label, sub }: { phase: 0 | 1 | 2 | 3; right?: React.ReactNode; demo?: boolean; label?: string; sub?: React.ReactNode }) {
+/** One header row: brand, optional page tools (left), the step indicator (centre), status and demo badge (right). */
+export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 | 3; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
   return (
     <div className="topwrap">
-    <header className="top">
-      <Link href="/" className="brand">docendo</Link>
+    <header className={`top${left ? " has-tools" : ""}`}>
+      <div className="top-start">
+        <Link href="/" className="brand">docendo</Link>
+        {left}
+      </div>
       {phase > 0 && (
         <div className="phase" aria-label={`Step ${phase} of 3: ${PHASES[phase - 1]}`}>
           <div className="arms" aria-hidden="true">
@@ -24,12 +28,11 @@ export function Header({ phase, right, demo, label, sub }: { phase: 0 | 1 | 2 | 
           </span>
         </div>
       )}
-      <div className="top-right" style={phase === 0 ? { marginLeft: "auto" } : undefined}>
-        {demo && <span className="demo" title="No AI model is connected, so Kai uses simple scripted replies."><FlaskConical size={13} strokeWidth={2.2} />Demo<span className="long"> mode</span></span>}
+      <div className="top-right">
         {right}
+        {demo && <span className="demo" title="No AI model is connected, so Kai uses simple scripted replies."><FlaskConical size={13} strokeWidth={2.2} />Demo<span className="long"> mode</span></span>}
       </div>
     </header>
-    {sub && <div className="subbar">{sub}</div>}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { bundle } from "@/lib/server/content";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
-import { State } from "@/engine/tutor/state";
+import { MESSAGE_MAX, State } from "@/engine/tutor/state";
 import { takeTurn, type Deps } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
 import { llmWrite, mockWrite } from "@/engine/tutor/writer";
@@ -16,8 +16,8 @@ export const maxDuration = 60;
 
 const Body = z.object({
   token: z.string().max(400),
-  message: z.string().trim().min(1).max(1200),
-  history: z.array(z.object({ role: z.enum(["kai", "learner"]), text: z.string().max(1500) })).max(80),
+  message: z.string().trim().min(1).max(MESSAGE_MAX),
+  history: z.array(z.object({ role: z.enum(["kai", "learner"]), text: z.string().max(MESSAGE_MAX + 100) })).max(80),
   state: State,
 });
 
@@ -33,7 +33,7 @@ const deps: Deps = config.demo
 
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return fail(403, "Requests from other sites are not allowed.");
-  const raw = await readBody(req, 200_000);
+  const raw = await readBody(req, 500_000);
   const body = Body.safeParse(raw);
   if (!body.success) return fail(400, "Bad request.");
   const session = verifyToken(body.data.token);

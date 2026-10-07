@@ -7,15 +7,13 @@ import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
-import type { State } from "@/engine/tutor/state";
+import { MESSAGE_MAX as MAX, type State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
 
 type Video = { id: string; videoId: string; title: string; part: number; durationSec?: number };
 const videoName = (t: string) => t.replace(/^[^:]{2,30}:\s+/, "");
 type TurnReply = { reply: string; mood: Mood; state: State; progress: number; mind: Mind; done: boolean; help: Help | null; helpAvailable: boolean; demo: boolean };
-
-const MAX = 1200;
 
 export default function Teach({ opening, initial, initialMind, videos, graph }: { opening: string; initial: State; initialMind: Mind; videos: Video[]; graph: GraphView }) {
   const router = useRouter();
@@ -104,15 +102,28 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     if (log) update((s) => ({ ...s, chat: { ...s.chat, turns: [...s.chat.turns, { role: "learner", text: "", help: { part: v.part, start: h.start } }] } }));
   }
 
-  function goExercises(skipped: boolean) {
-    update((s: Saved) => ({ ...s, step: "exercises", chat: { ...s.chat, skipped: s.chat.skipped || skipped } }));
+  function goExercises() {
+    update((s: Saved) => ({ ...s, step: "exercises" }));
     router.push("/exercises");
   }
 
+  // "I've taught all I can": end the chat here with a closing line from Kai; the learner moves on when ready
+  function stopTeaching() {
+    setConfirmSkip(false);
+    update((s: Saved) => ({
+      ...s,
+      chat: {
+        ...s.chat,
+        skipped: true,
+        mood: "okay",
+        turns: [...s.chat.turns, { role: "kai", text: "Okay, thanks for teaching me! I'll go with what you told me so far. Good luck with the exercises!", mood: "okay" }],
+      },
+    }));
+  }
+
   const pct = Math.round(mind.understanding * 100);
-  const sub = (
-    <>
-      <div className="seg" role="group" aria-label="View">
+  const tools = (
+    <div className="seg" role="group" aria-label="View">
         <button type="button" aria-pressed={view === "chat"} onClick={() => setView("chat")} aria-label="Chat">
           <MessageCircle size={16} strokeWidth={2.2} />
           <span className="lbl">Chat</span>
@@ -121,7 +132,9 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
           <Brain size={16} strokeWidth={2.2} />
           <span className="lbl">Kai&apos;s mind</span>
         </button>
-      </div>
+    </div>
+  );
+  const status = (
       <div className="row" style={{ gap: 14, flexWrap: "nowrap" }}>
         <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
           {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
@@ -134,12 +147,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
           <b style={{ fontVariantNumeric: "tabular-nums", color: "var(--ink-2)" }}>{pct}%</b>
         </button>
       </div>
-    </>
   );
 
   return (
     <div className="shell">
-      <Header phase={2} demo={saved.demo} sub={sub} />
+      <Header phase={2} demo={saved.demo} left={tools} right={status} />
       {view === "mind" ? (
         <main className="teach-mind">
           <MindView graph={graph} mind={mind} popout />
@@ -187,14 +199,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
             )}
             {finished && (
               <div className="ready">
-                <h2>{chat.done ? "Kai feels ready" : "On to the exercises"}</h2>
+                <h2>{chat.done ? "Kai feels ready" : "Teaching finished"}</h2>
                 <p>
                   {chat.done
                     ? `Kai reached ${pct}% understanding. Time to check what stuck with you.`
                     : `You stopped at ${pct}% of what Kai needed. Let's check what stuck with you.`}
                 </p>
                 <div className="row">
-                  <button className="btn primary" onClick={() => goExercises(false)}>
+                  <button className="btn primary" onClick={goExercises}>
                     Go to the exercises <ArrowRight size={17} />
                   </button>
                   <button className="btn ghost" onClick={() => setView("mind")}>
@@ -263,9 +275,9 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
               <div className="composer-foot">
                 {confirmSkip ? (
                   <div className="row" style={{ justifyContent: "center", gap: 8 }}>
-                    <span className="note">Kai is at {pct}%. Skip to the exercises?</span>
-                    <button className="btn small" onClick={() => goExercises(true)}>
-                      Skip <ArrowRight size={15} />
+                    <span className="note">Kai is at {pct}%. Stop teaching here?</span>
+                    <button className="btn small" onClick={stopTeaching}>
+                      Stop here <ArrowRight size={15} />
                     </button>
                     <button className="btn ghost small" onClick={() => setConfirmSkip(false)}>Keep teaching</button>
                   </div>

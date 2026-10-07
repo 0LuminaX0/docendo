@@ -36,9 +36,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1") || "null"));
 const shot = (page, name, fullPage = false) => page.screenshot({ path: join(OUT, `${name}.png`), fullPage });
 
-async function start(page) {
+async function start(page, welcomeShot = null) {
   await page.goto(BASE + "/", { waitUntil: "load" });
   await page.waitForSelector("button[type=submit]");
+  if (welcomeShot) await shot(page, welcomeShot);
   await page.click("button[type=submit]");
   await page.waitForFunction(() => location.pathname === "/watch");
   await page.waitForSelector(".frame iframe");
@@ -46,7 +47,7 @@ async function start(page) {
 
 // ---------- 1. full run: watch, teach until Kai is ready, exercises ----------
 const page = await newPage();
-await start(page);
+await start(page, "00-welcome");
 const imagesLoaded = (p) => p.waitForFunction(() => [...document.images].every((i) => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {});
 await imagesLoaded(page);
 await wait(2500); // let the YouTube player paint
@@ -142,8 +143,14 @@ await skip.click(".skip");
 await skip.waitForSelector(".composer-foot .btn.small");
 await shot(skip, "09-skip-confirm");
 await skip.click(".composer-foot .row .btn.small");
+// stopping ends the chat in place; the learner moves on with a click
+await skip.waitForSelector(".ready .btn.primary");
+await wait(1200);
+const stayed = await skip.evaluate(() => location.pathname === "/teach");
+await shot(skip, "09b-skip-finished");
+await skip.click(".ready .btn.primary");
 await skip.waitForFunction(() => location.pathname === "/exercises");
-check(true, "skipping from the first message reaches the exercises");
+check(stayed, "stopping from the first message waits for a click, then reaches the exercises");
 
 // ---------- 3. phone width ----------
 const phone = await newPage(390, 844);
@@ -154,8 +161,22 @@ for (const path of ["/teach", "/mind", "/results"]) {
   await wait(700);
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   check(over <= 0, `no sideways scroll at 390px on ${path}`);
+  if (path === "/teach") {
+    // the one-row header: the left group (brand, toggle) must end before the right group (meter) starts
+    const gap = await phone.evaluate(() => {
+      const kids = (sel) => [...document.querySelectorAll(`${sel} > *`)].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+      const left = Math.max(...kids(".top-start").map((r) => r.right));
+      const right = Math.min(...kids(".top-right").map((r) => r.left));
+      return right - left;
+    });
+    check(gap >= 4, `header items don't overlap at 390px (${Math.round(gap)}px apart)`);
+  }
   await shot(phone, `10-phone${path.replace("/", "-")}`);
 }
+const phoneHome = await newPage(390, 844, await browser.createBrowserContext());
+await phoneHome.goto(BASE + "/", { waitUntil: "load" });
+await phoneHome.waitForSelector("button[type=submit]");
+await shot(phoneHome, "10-phone-welcome", true);
 
 await browser.close();
 console.log(checks.join("\n"));

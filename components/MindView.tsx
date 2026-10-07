@@ -153,7 +153,7 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
                   {n.label}
                 </text>
                 {n.goals.map((g, i) => (
-                  <GoalMark key={g} index={goalIndex(g)} size={8} x={W - 11 - (n.goals.length - 1 - i) * 11} y={13} />
+                  <GoalMark key={g} index={goalIndex(g)} size={10} x={W - 12 - (n.goals.length - 1 - i) * 13} y={13} />
                 ))}
               </g>
             );
@@ -170,24 +170,23 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
         ))}
         <span>
           <i className="sw focus" />
-          Kai is asking about it
+          Kai&apos;s focus
         </span>
         <span>
           <i className="fdot c" />
           <i className="fdot p" />
           <i className="fdot" />
-          fact explained / partly / not yet
+          facts: explained, partly, not yet
         </span>
         <span>
           {graph.goals.map((g, i) => (
             <GoalMark key={g.id} index={i} size={10} />
           ))}
-          learning goals {graph.goals.map((g) => g.id.replace(/\D/g, "")).join(", ")}
+          goals {graph.goals.map((g) => g.id.replace(/\D/g, "")).join(", ")}
         </span>
       </div>
 
-      <div className="mind-cols">
-        <section className="mind-detail" aria-live="polite">
+      <section className="mind-detail" aria-live="polite">
           {node && ns ? (
             <>
               <span className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
@@ -237,18 +236,18 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
           ) : (
             <p className="note">Click an idea to see what you told Kai about it.</p>
           )}
-        </section>
-        <section className="mind-how">
-          <h3>How Kai&apos;s understanding is scored</h3>
-          <ul>
-            <li>Kai waits for the <b>{mind.facts.total} facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
-            <li>Kai asks about one fact at a time. After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
-            <li>If an answer only partly lands, Kai asks once more; then it moves on and the question stays open here. An idea is <b>done</b> once Kai has no questions left about it.</li>
-            <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth) once every learning goal has at least one explained idea. The bar shows progress towards that point.</li>
-            <li>Kai always wraps up after {mind.maxTurns} messages.</li>
-          </ul>
-        </section>
-      </div>
+      </section>
+
+      <details className="mind-how">
+        <summary>How Kai&apos;s understanding is scored</summary>
+        <ul>
+          <li>Kai waits for the <b>{mind.facts.total} facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
+          <li>Kai asks about one fact at a time. After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
+          <li>If an answer only partly lands, Kai asks once more; then it moves on and the question stays open here. An idea is <b>done</b> once Kai has no questions left about it.</li>
+          <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth) once every learning goal has at least one explained idea. The bar shows progress towards that point.</li>
+          <li>Kai always wraps up after {mind.maxTurns} messages.</li>
+        </ul>
+      </details>
     </div>
   );
 }

@@ -92,6 +92,15 @@ TypeScript (5.9; Next's build-time type check needs its JS API, so not TS 7), pn
 
 Direction 3 from the plan, refined: friendly chat bubbles, Bricolage Grotesque for names and headings, Figtree for body text, a three-bar bandit-arm phase indicator in the header (Watch, Teach Kai, Exercises), Kai avatar with three expressions, help shown as a video-frame card with a timestamp, and motion only in the "Kai is thinking" indicator. Light-only for the study. The user wants it to look designed, not AI-generated: avoid generic templates. Icons come from `lucide-react` (send = round arrow button, Chat = message bubble, Kai's mind = brain). Kai's faces share one flat style (same yellow, no cheeks or colour changes). Video cards use the real YouTube thumbnail (`i.ytimg.com`, allowed by the CSP) with a timestamp badge and a red progress bar at the moment's position. README screenshots in `docs/` come from `pnpm e2e` (.e2e/ → docs/).
 
+Layout conventions (user feedback, 2026-10-07):
+- **One header row** (`Header` in `components/ui.tsx`): brand + page tools (`left`, e.g. the Chat / Kai's mind toggle or "Back"), step bars centred, status (`right`) and demo badge on the right. No second sub-bar. On phones the step bars and message count hide; an e2e check guards against overlap.
+- **Reading column** `--col: clamp(720px, 64vw, 1040px)` for chat and exercises: Claude-like width that grows with the screen, not a narrow Gemini-style strip.
+- **Few boxes.** Don't nest outlined rounded rectangles. Exercises: no card per question, only the option boxes. Kai's mind: only the graph has a frame; the idea details below are a plain section, and the scoring explanation is a collapsed `<details>` at the bottom.
+- Welcome page: three zones filling the screen (title, Kai's message in the middle, steps + Start at the bottom).
+- "I've taught all I can" ends the chat in place with a closing line from Kai; the learner moves on with a click (no auto-redirect).
+- Learner messages up to 4,000 characters (`MESSAGE_MAX`).
+- iCloud sync duplicates files as "name 2" in `.next` and `node_modules`, which breaks the typecheck. Fix: `rm -rf .next node_modules && pnpm install`.
+
 ## Source documents
 
 The design PDFs (C2 draft, background, study design options) are not in the repo. Key facts from them are in this file and the plan artifact. Learning goals: LG1 compute the regret of greedy and ε-greedy; LG2 compare ε-greedy and UCB1 by how they explore; LG3 model a new problem as a bandit and choose a strategy.

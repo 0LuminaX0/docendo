@@ -4,6 +4,9 @@ import type { Bundle } from "../../content/schema";
 // Kai's state travels with the browser between turns and is validated on every
 // request. Tampering with it only changes that learner's own session.
 
+/** Longest learner message, in characters (about 600 words: room for a pasted explanation). */
+export const MESSAGE_MAX = 4000;
+
 export const Verdict = z.enum(["correct", "partial", "wrong"]);
 export type Verdict = z.infer<typeof Verdict>;
 

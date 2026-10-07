@@ -28,8 +28,8 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
   return (
     <div className="shell">
       <Header phase={0} demo={demo} />
-      <main className="page">
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <main className="page intro">
+        <div className="intro-head">
           <span className="eyebrow">A learning-by-teaching study · CS-411 Digital Education, EPFL</span>
           <h1 className="title">Learn {topic.toLowerCase()} by teaching them</h1>
           <p className="lede">
@@ -37,14 +37,17 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
           </p>
         </div>
 
-        <div className="hero-kai">
-          <KaiFace mood="great" size={44} />
-          <div className="col" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <span className="who">Kai</span>
-            <div className="bubble">Hi! I missed the lecture on bandits. Could you teach me once you&apos;ve watched it? I&apos;ll ask a lot of questions.</div>
+        <div className="intro-mid">
+          <div className="hero-kai">
+            <KaiFace mood="great" size={48} />
+            <div className="col" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <span className="who">Kai</span>
+              <div className="bubble">Hi! I missed the lecture on bandits. Could you teach me once you&apos;ve watched it? I&apos;ll ask a lot of questions.</div>
+            </div>
           </div>
         </div>
 
+        <div className="intro-foot">
         <ol className="steps">
           <li>
             <span className="ico"><Play size={22} fill="currentColor" strokeWidth={0} /></span>
@@ -101,6 +104,7 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
           <p className="note">
             Your progress is kept in this browser only. What you write to Kai is sent to an AI model to generate its replies, so please don&apos;t include personal details.
           </p>
+        </div>
         </div>
       </main>
     </div>

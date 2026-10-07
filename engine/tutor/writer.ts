@@ -48,6 +48,8 @@ function instruction(m: Move): string {
   }
 }
 
+const clipText = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max).replace(/\s+\S*$/, "")} …`);
+
 export function notebookLines(_bundle: Bundle, state: State): string {
   const facts = latest(state);
   if (!facts.size) return "(empty: they haven't taught you anything yet)";
@@ -65,7 +67,8 @@ const REACTION: Record<"neutral" | "great" | "okay" | "confused", string> = {
 export function promptFor(bundle: Bundle, state: State, move: Move, history: Turn[], avoid: string[] = [], mood: keyof typeof REACTION = "neutral") {
   const recent = history
     .slice(-8)
-    .map((t) => `${t.role === "kai" ? "You (Kai)" : "Classmate"}: ${t.text}`)
+    // long pasted explanations are clipped here; the notebook already holds what Kai learned from them
+    .map((t, i, all) => `${t.role === "kai" ? "You (Kai)" : "Classmate"}: ${i === all.length - 1 ? t.text.slice(0, 2500) : clipText(t.text, 600)}`)
     .join("\n");
   return [
     { role: "system" as const, content: persona(bundle.title.toLowerCase()) },
