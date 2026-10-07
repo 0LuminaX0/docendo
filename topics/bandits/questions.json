@@ -1,0 +1,59 @@
+{
+  "contradictions": [
+    { "misconception": "m_bandit_is_rl", "node": "n01", "question": "Wait, if I eat at restaurant 2 tonight, does that change how good restaurant 2 will be tomorrow?" },
+    { "misconception": "m_greedy_optimal", "node": "n05", "question": "But what if the best place just had an off night the one time I went there?" },
+    { "misconception": "m_eps_smart", "node": "n07", "question": "When it picks something other than the favourite, does it look at which place it knows least about, or does it just roll a die?" },
+    { "misconception": "m_more_explore_safer", "node": "n08", "question": "If I explore on every single day, how much happiness do I give up compared with always going to the best place?" },
+    { "misconception": "m_regret_luck", "node": "n09", "question": "If I eat at the best restaurant every night but get a few bad meals, does that count as regret too?" },
+    { "misconception": "m_ucb_random", "node": "n11", "question": "If I gave UCB the exact same history twice, could it pick different restaurants?" },
+    { "misconception": "m_avg_always_right", "node": "n14", "question": "What if a restaurant gets a new chef halfway through the year, does my old average still tell the truth?" }
+  ],
+  "goalChecks": [
+    {
+      "goal": "LG1",
+      "question": "Over 100 rounds I pulled the 0.8 arm 60 times and the 0.5 arm 40 times. How much did I lose compared with always pulling the best one? And how much would greedy lose if it got stuck on the 0.5 arm for all 100 rounds?",
+      "expects": "40 × (0.8 − 0.5) = 12; stuck for 100 rounds: 100 × 0.3 = 30."
+    },
+    {
+      "goal": "LG2",
+      "question": "Two arms have the same average, but one was tried 1,000 times and the other 3 times. Which one would ε-greedy pick when it isn't picking randomly, which one would UCB1 pick, and which of the two rules loses less over a very long time?",
+      "expects": "ε-greedy sees a tie and ignores the counts; UCB1 picks the arm tried 3 times because its bonus is larger. Over a long time UCB1 loses less: its bonus shrinks so exploration fades and regret grows logarithmically, while a constant ε keeps exploring and regret grows linearly."
+    },
+    {
+      "goal": "LG3",
+      "question": "A news site wants to choose one of 4 headlines for each visitor. How would you set it up as a bandit, and would you use ε-greedy or UCB1?",
+      "expects": "Arms: the 4 headlines; reward: click (1) or no click (0); rounds: visitors. Check: click rates roughly stable over time, showing a headline doesn't change later visitors, many visitors compared with 4 arms. Then UCB1, because exploration fades and regret stays lower over many rounds; watch for drift in click rates."
+    }
+  ],
+  "exam": [
+    {
+      "goal": "LG1",
+      "question": "Arm A has mean 0.9 and arm B has mean 0.6. Over 200 rounds a strategy pulls A 150 times and B 50 times. What is its regret, and what would greedy's regret be if it locked onto B from the start?",
+      "reference": "50 × 0.3 = 15; locked onto B for all 200 rounds: 200 × 0.3 = 60."
+    },
+    {
+      "goal": "LG2",
+      "question": "Why does UCB1 end up with lower regret than ε-greedy with ε = 0.1 over a million rounds?",
+      "reference": "ε-greedy keeps picking at random on 10% of rounds forever, so its regret grows linearly. UCB1's bonus shrinks as arms are tried, so it explores less and less and its regret grows only logarithmically."
+    },
+    {
+      "goal": "LG3",
+      "question": "A streaming service shows each user one of 5 thumbnails for a film and wants as many clicks as possible. Describe it as a bandit and choose a strategy.",
+      "reference": "Arms: thumbnails; reward: click or not; rounds: users. Assumptions to check: click rates stable over time, one user's thumbnail doesn't change the next user's behaviour, many users compared with 5 arms. UCB1, because exploration fades and long-run regret is lower."
+    }
+  ],
+  "fallbacks": {
+    "dontKnow": [
+      "Hmm, I don't think you've told me that yet. Can you explain it?",
+      "I'm not sure, we haven't covered that. How does it work?"
+    ],
+    "listen": [
+      "Wait, let me make sure I follow. Can you keep going?",
+      "Okay, I think I'm with you so far. What comes next?"
+    ],
+    "wrapUp": [
+      "I think I've got the main ideas now. Do you want to test me?",
+      "Okay, I feel ready. Can you quiz me on it?"
+    ]
+  }
+}

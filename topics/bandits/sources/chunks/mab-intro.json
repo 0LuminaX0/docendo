@@ -1,0 +1,267 @@
+{
+  "sourceId": "mab-intro",
+  "fetchedAt": "2026-10-06T11:04:28.566Z",
+  "origin": "https://www.youtube.com/watch?v=e3L4VocZnnQ (auto-generated captions)",
+  "chunks": [
+    {
+      "id": "mab-intro#0",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 1.7,
+        "end": 30
+      },
+      "text": "hey everyone welcome back in this video i'm really excited to talk to you about a problem called the multi-armed bandit so that's kind of a funky name but it's actually very interesting and very very applicable problem so first let's dive right into this example and then through the course of this video i'll talk about some different applications so let's say that you are a visiting professor to a very small town so they've invited you to their local college to live there for 300 days and give some lectures so every morning you go and give your lectures and every"
+    },
+    {
+      "id": "mab-intro#1",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 29.4,
+        "end": 58
+      },
+      "text": "night you eat at one of the three restaurants in the city so it's a small town there's only three restaurants and there's no yelp reviews you don't have any understanding about which of these restaurants you might like more so we have restaurant one two and three and there are these distributions about how much happiness you're going to derive from eating at those restaurants so for example restaurant 1 has an average happiness of 10 and a standard deviation of 5. restaurant 2 would give you an average"
+    },
+    {
+      "id": "mab-intro#2",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 55.9,
+        "end": 84.6
+      },
+      "text": "happiness of 8 with a standard deviation of 4 and finally restaurant 3 would give you average happiness of 5 with a standard deviation of 2.5 but here's the very interesting part that makes this problem actually interesting this information these distributions are hidden to you in the beginning you have no idea since you have never visited any of these restaurants yet how much happiness the meals are going to bring you so your goal basically is over the course of these 300 days"
+    },
+    {
+      "id": "mab-intro#3",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 82.2,
+        "end": 111
+      },
+      "text": "is to strike a very good balance between two concepts the first is called exploration which is basically going to these restaurants enough times to understand which one you like the best and then exploitation which means once you have a pretty good idea about which restaurant makes you the happiest continue going to that restaurant in order to derive as much happiness as possible before these 300 days run out so this is an example of a multi-armed bandit problem and in general this is"
+    },
+    {
+      "id": "mab-intro#4",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 109.5,
+        "end": 137.9
+      },
+      "text": "all set of problems where you have to strike this really interesting balance between exploration and exploitation and let me just give you a couple of different examples to really get a good feel for what these models are another example that comes to my head is picking your college major a lot of times when you enter college you don't know exactly what you want to study so you spend some time exploring different courses you might take a couple of statistics courses you might take some english courses and so on but at some point you have to enter the exploitation phase which means that"
+    },
+    {
+      "id": "mab-intro#5",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 136.5,
+        "end": 164.1
+      },
+      "text": "based on your current knowledge about which courses you've taken and which owns have made you the happiest you're going to go ahead and pursue that major so that's one example another one that comes to mind from my personal work is after i graduated i worked as a software engineer and often times we would have to develop a new system and of course there's many ways to develop a new system so you have to strike a balance between exploring all of the different ways to develop this system trying to find the best way and you have to strike the balance"
+    },
+    {
+      "id": "mab-intro#6",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 161.8,
+        "end": 191
+      },
+      "text": "between that and just picking away and moving forward with the project so this multi-arm bandit problem comes up in a lot of different places so now let's talk about some naive strategies and why the most naive strategies might not be the best idea and then we'll talk about a little bit of a less naive more informed strategy so the two most naive strategies would be explore only and exploit only so let's go with explore only first explore only means that you're going to"
+    },
+    {
+      "id": "mab-intro#7",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 188.2,
+        "end": 217.2
+      },
+      "text": "spend your entire 300 days basically visiting a random restaurant every night so you're basically only exploring for all 300 days what does that mean mathematically for your happiness that means that on average 100 days you're going to be at restaurant 1 100 days at restaurant 2 and 100 days at restaurant 3. so that's where these 300s come in and that means on one set of 100 days you're going to derive on average 10 units of happiness from visiting restaurant 1."
+    },
+    {
+      "id": "mab-intro#8",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 215.7,
+        "end": 245.3
+      },
+      "text": "on a different set of 100 days you'll get 8 units of happiness from visiting restaurant 2 and the other 100 days you'll get 5 average units of happiness from visiting restaurant 3. so we do the math we add these together and we get your average happiness over the 300 day period if you do explore only is 2300 now there is a very important metric in the language of multi-armed bandit that helps us think about how good is a strategy and that is the regret"
+    },
+    {
+      "id": "mab-intro#9",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 243,
+        "end": 272.4
+      },
+      "text": "which is the greek symbol row the regret is the difference between the average happiness from your strategy and the maximum happiness that you could possibly achieve if you knew all of the information beforehand and what would that be if you knew all the information beforehand so if you walked into town and you already knew these distributions of course you would just visit restaurant 1 from the very get-go in order to drive these average 10 units of happiness every day and 10 units of happiness on average"
+    },
+    {
+      "id": "mab-intro#10",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 271.4,
+        "end": 299.8
+      },
+      "text": "every day times 300 days gives you 3 000 optimal units of happiness so this would be the best case scenario but of course we can't do that because we don't know these distributions beforehand but this is very important because if we can find a strategy that is as close to this 3000 as possible then we'll say that that's a good strategy so how does this explore only strategy do well it is 700 points away from that optimal 3000 so it's not great let's see if we can do better so"
+    },
+    {
+      "id": "mab-intro#11",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 298.3,
+        "end": 327.6
+      },
+      "text": "let's go to the opposite end of the spectrum let's do exploit only so basically what we're gonna do is the first three days we'll visit first restaurant one then restaurant two then restaurant three and whichever gave us the best meal on those three days we're just gonna pick that one for the other 297 days now you might already see the problem with this method which is that since these are distributions and you might get a bad meal at the best restaurant just based on chance that might not be enough information just one meal"
+    },
+    {
+      "id": "mab-intro#12",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 326,
+        "end": 354.6
+      },
+      "text": "at each restaurant to make an informed decision about where to eat for the foreseeable future for example let's say this happens let's say that on day one you get a happiness of seven from restaurant one that could happen just by chance let's say you get a happiness of eight from restaurant two on the second day and let's say you get a happiness of five from restaurant three on the third day now in this exploit only framework you're going to say that okay i got the best happiness from restaurant 2 so i'm just going to eat there forever for the"
+    },
+    {
+      "id": "mab-intro#13",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 353,
+        "end": 382.6
+      },
+      "text": "other 297 days so your happiness would basically be the sum of the first three days which is 20 that's 7 plus 8 plus 5 plus 297 days times this 8 units of happiness on average you're going to derive by going to restaurant 2. now you can see the flaw here you've missed out on finding out that restaurant 1 was the best restaurant for you because you made your decision based on just one visit to each restaurant so in this case you get 23.96 now"
+    },
+    {
+      "id": "mab-intro#14",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 380.6,
+        "end": 410.5
+      },
+      "text": "calculating the average happiness with this strategy is a little bit more involved i just wrote a simple computer program to do it for me and you find that your average regret is going to be about 330 units of happiness so one thing to note we're already doing better than the explore only but we're still pretty far away from our ideal of three thousand so to close this video out let's look at a strategy that people actually use in multiarm bandit sometimes and this is called the epsilon greedy strategy this is kind of striking a balance"
+    },
+    {
+      "id": "mab-intro#15",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 408.4,
+        "end": 437.2
+      },
+      "text": "between exploration and exploitation because we saw the flaws with each if we do explore only then at some point we do have enough information to know which is our favorite restaurant but we just keep exploring we never exploit it on the other hand if we do exploit only then we never collect enough data to really know which our favorite restaurant is so we need to strike some balance the epsilon greedy method starts by setting some epsilon and it's something usually low like 10 5 something like that and it basically"
+    },
+    {
+      "id": "mab-intro#16",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 435.4,
+        "end": 464.6
+      },
+      "text": "just says that on any given day out of these 300 days there's a epsilon percent chance in this case a 10 chance that we're going to randomly pick a restaurant and there's a 90 chance that on any given day we're going to visit the restaurant which has historically given us the best happiness so far so just to make it really concrete let's say we're in the hundredth day and let's say that we run our random number generator and we find that okay based on our 10 chance we found that we should be exploiting our current knowledge today"
+    },
+    {
+      "id": "mab-intro#17",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 463.8,
+        "end": 493.3
+      },
+      "text": "so what we do is that we look through the first 99 days and we find that what's the best average happiness i've got which restaurant gave me that best average happiness and we visit that restaurant now let's say it's the 101st day and we visit our random number generator again and we find that today shall be an explore day that means that we take a one-third chance of visiting any of these restaurants and that's purely to get another data point so that we become even more sure of our decision when the next exploit day comes okay so hopefully you can see why this"
+    },
+    {
+      "id": "mab-intro#18",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 491.3,
+        "end": 520.8
+      },
+      "text": "epsilon greedy strategy strikes kind of a balance and of course the performance is going to depend on the choice of epsilon itself and just a quick note the performance is also going to depend on these distributions this numbers 5 8 and 10 are fairly far apart but these standard deviations are big enough where there's some ambiguity in the distributions but you can imagine that let's say these numbers were really far apart then the exploit only strategy might start looking better because there's less of a chance that you're going to get a bad meal"
+    },
+    {
+      "id": "mab-intro#19",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 519,
+        "end": 548.1
+      },
+      "text": "from the best restaurant if the best restaurant is a lot better than the second best restaurant for example so the reason this set of problems these multi-armed bandit problems is really cool is because it really depends on the initial conditions it really depends on the exact situation you have at hand but let's go back to the epsilon gradient strategy here so again i wrote a computer simulation to see what's the average happiness i would get with this strategy and that ends up being 2907 units of happiness this is really good that means on average our regret and again regret is the difference between"
+    },
+    {
+      "id": "mab-intro#20",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 546.5,
+        "end": 576.2
+      },
+      "text": "the average happiness from any given strategy and the optimal average happiness you could achieve if you knew all the information beforehand our regret is around 100 units which is much better than the 330 we got using the exploit only strategy and finally i just wanted to mention a quick piece of terminology you might also hear with the multi-arm bandit problem which is the zero regret strategy so zero regret strategy basically says that as time goes on so as t approaches infinity where t is the number of days that you're in this town"
+    },
+    {
+      "id": "mab-intro#21",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 574.6,
+        "end": 604
+      },
+      "text": "so a good way to think about this is let's say that you're not visiting let's say that you're permanently going to move to that town and you're just going to live there for many many many dates a zero regret strategy would be one where this fraction where the regret divided by the number of days that you're going to be living in the town approaches zero as the number of days goes on a more easy way of saying this is that a zero regret strategy is one where eventually you fully figure out the situation you more or less fully understand these distributions and are able to"
+    },
+    {
+      "id": "mab-intro#22",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 603,
+        "end": 631.5
+      },
+      "text": "exploit the best one so that you might have high levels of regret in the beginning so this row might be high for the first days but as time goes on this row is not growing so much over time so that this fraction rho over t is going to zero so that's another metric we use to say that a strategy is good so these naive strategies don't follow that and you can kind of prove that for yourself for example the exploration strategy can't be zero regret because by definition every day we're not exploiting anything so"
+    },
+    {
+      "id": "mab-intro#23",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 630.2,
+        "end": 659.4
+      },
+      "text": "that's really mostly what i wanted to say in this video i wanted to explain the multi-armed bandit problem this is one example again picking your college major or deciding which approach to take in a research project are just a couple other examples you can probably think of many more but really it's any class of problems where you have to strike a good balance between exploring the space in order to understand things that you didn't understand at the beginning and exploiting that current knowledge in order to start reaping the rewards of your exploration"
+    },
+    {
+      "id": "mab-intro#24",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 657.3,
+        "end": 685.1
+      },
+      "text": "so you can't do too little or too much of either one and that's why this class of problems is really really interesting and very very heavily studied now in truth there's a lot more to say about the multi-armed bandit this epsilon greedy strategy that i gave is better than the naive ones we thought about but it's by no means the best one there are more optimal methods that people have devised so you'll have to let me know if you want me to talk about those but hopefully you learned about the multi-armed bandit and oh just a quick note why is it called the multi-armed"
+    },
+    {
+      "id": "mab-intro#25",
+      "sourceId": "mab-intro",
+      "loc": {
+        "kind": "time",
+        "start": 683.7,
+        "end": 705
+      },
+      "text": "bandit this comes from the original formulation of this problem where you're going to visit a slot machine which i believe were called bandits in the olden days and you're trying to pick which slot machine will give you the best average return but i think this example is a lot more fun personally so that's the one i used so if you like this video please like and subscribe for more videos just like this and i'll see you next time"
+    }
+  ]
+}

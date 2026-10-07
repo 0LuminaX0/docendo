@@ -1,0 +1,346 @@
+{
+  "sourceId": "slivkins",
+  "fetchedAt": "2026-10-06T11:04:38.260Z",
+  "origin": "https://arxiv.org/pdf/1904.07272 (pdf pages 8–16)",
+  "chunks": [
+    {
+      "id": "slivkins#0",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 4
+      },
+      "text": "Chapter 1 Stochastic Bandits This chapter covers bandits with IID rewards, the basic model of multi-arm bandits. We present several algorithms, and analyze their performance in terms of regret. The ideas introduced in this chapter extend far beyond the basic model, and will resurface throughout the book. Prerequisites: Hoeffding inequality (Appendix A)."
+    },
+    {
+      "id": "slivkins#1",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 4,
+        "section": "1.1 Model and examples"
+      },
+      "text": "We consider the basic model with IID rewards, called stochastic bandits.1 An algorithm has K possible actions to choose from, a.k.a. arms, and there are T rounds, for some known K and T . In each round, the algorithm chooses an arm and collects a reward for this arm. The algorithm’s goal is to maximize its total reward over the T rounds. We make three essential assumptions: • The algorithm observes only the reward for the selected action, and nothing else. In particular, it does not observe rewards for other actions that could have been selected. This is called bandit feedback. • The reward for each action is IID. For each action a, there is a distribution Da over reals, called the reward distribution. Every time this action is chosen, the reward is sampled independently from this distribution. The reward distributions are initially unknown to the algorithm. • Per-round rewards are bounded; the restriction to the interval [0, 1] is for simplicity. Thus, an algorithm interacts with the world according to the protocol summarized below."
+    },
+    {
+      "id": "slivkins#2",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 4,
+        "section": "1.1 Model and examples"
+      },
+      "text": "Problem protocol: Stochastic bandits Parameters: K arms, T rounds (both known); reward distribution Da for each arm a (unknown). In each round t ∈ [T ]: 1. Algorithm picks some arm at. 2. Reward rt ∈ [0, 1] is sampled independently from distribution Da, a = at. 3. Algorithm collects reward rt, and observes nothing else. We are primarily interested in the mean reward vector μ ∈ [0, 1]K , where μ(a) = E[Da] is the mean reward of arm a. Perhaps the simplest reward distribution is the Bernoulli distribution, when the reward of each arm a can be either 1 or 0 (“success or failure”, “heads or tails”). This reward distribution is fully specified by the mean reward, which in this case is simply the probability of the successful outcome. The problem instance is then fully specified by the time horizon T and the mean reward vector. 1Here and elsewhere, IID stands for “independent and identically distributed”."
+    },
+    {
+      "id": "slivkins#3",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 5,
+        "section": "1.1 Model and examples"
+      },
+      "text": "Our model is a simple abstraction for an essential feature of reality that is present in many application scenarios. We proceed with three motivating examples: 1. News: in a very stylized news application, a user visits a news site, the site presents a news header, and a user either clicks on this header or not. The goal of the website is to maximize the number of clicks. So each possible header is an arm in a bandit problem, and clicks are the rewards. Each user is drawn independently from a fixed distribution over users, so that in each round the click happens independently with a probability that depends only on the chosen header. 2. Ad selection: In website advertising, a user visits a webpage, and a learning algorithm selects one of many possible ads to display. If ad a is displayed, the website observes whether the user clicks on the ad, in which case the advertiser pays some amount va ∈ [0, 1]. So each ad is an arm, and the paid amount is the reward."
+    },
+    {
+      "id": "slivkins#4",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 5,
+        "section": "1.1 Model and examples"
+      },
+      "text": "The va depends only on the displayed ad, but does not change over time. The click probability for a given ad does not change over time, either. 3. Medical Trials: a patient visits a doctor and the doctor can prescribe one of several possible treatments, and observes the treatment effectiveness. Then the next patient arrives, and so forth. For simplicity of this example, the effectiveness of a treatment is quantified as a number in [0, 1]. Each treatment can be considered as an arm, and the reward is defined as the treatment effectiveness. As an idealized assumption, each patient is drawn independently from a fixed distribution over patients, so the effectiveness of a given treatment is IID. Note that the reward of a given arm can only take two possible values in the first two examples, but could, in principle, take arbitrary values in the third example. Remark 1.1. We use the following conventions in this chapter and throughout much of the book. We will use arms and actions interchangeably. Arms are denoted with a, rounds with t."
+    },
+    {
+      "id": "slivkins#5",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 5,
+        "section": "1.1 Model and examples"
+      },
+      "text": "There are K arms and T rounds. The set of all arms is A. The mean reward of arm a is μ(a) := E[Da]. The best mean reward is denoted μ∗ := maxa∈A μ(a). The difference ∆(a) := μ∗ − μ(a) describes how bad arm a is compared to μ∗; we call it the gap of arm a. An optimal arm is an arm a with μ(a) = μ∗; note that it is not necessarily unique. We take a∗ to denote some optimal arm. [n] denotes the set {1, 2 , . . . , n}. Regret. How do we argue whether an algorithm is doing a good job across different problem instances? The problem is, some problem instances inherently allow higher rewards than others. One standard approach is to compare the algorithm’s cumulative reward to the best-arm benchmark μ∗ · T : the expected reward of always playing an optimal arm, which is the best possible total expected reward for a particular problem instance."
+    },
+    {
+      "id": "slivkins#6",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 5,
+        "section": "1.1 Model and examples"
+      },
+      "text": "Formally, we define the following quantity, called regret at round T : R(T ) = μ∗ · T − PT t=1 μ(at). (1.1) Indeed, this is how much the algorithm “regrets” not knowing the best arm in advance. Note that at, the arm chosen at round t, is a random quantity, as it may depend on randomness in rewards and/or in the algorithm. So, R(T ) is also a random variable. We will typically talk about expected regret E[R(T )]. We mainly care about the dependence of E[R(T )] regret on the time horizon T . We also consider the dependence on the number of arms K and the mean rewards μ(·). We are less interested in the fine-grained dependence on the reward distributions (beyond the mean rewards). We will usually use big-O notation to focus on the asymptotic dependence on the parameters of interests, rather than keep track of the constants. Remark 1.2 (Terminology). Since our definition of regret sums over all rounds, we sometimes call it cumulative regret."
+    },
+    {
+      "id": "slivkins#7",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 5,
+        "section": "1.1 Model and examples"
+      },
+      "text": "When/if we need to highlight the distinction between R(T ) and E[R(T )], we say realized"
+    },
+    {
+      "id": "slivkins#8",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 6,
+        "section": "1.1 Model and examples"
+      },
+      "text": "regret and expected regret; but most of the time we just say “regret” and the meaning is clear from the context. The quantity R(T ) is sometimes called pseudo-regret in the literature."
+    },
+    {
+      "id": "slivkins#9",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 6,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "We start with a simple idea: explore arms uniformly (at the same rate), regardless of what has been observed previously, and pick an empirically best arm for exploitation. A natural incarnation of this idea, known as Explore-first algorithm, is to dedicate an initial segment of rounds to exploration, and the remaining rounds to exploitation. 1 Exploration phase: try each arm N times; 2 Select the arm ˆa with the highest average reward (break ties arbitrarily); 3 Exploitation phase: play arm ˆa in all remaining rounds. Algorithm 1.1: Explore-First with parameter N . The parameter N is fixed in advance; it will be chosen later as function of the time horizon T and the number of arms K, so as to minimize regret. Let us analyze regret of this algorithm. Let the average reward for each action a after exploration phase be denoted ¯μ(a). We want the average reward to be a good estimate of the true expected rewards, i.e. the following quantity should be small: |¯μ(a) − μ(a)|."
+    },
+    {
+      "id": "slivkins#10",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 6,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "We bound it using the Hoeffding inequality (Theorem A.1): Pr [ |¯μ(a) − μ(a)| ≤ rad ] ≥ 1 − 2/T 4, where rad := p2 log(T ) / N . (1.2) Remark 1.3. Thus, μ(a) lies in the known interval [¯μ(a) − rad, ¯μ(a) + rad] with high probability. A known interval containing some scalar quantity is called the confidence interval for this quantity. Half of this interval’s length (in our case, rad) is called the confidence radius.2 We define the clean event to be the event that (1.2) holds for all arms simultaneously. We will argue separately the clean event, and the “bad event” – the complement of the clean event. Remark 1.4. With this approach, one does not need to worry about probability in the rest of the analysis. Indeed, the probability has been taken care of by defining the clean event and observing that (1.2) holds therein. We do not need to worry about the bad event, either: essentially, because its probability is so tiny."
+    },
+    {
+      "id": "slivkins#11",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 6,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "We will use this “clean event” approach in many other proofs, to help simplify the technical details. This simplicity usually comes at the cost of slightly larger constants in O(), compared to more careful arguments which explicitly track low-probability events throughout the proof. For simplicity, let us start with the case of K = 2 arms. Consider the clean event. We will show that if we chose the worse arm, it is not so bad because the expected rewards for the two arms would be close. Let the best arm be a∗, and suppose the algorithm chooses the other arm a̸ = a∗. This must have been because its average reward was better than that of a∗: ¯μ(a) > ¯μ(a∗). Since this is a clean event, we have: μ(a) + rad ≥ ¯μ(a) > ¯μ(a∗) ≥ μ(a∗) − rad Re-arranging the terms, it follows that μ(a∗) − μ(a) ≤ 2 rad. Thus, each round in the exploitation phase contributes at most 2 rad to regret. Each round in exploration trivially contributes at most 1."
+    },
+    {
+      "id": "slivkins#12",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 6,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "We derive an upper bound on the regret, which consists of two parts: for exploration, when each arm is chosen N times, and then for the remaining T − 2N rounds of exploitation: R(T ) ≤ N + 2 rad · (T − 2N ) < N + 2 rad · T. 2It is called a “radius” because an interval can be seen as a “ball” on the real line."
+    },
+    {
+      "id": "slivkins#13",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 7,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "Recall that we can select any value for N , as long as it is given to the algorithm in advance. So, we can choose N so as to (approximately) minimize the right-hand side. Since the two summands are, resp., monotonically increasing and monotonically decreasing in N , we can set N so that they are approximately equal. For N = T 2/3 (log T )1/3, we obtain: R(T ) ≤ O \u0010 T 2/3 (log T )1/3\u0011 . It remains to analyze the “bad event”. Since regret can be at most T (each round contributes at most 1), and the bad event happens with a very small probability, regret from this event can be neglected. Formally: E [ R(T ) ] = E [ R(T ) | clean event ] × Pr [ clean event ] + E [ R(T ) | bad event ] × Pr [ bad event ] ≤ E [ R(T ) | clean event ] + T × O \u0000 T −4 \u0001 ≤ O \u0010 (log T )1/3 × T 2/3 \u0011 ."
+    },
+    {
+      "id": "slivkins#14",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 7,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "(1.3) This completes the proof for K = 2 arms. For K > 2 arms, we apply the union bound for (1.2) over the K arms, and then follow the same argument as above. Note that T ≥ K without loss of generality, since we need to explore each arm at least once. For the final regret computation, we will need to take into account the dependence on K: specifically, regret accumulated in exploration phase is now upper-bounded by KN . Working through the proof, we obtain R(T ) ≤ N K + 2 rad · T . As before, we approximately minimize it by approximately minimizing the two summands. Specifically, we plug in N = (T /K)2/3 · O(log T )1/3. Completing the proof same way as in (1.3), we obtain: Theorem 1.5. Explore-first achieves regret E [ R(T ) ] ≤ T 2/3 × O(K log T )1/3. 1.2.1 Improvement: Epsilon-greedy algorithm One problem with Explore-first is that its performance in the exploration phase may be very bad if many/most of the arms have a large gap ∆(a)."
+    },
+    {
+      "id": "slivkins#15",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 7,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "It is usually better to spread exploration more uniformly over time. This is done in the Epsilon-greedy algorithm: for each round t = 1, 2, . . . do Toss a coin with success probability ϵt; if success then explore: choose an arm uniformly at random else exploit: choose the arm with the highest average reward so far end Algorithm 1.2: Epsilon-Greedy with exploration probabilities (ϵ1, ϵ2, . . .). Choosing the best option in the short term is often called the “greedy” choice in the computer science literature, hence the name “Epsilon-greedy”. The exploration is uniform over arms, which is similar to the “round-robin” exploration in the explore-first algorithm. Since exploration is now spread uniformly over time, one can hope to derive meaningful regret bounds even for small t. We focus on exploration probability ϵt ∼ t−1/3 (ignoring the dependence on K and log t for a moment), so that the expected number of exploration rounds up to round t is on the order of t2/3, same as in Explore-first with time horizon T = t."
+    },
+    {
+      "id": "slivkins#16",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 7,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "We derive the same regret bound as in Theorem 1.5, but now it holds for all rounds t. Theorem 1.6. Epsilon-greedy algorithm with exploration probabilities ϵt = t−1/3 · (K log t)1/3 achieves regret bound E[R(t)] ≤ t2/3 · O(K log t)1/3 for each round t."
+    },
+    {
+      "id": "slivkins#17",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 8,
+        "section": "1.2 Simple algorithms: uniform exploration"
+      },
+      "text": "The proof relies on a more refined clean event, introduced in the next section; we leave it as Exercise 1.2. 1.2.2 Non-adaptive exploration Explore-first and Epsilon-greedy do not adapt their exploration schedule to the history of the observed rewards. We refer to this property as non-adaptive exploration, and formalize it as follows: Definition 1.7. A round t is an exploration round if the data ( at, rt ) from this round is used by the algorithm in the future rounds. A deterministic algorithm satisfies non-adaptive exploration if the set of all exploration rounds and the choice of arms therein is fixed before round 1. A randomized algorithm satisfies non-adaptive exploration if it does so for each realization of its random seed. Next, we obtain much better regret bounds by adapting exploration to the observations. Non-adaptive exploration is indeed the key obstacle here. Making this point formal requires information-theoretic machinery developed in Chapter 2; see Section 2.5 for the precise statements."
+    },
+    {
+      "id": "slivkins#18",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 8,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "We present two algorithms which achieve much better regret bounds. Both algorithms adapt exploration to the observations so that very under-performing arms are phased out sooner. Let’s start with the case of K = 2 arms. One natural idea is as follows: alternate the arms until we are confident which arm is better, and play this arm thereafter. (1.4) However, how exactly do we determine whether and when we are confident? We flesh this out next. 1.3.1 Clean event and confidence bounds Fix round t and arm a. Let nt(a) be the number of rounds before t in which this arm is chosen, and let ¯μt(a) be the average reward in these rounds. We will use Hoeffding Inequality (Theorem A.1) to derive Pr [ |¯μt(a) − μ(a)| ≤ rt(a) ] ≥ 1 − 2 T 4 , where rt(a) = p2 log(T ) / nt(a). (1.5) However, Eq. (1.5) does not follow immediately."
+    },
+    {
+      "id": "slivkins#19",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 8,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "This is because Hoeffding Inequality only applies to a fixed number of independent random variables, whereas here we have nt(a) random samples from reward distribution Da, where nt(a) is itself is a random variable. Moreover, nt(a) can depend on the past rewards from arm a, so conditional on a particular realization of nt(a), the samples from a are not necessarily independent! For a simple example, suppose an algorithm chooses arm a in the first two rounds, chooses it again in round 3 if and only if the reward was 0 in the first two rounds, and never chooses it again. So, we need a slightly more careful argument. We present an elementary version of this argument (whereas a more standard version relies on the concept of martingale). For each arm a, let us imagine there is a reward tape: an 1 × T table with each cell independently sampled from Da, as shown in Figure 1.1."
+    },
+    {
+      "id": "slivkins#20",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 8,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Without loss of generality, the reward tape encodes rewards as follows: the j-th time a given arm a is chosen by the algorithm, its reward is taken from the j-th cell in this arm’s tape. Let ¯vj (a) represent the average reward at arm a from first j times that arm a is chosen. Now one can use Hoeffding Inequality to derive that ∀j Pr [ |¯vj (a) − μ(a)| ≤ rt(a) ] ≥ 1 − 2/T 4."
+    },
+    {
+      "id": "slivkins#21",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 9,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Figure 1.1: the j-th cell contains the reward of the j-th time we pull arm a, i.e., reward of arm a when nt(a) = j Taking a union bound, it follows that (assuming K = #arms ≤ T ) Pr [ E ] ≥ 1 − 2/T 2, where E := { ∀a∀t |¯μt(a) − μ(a)| ≤ rt(a) } . (1.6) The event E in (1.6) will be the clean event for the subsequent analysis. For each arm a at round t, we define upper and lower confidence bounds, UCBt(a) = ¯μt(a) + rt(a), LCBt(a) = ¯μt(a) − rt(a). As per Remark 1.3, we have confidence interval [ LCBt(a), UCBt(a) ] and confidence radius rt(a). 1.3.2 Successive Elimination algorithm Let’s come back to the case of K = 2 arms, and recall the idea (1.4). Now we can naturally implement this idea via the confidence bounds. The full algorithm for two arms is as follows: Alternate two arms until UCBt(a) < LCBt(a′) after some even round t; Abandon arm a, and use arm a′ forever since."
+    },
+    {
+      "id": "slivkins#22",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 9,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Algorithm 1.3: “High-confidence elimination” algorithm for two arms For analysis, assume the clean event. Note that the “abandoned” arm cannot be the best arm. But how much regret do we accumulate before disqualifying one arm? Let t be the last round when we did not invoke the stopping rule, i.e., when the confidence intervals of the two arms still overlap (see Figure 1.2). Then ∆ := |μ(a) − μ(a′)| ≤ 2(rt(a) + rt(a′)). Since the algorithm has been alternating the two arms before time t, we have nt(a) = t/2 (up to floor and ceiling), which yields ∆ ≤ 2 \u0000 rt(a) + rt(a′) \u0001 ≤ 4p2 log(T ) / ⌊t/2⌋ = O \u0010 plog(T ) / t \u0011 . Then the total regret accumulated till round t is R(t) ≤ ∆ × t ≤ O \u0012 t · q log T t \u0013 = O \u0010 pt log T \u0011 . Since we’ve chosen the best arm from then on, we have R(t) ≤ O \u0000 √t log T \u0001."
+    },
+    {
+      "id": "slivkins#23",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 9,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "To complete the analysis, we need to argue that the “bad event” ¯E contributes a negligible amount to regret, like in (1.3): E [ R(t) ] = E [ R(t) | clean event ] × Pr [ clean event ] + E [ R(t) | bad event ] × Pr [ bad event ] ≤ E [ R(t) | clean event ] + t × O(T −2) ≤ O \u0010 pt log T \u0011 ."
+    },
+    {
+      "id": "slivkins#24",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 10,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Figure 1.2: t is the last round that the two confidence intervals still overlap We proved the following: Lemma 1.8. For two arms, Algorithm 1.3 achieves regret E [ R(t) ] ≤ O \u0000 √t log T \u0001 for each round t ≤ T . Remark 1.9. The √t dependence in this regret bound should be contrasted with the T 2/3 dependence for Explore-First. This improvement is possible due to adaptive exploration. This approach extends to K > 2 arms as follows: alternate the arms until some arm a is worse than some other arm with high probability. When this happens, discard all such arms a and go to the next phase. This algorithm is called Successive Elimination."
+    },
+    {
+      "id": "slivkins#25",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 10,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "All arms are initially designated as active loop {new phase} play each active arm once deactivate all arms a such that, letting t be the current round, UCBt(a) < LCBt(a′) for some other arm a′ {deactivation rule} end loop Algorithm 1.4: Successive Elimination To analyze the performance of this algorithm, it suffices to focus on the clean event (1.6); as in the case of K = 2 arms, the contribution of the “bad event” ¯E can be neglected. Let a∗ be an optimal arm, and note that it cannot be deactivated. Fix any arm a such that μ(a) < μ(a∗). Consider the last round t ≤ T when deactivation rule was invoked and arm a remained active. As in the argument for K = 2 arms, the confidence intervals of a and a∗ must overlap at round t. Therefore, ∆(a) := μ(a∗) − μ(a) ≤ 2 ( rt(a∗) + rt(a) ) = 4 · rt(a)."
+    },
+    {
+      "id": "slivkins#26",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 10,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "The last equality is because nt(a) = nt(a∗), since the algorithm has been alternating active arms and both a and a∗ have been active before round t. By the choice of t, arm a can be played at most once afterwards: nT (a) ≤ 1 + nt(a). Thus, we have the following crucial property: ∆(a) ≤ O(rT (a)) = O \u0010 p log(T )/ nT (a) \u0011 for each arm a with μ(a) < μ(a∗). (1.7)"
+    },
+    {
+      "id": "slivkins#27",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 11,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Informally: an arm played many times cannot be too bad. The rest of the analysis only relies on (1.7). In other words, it does not matter which algorithm achieves this property. The contribution of arm a to regret at round t, denoted R(t; a), can be expressed as ∆(a) for each round this arm is played; by (1.7) we can bound this quantity as R(t; a) = nt(a) · ∆(a) ≤ nt(a) · O \u0010plog(T ) / nt(a) \u0011 = O \u0010 pnt(a) log T \u0011 . Summing up over all arms, we obtain that R(t) = P a∈A R(t; a) ≤ O \u0000 √log T \u0001 P a∈A pnt(a). (1.8) Since f (x) = √x is a real concave function, and P a∈A nt(a) = t, by Jensen’s Inequality we have K X a∈A pnt(a) ≤ s 1 K X a∈A nt(a) = r t K . Plugging this into (1.8), we see that R(t) ≤ O \u0000 √Kt log T \u0001. Thus, we have proved: Theorem 1.10."
+    },
+    {
+      "id": "slivkins#28",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 11,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Successive Elimination algorithm achieves regret E [ R(t) ] = O \u0010 pKt log T \u0011 for all rounds t ≤ T . (1.9) We can also use property (1.7) to obtain another regret bound. Rearranging the terms in (1.7), we obtain nT (a) ≤ O \u0000 log(T ) / [∆(a)]2 \u0001. In words, a bad arm cannot be played too often. So, R(T ; a) = ∆(a) · nT (a) ≤ ∆(a) · O \u0012 log T [∆(a)]2 \u0013 = O \u0012 log T ∆(a) \u0013 . (1.10) Summing up over all suboptimal arms, we obtain the following theorem. Theorem 1.11. Successive Elimination algorithm achieves regret E[R(T )] ≤ O(log T )   X arms a with μ(a) < μ(a∗) μ(a∗) − μ(a)   . (1.11) This regret bound is logarithmic in T , with a constant that can be arbitrarily large depending on a problem instance. In particular, this constant is at most O(K/∆), where ∆ = min suboptimal arms a ∆(a) (minimal gap)."
+    },
+    {
+      "id": "slivkins#29",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 11,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "(1.12) The distinction between regret bounds achievable with an absolute constant (as in Theorem 1.10) and regret bounds achievable with an instance-dependent constant is typical for multi-armed bandit problems. The existence of logarithmic regret bounds is another benefit of adaptive exploration. Remark 1.12. For a more formal terminology, consider a regret bound of the form C ·f (T ), where f (·) does not depend on the mean reward vector μ, and the “constant” C does not depend on T . Such regret bound is called instance-independent if C does not depend on μ, and instance-dependent otherwise. Remark 1.13. It is instructive to derive Theorem 1.10 in a different way: starting from the logarithmic regret bound in (1.10). Informally, we need to get rid of arbitrarily small gaps ∆(a) in the denominator. Let us fix some ϵ > 0, then regret consists of two parts:"
+    },
+    {
+      "id": "slivkins#30",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 12,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "• all arms a with ∆(a) ≤ ϵ contribute at most ϵ per round, for a total of ϵT ; • each arm a with ∆(a) > ϵ contributes R(T ; a) ≤ O \u0000 1 ϵ log T \u0001, under the clean event. Combining these two parts and assuming the clean event, we see that R(T ) ≤ O \u0000ϵT + K ϵ log T \u0001 . Since this holds for any ϵ > 0, we can choose one that minimizes the right-hand side. Ensuring that ϵT = K ϵ log T yields ϵ = q K T log T , and therefore R(T ) ≤ O \u0000 √KT log T \u0001. 1.3.3 Optimism under uncertainty Let us consider another approach for adaptive exploration, known as optimism under uncertainty: assume each arm is as good as it can possibly be given the observations so far, and choose the best arm based on these optimistic estimates."
+    },
+    {
+      "id": "slivkins#31",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 12,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "This intuition leads to the following simple algorithm called UCB1: Try each arm once for each round t = 1 , . . . , T do pick arm some a which maximizes UCBt(a). end for Algorithm 1.5: Algorithm UCB1 Remark 1.14. Let’s see why UCB-based selection rule makes sense. An arm a can have a large UCBt(a) for two reasons (or combination thereof): because the average reward ¯μt(a) is large, in which case this arm is likely to have a high reward, and/or because the confidence radius rt(a) is large, in which case this arm has not been explored much. Either reason makes this arm worth choosing. Put differently, the two summands in UCBt(a) = ¯μt(a) + rt(a) represent, resp., exploitation and exploration, and summing them up is one natural way to resolve exploration-exploitation tradeoff. To analyze this algorithm, let us focus on the clean event (1.6), as before. Recall that a∗ is an optimal arm, and at is the arm chosen by the algorithm in round t. According to the algorithm, UCBt(at) ≥ UCBt(a∗)."
+    },
+    {
+      "id": "slivkins#32",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 12,
+        "section": "1.3 Advanced algorithms: adaptive exploration"
+      },
+      "text": "Under the clean event, μ(at) + rt(at) ≥ ¯μt(at) and UCBt(a∗) ≥ μ(a∗). Therefore: μ(at) + 2rt(at) ≥ ¯μt(at) + rt(at) = UCBt(at) ≥ UCBt(a∗) ≥ μ(a∗). (1.13) It follows that ∆(at) := μ(a∗) − μ(at) ≤ 2rt(at) = 2p2 log(T ) / nt(at). (1.14) This cute trick resurfaces in the analyses of several UCB-like algorithms for more general settings. For each arm a consider the last round t when this arm is chosen by the algorithm. Applying (1.14) to this round gives us property (1.7). The rest of the analysis follows from that property, as in the analysis of Successive Elimination. Theorem 1.15. Algorithm UCB1 satisfies regret bounds in (1.9) and (1.11)."
+    },
+    {
+      "id": "slivkins#33",
+      "sourceId": "slivkins",
+      "loc": {
+        "kind": "page",
+        "page": 12,
+        "section": "1.4 Forward look: bandits with initial information"
+      },
+      "text": "Some information about the mean reward vector μ may be known to the algorithm beforehand, and may be used to improve performance. This “initial information” is typically specified via a constraint on μ or a Bayesian prior thereon. In particular, such models may allow for non-trivial regret bounds that are independent of the number of arms, and hold even for infinitely many arms."
+    }
+  ]
+}

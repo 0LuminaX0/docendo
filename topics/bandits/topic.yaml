@@ -1,0 +1,66 @@
+# Docendo topic: multi-armed bandits
+# Swap or add sources here, then re-run: pnpm content ingest bandits && pnpm content locate bandits && pnpm content validate bandits
+
+slug: bandits
+title: Multi-armed bandits
+audience: >-
+  EPFL bachelor's and master's students in engineering and computer science who have
+  taken a basic statistics course (expected value, sample means, square roots and ln by
+  hand) but have not met multi-armed bandits or taken a reinforcement learning course.
+
+goals:
+  - id: LG1
+    level: Apply
+    text: >-
+      Calculate the expected regret of greedy and ε-greedy after a given number of rounds,
+      including the regret greedy incurs by locking onto a worse arm, with the correct result.
+  - id: LG2
+    level: Analyze
+    text: >-
+      Compare how ε-greedy and UCB1 decide when to explore and say which has lower regret over
+      many rounds, justified by how the UCB1 bonus changes with pulls and rounds.
+  - id: LG3
+    level: Create and Evaluate
+    text: >-
+      Design a bandit model for a new decision problem, naming its arms, reward and number of
+      rounds, and justify a choice between ε-greedy and UCB1 after checking the model's assumptions.
+
+# core nodes the draft may use (branch nodes are extra)
+nodeBudget: { min: 14, max: 20 }
+
+sources:
+  # what participants watch: about 15 minutes in total (ritvikmath for the problem, regret and ε-greedy; DataMListic for UCB and regret growth)
+  - id: mab-intro
+    kind: youtube
+    role: learner
+    title: "ritvikmath: Multi-Armed Bandit: Data Science Concepts"
+    videoId: e3L4VocZnnQ
+    durationSec: 703
+  - id: mab-dml
+    kind: youtube
+    role: learner
+    title: "DataMListic: Multi-Armed Bandits Explained: Epsilon-Greedy vs UCB"
+    videoId: 8CquWcViBfg
+    durationSec: 199
+
+  # reference only: feed the graph and the fact checks, never shown to participants
+  - id: mab-ucb
+    kind: youtube
+    role: reference
+    title: "ritvikmath: Best Multi-Armed Bandit Strategy? (feat: UCB Method)"
+    videoId: FgmMK6RPU1c
+    durationSec: 853
+  - id: sutton-barto
+    kind: pdf
+    role: reference
+    title: "Sutton & Barto, Reinforcement Learning (2nd ed.), ch. 2, §2.1–2.7"
+    url: http://incompleteideas.net/book/RLbook2020.pdf
+    pages: [47, 58]
+    pageOffset: -22
+  - id: slivkins
+    kind: pdf
+    role: reference
+    title: "Slivkins, Introduction to Multi-Armed Bandits, ch. 1, §1.1–1.3"
+    url: https://arxiv.org/pdf/1904.07272
+    pages: [8, 16]
+    pageOffset: -4

@@ -1,0 +1,87 @@
+{
+  "sourceId": "mab-dml",
+  "fetchedAt": "2026-10-07T11:15:40.833Z",
+  "origin": "https://www.youtube.com/watch?v=8CquWcViBfg (auto-generated captions)",
+  "chunks": [
+    {
+      "id": "mab-dml#0",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 0.2,
+        "end": 29.5
+      },
+      "text": "Hey there. In this video, we're going to explore the multi-armed bandit problem, a fundamental concept in decision making under uncertainty. Imagine you're in a casino with several slot machines, and each one has a different probability of paying out, but you don't know which is best. Your goal is to maximize your total winnings, and this creates an interesting dilemma. Should you stick with a machine that"
+    },
+    {
+      "id": "mab-dml#1",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 27,
+        "end": 56.4
+      },
+      "text": "seems to be paying well or try others that might be even better? This is the classic exploration versus exploitation tradeoff. Exploration means trying different options to learn more about them, while exploitation means sticking with the best option you found so far. Too much exploration wastes time on inferior choices, but too much exploitation might cause you to miss a better opportunity altogether. One"
+    },
+    {
+      "id": "mab-dml#2",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 54.1,
+        "end": 82.3
+      },
+      "text": "elegant approach is the epsilon greedy strategy. We set epsilon to 0.1 meaning 10% of the time. The decision process works like this. Generate a random number and if it's below epsilon, we explore by picking a random arm. Otherwise, we exploit by choosing the arm with the highest estimated Q value so far. Now, let's see this in action"
+    },
+    {
+      "id": "mab-dml#3",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 79.3,
+        "end": 108.7
+      },
+      "text": "with our four machines. Each pull shows us making either an explore or exploit decision. When we get a reward, we update our Q value estimate for that arm. And over time, these estimates converge toward the true values as we balance learning with earning. A more sophisticated approach is the upper confidence bound or UCB algorithm. The"
+    },
+    {
+      "id": "mab-dml#4",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 105.9,
+        "end": 133.8
+      },
+      "text": "key insight is optimism in the face of uncertainty. When you don't know much about an option, give it the benefit of the doubt. The formula combines our estimated value with an exploration bonus that shrinks as we gather more samples. In our visualization, each bar shows the estimated value and the whiskers represent uncertainty. ARMC has been sampled the least, so its"
+    },
+    {
+      "id": "mab-dml#5",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 131.1,
+        "end": 160.6
+      },
+      "text": "uncertainty extends highest. Even though its estimate isn't the best, its upper confidence bound reaches the top. So UCB selects it. After more samples, C's uncertainty shrinks. If it's good, we keep exploiting it. If not, its upper bound drops and we move on. All without a fixed epsilon parameter. Finally, we measure the performance by using what known as the cumulative regret, which is"
+    },
+    {
+      "id": "mab-dml#6",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 159,
+        "end": 186.8
+      },
+      "text": "the difference between what you would have earned always playing the optimal arm and what you actually earned. Random selection leads to linear regret that grows forever. Epsilon greedy does much better and UCB achieves near optimal logarithmic regret making it one of the most elegant solutions to this fundamental problem. And that basically wraps up this video. Thank you so much"
+    },
+    {
+      "id": "mab-dml#7",
+      "sourceId": "mab-dml",
+      "loc": {
+        "kind": "time",
+        "start": 184.8,
+        "end": 200.9
+      },
+      "text": "for watching. If you found this explanation helpful, give it a thumbs up, share your thoughts in the comments, and subscribe to stay uptodate with everything I post on this channel. See you in the next one. Bye-bye."
+    }
+  ]
+}

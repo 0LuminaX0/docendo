@@ -1,0 +1,27 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Header } from "./ui";
+import MindView from "./MindView";
+import { useGuard } from "./useGuard";
+import { useSaved } from "@/lib/client/store";
+import type { GraphView } from "@/lib/server/content";
+
+/** Kai's mind on its own page. It follows the chat live (also from another tab), since both read the same browser storage. */
+export default function MindPage({ graph }: { graph: GraphView }) {
+  const [saved] = useSaved();
+  const allowed = useGuard(saved, "teach");
+  if (!allowed || !saved) return <div className="center">Loading…</div>;
+  return (
+    <div className="shell">
+      <Header phase={2} label="Kai's mind" demo={saved.demo} />
+      <main className="mind-page">
+        <Link className="btn small" style={{ alignSelf: "flex-start", marginBottom: 16 }} href={saved.step === "results" ? "/results" : saved.step === "exercises" ? "/exercises" : "/teach"}>
+          <ArrowLeft size={16} /> Back to {saved.step === "results" ? "results" : saved.step === "exercises" ? "the exercises" : "the chat"}
+        </Link>
+        <MindView graph={graph} mind={saved.chat.mind} notebook={saved.chat.state?.notebook ?? []} />
+      </main>
+    </div>
+  );
+}

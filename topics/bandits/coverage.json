@@ -1,0 +1,299 @@
+{
+  "decidedBy": "manual: Claude (claude-opus-5-5), from reading both transcripts in full (ritvikmath e3L4VocZnnQ + DataMListic 8CquWcViBfg)",
+  "decidedAt": "2026-10-07",
+  "graphHash": "693326ca1d699d5c",
+  "facts": {
+    "n01.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#0",
+        "mab-intro#1",
+        "mab-dml#0"
+      ]
+    },
+    "n01.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#1",
+        "mab-intro#2",
+        "mab-dml#0"
+      ]
+    },
+    "n01.f3": {
+      "status": "covered",
+      "where": [
+        "mab-intro#3",
+        "mab-dml#0"
+      ]
+    },
+    "n02.f1": {
+      "status": "partial",
+      "where": [
+        "mab-intro#2",
+        "mab-dml#0"
+      ],
+      "note": "implied by both stories; never said that you only see the reward of the option you picked"
+    },
+    "n02.f2": {
+      "status": "partial",
+      "where": [
+        "mab-intro#3",
+        "mab-dml#1"
+      ],
+      "note": "exploring is described as trying options to learn about them, not as the only way to learn"
+    },
+    "n03.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#17",
+        "mab-dml#2",
+        "mab-dml#3"
+      ]
+    },
+    "n03.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#11",
+        "mab-dml#3"
+      ]
+    },
+    "n04.f1": {
+      "status": "partial",
+      "where": [
+        "mab-dml#3"
+      ],
+      "note": "DataMListic says the Q estimate is updated after each reward, but never shows how"
+    },
+    "n04.f2": {
+      "status": "absent",
+      "where": [],
+      "note": "not shown"
+    },
+    "n05.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#11",
+        "mab-dml#2"
+      ]
+    },
+    "n05.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#15"
+      ]
+    },
+    "n06.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#11",
+        "mab-intro#12"
+      ]
+    },
+    "n06.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#12",
+        "mab-intro#13"
+      ]
+    },
+    "n06.f3": {
+      "status": "partial",
+      "where": [
+        "mab-intro#13"
+      ],
+      "note": "the 297 × 8 calculation is shown, but the gap × rounds rule isn't stated"
+    },
+    "n07.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#15",
+        "mab-intro#16",
+        "mab-dml#2"
+      ]
+    },
+    "n07.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#17"
+      ]
+    },
+    "n07.f3": {
+      "status": "absent",
+      "where": [],
+      "note": "the probability isn't calculated"
+    },
+    "n08.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#3",
+        "mab-dml#1"
+      ]
+    },
+    "n08.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#15",
+        "mab-intro#24",
+        "mab-dml#1"
+      ]
+    },
+    "n08.f3": {
+      "status": "covered",
+      "where": [
+        "mab-intro#18",
+        "mab-intro#19"
+      ]
+    },
+    "n09.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#9",
+        "mab-intro#20",
+        "mab-dml#6"
+      ]
+    },
+    "n09.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#7",
+        "mab-intro#8",
+        "mab-intro#10"
+      ]
+    },
+    "n09.f3": {
+      "status": "absent",
+      "where": [],
+      "note": "not discussed"
+    },
+    "n10.f1": {
+      "status": "partial",
+      "where": [
+        "mab-dml#6"
+      ],
+      "note": "DataMListic says random selection's regret grows forever; it doesn't say this of constant-ε ε-greedy"
+    },
+    "n10.f2": {
+      "status": "partial",
+      "where": [
+        "mab-dml#6"
+      ],
+      "note": "linear growth is stated for random selection only"
+    },
+    "n11.f1": {
+      "status": "partial",
+      "where": [
+        "mab-dml#4"
+      ],
+      "note": "the bonus is described (it shrinks with samples) but the formula √(2 ln t / n) isn't shown"
+    },
+    "n11.f2": {
+      "status": "covered",
+      "where": [
+        "mab-dml#4"
+      ]
+    },
+    "n11.f3": {
+      "status": "partial",
+      "where": [
+        "mab-dml#5"
+      ],
+      "note": "implied: UCB picks the arm whose upper bound reaches the top, with no random step"
+    },
+    "n12.f1": {
+      "status": "covered",
+      "where": [
+        "mab-dml#4",
+        "mab-dml#5"
+      ]
+    },
+    "n12.f2": {
+      "status": "absent",
+      "where": [],
+      "note": "the growth of the bonus over rounds isn't discussed"
+    },
+    "n13.f1": {
+      "status": "covered",
+      "where": [
+        "mab-dml#5",
+        "mab-dml#6"
+      ]
+    },
+    "n13.f2": {
+      "status": "partial",
+      "where": [
+        "mab-dml#6"
+      ],
+      "note": "UCB's regret is called logarithmic and ε-greedy's 'much better than random', but the two aren't compared directly"
+    },
+    "n14.f1": {
+      "status": "absent",
+      "where": [],
+      "note": "fixed reward distributions are assumed but never stated"
+    },
+    "n14.f2": {
+      "status": "absent",
+      "where": [],
+      "note": "never stated"
+    },
+    "n14.f3": {
+      "status": "absent",
+      "where": [],
+      "note": "not discussed in these two videos"
+    },
+    "n15.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#20",
+        "mab-intro#21"
+      ]
+    },
+    "n15.f2": {
+      "status": "covered",
+      "where": [
+        "mab-intro#21",
+        "mab-intro#22"
+      ]
+    },
+    "n15.f3": {
+      "status": "covered",
+      "where": [
+        "mab-intro#22"
+      ]
+    },
+    "n16.f1": {
+      "status": "covered",
+      "where": [
+        "mab-intro#11",
+        "mab-dml#5"
+      ]
+    },
+    "n16.f2": {
+      "status": "partial",
+      "where": [
+        "mab-dml#5"
+      ],
+      "note": "shown with the least-sampled arm's uncertainty, without the 2.9-vs-3 example"
+    },
+    "n17.f1": {
+      "status": "partial",
+      "where": [
+        "mab-intro#18",
+        "mab-intro#19"
+      ],
+      "note": "ritvikmath says performance depends on epsilon and on the distributions; number of arms and rounds aren't discussed"
+    },
+    "n17.f2": {
+      "status": "partial",
+      "where": [
+        "mab-intro#18",
+        "mab-intro#19"
+      ],
+      "note": "well-separated arms favour exploit-only, compared with ε-greedy rather than UCB1"
+    },
+    "n17.f3": {
+      "status": "absent",
+      "where": [],
+      "note": "not in these two videos"
+    }
+  }
+}

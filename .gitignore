@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+# raw downloads (large, copyrighted); chunks are derived and kept
+topics/*/sources/raw/
+.DS_Store
+topics/*/review.html
+.next/
+next-env.d.ts
+*.tsbuildinfo
+.vercel
+!.env.example
+.e2e/

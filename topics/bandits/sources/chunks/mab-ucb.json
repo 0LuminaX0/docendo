@@ -1,0 +1,327 @@
+{
+  "sourceId": "mab-ucb",
+  "fetchedAt": "2026-10-06T11:04:37.319Z",
+  "origin": "https://www.youtube.com/watch?v=FgmMK6RPU1c (auto-generated captions)",
+  "chunks": [
+    {
+      "id": "mab-ucb#0",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 1.9,
+        "end": 30
+      },
+      "text": "hey everyone welcome back so in this video it's going to be an extension to the original multi-arm bandit video which i'll link in the description below so if you're coming to this video make sure that you either watch that video or basically understand what a multi-arm bandit problem is but just to give a quick summary it's any kind of problem where we have to balance this exploration of different possibilities with the exploitation of which of these possibilities is giving us the best reward so we're going to be rolling with the same exact example that we used in"
+    },
+    {
+      "id": "mab-ucb#1",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 29.2,
+        "end": 58.6
+      },
+      "text": "the original video which is that you are living in a town for 300 days and every night you get to go to one of the restaurants in town and each of these restaurants has some kind of distribution about how much happiness you're going to derive by having a meal there but these distributions are unknown to you and that's why it's a multi-arm bandit problem so you have to spend time exploring the restaurants figuring out which one is your favorite and then exploiting that knowledge in order to gain the happiness over the course of those 300 days"
+    },
+    {
+      "id": "mab-ucb#2",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 56.2,
+        "end": 86
+      },
+      "text": "okay so in a nutshell that's the setup now in the initial multi-arm bandit video we it was more of an intro video so we just said that there's three restaurants to make it simple and these are the distributions in this video we'll be doing a couple of things the first is that we're going to be eliminating those restrictions so we're going to be saying that maybe there's three restaurants what if there's 10 restaurants what if it's a big city with 100 restaurants we'll be looking at how the optimal strategy changes in those cases and we'll be also changing the distributions themselves for example in"
+    },
+    {
+      "id": "mab-ucb#3",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 84.8,
+        "end": 111.9
+      },
+      "text": "that video we had certain fixed distributions and they overlapped a little bit which made it kind of interesting but we'll be looking at what if they overlap or what if they don't overlap how does that change the strategy that you would like to use so we'll be looking at a bunch of different things which will be summarized in this table we'll look at at the end but first things first let's look at the different parameters that we're going to vary so the first parameter that i hinted at was the number of restaurants themselves n so before we just had three"
+    },
+    {
+      "id": "mab-ucb#4",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 110.5,
+        "end": 140.2
+      },
+      "text": "restaurants but in general we can say that there's r1 r2 all the way to rn restaurants and in this video we're going to say that the mean happiness from the first restaurant is three units the mean happiness from the second restaurant is six units and so on so if there's n restaurants then the mean happiness from the nth restaurant is going to be 3n all right so that's one parameter we're going to vary the other parameter we're going to vary is the exact shape of these distributions so notice i only told you about the mean"
+    },
+    {
+      "id": "mab-ucb#5",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 139,
+        "end": 168.8
+      },
+      "text": "i didn't tell you about the standard deviation so we're going to assume these are gaussian or normal distributions but i've only told you the mean so far so the other parameter we're going to vary is the standard deviation of these gaussian distributions and that will be given by the parameter d for example if d is equal to 50 percent that means that the standard deviation at every restaurant is half of its mean however if d is equal to ten percent then the standard deviation in a given restaurant is a tenth of its mean now let's think about what this could affect for a"
+    },
+    {
+      "id": "mab-ucb#6",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 168.2,
+        "end": 197.1
+      },
+      "text": "second if the standard deviation is half of the mean that means these distributions are relatively fat they have long tails because they have bigger standard deviations however if the standard deviation is only a tenth of the mean then these are more narrow distributions still centered around the same exact number but there's a lot less uncertainty so that's going to factor in now the next thing we'll do is we'll look at one more strategy and the strategy adds a very necessary layer on top of the epsilon greedy strategy that"
+    },
+    {
+      "id": "mab-ucb#7",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 195.3,
+        "end": 224.9
+      },
+      "text": "we finished on the last video just to reiterate a little bit the epsilon greedy strategy said that we're going to set some small value epsilon let's say 10 and on any given day there's a 10 chance that you're going to randomly explore one of the restaurants so just go to one of them randomly and there's a 90 chance that you're instead going to exploit your current knowledge so based on the history of restaurants you visited you're going to go to the best one the one with the best means so far now this misses one key point it's a good strategy but it misses one key"
+    },
+    {
+      "id": "mab-ucb#8",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 223.6,
+        "end": 250.5
+      },
+      "text": "point which is the fact that the mean of each restaurant so far might be based on a very different number of samples so let me just give you a quick theoretical situation let's say that there's just two restaurants in town and one of them has given you a mean happiness of let's say 2.9 and the other has given you a mean happiness of three so in the epsilon greedy strategy we just say okay it's going to go with the greedy method which means that it's going to go with the mean 3 restaurant let's add a second layer to the story and let's say that"
+    },
+    {
+      "id": "mab-ucb#9",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 248.3,
+        "end": 277
+      },
+      "text": "the restaurant with mean 2.9 you've only visited once but the restaurant with mean 3 you visited a hundred times now that changes the story a lot right because you're basing this 2.9 estimate on one visit to the restaurant but you're basing your estimate for the other restaurant on 100 visits so it might make sense to go visit that first restaurant just a couple more times to make sure that 2.9 is really the mean it probably is not if you've only visited it once so that's where this ucb"
+    },
+    {
+      "id": "mab-ucb#10",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 274.6,
+        "end": 304.6
+      },
+      "text": "or upper confidence bound strategy comes in so at first glance the formula looks a little bit complicated but i'm going to explain every part of it to you pretty simply so this strategy basically says that at each time point t so t is the current day you're on so one two three all the way to 300 you're going to pick the restaurant r such that the following quantity is maximized so i'm going to tell this like a story so it's a little bit easier to understand the first part is mu r hat mu r hat is simply the mean happiness you've"
+    },
+    {
+      "id": "mab-ucb#11",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 302.6,
+        "end": 331.6
+      },
+      "text": "derived from restaurant r so far so this is the same as the epsilon greedy strategy in fact if we didn't include the second term then this is basically just the epsilon greedy strategy again but the second term incorporates the idea that we're going to give the benefit of the doubt to restaurants that we haven't visited a lot yet we're going to say that there is a chance that the mean we're seeing so far on restaurants we haven't visited a lot might actually be higher and so we're going to give them a chance people often operate like this in the"
+    },
+    {
+      "id": "mab-ucb#12",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 329.9,
+        "end": 358.6
+      },
+      "text": "real world too right you sometimes say with your family maybe like oh we've only been to that restaurant once or twice or a long time ago so maybe it's time to give them another chance so this does kind of match up with our human behavior anyway the second part is this so this says 2 times natural log of t divided by ntr so let me just break down the terms so it's not so scary the denominator is the easiest to understand n sub t r is the number of times that you've visited restaurant r so far so for"
+    },
+    {
+      "id": "mab-ucb#13",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 357.5,
+        "end": 386.2
+      },
+      "text": "example in the theoretical scenario i just gave that would be one for one of the restaurants and 100 for the other restaurant natural log t is simply just the natural log of the current time step you're on so why is this a good idea why should we include this term because just looking at it mathematically doesn't make too much sense let me first say that this formulation is based on an inequality called hofding's inequality so on this channel i don't like to get into theory unless it's really important and i don't think it's super important in this case but"
+    },
+    {
+      "id": "mab-ucb#14",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 384.7,
+        "end": 412.3
+      },
+      "text": "if you would like to look up hofding's inequality and how we used it to get this i'll leave the link in the description below which is suffice to say we used hofding's inequality in order to get this upper confidence bound now let's dive a little bit deeper and think about how this operates mechanically so let's go back to that example with two restaurants so let's say the mean of two restaurants were about the same so this first term is about the same so we're going to rely solely on the second term to make a decision about where to visit today"
+    },
+    {
+      "id": "mab-ucb#15",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 410.4,
+        "end": 439.5
+      },
+      "text": "now this natural log t is also going to be the same because this is the same time stamp but the only difference is that this n sub tr is going to be different for the two restaurants so that means that whichever restaurant has a lower n sub tr which means a less number of visits so far will cause the denominator of this fraction to be lower which means this whole quantity is going to be higher which means we're going to pick that restaurant so in a nutshell what this is doing is actually very interesting and very clever"
+    },
+    {
+      "id": "mab-ucb#16",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 437.7,
+        "end": 466.1
+      },
+      "text": "it's saying that if two restaurants have the same mean or maybe kind of similar means we're gonna pick the next restaurant to visit not just based on who has the highest mean but we're gonna take that mean and add it to this factor which incorporates the number of times we visited that restaurant restaurants with fewer visits get an advantage here so we're going to kind of strike a balance between picking the best restaurant so far which is exploitation so this first term is the exploitation and we're going to strike a balance"
+    },
+    {
+      "id": "mab-ucb#17",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 464.2,
+        "end": 493
+      },
+      "text": "between that and going to restaurants that we haven't really visited much that we don't have enough data to really go off of yet and that's the second term this upper confidence bound and that is helping us do the exploration so this mathematical term here literally balances exploitation and exploration so it's really really cool and to add another layer on top of this whole story what happens when we visit that restaurant one more time that we haven't visited that much that's going to cause its n sub tr to go up by one"
+    },
+    {
+      "id": "mab-ucb#18",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 491.4,
+        "end": 520.9
+      },
+      "text": "and that means that the next day we're going to be less likely to choose that restaurant because the denominator will be bigger which will cause this whole second term to be smaller and again we're trying to pick the restaurant that has the maximum of this whole expression here so it's kind of this really cool mechanism which allows us to sample restaurants that we haven't visited that much but in doing so when we sample them we actually make them less likely to be chosen in the future so it's this really nice balance between exploration and exploitation so the last part of this video is i'm"
+    },
+    {
+      "id": "mab-ucb#19",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 519.6,
+        "end": 548.5
+      },
+      "text": "going to just go over a bunch of different parameter settings of one and two here and look at which strategy is the best so let me just quickly explain this table and we'll look at which strategy is the best and why that might be the case so the top row here tells you the d ratio of the standard deviation to the mean so for example d could either be 50 which means that relatively fat distributions or d could be 10 which means they're relatively skinny distributions now why is this important if they're relatively skinny"
+    },
+    {
+      "id": "mab-ucb#20",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 546.7,
+        "end": 575.9
+      },
+      "text": "distributions and the numbers are far apart enough that means that we only really need one or two visits to each restaurant to really get a full picture of what's going on that means that strategies that are heavy on exploiting so maybe we just visit the restaurant once or twice and then go ahead and just go with the best restaurant forever are going to be pretty favored if the d is low and then the other parameter that we vary is the number of restaurants themselves so we're either going to have three restaurants 10 restaurants or 100 restaurants and we're going to see how that affects"
+    },
+    {
+      "id": "mab-ucb#21",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 573.9,
+        "end": 602.5
+      },
+      "text": "the best strategy and then for the strategy themselves we're looking at two naive strategies one is exploration only this means that every day we just visit a random restaurant this is kind of our baseline the next is exploitation only which means that on the first n days we visit each restaurant once and then we just pick the one with the best meal and go with that for the rest of the days and the time period then we have the epsilon equals 10 so epsilon greedy strategy with 10"
+    },
+    {
+      "id": "mab-ucb#22",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 600.3,
+        "end": 628.4
+      },
+      "text": "and finally we have our new ucb strategy and by the way this is called ucb1 there's a little bit of variations based on exactly how you formulate this term but this is called the ucb1 strategy and the last thing i'll note is what are the numbers inside the body of the table itself this is the regret divided by the optimal score so if those terms are unfamiliar go ahead and watch my previous video multi-arm bandit but this is basically a measure we would like to make as low as possible so i would like to have my regret divided by"
+    },
+    {
+      "id": "mab-ucb#23",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 626.6,
+        "end": 655.9
+      },
+      "text": "the optimal score be really low so i'm just going to show some general trends in this chart and look at which strategies do the best for each combination of parameters so first thing to look at is the exploration strategy we see that as the number of restaurants gets bigger and bigger this tends to 50 and that's no accident we have this as a fact that as the number of restaurants goes to infinity your regret percentage is going to go to 50 now i've put little stars next to the lowest percentages in each of these parameter settings and"
+    },
+    {
+      "id": "mab-ucb#24",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 654.4,
+        "end": 683.4
+      },
+      "text": "the really interesting thing is we find that it's either ucb1 or it's the exploitation only strategy the other strategies aren't the best in any case now let's look at just the first two parameter settings here both of these have three restaurants the only difference is that the first one has 50 d which means that the distributions are fat and this is important because this means that there's a lot more uncertainty when you go to any restaurant about whether the meal is going to be good or bad or better than one of the other restaurants so this ucb"
+    },
+    {
+      "id": "mab-ucb#25",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 681.5,
+        "end": 710.3
+      },
+      "text": "one strategy really helps to strike that balance between exploitation and exploration and therefore it gives us the best score on the other hand if the distributions are really narrow then this exploitation only strategy does really really well why because one meal at each restaurant is all you really need in order to make a fully informed decision about whether this is the place you want to go to or not that's why that wins in this case now if we look at these next two parameter settings we find that ucb1 is the winner and the"
+    },
+    {
+      "id": "mab-ucb#26",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 708.9,
+        "end": 738.5
+      },
+      "text": "difference here is that we have 10 restaurants instead of three what does that kind of change if we have 10 restaurants instead of three then even if this distribution this d equals 10 percent has really narrow distributions the fact that we just have more restaurants now means that there's a chance that the exploitation only strategy is going to fail more often so even if these distributions are narrow and are relatively certain the fact that there's many of them we might not pick the optimal restaurant using the exploitation only and that's why we have ucb"
+    },
+    {
+      "id": "mab-ucb#27",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 736.4,
+        "end": 765.7
+      },
+      "text": "doing the best in these situations and finally it's kind of weird that once we have a hundred restaurants we have that the exploitation only strategy is doing better again because we might expect the ucb1 but there's one factor that we didn't think about yet the one thing we've held fixed in this entire setup is that we have only 300 days now i could have also varied the number of days it would have been a much messier chart to write but think about this we only have 300 days so if there's a hundred restaurants that means in either the exploitation only or uc b1"
+    },
+    {
+      "id": "mab-ucb#28",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 764.5,
+        "end": 793.2
+      },
+      "text": "strategies we're going to spend the first 100 days just sampling each restaurant once that means that we only have 200 days left to do this exploration exploitation balance if we're using the ucb1 strategy which tries to strike a good balance between exploration and exploitation that means that on average we can only visit each restaurant like two more times that's really probably not enough time to get a full picture and that's why the exploitation only strategy ends up doing much better it says that i'm just not going to"
+    },
+    {
+      "id": "mab-ucb#29",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 791.9,
+        "end": 819.4
+      },
+      "text": "bother exploring at all i'm just going to run with whatever is the best restaurant i got in those first 100 days sampling each restaurant once and it just goes like that my guess is that if the number of days you're in town gets much much bigger like 10 000 or a million the ucb1 strategy might be dominant again so this is also one big thing to keep in mind is that usually when people think about multi-arm bandit problems one of the assumptions is that the number of days is very very large but that wasn't necessarily true in this case"
+    },
+    {
+      "id": "mab-ucb#30",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 817.8,
+        "end": 847
+      },
+      "text": "that might have been true if the number of restaurants was 10 or 3 but once the number of restaurants is like 100 or 200 you really have to think about whether you really want to balance exploration and exploitation or just use your few number of days to do exploitation only so another thing to think about anyway i hope this video was useful in diving much deeper into the multiarm bandit thinking about how these strategies compare based on your exact situation i'm going to make the code i use to derive all these simulations available"
+    },
+    {
+      "id": "mab-ucb#31",
+      "sourceId": "mab-ucb",
+      "loc": {
+        "kind": "time",
+        "start": 845.6,
+        "end": 853.9
+      },
+      "text": "in the description below hopefully you learned something in this video please like and subscribe for more videos just like this and i'll see you next time"
+    }
+  ]
+}

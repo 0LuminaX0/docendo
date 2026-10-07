@@ -1,0 +1,334 @@
+{
+  "topic": "bandits",
+  "draftedBy": "manual: Claude (claude-opus-5-5) from the two ritvikmath transcripts and the C2 goals; no API key yet, so `pnpm content draft` was not run",
+  "draftedAt": "2026-10-06",
+  "goals": [
+    { "id": "LG1", "level": "Apply", "text": "Calculate the expected regret of greedy and ε-greedy after a given number of rounds, including the regret greedy incurs by locking onto a worse arm, with the correct result." },
+    { "id": "LG2", "level": "Analyze", "text": "Compare how ε-greedy and UCB1 decide when to explore and say which has lower regret over many rounds, justified by how the UCB1 bonus changes with pulls and rounds." },
+    { "id": "LG3", "level": "Create and Evaluate", "text": "Design a bandit model for a new decision problem, naming its arms, reward and number of rounds, and justify a choice between ε-greedy and UCB1 after checking the model's assumptions." }
+  ],
+  "nodes": [
+    {
+      "id": "n01", "label": "Bandit setup", "kind": "core", "needs": [], "goals": ["LG1", "LG3"],
+      "facts": [
+        { "id": "n01.f1", "required": true, "text": "You repeatedly choose one of several options, called arms, for example which of three restaurants to eat at every night for 300 days." },
+        { "id": "n01.f2", "required": true, "text": "Each arm gives a random reward from its own distribution, and these distributions and their averages are hidden at the start." },
+        { "id": "n01.f3", "required": false, "text": "The goal is to collect as much total reward as possible over all the rounds, not only to find out which arm is best." }
+      ],
+      "lexicon": ["multi-armed bandit", "multi-arm bandit", "bandit", "bandits", "arm", "arms"],
+      "misconception": {
+        "id": "m_bandit_is_rl",
+        "says": "So this is basically full reinforcement learning, where what I pick changes the situation I'm in next?",
+        "truth": "In a bandit, choices don't change the situation: there are no states. Only the information you gather carries over."
+      },
+      "probes": {
+        "open": "So what exactly is the problem we're solving here? What do I get to choose each time?",
+        "why": "Why can't I just figure out which arm is best before I start?",
+        "whatIf": "What if there were 100 restaurants instead of 3, would it still be the same kind of problem?",
+        "compute": "If restaurant 1 averages 10 happiness and I eat there all 300 days, how much happiness do I expect in total?"
+      }
+    },
+    {
+      "id": "n02", "label": "Bandit feedback", "kind": "core", "needs": ["n01"], "goals": ["LG3"],
+      "facts": [
+        { "id": "n02.f1", "required": true, "text": "After each choice you only see the reward of the arm you picked, not what the other arms would have given." },
+        { "id": "n02.f2", "required": true, "text": "So the only way to learn how good an arm is, is to try it, which is why learning about the arms costs rounds." }
+      ],
+      "lexicon": ["bandit feedback", "partial feedback"],
+      "misconception": null,
+      "probes": {
+        "open": "When I eat at one restaurant, do I find out anything about the other ones that night?",
+        "why": "Why can't I learn about all the arms at the same time?",
+        "whatIf": "What if I could see what every arm would have paid each round, would I still need to try the worse ones?",
+        "compute": "With 3 arms and 30 rounds, if I try them equally often, how many rewards do I see from each arm?"
+      }
+    },
+    {
+      "id": "n03", "label": "Sample mean Q", "kind": "core", "needs": ["n01"], "goals": ["LG1", "LG2"],
+      "facts": [
+        { "id": "n03.f1", "required": true, "text": "An arm's value is estimated by the average (mean) of the rewards it has given so far." },
+        { "id": "n03.f2", "required": true, "text": "The estimate changes every time the arm is tried, and estimates from only a few tries can be far from the true average." }
+      ],
+      "lexicon": ["sample mean", "sample average", "estimated value", "action value", "action-value"],
+      "misconception": null,
+      "probes": {
+        "open": "How do I even keep track of which arm seems better so far?",
+        "why": "Why is the average the right thing to look at, and not just the last reward?",
+        "whatIf": "What if the best restaurant gave me a really bad meal on my first visit, just by bad luck?",
+        "compute": "An arm gave rewards 2, 9 and 4. What's my estimate for it?"
+      }
+    },
+    {
+      "id": "n04", "label": "Update rule", "kind": "core", "needs": ["n03"], "goals": ["LG1"],
+      "facts": [
+        { "id": "n04.f1", "required": true, "text": "The average can be updated from the old one: new estimate = old estimate + (reward − old estimate) / n, where n is how many times that arm has been tried." },
+        { "id": "n04.f2", "required": false, "text": "So you only need to store the current average and the count for each arm, not every past reward." }
+      ],
+      "lexicon": ["incremental", "incremental update", "update rule"],
+      "misconception": null,
+      "probes": {
+        "open": "Do I have to write down every single reward to keep my averages up to date?",
+        "why": "Why does one new reward move the estimate less the more times I've tried the arm?",
+        "whatIf": "What if the new reward is exactly equal to my current estimate, does the estimate change?",
+        "compute": "My estimate is 0.5 after 4 pulls and the fifth pull pays 1. What is the new estimate?"
+      }
+    },
+    {
+      "id": "n05", "label": "Greedy", "kind": "core", "needs": ["n03"], "goals": ["LG1"],
+      "facts": [
+        { "id": "n05.f1", "required": true, "text": "Greedy (exploit only) always picks the arm with the best average so far, for example after trying each restaurant once." },
+        { "id": "n05.f2", "required": true, "text": "Greedy never tries an arm on purpose to learn more, so arms that looked bad early are never tried again." }
+      ],
+      "lexicon": ["greedy"],
+      "misconception": {
+        "id": "m_greedy_optimal",
+        "says": "Isn't always picking the one that looks best just the smartest thing to do?",
+        "truth": "Early estimates are noisy. Greedy can lock onto a worse arm because it never collects the data that would correct the estimate."
+      },
+      "probes": {
+        "open": "Once I have some averages, what's the most obvious way to choose?",
+        "why": "Why would I ever pull an arm that looks worse?",
+        "whatIf": "What if two arms are tied on their average, what does this rule do?",
+        "compute": "My averages so far are 7, 8 and 5. Which arm does greedy pick next, and when does it pick the 5 one again?"
+      }
+    },
+    {
+      "id": "n06", "label": "Lock-in", "kind": "core", "needs": ["n05"], "goals": ["LG1"],
+      "facts": [
+        { "id": "n06.f1", "required": true, "text": "Because greedy only goes back to the current best, one unlucky early reward from the truly best arm can hide it for the rest of the game." },
+        { "id": "n06.f2", "required": true, "text": "Example: if restaurant 1 (mean 10) happens to give 7 on day one and restaurant 2 (mean 8) gives 8, exploit only eats at restaurant 2 for the remaining 297 days." },
+        { "id": "n06.f3", "required": false, "text": "Being stuck costs the gap between the two arms' averages on every remaining round." }
+      ],
+      "lexicon": ["lock in", "locks in", "locked in", "lock-in", "locking in", "locking onto"],
+      "misconception": null,
+      "probes": {
+        "open": "Could greedy ever get it wrong and never notice?",
+        "why": "Why wouldn't greedy just try the other arm again later?",
+        "whatIf": "What if the best arm had paid really well on its first try instead?",
+        "compute": "If restaurant 2 averages 8 and restaurant 1 averages 10, and I'm stuck at restaurant 2 for 297 days, how much happiness do I miss out on?"
+      }
+    },
+    {
+      "id": "n07", "label": "ε-greedy", "kind": "core", "needs": ["n05"], "goals": ["LG1", "LG2"],
+      "facts": [
+        { "id": "n07.f1", "required": true, "text": "ε-greedy picks a random arm with a small probability ε (for example 10%) and otherwise picks the arm with the best average so far." },
+        { "id": "n07.f2", "required": true, "text": "Its random picks ignore the estimates, so it spends as many of them on arms already known to be bad as on arms it knows little about." },
+        { "id": "n07.f3", "required": false, "text": "With 3 arms and ε = 0.1, the arm that currently looks best is picked with probability 0.9 + 0.1/3 ≈ 0.93." }
+      ],
+      "lexicon": ["epsilon", "ε", "epsilon-greedy", "epsilon greedy", "ε-greedy"],
+      "misconception": {
+        "id": "m_eps_smart",
+        "says": "So when it picks randomly, it goes for the arms it's least sure about, right?",
+        "truth": "No: ε-greedy picks uniformly at random, regardless of how uncertain each arm is."
+      },
+      "probes": {
+        "open": "Is there a way to keep using my best guess but still try the others sometimes?",
+        "why": "Why pick a random arm instead of the one I know least about?",
+        "whatIf": "What if ε were 0, or 1? What would happen then?",
+        "compute": "With 3 arms and ε = 0.1, how likely is it that I pick the arm that currently looks best?"
+      }
+    },
+    {
+      "id": "n08", "label": "Trade-off", "kind": "core", "needs": ["n06", "n07"], "goals": ["LG3"],
+      "facts": [
+        { "id": "n08.f1", "required": true, "text": "Exploration means trying arms to learn about them; exploitation means picking the best arm you know of to collect reward." },
+        { "id": "n08.f2", "required": true, "text": "Too little exploration risks locking onto a worse arm; too much exploration wastes rounds on arms you already know are worse." },
+        { "id": "n08.f3", "required": false, "text": "How much exploration pays off depends on how far apart and how noisy the arms are, and on how many rounds are left." }
+      ],
+      "lexicon": ["explore", "explores", "exploring", "exploration", "exploit", "exploits", "exploiting", "exploitation", "trade-off", "tradeoff"],
+      "misconception": {
+        "id": "m_more_explore_safer",
+        "says": "So exploring more is always the safe choice?",
+        "truth": "Every exploratory pull of a worse arm costs reward; with a constant ε that cost keeps growing."
+      },
+      "probes": {
+        "open": "It feels like I'm always torn between trying new places and going back to my favourite. Is that a real problem?",
+        "why": "Why not just try everything a lot at the start and then decide?",
+        "whatIf": "What if I only had 5 days in town instead of 300?",
+        "compute": "If I explore on 10% of 300 days by picking one of 3 restaurants at random, about how many days do I spend at the worst one because of exploring?"
+      }
+    },
+    {
+      "id": "n09", "label": "Regret", "kind": "core", "needs": ["n01"], "goals": ["LG1"],
+      "facts": [
+        { "id": "n09.f1", "required": true, "text": "Regret is the reward you would expect from always picking the best arm minus the reward your strategy is expected to get." },
+        { "id": "n09.f2", "required": true, "text": "Example: always eating at restaurant 1 gives 10 × 300 = 3000; picking a random restaurant every night gives 2300 on average, so its regret is 700." },
+        { "id": "n09.f3", "required": false, "text": "Regret measures the cost of the decisions in expectation, not bad luck on individual rewards." }
+      ],
+      "lexicon": ["regret"],
+      "misconception": {
+        "id": "m_regret_luck",
+        "says": "So that's just a measure of how unlucky I was with my meals?",
+        "truth": "Regret compares expected rewards of the choices made with always choosing the best arm; noise in individual rewards doesn't count."
+      },
+      "probes": {
+        "open": "How would I even measure how good or bad a way of choosing is?",
+        "why": "Why compare against always picking the best arm, and not against my own average?",
+        "whatIf": "What if I knew all the averages from day one, what would my regret be?",
+        "compute": "The best arm has mean 0.8. Over 100 rounds I pull it 60 times and an arm with mean 0.5 40 times. What's my regret?"
+      }
+    },
+    {
+      "id": "n10", "label": "Linear regret", "kind": "core", "needs": ["n07", "n09"], "goals": ["LG1", "LG2"],
+      "facts": [
+        { "id": "n10.f1", "required": true, "text": "With a constant ε, ε-greedy keeps making random picks at the same rate forever, so it keeps paying for pulls of worse arms." },
+        { "id": "n10.f2", "required": true, "text": "So its regret keeps growing in proportion to the number of rounds, roughly ε times the average gap to the best arm on every round." }
+      ],
+      "lexicon": ["linear regret", "grows linearly", "linearly", "linear"],
+      "misconception": null,
+      "probes": {
+        "open": "If I keep using the rule with the random picks for years, do those random picks ever stop costing me?",
+        "why": "Why doesn't ε-greedy stop picking randomly once it's pretty sure?",
+        "whatIf": "What if ε got smaller every day?",
+        "compute": "Three arms with means 10, 8 and 5, and ε = 0.1. Roughly how much regret do the random picks alone add per day?"
+      }
+    },
+    {
+      "id": "n11", "label": "UCB1 index", "kind": "core", "needs": ["n16"], "goals": ["LG2"],
+      "facts": [
+        { "id": "n11.f1", "required": true, "text": "UCB1 picks the arm with the highest score: its average plus a bonus √(2 ln t / n), where t is the current round (day) and n is the number of times that arm was tried." },
+        { "id": "n11.f2", "required": true, "text": "The average is the exploitation part and the bonus is the exploration part: arms tried only a few times get the benefit of the doubt." },
+        { "id": "n11.f3", "required": false, "text": "UCB1 is deterministic: with the same history it always picks the same arm." }
+      ],
+      "lexicon": ["ucb", "ucb1", "upper confidence bound", "upper confidence", "confidence bound", "bonus", "benefit of the doubt", "ln t", "hoeffding"],
+      "misconception": {
+        "id": "m_ucb_random",
+        "says": "So UCB sometimes just picks an arm at random to try it out?",
+        "truth": "No. UCB1 is deterministic; it explores by adding a bonus to arms it has tried few times."
+      },
+      "probes": {
+        "open": "Is there a smarter way to pick which place to try than rolling a die?",
+        "why": "Why add something to the average instead of just using the average?",
+        "whatIf": "What if two arms have the same average but one was tried 100 times and the other once?",
+        "compute": "After 10 rounds, arm A was tried 5 times with average 0.6 and arm B 3 times with average 0.7. Which does UCB1 pick? (ln 10 ≈ 2.3)"
+      }
+    },
+    {
+      "id": "n12", "label": "Bonus shrinks", "kind": "core", "needs": ["n11"], "goals": ["LG2"],
+      "facts": [
+        { "id": "n12.f1", "required": true, "text": "Each time an arm is tried its n goes up, so its bonus shrinks and it becomes less likely to be picked just to learn more about it." },
+        { "id": "n12.f2", "required": true, "text": "The ln t on top grows slowly with every round, so an arm that has been ignored for a long time eventually gets tried again." }
+      ],
+      "lexicon": ["bonus shrinks", "shrinking bonus"],
+      "misconception": null,
+      "probes": {
+        "open": "What happens to an arm's chances right after I finally try it again?",
+        "why": "Why does trying an arm make it less likely to be chosen the next day?",
+        "whatIf": "What if I never pick an arm for a very long time, does it get forgotten?",
+        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2·2/4) = 1. What's its bonus after 16 tries at the same round?"
+      }
+    },
+    {
+      "id": "n13", "label": "Log regret", "kind": "core", "needs": ["n10", "n12", "n15"], "goals": ["LG2", "LG3"],
+      "facts": [
+        { "id": "n13.f1", "required": true, "text": "Because UCB1's exploration fades as its estimates become reliable, its regret grows only logarithmically with the number of rounds." },
+        { "id": "n13.f2", "required": true, "text": "So over many rounds UCB1 ends up with lower regret than ε-greedy with a constant ε, whose regret grows linearly; UCB1 is a zero-regret strategy." }
+      ],
+      "lexicon": ["logarithmic", "logarithmically", "log regret"],
+      "misconception": null,
+      "probes": {
+        "open": "So which of the two rules ends up costing me less if I live in this town for years?",
+        "why": "Why does UCB's extra cost stop piling up the way ε-greedy's does?",
+        "whatIf": "What if I only had 20 days, would UCB still come out ahead?",
+        "compute": "If regret grows like 10 · ln T, how much regret is there at T = 100 and at T = 10,000? (ln 100 ≈ 4.6, ln 10,000 ≈ 9.2)"
+      }
+    },
+    {
+      "id": "n14", "label": "Assumptions", "kind": "core", "needs": ["n02"], "goals": ["LG3"],
+      "facts": [
+        { "id": "n14.f1", "required": true, "text": "The model assumes each arm's reward distribution stays the same over time." },
+        { "id": "n14.f2", "required": true, "text": "It also assumes your choices don't change the situation: there is no state, only the information you gather carries over." },
+        { "id": "n14.f3", "required": false, "text": "The usual analysis assumes the number of rounds is very large compared with the number of arms." }
+      ],
+      "lexicon": ["stationary", "non-stationary", "nonstationary", "assumption", "assumptions", "assumes"],
+      "misconception": {
+        "id": "m_avg_always_right",
+        "says": "So the plain average of everything I've seen is always the right estimate?",
+        "truth": "Only if the rewards don't drift. If they change over time, recent rewards should count more."
+      },
+      "probes": {
+        "open": "Are there situations where this whole way of thinking wouldn't work?",
+        "why": "Why does it matter whether a restaurant's food changes over the year?",
+        "whatIf": "What if eating at a restaurant changed how good it is the next time?",
+        "compute": "Restaurant 1 averaged 10 for 200 days, then a new chef makes it 4. If I ate there every day for 300 days, what does my plain average say?"
+      }
+    },
+    {
+      "id": "n15", "label": "Zero regret", "kind": "core", "needs": ["n09"], "goals": ["LG2"],
+      "facts": [
+        { "id": "n15.f1", "required": true, "text": "A zero-regret strategy is one where the regret divided by the number of rounds goes to zero as the rounds go on." },
+        { "id": "n15.f2", "required": true, "text": "It may lose a lot at first, but eventually it figures out the best arm, so its regret stops growing much." },
+        { "id": "n15.f3", "required": false, "text": "Exploring only can't be zero-regret, because it never uses what it has learned." }
+      ],
+      "lexicon": ["zero regret", "zero-regret", "no-regret", "regret per round", "average regret"],
+      "misconception": null,
+      "probes": {
+        "open": "If I moved to the town for good, how would I judge a way of choosing over many years?",
+        "why": "Why divide the regret by the number of days?",
+        "whatIf": "What if a strategy's regret kept going up by 1 every single day forever?",
+        "compute": "A strategy has regret 100 after 1,000 days and 120 after 100,000 days. What is its regret per day at each point?"
+      }
+    },
+    {
+      "id": "n16", "label": "Few samples", "kind": "core", "needs": ["n03"], "goals": ["LG2"],
+      "facts": [
+        { "id": "n16.f1", "required": true, "text": "An average based on one visit is much less reliable than one based on a hundred visits." },
+        { "id": "n16.f2", "required": true, "text": "So comparing averages alone ignores how many samples each is based on: 2.9 from 1 visit could really be higher than 3 from 100 visits." }
+      ],
+      "lexicon": ["sample size", "uncertainty", "confidence interval"],
+      "misconception": null,
+      "probes": {
+        "open": "If two places have almost the same average, is there anything else I should look at before choosing?",
+        "why": "Why is one visit not enough to trust an average?",
+        "whatIf": "What if one place averaged 2.9 from a single visit and the other 3 from 100 visits?",
+        "compute": "One restaurant: 1 visit, average 2.9. Another: 100 visits, average 3. Which has the higher average, and which estimate could be further off?"
+      }
+    },
+    {
+      "id": "n17", "label": "When each wins", "kind": "core", "needs": ["n13", "n14"], "goals": ["LG3"],
+      "facts": [
+        { "id": "n17.f1", "required": true, "text": "Which strategy is best depends on the situation: how noisy the arms are, how many arms there are, and how many rounds you have." },
+        { "id": "n17.f2", "required": true, "text": "With narrow, well-separated distributions, trying each arm once and then sticking with the best can beat UCB1, because one sample already tells you enough." },
+        { "id": "n17.f3", "required": true, "text": "With many arms and few rounds (100 restaurants, 300 days), UCB1 has no time left to profit from exploring; it does best when rounds are many compared with arms." }
+      ],
+      "lexicon": ["horizon"],
+      "misconception": null,
+      "probes": {
+        "open": "Is UCB always the right choice, or does it depend on the situation?",
+        "why": "Why would trying each place just once ever be enough?",
+        "whatIf": "What if the town had 100 restaurants and I stayed only 300 days?",
+        "compute": "100 restaurants and 300 days: if UCB1 first tries each restaurant once, how many days are left, and how many more visits does each restaurant get on average?"
+      }
+    },
+    {
+      "id": "b1", "label": "Thompson sampling", "kind": "branch", "needs": ["n11"], "goals": [],
+      "facts": [
+        { "id": "b1.f1", "required": true, "text": "Thompson sampling keeps a probability distribution over each arm's mean and picks the arm whose random draw from that distribution is highest." },
+        { "id": "b1.f2", "required": true, "text": "It explores through randomness that shrinks as the distributions narrow, while UCB1 adds a deterministic bonus." }
+      ],
+      "lexicon": ["thompson", "thompson sampling", "posterior", "beta distribution"],
+      "misconception": null,
+      "probes": {
+        "open": "Is adding a bonus the only clever way to decide which place to try?",
+        "why": "Why would picking by a random draw still favour the best arm most of the time?",
+        "whatIf": "What if I've tried an arm thousands of times, how random is its draw then?",
+        "compute": "Two arms: one I'm very sure has mean 0.6, one I've barely tried with a guess around 0.5 but wide. Which could still be picked sometimes, and why?"
+      }
+    },
+    {
+      "id": "b2", "label": "Drifting rewards", "kind": "branch", "needs": ["n04", "n14"], "goals": [],
+      "facts": [
+        { "id": "b2.f1", "required": true, "text": "If rewards drift over time, a plain average reacts too slowly, because old rewards count as much as new ones." },
+        { "id": "b2.f2", "required": true, "text": "A constant step size, new = old + α (reward − old), weights recent rewards more and lets the estimate follow the change." }
+      ],
+      "lexicon": ["step size", "step-size", "constant step", "drift", "drifting", "recency"],
+      "misconception": null,
+      "probes": {
+        "open": "What if a restaurant slowly gets better or worse over the year, can my averages keep up?",
+        "why": "Why would giving recent meals more weight help?",
+        "whatIf": "What if α were 1, what would the estimate be?",
+        "compute": "My estimate is 8, α = 0.5, and tonight's meal is 4. What is the new estimate?"
+      }
+    }
+  ]
+}

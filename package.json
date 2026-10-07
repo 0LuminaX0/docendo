@@ -1,0 +1,42 @@
+{
+  "name": "docendo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Learning by teaching an AI tutee: prompted vs managed knowledge (CS-411 Digital Education)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "content": "tsx content/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "e2e": "node scripts/e2e.mjs",
+    "chat": "tsx scripts/chat.ts"
+  },
+  "packageManager": "pnpm@10.20.0",
+  "dependencies": {
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
+    "lucide-react": "^1.52.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "unpdf": "^1.8.1",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "puppeteer-core": "^25.12.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
