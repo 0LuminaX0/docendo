@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "693326ca1d699d5c",
-  "builtAt": "2026-10-07T11:16:03.164Z",
+  "hash": "8fe27d4c1e2faab6",
+  "builtAt": "2026-10-07T12:42:30.928Z",
   "goals": [
     {
       "id": "LG1",
@@ -49,13 +49,15 @@
           "id": "n01.f1",
           "text": "You repeatedly choose one of several options, called arms, for example which of three restaurants to eat at every night for 300 days.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "So what do I actually choose between each time, and how many times do I get to choose?"
         },
         {
           "id": "n01.f2",
           "text": "Each arm gives a random reward from its own distribution, and these distributions and their averages are hidden at the start.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Do I know in advance how good each option is, or what I'll get when I pick it?"
         },
         {
           "id": "n01.f3",
@@ -126,13 +128,15 @@
           "id": "n02.f1",
           "text": "After each choice you only see the reward of the arm you picked, not what the other arms would have given.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "When I pick one option, do I also find out what the others would have given me?"
         },
         {
           "id": "n02.f2",
           "text": "So the only way to learn how good an arm is, is to try it, which is why learning about the arms costs rounds.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "So how can I find out how good an option really is?"
         }
       ],
       "lexicon": [
@@ -185,13 +189,15 @@
           "id": "n03.f1",
           "text": "An arm's value is estimated by the average (mean) of the rewards it has given so far.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "How do I put a number on how good an option seems so far?"
         },
         {
           "id": "n03.f2",
           "text": "The estimate changes every time the arm is tried, and estimates from only a few tries can be far from the true average.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Can I trust that number after only one or two tries?"
         }
       ],
       "lexicon": [
@@ -246,7 +252,8 @@
           "id": "n04.f1",
           "text": "The average can be updated from the old one: new estimate = old estimate + (reward − old estimate) / n, where n is how many times that arm has been tried.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "If I get one new reward, how do I update that number without redoing everything?"
         },
         {
           "id": "n04.f2",
@@ -290,13 +297,15 @@
           "id": "n05.f1",
           "text": "Greedy (exploit only) always picks the arm with the best average so far, for example after trying each restaurant once.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Once I have those numbers, what's the simplest rule for choosing?"
         },
         {
           "id": "n05.f2",
           "text": "Greedy never tries an arm on purpose to learn more, so arms that looked bad early are never tried again.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "With that rule, would I ever go back to an option that looked bad early on?"
         }
       ],
       "lexicon": [
@@ -346,13 +355,15 @@
           "id": "n06.f1",
           "text": "Because greedy only goes back to the current best, one unlucky early reward from the truly best arm can hide it for the rest of the game.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "What could go wrong with greedy if the best option happens to give a bad result the first time?"
         },
         {
           "id": "n06.f2",
           "text": "Example: if restaurant 1 (mean 10) happens to give 7 on day one and restaurant 2 (mean 8) gives 8, exploit only eats at restaurant 2 for the remaining 297 days.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Can you show me with the restaurants how that could actually happen?"
         },
         {
           "id": "n06.f3",
@@ -410,13 +421,15 @@
           "id": "n07.f1",
           "text": "ε-greedy picks a random arm with a small probability ε (for example 10%) and otherwise picks the arm with the best average so far.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Is there a way to mostly pick the best one but still try the others now and then? How would that work?"
         },
         {
           "id": "n07.f2",
           "text": "Its random picks ignore the estimates, so it spends as many of them on arms already known to be bad as on arms it knows little about.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "When it does try something else, how does it decide which one to try?"
         },
         {
           "id": "n07.f3",
@@ -482,13 +495,15 @@
           "id": "n08.f1",
           "text": "Exploration means trying arms to learn about them; exploitation means picking the best arm you know of to collect reward.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Is there a name for trying options to learn about them, versus sticking with my favourite?"
         },
         {
           "id": "n08.f2",
           "text": "Too little exploration risks locking onto a worse arm; too much exploration wastes rounds on arms you already know are worse.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "What goes wrong if I try new things too rarely, or too often?"
         },
         {
           "id": "n08.f3",
@@ -568,13 +583,15 @@
           "id": "n09.f1",
           "text": "Regret is the reward you would expect from always picking the best arm minus the reward your strategy is expected to get.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "How do I measure how much a way of choosing costs me compared with the ideal?"
         },
         {
           "id": "n09.f2",
           "text": "Example: always eating at restaurant 1 gives 10 × 300 = 3000; picking a random restaurant every night gives 2300 on average, so its regret is 700.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Can you work that out with numbers, like for picking a random restaurant every night?"
         },
         {
           "id": "n09.f3",
@@ -647,13 +664,15 @@
           "id": "n10.f1",
           "text": "With a constant ε, ε-greedy keeps making random picks at the same rate forever, so it keeps paying for pulls of worse arms.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Does that rule with the random picks ever stop paying for them?"
         },
         {
           "id": "n10.f2",
           "text": "So its regret keeps growing in proportion to the number of rounds, roughly ε times the average gap to the best arm on every round.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "So how does that cost add up as the days go on?"
         }
       ],
       "lexicon": [
@@ -692,13 +711,15 @@
           "id": "n11.f1",
           "text": "UCB1 picks the arm with the highest score: its average plus a bonus √(2 ln t / n), where t is the current round (day) and n is the number of times that arm was tried.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Is there a smarter way to score each option, instead of picking at random? How is the score made?"
         },
         {
           "id": "n11.f2",
           "text": "The average is the exploitation part and the bonus is the exploration part: arms tried only a few times get the benefit of the doubt.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Why would that score favour options I've hardly tried?"
         },
         {
           "id": "n11.f3",
@@ -757,13 +778,15 @@
           "id": "n12.f1",
           "text": "Each time an arm is tried its n goes up, so its bonus shrinks and it becomes less likely to be picked just to learn more about it.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "What happens to an option's bonus each time I try it?"
         },
         {
           "id": "n12.f2",
           "text": "The ln t on top grows slowly with every round, so an arm that has been ignored for a long time eventually gets tried again.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Could an option I haven't tried for ages ever get picked again?"
         }
       ],
       "lexicon": [
@@ -808,13 +831,15 @@
           "id": "n13.f1",
           "text": "Because UCB1's exploration fades as its estimates become reliable, its regret grows only logarithmically with the number of rounds.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "How does the regret of the bonus rule grow over a very long time?"
         },
         {
           "id": "n13.f2",
           "text": "So over many rounds UCB1 ends up with lower regret than ε-greedy with a constant ε, whose regret grows linearly; UCB1 is a zero-regret strategy.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Over many rounds, which ends up with less regret: ε-greedy or UCB?"
         }
       ],
       "lexicon": [
@@ -857,13 +882,15 @@
           "id": "n14.f1",
           "text": "The model assumes each arm's reward distribution stays the same over time.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Does any of this break if a restaurant gets better or worse over the year?"
         },
         {
           "id": "n14.f2",
           "text": "It also assumes your choices don't change the situation: there is no state, only the information you gather carries over.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Does picking an option change how good it will be next time?"
         },
         {
           "id": "n14.f3",
@@ -908,13 +935,15 @@
           "id": "n15.f1",
           "text": "A zero-regret strategy is one where the regret divided by the number of rounds goes to zero as the rounds go on.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "If I stayed for years, what should happen to the regret per day of a good strategy?"
         },
         {
           "id": "n15.f2",
           "text": "It may lose a lot at first, but eventually it figures out the best arm, so its regret stops growing much.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "Is it okay for a strategy to lose a lot at the very start?"
         },
         {
           "id": "n15.f3",
@@ -970,13 +999,15 @@
           "id": "n16.f1",
           "text": "An average based on one visit is much less reliable than one based on a hundred visits.",
           "required": true,
-          "teachable": true
+          "teachable": true,
+          "ask": "How much should I trust an average from one visit compared with one from a hundred?"
         },
         {
           "id": "n16.f2",
           "text": "So comparing averages alone ignores how many samples each is based on: 2.9 from 1 visit could really be higher than 3 from 100 visits.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "If two options have about the same average, does it matter how many times I tried each?"
         }
       ],
       "lexicon": [
@@ -1020,19 +1051,22 @@
           "id": "n17.f1",
           "text": "Which strategy is best depends on the situation: how noisy the arms are, how many arms there are, and how many rounds you have.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Is one strategy always the best, or does it depend on the situation?"
         },
         {
           "id": "n17.f2",
           "text": "With narrow, well-separated distributions, trying each arm once and then sticking with the best can beat UCB1, because one sample already tells you enough.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "When could trying each option once and then sticking with the best actually work well?"
         },
         {
           "id": "n17.f3",
           "text": "With many arms and few rounds (100 restaurants, 300 days), UCB1 has no time left to profit from exploring; it does best when rounds are many compared with arms.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "What if there are lots of options but only a few rounds?"
         }
       ],
       "lexicon": [
@@ -1071,13 +1105,15 @@
           "id": "b1.f1",
           "text": "Thompson sampling keeps a probability distribution over each arm's mean and picks the arm whose random draw from that distribution is highest.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "Is there another way to decide when to try the less certain options, besides adding a bonus?"
         },
         {
           "id": "b1.f2",
           "text": "It explores through randomness that shrinks as the distributions narrow, while UCB1 adds a deterministic bonus.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "How is that different from the bonus approach?"
         }
       ],
       "lexicon": [
@@ -1109,13 +1145,15 @@
           "id": "b2.f1",
           "text": "If rewards drift over time, a plain average reacts too slowly, because old rewards count as much as new ones.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "What if an option slowly gets better or worse over time, can my averages keep up?"
         },
         {
           "id": "b2.f2",
           "text": "A constant step size, new = old + α (reward − old), weights recent rewards more and lets the estimate follow the change.",
           "required": true,
-          "teachable": false
+          "teachable": false,
+          "ask": "How could I make my numbers follow those changes?"
         }
       ],
       "lexicon": [

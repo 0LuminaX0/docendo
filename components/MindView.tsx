@@ -1,30 +1,56 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ExternalLink } from "lucide-react";
-import type { Mind, MindStatus } from "@/engine/tutor/mind";
-import type { Entry } from "@/engine/tutor/state";
+import { Check, CircleDashed, CircleHelp, ExternalLink, MessageCircleQuestion, X } from "lucide-react";
+import type { Mind, MindStatus, Question } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
 
 const STATUS_TEXT: Record<MindStatus, string> = {
   off: "Not in the videos, so Kai doesn't wait for it.",
+  bonus: "Not in the videos, but you explained some of it anyway. Kai noted it; it doesn't count towards the score.",
   unseen: "Not taught yet.",
-  mentioned: "Touched on, but some required facts are still missing.",
-  explained: "Fully explained.",
-  checked: "Fully explained, and Kai checked it with a follow-up question.",
-  parked: "Kai set this aside after two tries. It may come back to it later.",
+  mentioned: "Started: Kai still has questions about it.",
+  explained: "Done: Kai has no more questions about it.",
+  checked: "Done, and Kai checked it with one more question.",
+  parked: "Set aside: Kai asked its questions, but some answers didn't settle them, so it moved on. Answer an open question below any time and the idea comes back.",
 };
 const STATUS_NAME: Record<MindStatus, string> = {
   off: "Not in videos",
+  bonus: "Bonus",
   unseen: "Not taught",
-  mentioned: "Touched on",
-  explained: "Explained",
-  checked: "Explained + checked",
+  mentioned: "Started",
+  explained: "Done",
+  checked: "Done + checked",
   parked: "Set aside",
 };
-const VERDICT: Record<Entry["verdict"], string> = { correct: "correct", partial: "partly", wrong: "wrong" };
+const Q_TEXT: Record<Question["state"], string> = {
+  answered: "got it",
+  partly: "partly",
+  wrong: "doesn't fit",
+  asked: "still open",
+  current: "asking now",
+};
+const Q_ICON: Record<Question["state"], typeof Check> = { answered: Check, partly: CircleDashed, wrong: X, asked: CircleHelp, current: MessageCircleQuestion };
 
-export default function MindView({ graph, mind, notebook, popout }: { graph: GraphView; mind: Mind | null; notebook: Entry[]; popout?: boolean }) {
+/** Learning goals are told apart by shape (and colour), so circles only ever mean facts. */
+export function GoalMark({ index, size = 10, x, y }: { index: number; size?: number; x?: number; y?: number }) {
+  const h = size / 2;
+  const d = [
+    `M0 ${-h} L${h} ${h * 0.8} L${-h} ${h * 0.8} Z`, // triangle
+    `M${-h * 0.82} ${-h * 0.82} H${h * 0.82} V${h * 0.82} H${-h * 0.82} Z`, // square
+    `M0 ${-h} L${h} 0 L0 ${h} L${-h} 0 Z`, // diamond
+    `M0 ${-h} L${h} ${-h * 0.2} L${h * 0.6} ${h} L${-h * 0.6} ${h} L${-h} ${-h * 0.2} Z`, // pentagon
+  ][index % 4];
+  const shape = <path className={`gm gm-${index % 4}`} d={d} />;
+  if (x !== undefined && y !== undefined) return <g transform={`translate(${x},${y})`}>{shape}</g>;
+  return (
+    <svg className="gmark" width={size} height={size} viewBox={`${-h} ${-h} ${size} ${size}`} aria-hidden="true">
+      {shape}
+    </svg>
+  );
+}
+
+export default function MindView({ graph, mind, popout }: { graph: GraphView; mind: Mind | null; popout?: boolean }) {
   const [sel, setSel] = useState<string | null>(null);
   const byId = useMemo(() => new Map((mind?.nodes ?? []).map((n) => [n.id, n])), [mind]);
   const focus = mind?.nodes.find((n) => n.focus)?.id ?? null;
@@ -36,7 +62,8 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
   const pct = Math.round(mind.understanding * 100);
   const node = graph.nodes.find((n) => n.id === selected);
   const ns = selected ? byId.get(selected) : undefined;
-  const quotes = selected ? dedupe(notebook.filter((e) => e.fact.split(".")[0] === selected)) : [];
+  const goalIndex = (id: string) => Math.max(0, graph.goals.findIndex((g) => g.id === id));
+  const questions = ns?.questions ?? []; // older saved sessions have no question list
 
   return (
     <div className="mind">
@@ -60,14 +87,14 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
               <div className="fill" style={{ width: `${Math.max(2, pct)}%` }} />
             </div>
             <p className="note">
-              {fmt(mind.facts.correct + mind.facts.partial / 2)} of {mind.facts.total} facts&apos; worth ({mind.facts.correct} explained, {mind.facts.partial} partly) · ready at {mind.facts.needed} · message {mind.turn} of {mind.maxTurns}
+              {pct}% of what Kai needs to feel ready · {mind.facts.correct} facts explained{mind.facts.partial ? `, ${mind.facts.partial} partly` : ""}, of {mind.facts.total} · message {mind.turn} of {mind.maxTurns}
             </p>
           </div>
         </div>
         <div className="mind-goals">
           {mind.goals.map((g) => (
             <span key={g.id} className={`goal ${g.ok ? "ok" : ""}`} title={graph.goals.find((x) => x.id === g.id)?.text}>
-              <i className={`dot g-${g.id}`} />
+              <GoalMark index={goalIndex(g.id)} size={11} />
               {g.id} {g.level}
               <b>
                 {g.explained}/{g.total}
@@ -126,7 +153,7 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
                   {n.label}
                 </text>
                 {n.goals.map((g, i) => (
-                  <circle key={g} className={`g-${g}`} cx={W - 12 - (n.goals.length - 1 - i) * 10} cy={13} r={3.6} />
+                  <GoalMark key={g} index={goalIndex(g)} size={8} x={W - 11 - (n.goals.length - 1 - i) * 11} y={13} />
                 ))}
               </g>
             );
@@ -135,7 +162,7 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
       </div>
 
       <div className="mind-legend">
-        {(["unseen", "mentioned", "explained", "checked", "parked", "off"] as MindStatus[]).map((s) => (
+        {(["unseen", "mentioned", "explained", "checked", "parked", "off", "bonus"] as MindStatus[]).map((s) => (
           <span key={s}>
             <i className={`sw s-${s}`} />
             {STATUS_NAME[s]}
@@ -151,34 +178,61 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
           <i className="fdot" />
           fact explained / partly / not yet
         </span>
+        <span>
+          {graph.goals.map((g, i) => (
+            <GoalMark key={g.id} index={i} size={10} />
+          ))}
+          learning goals {graph.goals.map((g) => g.id.replace(/\D/g, "")).join(", ")}
+        </span>
       </div>
 
       <div className="mind-cols">
         <section className="mind-detail" aria-live="polite">
           {node && ns ? (
             <>
-              <span className="eyebrow">
-                {node.id} · {node.goals.join(", ") || "branch"}
+              <span className="eyebrow" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                {node.id}
+                {node.goals.map((g) => (
+                  <GoalMark key={g} index={goalIndex(g)} size={9} />
+                ))}
+                {node.goals.length ? node.goals.join(", ") : "branch"}
               </span>
               <h3>{node.label}</h3>
-              <p>{ns.focus ? "Kai is asking about this right now. " : ""}{STATUS_TEXT[ns.status]}</p>
-              {ns.total > 0 && (
-                <p className="note">
-                  Required facts: {ns.correct} of {ns.total} explained{ns.partial ? `, ${ns.partial} partly` : ""}.
-                </p>
+              <p>{STATUS_TEXT[ns.status]}</p>
+              {ns.asking && (
+                <div className="asking">
+                  <MessageCircleQuestion size={18} aria-hidden="true" />
+                  <div>
+                    <span className="eyebrow">Kai is asking</span>
+                    <p>{ns.asking}</p>
+                  </div>
+                </div>
               )}
-              <div className="quotes">
-                <span className="eyebrow">What you told Kai</span>
-                {quotes.length ? (
-                  quotes.map((q, i) => (
-                    <blockquote key={i} className={`q-${q.verdict}`}>
-                      “{q.words}” <span className={`v v-${q.verdict}`}>{VERDICT[q.verdict]}</span>
-                    </blockquote>
-                  ))
-                ) : (
-                  <p className="note">Nothing yet.</p>
-                )}
-              </div>
+              {(questions.length > 0 || ns.unasked > 0) && (
+                <div className="qlist">
+                  <span className="eyebrow">Kai&apos;s questions about this idea</span>
+                  {questions.map((q, i) => {
+                    const Icon = Q_ICON[q.state];
+                    return (
+                      <div key={i} className={`qi qi-${q.state}`}>
+                        <Icon size={16} strokeWidth={2.4} aria-hidden="true" />
+                        <div>
+                          {q.ask ? <p className="qq">{q.ask}</p> : <p className="qq extra">Something extra you explained</p>}
+                          {q.words && <blockquote>“{q.words}”</blockquote>}
+                          <span className={`v v-${q.state}`}>{Q_TEXT[q.state]}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {ns.unasked > 0 && (
+                    <p className="note">
+                      {questions.length ? "And " : ""}
+                      {ns.unasked} more {ns.unasked === 1 ? "thing" : "things"} Kai doesn&apos;t know yet. It asks one at a time, or you can explain ahead.
+                    </p>
+                  )}
+                </div>
+              )}
+              {!questions.length && !ns.unasked && <p className="note">You haven&apos;t told Kai anything about this yet.</p>}
             </>
           ) : (
             <p className="note">Click an idea to see what you told Kai about it.</p>
@@ -187,9 +241,9 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
         <section className="mind-how">
           <h3>How Kai&apos;s understanding is scored</h3>
           <ul>
-            <li>Kai waits for the <b>{mind.facts.total} required facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
-            <li>After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
-            <li>An idea is <b>explained</b> once all its required facts are; Kai then usually asks one follow-up to check.</li>
+            <li>Kai waits for the <b>{mind.facts.total} facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
+            <li>Kai asks about one fact at a time. After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
+            <li>If an answer only partly lands, Kai asks once more; then it moves on and the question stays open here. An idea is <b>done</b> once Kai has no questions left about it.</li>
             <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth) once every learning goal has at least one explained idea. The bar shows progress towards that point.</li>
             <li>Kai always wraps up after {mind.maxTurns} messages.</li>
           </ul>
@@ -197,18 +251,4 @@ export default function MindView({ graph, mind, notebook, popout }: { graph: Gra
       </div>
     </div>
   );
-}
-
-const fmt = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
-
-function dedupe(entries: Entry[]): Entry[] {
-  const seen = new Set<string>();
-  const out: Entry[] = [];
-  for (const e of [...entries].reverse()) {
-    const k = e.words.trim().toLowerCase();
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(e);
-  }
-  return out.slice(0, 6);
 }

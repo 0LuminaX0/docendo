@@ -81,6 +81,9 @@ export const Fact = z.object({
   id: FactId,
   text: z.string().min(10),
   required: z.boolean(),
+  // Kai's question for this fact, in a novice's voice. Answering it explains the
+  // fact, but it must not contain the answer. Shown to the learner only once asked.
+  ask: z.string().min(10).optional(),
 });
 export type Fact = z.infer<typeof Fact>;
 
@@ -196,7 +199,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional() });
 export const BundleNode = z.object({
   id: z.string(),
   label: z.string(),

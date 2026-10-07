@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const result = await takeTurn(bundle, { message: body.data.message, history: body.data.history.slice(-20), state: body.data.state }, deps);
     // research log (Vercel function logs): what was judged and decided, never the API key
-    console.log(JSON.stringify({ t: "turn", sid: session.sid, turn: result.state.turn, move: result.trace.move.type, node: result.trace.move.node, judged: result.trace.judged.map((f) => `${f.fact}:${f.verdict}`), leaked: result.trace.leaked, fallback: result.trace.fallback, progress: Math.round(result.progress * 100) }));
+    console.log(JSON.stringify({ t: "turn", sid: session.sid, turn: result.state.turn, move: result.trace.move.type, node: result.trace.move.node, fact: result.trace.move.fact ?? null, intent: result.trace.intent, judged: result.trace.judged.map((f) => `${f.fact}:${f.verdict}`), dropped: result.trace.dropped?.map((d) => d.fact), leaked: result.trace.leaked, fallback: result.trace.fallback, progress: Math.round(result.progress * 100) }));
     const { trace: _trace, ...visible } = result;
     return ok({ ...visible, demo: config.demo });
   } catch (e) {

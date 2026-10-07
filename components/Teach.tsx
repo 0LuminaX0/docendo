@@ -126,7 +126,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
         <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
           {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
         </span>
-        <button type="button" className="meter" onClick={() => setView("mind")} title="How much Kai feels it understands. Open Kai's mind to see how it's scored." style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>
+        <button type="button" className="meter" onClick={() => setView("mind")} title={`${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.`} style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <span className="fill" style={{ display: "block", width: `${Math.max(4, pct)}%` }} />
@@ -142,7 +142,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
       <Header phase={2} demo={saved.demo} sub={sub} />
       {view === "mind" ? (
         <main className="teach-mind">
-          <MindView graph={graph} mind={mind} notebook={chat.state?.notebook ?? []} popout />
+          <MindView graph={graph} mind={mind} popout />
         </main>
       ) : (
         <main className="teach">

@@ -1,20 +1,26 @@
 import type { Bundle } from "../../content/schema";
-import { latest, memo, nodeStatus, progress, teachableRequired, type MoveType, type Node, type State } from "./state";
+import { latest, memo, nodeStatus, progress, teachableRequired, type Entry, type MoveType, type Node, type State } from "./state";
 import type { Judgement } from "./judge";
 
 // Deterministic: the same state and judgement always give the same move.
+// Every move except wrapUp ends in one concrete question, so the learner always
+// knows what Kai is waiting for.
 
 export const CONFIG = {
   ready: 0.8, // share of teachable required facts explained before Kai feels ready
   maxTurns: 30, // learner messages; Kai wraps up after this many regardless
-  maxFollowUps: 2, // per node, before the node is parked
-  listenWords: 45, // a long message that taught 2+ new facts gets "go on"
+  tries: 1, // Kai asks each fact's question once…
+  triesIfClose: 2, // …or twice when the answer was partly right (or wrong)
 };
 
 export type Move = {
   type: MoveType;
   node: string | null;
   seed: string | null; // a pre-checked question or line the writer may rephrase
+  fact?: string | null; // followUp, nudge: the fact the seed asks about
+  closure?: "explained" | "parked" | null; // close the previous idea first: "got it" or "let's come back to it"
+  cue?: "again" | "skip" | null; // followUp: re-ask after a reply that wasn't an answer / the learner didn't know
+  then?: Move | null; // answer: the question Kai carries on with
 };
 
 const PROBES = ["why", "whatIf", "compute"] as const;
@@ -29,54 +35,91 @@ export function isReady(bundle: Bundle, state: State): boolean {
   return p >= CONFIG.ready && goalsOk;
 }
 
-export function nextMove(bundle: Bundle, state: State, j: Judgement, learnerWords: number): Move {
-  const byId = new Map(bundle.nodes.map((n) => [n.id, n]));
+/** How often Kai asks a fact's question: once, or twice if the first answer was close. */
+const limitFor = (e: Entry | undefined) => (e && e.verdict !== "correct" ? CONFIG.triesIfClose : CONFIG.tries);
+
+/** The next required fact of a node Kai still lacks and may still ask about. */
+export function nextFact(n: Node, state: State, skip: string | null = null, ignoreTries = false) {
   const facts = latest(state);
-  const status = (n: Node) => nodeStatus(n, state, facts);
+  const m = memo(state, n.id);
+  return (
+    teachableRequired(n).find((f) => {
+      const e = facts.get(f.id);
+      if (e?.verdict === "correct" || f.id === skip) return false;
+      return ignoreTries || (m.tries[f.id] ?? 0) < limitFor(e);
+    }) ?? null
+  );
+}
 
-  if (isReady(bundle, state) || state.turn >= CONFIG.maxTurns) return { type: "wrapUp", node: null, seed: null };
+export function nextMove(bundle: Bundle, state: State, j: Judgement): Move {
+  const wrapUp: Move = { type: "wrapUp", node: null, seed: null };
+  if (isReady(bundle, state) || state.turn >= CONFIG.maxTurns) return wrapUp;
 
-  // 1. a question for Kai: answer from the notebook, then carry on with the focus
+  // 1. a question for Kai: answer from the notebook, then carry on with a question
   if (j.intent === "ask_kai") {
-    const f = state.focus ? byId.get(state.focus) : undefined;
-    return { type: "answer", node: f?.id ?? null, seed: f && status(f) !== "explained" ? f.probes.open : null };
+    const then = carryOn(bundle, state, j);
+    return then.type === "wrapUp" ? wrapUp : { type: "answer", node: then.node, seed: null, then };
   }
 
   // 2. a new wrong fact that matches a known misconception
   for (const v of j.facts) {
     if (v.verdict !== "wrong") continue;
-    const n = byId.get(v.fact.split(".")[0]!);
+    const n = bundle.nodes.find((x) => x.id === v.fact.split(".")[0]);
     const m = n?.misconception;
     if (!n || !m || state.contradicted.includes(m.id)) continue;
     const q = bundle.questions.contradictions.find((c) => c.misconception === m.id);
     if (q) return { type: "contradict", node: n.id, seed: q.question };
   }
 
-  // 3. the learner is in full flow: let them continue
-  const newCorrect = j.facts.filter((v) => v.verdict === "correct").length;
-  const f = state.focus ? byId.get(state.focus) : undefined;
-  if (f && newCorrect >= 2 && learnerWords >= CONFIG.listenWords && status(f) !== "explained" && state.last?.type !== "listen")
-    return { type: "listen", node: f.id, seed: null };
-
-  // 4. stay on the focus node: misconception, one deepening question, or a follow-up
-  if (f) {
-    const m = memo(state, f.id);
-    if (status(f) === "explained") {
-      if (f.misconception && !m.voiced) return { type: "misconception", node: f.id, seed: f.misconception.says };
-      if (!m.probed) {
-        const kind = PROBES[bundle.nodes.indexOf(f) % PROBES.length]!;
-        return { type: "deepen", node: f.id, seed: f.probes[kind] };
-      }
-    } else if (teachableRequired(f).length && !m.parked && m.followUps < CONFIG.maxFollowUps && m.attempts > 0) {
-      return { type: "followUp", node: f.id, seed: null };
-    }
+  // 3. "what's next?" before the idea is done: ask once about what's missing, then let it go
+  const f = focusNode(bundle, state);
+  if (j.intent === "move_on" && f && nodeStatus(f, state) !== "explained") {
+    const fact = nextFact(f, state, null, true);
+    if (fact && !memo(state, f.id).nudged) return { type: "nudge", node: f.id, seed: fact.ask ?? null, fact: fact.id };
+    return moveOn(bundle, state, j, "parked");
   }
 
-  // 5. move on to the best next idea
-  const n = pickNext(bundle, state, j);
-  if (n) return { type: "open", node: n.id, seed: n.probes.open };
+  return carryOn(bundle, state, j);
+}
 
-  return { type: "wrapUp", node: null, seed: null };
+const focusNode = (bundle: Bundle, state: State) => (state.focus ? bundle.nodes.find((n) => n.id === state.focus) : undefined);
+
+/** Stay on the focus idea while Kai still has a question about it; otherwise move on. */
+function carryOn(bundle: Bundle, state: State, j: Judgement): Move {
+  const f = focusNode(bundle, state);
+  if (!f) return moveOn(bundle, state, j, null);
+  const m = memo(state, f.id);
+
+  if (nodeStatus(f, state) === "explained") {
+    // the idea was completed by this very message: say so before anything else
+    const closure = state.last?.node === f.id && ["open", "followUp", "nudge"].includes(state.last.type) ? "explained" : null;
+    if (f.misconception && !m.voiced) return { type: "misconception", node: f.id, seed: f.misconception.says, closure };
+    if (!m.probed) return { type: "deepen", node: f.id, seed: f.probes[PROBES[Math.max(0, bundle.nodes.indexOf(f)) % PROBES.length]!], closure };
+    return moveOn(bundle, state, j, closure);
+  }
+
+  if (!teachableRequired(f).length) return moveOn(bundle, state, j, null);
+
+  // a reply that wasn't an answer at all (chit-chat, gibberish): ask the same question again
+  const lastFact = state.last?.node === f.id ? (state.last.fact ?? null) : null;
+  if (j.intent === "off_topic" && lastFact && !j.facts.length) {
+    const fact = f.facts.find((x) => x.id === lastFact);
+    if (fact && latest(state).get(fact.id)?.verdict !== "correct")
+      return { type: "followUp", node: f.id, seed: fact.ask ?? null, fact: fact.id, cue: "again" };
+  }
+
+  // the next fact Kai still lacks; "I don't know" skips the fact just asked
+  const skip = j.intent === "unsure" ? lastFact : null;
+  const fact = nextFact(f, state, skip);
+  if (fact) return { type: "followUp", node: f.id, seed: fact.ask ?? null, fact: fact.id, cue: skip ? "skip" : null };
+
+  // every question asked as often as allowed: set the idea aside for now
+  return moveOn(bundle, state, j, "parked");
+}
+
+function moveOn(bundle: Bundle, state: State, j: Judgement, closure: Move["closure"]): Move {
+  const n = pickNext(bundle, state, j);
+  return n ? { type: "open", node: n.id, seed: n.probes.open, closure } : { type: "wrapUp", node: null, seed: null };
 }
 
 /** Score unlocked, unexplained nodes; fall back to parked ones once everything else is done. */

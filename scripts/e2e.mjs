@@ -1,7 +1,8 @@
 // End-to-end walkthrough in a real browser. Start the app first (pnpm build && pnpm start),
 // then: pnpm e2e [baseUrl]. Screenshots go to .e2e/.
 // Uses your installed Chrome; set CHROME_PATH if it isn't in the default place.
-// Against a server without an OpenRouter key this runs in demo mode, so it costs nothing.
+// Against a server in demo mode it costs nothing. With a key in .env, start the server with
+// DOCENDO_DEMO=1, or every message goes to OpenRouter (~60 model calls per run).
 // It sends ~20 messages quickly: start the server with SESSION_TURNS_PER_MIN=200 for the run.
 
 import puppeteer from "puppeteer-core";
@@ -75,7 +76,8 @@ while (turns < 32) {
   await page.keyboard.press("Enter");
   await page.waitForFunction((n) => {
     const s = JSON.parse(localStorage.getItem("docendo:session:v1") || "null");
-    return s && s.chat.turns.filter((t) => t.role === "kai").length > n;
+    // wait for the saved state too: it lands after the reply, and the next message depends on Kai's focus
+    return s && s.chat.turns.filter((t) => t.role === "kai").length > n && s.chat.state?.turn === n;
   }, { timeout: 30000 }, turns + 1);
   turns++;
   (await saved(page)).chat.turns.forEach((t) => t.mood && moods.add(t.mood));

@@ -20,7 +20,7 @@ export default function MindPage({ graph }: { graph: GraphView }) {
         <Link className="btn small" style={{ alignSelf: "flex-start", marginBottom: 16 }} href={saved.step === "results" ? "/results" : saved.step === "exercises" ? "/exercises" : "/teach"}>
           <ArrowLeft size={16} /> Back to {saved.step === "results" ? "results" : saved.step === "exercises" ? "the exercises" : "the chat"}
         </Link>
-        <MindView graph={graph} mind={saved.chat.mind} notebook={saved.chat.state?.notebook ?? []} />
+        <MindView graph={graph} mind={saved.chat.mind} />
       </main>
     </div>
   );

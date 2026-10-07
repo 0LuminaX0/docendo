@@ -4,7 +4,6 @@ import type { Judgement } from "./judge";
 import { CONFIG, isReady, nextMove, type Move } from "./policy";
 import { blankMemo, latest, memo, nodeStatus, progress, type State } from "./state";
 import { mindView, type Mind } from "./mind";
-import { wordCount } from "./text";
 import type { Turn } from "./writer";
 
 /**
@@ -12,7 +11,7 @@ import type { Turn } from "./writer";
  * great    2+ facts newly explained, an idea fully explained, or Kai is ready
  * okay     one new fact, partly explained ones, or facts Kai already knew (consistent, nothing new)
  * confused no lesson fact at all, a wrong fact, or "I'm not sure"
- * neutral  Kai is answering the learner's question, or just opening
+ * neutral  Kai is answering the learner's question, the learner asked to move on, or just opening
  */
 export type Mood = "neutral" | "great" | "okay" | "confused";
 
@@ -30,7 +29,7 @@ export type TurnResult = {
   done: boolean;
   help: { video: string; start: number; end: number } | null; // for the current question
   helpAvailable: boolean; // answer first: help opens after one attempt on the current idea
-  trace: { move: Move; judged: Judgement["facts"]; leaked: string[]; fallback: boolean }; // for logs, not shown
+  trace: { move: Move; intent: Judgement["intent"]; judged: Judgement["facts"]; dropped: Judgement["dropped"]; leaked: string[]; fallback: boolean }; // for logs, not shown
 };
 
 export function opening(bundle: Bundle, state: State): string {
@@ -38,7 +37,7 @@ export function opening(bundle: Bundle, state: State): string {
   return `Hi! I'm Kai. I missed the lecture on ${bundle.title.toLowerCase()}, and I heard you just watched it. Could you teach me? ${first?.probes.open ?? "Where should we start?"}`;
 }
 
-/** Apply the judgement to a copy of the state: notebook, used terms, attempts on the focus. */
+/** Apply the judgement to a copy of the state: notebook, used terms, attempts on the focus, unparking. */
 export function applyJudgement(state: State, j: Judgement): State {
   const next: State = structuredClone(state);
   next.turn += 1;
@@ -50,10 +49,12 @@ export function applyJudgement(state: State, j: Judgement): State {
   }
   if (next.notebook.length > 300) next.notebook = next.notebook.slice(-300);
   for (const t of j.termsUsed) if (!next.usedTerms.includes(t)) next.usedTerms.push(t);
-  if (next.focus) {
-    const m = { ...memo(next, next.focus) };
-    m.attempts += 1;
-    next.memo[next.focus] = m;
+  // only a real answer counts as having a go (it unlocks the help card); chit-chat doesn't
+  if (next.focus && ["explain", "answer", "unsure"].includes(j.intent)) next.memo[next.focus] = { ...memo(next, next.focus), attempts: memo(next, next.focus).attempts + 1 };
+  // explaining any fact of a set-aside idea brings it back
+  for (const v of j.facts) {
+    const id = v.fact.split(".")[0]!;
+    if (v.verdict === "correct" && next.memo[id]?.parked) next.memo[id] = { ...memo(next, id), parked: false };
   }
   return next;
 }
@@ -66,18 +67,29 @@ export function applyMove(bundle: Bundle, state: State, move: Move): State {
     f(m);
     next.memo[id] = m;
   };
+  const asked = (id: string, fact: string | null | undefined) => touch(id, (m) => fact && (m.tries = { ...m.tries, [fact]: (m.tries[fact] ?? 0) + 1 }));
   switch (move.type) {
     case "open":
-      if (next.focus && next.focus !== move.node) {
+      if (next.focus && next.focus !== move.node && move.closure === "parked") {
         const old = bundle.nodes.find((n) => n.id === next.focus);
-        if (old && nodeStatus(old, next) !== "explained" && memo(next, old.id).followUps >= CONFIG.maxFollowUps) touch(old.id, (m) => (m.parked = true));
+        if (old && nodeStatus(old, next) !== "explained") touch(old.id, (m) => (m.parked = true));
       }
       next.focus = move.node;
-      if (move.node) touch(move.node, (m) => ((m.attempts = 0), (m.followUps = 0), (m.parked = false)));
+      // a fresh start on the idea, also when a set-aside one comes back
+      if (move.node) touch(move.node, (m) => ((m.attempts = 0), (m.followUps = 0), (m.parked = false), (m.tries = {}), (m.nudged = false)));
       break;
     case "followUp":
       if (move.node) touch(move.node, (m) => (m.followUps += 1));
+      // re-asking after a reply that wasn't an answer doesn't use up the question
+      if (move.node && move.cue !== "again") asked(move.node, move.fact);
       break;
+    case "nudge":
+      if (move.node) touch(move.node, (m) => (m.nudged = true));
+      if (move.node) asked(move.node, move.fact);
+      break;
+    case "answer":
+      // answering the learner's question, then carrying on: the follow-on question is what changes the state
+      return move.then ? applyMove(bundle, state, move.then) : { ...next, last: { type: "answer", node: move.node, fact: null } };
     case "deepen":
       if (move.node) touch(move.node, (m) => (m.probed = true));
       break;
@@ -93,7 +105,7 @@ export function applyMove(bundle: Bundle, state: State, move: Move): State {
       next.done = true;
       break;
   }
-  next.last = { type: move.type, node: move.node };
+  next.last = { type: move.type, node: move.node, fact: move.fact ?? null };
   return next;
 }
 
@@ -106,7 +118,7 @@ export async function takeTurn(
   const j = await deps.judge(bundle, input.message, kaiLast);
   let state = applyJudgement(input.state, j);
 
-  const move = nextMove(bundle, state, j, wordCount(input.message));
+  const move = nextMove(bundle, state, j);
   state = applyMove(bundle, state, move);
 
   const mood = moodFor(bundle, input.state, state, j, move);
@@ -121,8 +133,9 @@ export async function takeTurn(
     const again = forbiddenTerms(bundle, state, reply);
     if (again.length) {
       fallback = true;
-      const seedOk = move.seed && forbiddenTerms(bundle, state, move.seed).length === 0;
-      reply = seedOk ? move.seed! : bundle.questions.fallbacks.dontKnow[state.turn % bundle.questions.fallbacks.dontKnow.length]!;
+      const seed = move.seed ?? move.then?.seed ?? null;
+      const seedOk = seed && forbiddenTerms(bundle, state, seed).length === 0;
+      reply = seedOk ? seed : bundle.questions.fallbacks.dontKnow[state.turn % bundle.questions.fallbacks.dontKnow.length]!;
     }
     leaked = [...new Set([...leaked, ...again])];
   }
@@ -138,13 +151,13 @@ export async function takeTurn(
     done,
     help: !done && focus?.help[0] ? focus.help[0] : null,
     helpAvailable: !!focus && memo(state, focus.id).attempts > 0,
-    trace: { move, judged: j.facts, leaked, fallback },
+    trace: { move, intent: j.intent, judged: j.facts, dropped: j.dropped ?? [], leaked, fallback },
   };
 }
 
 export function moodFor(bundle: Bundle, before: State, after: State, j: Judgement, move: Move): Mood {
   if (move.type === "wrapUp") return "great";
-  if (j.intent === "ask_kai") return "neutral";
+  if (j.intent === "ask_kai" || (j.intent === "move_on" && !j.facts.length)) return "neutral";
   const old = latest(before);
   const newCorrect = j.facts.filter((v) => v.verdict === "correct" && old.get(v.fact)?.verdict !== "correct").length;
   const newPartial = j.facts.filter((v) => v.verdict === "partial" && !old.has(v.fact)).length;

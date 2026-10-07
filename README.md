@@ -64,9 +64,9 @@ The lesson is two videos, about 15 minutes together:
 
 The lesson is stored as a small knowledge graph: 17 ideas (regret, ε-greedy, the UCB bonus, …), each with two to four facts, the ideas it builds on, and the learning goals it serves. On every message:
 
-1. A **judge** (a language model) decides which facts your message explains, and how well. It has to quote your exact words, or the verdict is dropped.
+1. A **judge** (a language model) decides which facts your message explains, and how well. Informal wording and examples count. It has to quote your own words, or the verdict is dropped.
 2. Those facts go into **Kai's notebook**, in your words.
-3. A small deterministic **policy** picks Kai's next move. It can ask a follow-up, check its understanding with a "why" or "what if" question, voice a common misconception for you to correct, or move on to the next idea.
+3. A small deterministic **policy** picks Kai's next move. Kai keeps one beginner's question for each fact it needs, and asks about one missing fact at a time. When an answer only partly lands, it asks once more, then moves on. When an idea is complete, Kai says so, checks it with a "why" or "what if" question or voices a common misconception for you to correct, and then moves on to the next idea. Every message from Kai ends with one clear question.
 4. A **writer** (a language model) phrases Kai's reply. It sees only the notebook and the chosen move, never the lesson.
 5. A **term check** blocks lesson terms you haven't used yet. A leaking reply is rewritten once and otherwise replaced with a safe question.
 
@@ -74,7 +74,7 @@ The lesson is stored as a small knowledge graph: 17 ideas (regret, ε-greedy, th
 
 **Kai's face** reacts to each answer: delighted when you explained two or more new things, content when you explained one, confused when nothing landed or something was wrong.
 
-**Kai's mind** shows the graph live: which ideas are untaught, touched on, explained, or set aside, what Kai is asking about, and what you told it about each idea. Open it with the toggle above the chat, or at `/mind` in a second window.
+**Kai's mind** shows the graph live: which ideas are untaught, started, done, or set aside, and what Kai is asking right now. For each idea it lists the questions Kai has asked, what you answered and whether it landed. Questions Kai hasn't asked yet appear only as a count, so the view never gives away the lesson. Open it with the toggle above the chat, or at `/mind` in a second window.
 
 
 ## Running it

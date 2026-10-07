@@ -16,15 +16,18 @@ export const Entry = z.object({
 export type Entry = z.infer<typeof Entry>;
 
 export const NodeMemo = z.object({
-  attempts: z.number().int().min(0).max(100), // learner replies while this node was the focus
+  attempts: z.number().int().min(0).max(100), // real answers (not chit-chat) while this node was the focus
   followUps: z.number().int().min(0).max(100),
   probed: z.boolean(),
   voiced: z.boolean(),
   parked: z.boolean(),
+  tries: z.record(z.string().max(12), z.number().int().min(0).max(100)).default({}), // times Kai asked each fact's question
+  nudged: z.boolean().default(false), // "before we move on…" already asked once
 });
 export type NodeMemo = z.infer<typeof NodeMemo>;
 
-export const MoveType = z.enum(["open", "followUp", "deepen", "misconception", "contradict", "answer", "listen", "wrapUp"]);
+// "listen" is no longer chosen (every Kai message ends with a question); kept so older saved states still parse
+export const MoveType = z.enum(["open", "followUp", "nudge", "deepen", "misconception", "contradict", "answer", "listen", "wrapUp"]);
 export type MoveType = z.infer<typeof MoveType>;
 
 export const State = z.object({
@@ -35,14 +38,14 @@ export const State = z.object({
   memo: z.record(z.string().max(12), NodeMemo),
   contradicted: z.array(z.string().max(60)).max(50),
   usedTerms: z.array(z.string().max(60)).max(300), // lesson terms the learner has used
-  last: z.object({ type: MoveType, node: z.string().max(12).nullable() }).nullable(),
+  last: z.object({ type: MoveType, node: z.string().max(12).nullable(), fact: z.string().max(12).nullable().default(null) }).nullable(),
   done: z.boolean(),
 });
 export type State = z.infer<typeof State>;
 
 export type Node = Bundle["nodes"][number];
 
-export const blankMemo = (): NodeMemo => ({ attempts: 0, followUps: 0, probed: false, voiced: false, parked: false });
+export const blankMemo = (): NodeMemo => ({ attempts: 0, followUps: 0, probed: false, voiced: false, parked: false, tries: {}, nudged: false });
 
 export function initialState(bundle: Bundle): State {
   const first = bundle.nodes.find((n) => n.kind === "core") ?? null;
@@ -54,7 +57,7 @@ export function initialState(bundle: Bundle): State {
     memo: {},
     contradicted: [],
     usedTerms: [],
-    last: first ? { type: "open", node: first.id } : null,
+    last: first ? { type: "open", node: first.id, fact: null } : null,
     done: false,
   };
 }
@@ -98,4 +101,4 @@ export function factScore(bundle: Bundle, state: State) {
 
 export const progress = (bundle: Bundle, state: State): number => factScore(bundle, state).score;
 
-export const memo = (state: State, id: string): NodeMemo => state.memo[id] ?? blankMemo();
+export const memo = (state: State, id: string): NodeMemo => ({ ...blankMemo(), ...state.memo[id] });

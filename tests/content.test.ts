@@ -30,7 +30,7 @@ const node = (id: string, needs: string[], lexicon: string[], extra: Partial<Nod
   needs,
   goals: ["LG1"],
   facts: [
-    { id: `${id}.f1`, text: "A fact that is long enough.", required: true },
+    { id: `${id}.f1`, text: "A fact that is long enough.", required: true, ask: "A question that is long enough?" },
     { id: `${id}.f2`, text: "Another fact long enough.", required: false },
   ],
   lexicon,
@@ -69,6 +69,17 @@ describe("checkGraph", () => {
 
   it("accepts a small valid graph", () => {
     expect(errors(graph([node("n01", [], ["alpha"]), node("n02", ["n01"], ["beta"])]))).toEqual([]);
+  });
+
+  it("requires a question per required fact, using only the prerequisites' terms", () => {
+    const n02 = node("n02", ["n01"], ["beta"]);
+    const noAsk = { ...n02, facts: n02.facts.map((f) => ({ ...f, ask: undefined })) };
+    expect(errors(graph([node("n01", [], ["alpha"]), noAsk])).join()).toMatch(/no question/);
+    const leaky = { ...n02, facts: n02.facts.map((f) => (f.required ? { ...f, ask: "Is beta the same as gamma here?" } : f)) };
+    const n03 = node("n03", ["n02"], ["gamma"]);
+    expect(errors(graph([node("n01", [], ["alpha"]), leaky, n03])).join()).toMatch(/"gamma" from n03/);
+    const ok = { ...n02, facts: n02.facts.map((f) => (f.required ? { ...f, ask: "Is that like alpha, then?" } : f)) };
+    expect(errors(graph([node("n01", [], ["alpha"]), ok]))).toEqual([]);
   });
 
   it("finds cycles", () => {

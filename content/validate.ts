@@ -88,6 +88,11 @@ export function checkGraph(
     for (const key of ["why", "whatIf", "compute"] as const)
       for (const hit of termsIn(n.probes[key], foreign(true)))
         err(n.id, `${key} probe uses "${hit.term}" from ${hit.node}, which is not a prerequisite`);
+    for (const f of n.facts) {
+      if (f.required && n.kind === "core" && !f.ask) err(f.id, "required fact has no question (ask) for Kai to follow up with");
+      // asked while the idea may not be taught yet: only prerequisites' terms
+      if (f.ask) for (const hit of termsIn(f.ask, foreign(false))) err(f.id, `question uses "${hit.term}" from ${hit.node}, which may not be taught when it is asked`);
+    }
     if (n.misconception) {
       for (const hit of termsIn(n.misconception.says, foreign(true)))
         err(n.id, `misconception line uses "${hit.term}" from ${hit.node}, which is not a prerequisite`);

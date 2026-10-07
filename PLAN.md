@@ -13,13 +13,15 @@ Single-version MVP: watch → teach Kai until it feels ready → 10 exercises. T
 - [x] Tutor engine (`engine/tutor`): judge with quote check, notebook, deterministic policy, writer, term-leak check with fallback; offline demo mode
 - [x] Web app: welcome, watch (2 videos), teach chat (help card with video timestamps, Kai's moods, readiness meter), exercises (graded on the server), results
 - [x] Security: server-only secrets, signed session tokens, Origin check, zod validation and size caps, per-learner/per-network/daily rate limits (Upstash or memory), CSP and security headers; build scanned for leaked answers and keys
-- [x] Tests (34) + `pnpm e2e` browser walkthrough (demo mode, 10 checks: ready within 30 messages, all three reactions, Kai's mind, server grading, skip from the start, no sideways scroll at phone width)
+- [x] Tests (49) + `pnpm e2e` browser walkthrough (demo mode, 10 checks: ready within 30 messages, all three reactions, Kai's mind, server grading, skip from the start, no sideways scroll at phone width)
 - [x] 2026-10-07 round 2: Kai's faces per message (great / okay / confused + neutral, thinking), max 30 messages, "I've taught all I can" from the start, partial facts count ½ (never downgrade a correct one), "Kai's mind" view (toggle + `/mind`, live graph, goal progress, scoring explained, what you told Kai), video durations, retry on errors, auto-growing input, `pnpm chat` terminal tester, mood passed to the writer so words match the face
+
+- [x] 2026-10-07 round 3 (after the first live test): one question per required fact (`ask`), follow-ups ask the next missing fact, "what's next?" gets one "before we move on…", ideas close with "got it" or "let's come back to it", every Kai message ends with a question; gibberish no longer parks ideas and a correct fact unparks one; fuzzy quote check; judge fact ids constrained by schema (the live judge's "id: text" answers had been dropping every verdict); Kai's mind lists asked questions with the learner's answers (unasked ones as a count only), bonus status, goal shapes instead of dots
 
 ## Next
 
 - [ ] **Deploy**: GitHub repo → Vercel import → `SESSION_SECRET` → Upstash Redis → redeploy (README)
-- [ ] **OpenRouter key** with a credit limit → set `OPENROUTER_API_KEY` → test real Kai end to end; tune the judge prompt on real explanations
+- [ ] **OpenRouter key** (now in `.env`) with a credit limit → test real Kai end to end in the browser; tune the judge prompt on real explanations
 - [ ] Tutee name (placeholder: Kai)
 - [x] Videos cut to ~15 min: ritvikmath part 1 + DataMListic (UCB, regret growth). 4 required facts remain outside the videos; Kai doesn't wait for them and the exercises don't test them
 - [ ] Exercises reviewed by a team member who didn't write the prompts
