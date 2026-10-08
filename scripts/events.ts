@@ -12,10 +12,13 @@ import { Redis } from "@upstash/redis";
 const EVENTS_KEY = "docendo:events:v1";
 type Ev = { t: string; sid: string; at: string; [k: string]: unknown };
 
-try {
-  process.loadEnvFile?.(".env");
-} catch {
-  // no .env: use the environment as is
+// .env, and .env.local (what `vercel env pull .env.local` writes)
+for (const f of [".env", ".env.local"]) {
+  try {
+    process.loadEnvFile?.(f);
+  } catch {
+    // file missing: use the environment as is
+  }
 }
 
 async function load(from?: string): Promise<Ev[]> {
@@ -26,8 +29,8 @@ async function load(from?: string): Promise<Ev[]> {
     return ok;
   };
   if (from) return parse(readFileSync(from, "utf8").split("\n"));
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   if (url && token) {
     const redis = new Redis({ url, token, automaticDeserialization: false });
     const n = await redis.llen(EVENTS_KEY);

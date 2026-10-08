@@ -10,6 +10,9 @@ const Env = z.object({
   ACCESS_CODE: z.string().min(4).max(64).optional(),
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(10).optional(),
+  // the same database under the names Vercel's Upstash integration may use
+  KV_REST_API_URL: z.url().optional(),
+  KV_REST_API_TOKEN: z.string().min(10).optional(),
   DOCENDO_DEMO: z.enum(["0", "1"]).optional(), // "1" forces the offline Kai even when a key is set
   DAILY_TURN_LIMIT: z.coerce.number().int().positive().default(1500), // whole site, per UTC day
   SESSION_TURN_LIMIT: z.coerce.number().int().positive().default(45), // per learner session (Kai wraps up at 30)
@@ -37,7 +40,12 @@ export class ConfigError extends Error {}
 export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
   accessCode: env.ACCESS_CODE,
-  upstash: env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN ? { url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN } : null,
+  upstash:
+    env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
+      ? { url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN }
+      : env.KV_REST_API_URL && env.KV_REST_API_TOKEN
+        ? { url: env.KV_REST_API_URL, token: env.KV_REST_API_TOKEN }
+        : null,
   dailyTurnLimit: env.DAILY_TURN_LIMIT,
   sessionTurnLimit: env.SESSION_TURN_LIMIT,
   sessionTurnsPerMin: env.SESSION_TURNS_PER_MIN,
