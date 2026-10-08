@@ -141,7 +141,7 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
     name: "judgement",
     schema: replySchema(bundle),
     maxTokens: 1200,
-    timeoutMs: limits.timeoutMs ?? 20_000,
+    timeoutMs: limits.timeoutMs ?? 15_000, // two tries of 15 s plus the writer's 25 s stay under the chat route's 60 s
     retries: limits.retries ?? 1,
     messages: [
       { role: "system", content: SYSTEM },

@@ -9,6 +9,9 @@ export const PracticeItem = z
     id: z.string(),
     round: z.number().int().min(1).max(3).default(1), // round 2 repeats round 1's ideas in new settings
     idea: z.string().optional(), // which idea it practises (greedy, epsilon, ucb), to pair items across rounds
+    // recursive feedback: the facts without which the answer can't be reached. Kai can only be right when its
+    // notebook holds all of them, correctly explained (engine/tutor/solve.ts, gate). Default: every step's facts.
+    needs: z.array(z.string()).min(1).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),
     prompt: z.string(),

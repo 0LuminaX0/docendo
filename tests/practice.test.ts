@@ -173,3 +173,43 @@ describe("misconceptions Kai still believes", () => {
     expect(activeMisconceptions(earlier)).toHaveLength(1);
   });
 });
+
+import { gate, solve, type Solution } from "../engine/tutor/solve";
+
+describe("the gate: Kai can't be right without the facts", () => {
+  const base = initialState(bundle);
+  const p3 = item("p3");
+  const ucb = { ...base, notebook: [{ fact: "n11.f2", verdict: "correct" as const, words: "UCB adds a bonus to each average and picks the highest total", turn: 1 }] };
+
+  it("opens only with every needed fact explained correctly and no misconception left about them", () => {
+    expect(gate(p3, base)).toMatchObject({ needs: ["n11.f2"], missing: ["n11.f2"], canBeRight: false });
+    expect(gate(p3, ucb).canBeRight).toBe(true);
+    expect(gate(p3, { ...ucb, notebook: [{ ...ucb.notebook[0]!, verdict: "partial" as const }] }).canBeRight).toBe(false); // vague isn't enough
+    expect(gate(p3, { ...ucb, misconceptions: [{ node: "n11", words: "UCB picks at random", turn: 2 }] }).canBeRight).toBe(false);
+    for (const p of practice.items) for (const f of p.needs ?? []) expect(p.steps.some((s) => s.facts.includes(f)), `${p.id} needs ${f}`).toBe(true);
+  });
+
+  it("replaces a model's right answer without the facts by a wrong guess", async () => {
+    const lucky = async (): Promise<Solution> => ({ steps: [{ text: "I add the bonus.", notes: [] }], answer: "B", correct: true, notes: [], leaked: [], by: "model", gate: gate(p3, base) });
+    let why = "";
+    const s = await solve(bundle, p3, base, { demo: false, model: lucky, onError: (e) => (why = String(e)) });
+    expect(s.correct).toBe(false);
+    expect(s.by).toBe("offline");
+    expect(why).toMatch(/without the facts/);
+    // with the facts, the model's right answer stands
+    const earned = async (): Promise<Solution> => ({ ...(await lucky()), gate: gate(p3, ucb) });
+    expect((await solve(bundle, p3, ucb, { demo: false, model: earned })).correct).toBe(true);
+  });
+
+  it("guesses at random among the wrong answers, numbers included", () => {
+    for (const p of practice.items) {
+      const guesses = new Set<string>();
+      for (let t = 0; t < 30; t++) {
+        const s = offlineSolve(bundle, p, { ...base, notebook: [{ fact: "n01.f1", verdict: "correct" as const, words: `note ${t}`, turn: 1 }] });
+        expect(s.correct, p.id).toBe(false);
+        guesses.add(s.answer);
+      }
+      expect(guesses.size, `${p.id} guesses vary`).toBeGreaterThan(1);
+    }
+  });
+});

@@ -15,10 +15,10 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | 1 Watch | Done: 8:12 lesson, three video parts in one player |
 | 2 Teach Kai | Done: judge with quote check (facts and open-ended misconceptions), notebook, policy, writer with term filter, readiness 80% or 50% after 8 min, Kai's mind; participants can stop after 12 messages or 8 min |
 | 3 Practice, direct | Done: 2 rounds × 3 problems, two tries, Rewatch, 10 min, then the test |
-| 3 Practice, recursive | First version: Kai solves with the LLM from its notes, light, click a step to see the notes behind it, one correction (judged like teaching), second try; offline fallback; team sessions switch views |
+| 3 Practice, recursive | First version, with a code-enforced gate (Kai is right only with every needed fact taught correctly; otherwise a guess that can't hit the key): Kai solves with the LLM from its notes, light, click a step to see the notes behind it, one correction (judged like teaching), second try; offline fallback; team sessions switch views |
 | 4 Final test | Done: 10 MCQs checked against the item rules; results with explanations and practice solutions |
 | Research log | Done: every turn, try, click and video event; notebook snapshots; `pnpm events export` |
-| Checks | 75 unit tests (incl. recomputed keys), `pnpm e2e` (23 browser checks on its own safe server, including a scan of everything the browser downloads for solutions, explanations and lesson facts) |
+| Checks | 78 unit tests (incl. recomputed keys), `pnpm e2e` (23 browser checks on its own safe server, including a scan of everything the browser downloads for solutions, explanations and lesson facts) |
 
 ## Next, in order
 

@@ -141,6 +141,7 @@ function tables(events: Ev[]) {
       droppedVerdicts: sum(chat.map((c) => ((c.dropped as unknown[]) ?? []).length)),
       leakTurns: count(chat, (c) => ((c.leaked as unknown[]) ?? []).length > 0),
       fallbacks: count(chat, (c) => !!c.fallback),
+      degradedTurns: count(chat, (c) => ((c.degraded as unknown[]) ?? []).length > 0), // offline judge or writer: the model account was out of credits
       chatErrors: of("chat_error").length,
       factsCorrect: (lastTurn?.score as { correct?: number })?.correct ?? 0,
       factsPartial: (lastTurn?.score as { partial?: number })?.partial ?? 0,

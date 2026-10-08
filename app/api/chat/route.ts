@@ -27,18 +27,36 @@ const Body = z.object({
   pastedChars: z.number().int().min(0).max(100_000).optional(),
 });
 
-/** Kai's judge and writer for one request; every model call is collected for the log. */
-function depsFor(calls: LlmCall[]): Deps {
+/** The model account is out of credits (or its in-flight budget): resending won't help. */
+const outOfCredits = (e: unknown) => e instanceof Error && /OpenRouter 402\b/.test(e.message);
+
+/**
+ * Kai's judge and writer for one request; every model call is collected for the
+ * log. If the model account runs out of credits mid-study, the turn falls back
+ * to the offline judge and writer rather than breaking the session (logged as
+ * `degraded`); other errors still fail the turn so the learner can resend.
+ */
+function depsFor(calls: LlmCall[], degraded: string[]): Deps {
   const onCall = (c: LlmCall) => calls.push(c);
-  return config.demo
-    ? {
-        judge: async (b, m) => mockJudge(b, m),
-        write: async (b, s, move, _h, mood) => mockWrite(b, s, move, mood),
-      }
-    : {
-        judge: (b, m, kai) => llmJudge(b, m, kai, onCall),
-        write: (b, s, move, h, mood, avoid) => llmWrite(b, s, move, h, avoid, mood, onCall),
-      };
+  if (config.demo)
+    return {
+      judge: async (b, m) => mockJudge(b, m),
+      write: async (b, s, move, _h, mood) => mockWrite(b, s, move, mood),
+    };
+  return {
+    judge: (b, m, kai) =>
+      llmJudge(b, m, kai, onCall).catch((e) => {
+        if (!outOfCredits(e)) throw e;
+        degraded.push("judge");
+        return mockJudge(b, m);
+      }),
+    write: (b, s, move, h, mood, avoid) =>
+      llmWrite(b, s, move, h, avoid, mood, onCall).catch((e) => {
+        if (!outOfCredits(e)) throw e;
+        degraded.push("writer");
+        return mockWrite(b, s, move, mood);
+      }),
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -67,7 +85,8 @@ export async function POST(req: NextRequest) {
   const t0 = Date.now();
   const { message, state: before, elapsedMs } = body.data;
   try {
-    const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls));
+    const degraded: string[] = [];
+    const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls, degraded));
     const tr = result.trace;
     const old = latest(before);
     const score = factScore(bundle, result.state);
@@ -106,6 +125,7 @@ export async function POST(req: NextRequest) {
       readyReason: tr.readyReason,
       helpAvailable: result.helpAvailable,
       llm: calls,
+      degraded, // parts that fell back offline because the model account was out of credits
       latencyMs: Date.now() - t0,
     });
     if (result.done)

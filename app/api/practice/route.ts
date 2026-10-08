@@ -110,6 +110,8 @@ export async function POST(req: NextRequest) {
       steps: sol.steps,
       notes: sol.notes,
       leaked: sol.leaked,
+      gate: sol.gate, // the facts this problem needs, which were missing, misconceptions still believed: Kai can only be right with all of them
+
       by: sol.by, // model, or offline (demo mode, or the model failed)
       error,
       msOnProblem: body.data.msOnProblem ?? null,

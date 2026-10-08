@@ -1,10 +1,11 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
   "minutes": 10,
-  "note": "Two rounds of three problems. Round 2 matches round 1 idea by idea (greedy locking in, ε-greedy's random picks, UCB's score), in new settings, so a correction in round 1 can carry over to round 2. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on, so the recursive condition can build Kai's solution from the learner's notebook. The final test uses other settings (banner ads, coffee machines, a study app, podcasts).",
+  "note": "Two rounds of three problems. Round 2 matches round 1 idea by idea (greedy locking in, ε-greedy's random picks, UCB's score), in new settings, so a correction in round 1 can carry over to round 2. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on, and `needs` lists the facts without which the answer can't be reached: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. The final test uses other settings (banner ads, coffee machines, a study app, podcasts).",
   "items": [
     {
       "id": "p1",
+      "needs": ["n05.f1", "n05.f2"],
       "round": 1,
       "idea": "greedy",
       "title": "Greedy gets stuck",
@@ -25,6 +26,7 @@
     },
     {
       "id": "p2",
+      "needs": ["n07.f1", "n07.f2"],
       "round": 1,
       "idea": "epsilon",
       "title": "An explore day",
@@ -45,6 +47,7 @@
     },
     {
       "id": "p3",
+      "needs": ["n11.f2"],
       "round": 1,
       "idea": "ucb",
       "title": "Which truck does UCB pick?",
@@ -65,6 +68,7 @@
     },
     {
       "id": "p4",
+      "needs": ["n05.f1", "n05.f2"],
       "round": 2,
       "idea": "greedy",
       "title": "Greedy and the headlines",
@@ -85,6 +89,7 @@
     },
     {
       "id": "p5",
+      "needs": ["n07.f1", "n07.f2"],
       "round": 2,
       "idea": "epsilon",
       "title": "How often ε-greedy shows its favourite",
@@ -101,6 +106,7 @@
     },
     {
       "id": "p6",
+      "needs": ["n11.f2", "n12.f1"],
       "round": 2,
       "idea": "ucb",
       "title": "After B has been tried more",

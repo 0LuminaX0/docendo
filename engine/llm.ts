@@ -59,7 +59,7 @@ export async function chatJson<T extends z.ZodType>(opts: {
   temperature?: number;
   maxTokens?: number;
   retries?: number;
-  timeoutMs?: number; // per attempt; a timeout is not retried
+  timeoutMs?: number; // per attempt; a timeout uses up an attempt like an invalid reply
 }): Promise<{ data: z.infer<T>; usage: Usage; ms: number }> {
   const { model, messages, schema, name, temperature = 0, maxTokens = 4000, retries = 2, timeoutMs = TIMEOUT_MS } = opts;
   const body = {
@@ -78,16 +78,26 @@ export async function chatJson<T extends z.ZodType>(opts: {
   let lastError = "";
   for (let attempt = 0; attempt <= retries; attempt++) {
     const t0 = Date.now();
-    const res = await fetch(URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey()}`,
-        "Content-Type": "application/json",
-        "X-Title": "Docendo",
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    let res: Response;
+    try {
+      res = await fetch(URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey()}`,
+          "Content-Type": "application/json",
+          "X-Title": "Docendo",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (e) {
+      // a timeout gets one more go while attempts remain; anything else is final
+      if (e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError") && attempt < retries) {
+        lastError = `timed out after ${timeoutMs} ms`;
+        continue;
+      }
+      throw e;
+    }
     if (!res.ok) {
       lastError = `${res.status} ${await res.text()}`;
       if (res.status === 429 || res.status >= 500) {
