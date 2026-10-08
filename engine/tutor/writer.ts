@@ -1,7 +1,7 @@
 import type { Bundle } from "../../content/schema";
 import { chatText, MODELS, type OnCall } from "../llm";
 import type { Move } from "./policy";
-import { latest, type State } from "./state";
+import { activeMisconceptions, latest, type State } from "./state";
 
 export type Turn = { role: "kai" | "learner"; text: string };
 
@@ -55,7 +55,7 @@ export function notebookLines(_bundle: Bundle, state: State): string {
   // the learner's words only: Kai never sees the lesson's own fact text
   const lines = [...facts.values()].map((e) => `- ${e.verdict === "partial" ? "(vague) " : ""}"${e.words}"`);
   // wrong beliefs are things Kai was told too, and it believes them
-  for (const m of state.misconceptions ?? []) if (!lines.some((l) => l.includes(m.words))) lines.push(`- "${m.words}"`);
+  for (const m of activeMisconceptions(state)) if (!lines.some((l) => l.includes(m.words))) lines.push(`- "${m.words}"`);
   return lines.length ? lines.join("\n") : "(empty: they haven't taught you anything yet)";
 }
 

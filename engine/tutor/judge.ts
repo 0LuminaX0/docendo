@@ -134,13 +134,15 @@ Leave the list empty when nothing is wrong. Vague or incomplete is not wrong.
 
 intent: "explain" (teaching), "answer" (replying to the classmate's question), "ask_kai" (asking the classmate a question), "unsure" (saying they don't know), "move_on" (asking to move on or saying they're done with this part, e.g. "what's next?", "that's it", "next one"), "off_topic" (anything else, including chit-chat and messages that make no sense).`;
 
-export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall): Promise<Judgement> {
+export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number } = {}): Promise<Judgement> {
   const facts = bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => `[${f.id}] ${f.text}`));
   const r = await chatJson({
     model: MODELS.judge,
     name: "judgement",
     schema: replySchema(bundle),
     maxTokens: 1200,
+    timeoutMs: limits.timeoutMs ?? 20_000,
+    retries: limits.retries ?? 1,
     messages: [
       { role: "system", content: SYSTEM },
       {

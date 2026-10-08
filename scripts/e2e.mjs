@@ -247,6 +247,46 @@ await skip.click(".ready .btn.primary");
 await skip.waitForFunction(() => location.pathname === "/practice");
 check(stayed, "stopping from the first message waits for a click, then reaches practice");
 
+// recursive feedback (team sessions can switch the view): Kai solves from its (empty) notebook, the learner
+// clicks the faulty step, sees where Kai got it from, corrects Kai once, and Kai tries again
+await skip.waitForSelector(".pq");
+await skip.click(".seg button:nth-child(2)");
+await skip.waitForSelector(".kai-solve .btn.primary");
+await skip.click(".kai-solve .btn.primary");
+await skip.waitForSelector(".kattempt .bulb", { timeout: 30000 });
+const kaiWrong = await skip.$eval(".kattempt .bulb", (e) => e.classList.contains("off"));
+await skip.click(".ksteps li:first-child button");
+await skip.waitForSelector(".knote");
+const knote = await skip.$eval(".knote", (e) => e.textContent);
+await skip.type(".reteach textarea", bundle.nodes.find((n) => n.id === "n05").facts.map((f) => f.text).join(" "));
+await shot(skip, "07d-kai-solves");
+await skip.click(".reteach .btn.primary");
+await skip.waitForFunction(() => document.querySelectorAll(".kattempt").length === 2, { timeout: 30000 });
+const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
+check(kaiWrong && /didn't tell me|You said/.test(knote) && secondNotes > 0, `Kai solves from its notebook, shows where a step came from, takes one correction and tries again (${secondNotes} notes after the correction)`);
+await shot(skip, "07e-kai-second-try", true);
+// on to the test and the results: they report Kai's outcome on the problems Kai worked on
+for (let n = 1; n < practiceItems.length; n++) {
+  await skip.$eval(".submitbar .btn", (e) => e.click());
+  await skip.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, n);
+}
+await skip.$eval(".submitbar .btn", (e) => e.click());
+await skip.waitForFunction(() => location.pathname === "/exercises");
+await skip.waitForSelector(".q");
+const nq = (await skip.$$(".q")).length;
+for (let i = 1; i <= nq; i++) await skip.$eval(`.q:nth-of-type(${i}) .opt input`, (e) => e.click()).catch(() => {});
+await skip.evaluate((n) => {
+  const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+  localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, answers: Array(n).fill(0) }));
+}, answers.length);
+await skip.reload({ waitUntil: "load" });
+await skip.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
+await skip.$eval(".submitbar .btn.primary", (e) => e.click());
+await skip.waitForFunction(() => location.pathname === "/results");
+await skip.waitForSelector(".review .pq");
+const kaiLine = await skip.$eval(".review .pq .tag", (e) => e.textContent);
+check(/Kai/.test(kaiLine), `results report Kai's practice outcome in the recursive view (“${kaiLine.trim()}”)`);
+
 // a participant (own code) can't stop teaching at once: the button appears after 12 messages or 8 minutes
 const part = await newPage(1366, 900, await browser.createBrowserContext());
 await start(part);
@@ -295,7 +335,7 @@ if (existsSync(logFile)) {
   const since = runStarted.toISOString();
   const evs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.at >= since);
   const has = (t) => evs.some((e) => e.t === t);
-  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm"];
+  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm"];
   const missing = need.filter((t) => !has(t));
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);

@@ -95,8 +95,16 @@ export default function Results({ items }: { items: Item[] }) {
             <h2 className="quiz-section" id="review-h">Practice problems: worked solutions</h2>
             {r.practice.map((p, i) => {
               const e = saved.practice?.items[p.id];
-              const mine = !e?.answer ? null : p.options ? (p.options[Number(e.answer)] ?? null) : e.answer;
-              const how = !e || !e.checks ? "Not tried" : e.correct ? (e.firstCorrect ? "Correct on the first try" : "Correct on the second try") : "Not solved";
+              // recursive feedback: the outcome is Kai's, after the learner's teaching (and correction)
+              const kai = saved.practice?.kai?.[p.id]?.attempts ?? [];
+              const kaiLast = kai.at(-1);
+              const kaiKey = kaiLast ? "ABCDEF".indexOf(kaiLast.answer.trim().charAt(0).toUpperCase()) : -1;
+              const kaiAnswer = !kaiLast ? null : p.options && kaiKey >= 0 ? (p.options[kaiKey] ?? kaiLast.answer) : kaiLast.answer;
+              const solved = kai.length ? kai.some((x) => x.correct) : !!e?.correct;
+              const mine = kai.length ? kaiAnswer : !e?.answer ? null : p.options ? (p.options[Number(e.answer)] ?? null) : e.answer;
+              const how = kai.length
+                ? kai[0]!.correct ? "Kai got it right on the first try" : kai[1]?.correct ? "Kai got it right after your correction" : "Kai didn't solve it"
+                : !e || !e.checks ? "Not tried" : e.correct ? (e.firstCorrect ? "Correct on the first try" : "Correct on the second try") : "Not solved";
               return (
                 <article className="pq" key={p.id}>
                   <div className="qt">
@@ -106,11 +114,11 @@ export default function Results({ items }: { items: Item[] }) {
                     <p>{p.prompt}</p>
                   </div>
                   <p className="note" style={{ margin: 0 }}>
-                    <span className={`tag ${e?.correct ? "ok" : "no"}`} style={{ marginRight: 10 }}>
-                      {e?.correct ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
+                    <span className={`tag ${solved ? "ok" : "no"}`} style={{ marginRight: 10 }}>
+                      {solved ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
                       {how}
                     </span>
-                    {mine && !e?.correct ? <>Your last answer: {mine}</> : null}
+                    {mine && !solved ? <>{kai.length ? "Kai's last answer" : "Your last answer"}: {mine}</> : null}
                   </p>
                   <div className="explain solution">
                     <ol>

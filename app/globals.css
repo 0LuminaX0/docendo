@@ -274,6 +274,25 @@ button { font: inherit; color: inherit; }
 .solution ol { margin: 0 0 8px; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
 .solution p { margin: 0; }
 .review { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+
+/* recursive feedback: Kai's attempt at a practice problem */
+.kopts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.45; }
+.kopts li { display: flex; gap: 12px; align-items: baseline; color: var(--ink-2); }
+.kopts .key { flex: none; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; font: 700 12px var(--font-display), sans-serif; background: var(--sunk); color: var(--ink-2); transform: translateY(2px); }
+.kattempt { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+.who-row { display: flex; align-items: center; gap: 10px; font: 600 14px var(--font-display), sans-serif; }
+.ksteps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.5; }
+.ksteps li { padding-left: 4px; }
+.ksteps li > span, .ksteps li > button { display: block; padding: 6px 10px; border-radius: 10px; }
+.ksteps li > button { width: 100%; text-align: left; font: inherit; color: inherit; background: none; border: 1px dashed #cfd5dd; cursor: pointer; }
+.ksteps li > button:hover { border-color: var(--blue); background: var(--blue-soft); }
+.ksteps li.bad > button, .ksteps li.bad > span { background: var(--red-soft); border: 1px solid transparent; box-shadow: inset 0 -2px 0 var(--red); }
+.knote { margin: 8px 0 2px 10px; background: var(--kai); border-radius: 16px 16px 16px 6px; padding: 9px 14px; font-size: 14.5px; }
+.knote q { font-style: italic; }
+.knote q + q::before { content: " "; }
+.kanswer { margin: 0; font-weight: 600; }
+.kanswer span { color: var(--muted); font-weight: 500; margin-right: 4px; }
+.reteach { display: flex; flex-direction: column; gap: 8px; }
 .clock { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--sunk); padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
 .clock.low { color: #b54708; background: #fff4dc; }
 .clock.over { color: #b42318; background: var(--red-soft); }

@@ -49,7 +49,7 @@
       "idea": "ucb",
       "title": "Which truck does UCB pick?",
       "kind": "choice",
-      "prompt": "Now you choose with UCB. It gives each truck a score: its average so far plus a bonus that is bigger for trucks you have tried fewer times. Today: A has average 6.1 (tried 30 times, bonus 0.5), B has 4.8 (tried twice, bonus 1.9) and C has 5.5 (tried 12 times, bonus 0.8). Where does UCB send you, and why?",
+      "prompt": "Now you choose between the three trucks with UCB. Today truck A has average 6.1 (tried 30 times, UCB bonus 0.5), B has average 4.8 (tried twice, bonus 1.9) and C has average 5.5 (tried 12 times, bonus 0.8). Where does UCB send you, and why?",
       "options": [
         "To A, because it has the best average",
         "To B, because its average plus its bonus is the highest",
@@ -105,7 +105,7 @@
       "idea": "ucb",
       "title": "After B has been tried more",
       "kind": "choice",
-      "prompt": "UCB plays four slot machines. Machine B had been played only 3 times, so its bonus was large and UCB played it next. After 20 more plays of B, its average has settled at 4.0 and its bonus has shrunk to 0.6. The other machines' scores (average plus bonus) are about the same as before: A 5.4, C 3.8 and D 5.1. What does UCB do next, and why?",
+      "prompt": "UCB plays four slot machines. Machine B had been played only 3 times, so its bonus was large and UCB played it next. After 20 more plays of B, its average has settled at 4.0 and its bonus has shrunk to 0.6. The other machines' UCB scores are about the same as before: A 5.4, C 3.8 and D 5.1. What does UCB do next, and why?",
       "options": [
         "It keeps playing B, because B was picked last time",
         "It plays C, because C has the lowest score and needs more tries",

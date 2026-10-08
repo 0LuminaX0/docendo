@@ -87,6 +87,16 @@ export function latest(state: State): Map<string, Entry> {
   return m;
 }
 
+/**
+ * Misconceptions Kai still believes: a later correct explanation of any fact of
+ * the same idea replaces them, as a later verdict replaces an earlier one on a
+ * fact. (All stay in `state.misconceptions` for the log.)
+ */
+export function activeMisconceptions(state: State): Belief[] {
+  const corrected = (m: Belief) => state.notebook.some((e) => e.verdict === "correct" && e.turn > m.turn && e.fact.split(".")[0] === m.node);
+  return (state.misconceptions ?? []).filter((m) => !corrected(m));
+}
+
 /** Required facts the learner-facing videos cover: what Kai waits for. */
 export const teachableRequired = (n: Node) => n.facts.filter((f) => f.required && f.teachable);
 

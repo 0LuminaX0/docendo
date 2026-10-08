@@ -43,10 +43,10 @@ The lesson is about 8 minutes, three parts of two videos that play one after ano
 
 1. **Watch** the 8-minute lesson (after five quick questions on what you already know).
 2. **Teach Kai.** Explain the ideas in your own words. Kai reacts to every answer and asks follow-up questions. If you're stuck on what Kai asks, a help button replays the exact moment in the video, but only after you've had a go. The session ends when Kai feels ready (80% of what it needs, or 50% after 8 minutes of teaching), after 30 messages, or when you decide you've taught all you can.
-3. **Practice.** Two rounds of three problems, one at a time, in 10 minutes. Each gets a first try and one retry, with a light that says right or wrong. Nothing is graded.
+3. **Practice.** Two rounds of three problems, one at a time, in 10 minutes. In one condition you solve them: a first try and one retry, with a light that says right or wrong. In the other, Kai solves them from what you taught it: you see its steps and the light, click the step where it went wrong to see which of your statements it used, correct Kai once, and it tries again. Nothing is graded.
 4. **Final test.** Ten multiple-choice questions on new examples, graded on the server. Afterwards: explanations, and the worked solutions of the practice problems.
 
-The app is the instrument for a small study. It replicates Okita and Schwartz's (2013) comparison of *recursive* feedback (the pupil you taught solves the problems, and you see its answers marked) with *direct* feedback (you solve them yourself). The direct condition is built; the recursive one comes next.
+The app is the instrument for a small study. It replicates Okita and Schwartz's (2013) comparison of *recursive* feedback (the pupil you taught solves the problems, and you see its answers marked) with *direct* feedback (you solve them yourself). Both conditions are built. With the shared access code, a switch on the practice page shows either one.
 
 <table>
   <tr>

@@ -43,14 +43,12 @@ export async function POST(req: NextRequest) {
       pid: who.pid,
       condition: who.cond,
       entry: who.entry, // participant (own code), team (shared code) or open
-      // the recursive condition's practice isn't built yet: until it is, everyone practises in the direct condition
-      practiceAs: "direct",
       demo: config.demo,
       device: deviceOf(req.headers.get("user-agent")),
       config: { practiceTries: config.practiceTries, practiceMinutes: config.practiceMinutes ?? null },
     });
-    // the browser learns only whether test shortcuts are on, not the condition
-    return ok({ token, expiresAt, demo: config.demo, team: who.entry !== "participant" });
+    // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
+    return ok({ token, expiresAt, demo: config.demo, team: who.entry !== "participant", condition: who.cond });
   } catch (e) {
     if (e instanceof ConfigError) return fail(500, "The server isn't fully configured yet.");
     throw e;

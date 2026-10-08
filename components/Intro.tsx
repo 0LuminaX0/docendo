@@ -26,10 +26,10 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
     setError(null);
     // team sessions: ?pid=… in the link joins the session with our other data (a participant's code does this itself)
     const pid = new URLSearchParams(window.location.search).get("pid")?.slice(0, 40) || undefined;
-    const r = await post<{ token: string; expiresAt: number; demo: boolean; team: boolean }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
+    const r = await post<{ token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive" }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
     setBusy(false);
     if (!r.ok) return setError(r.error);
-    save(newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team));
+    save(newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition));
     router.push("/pretest");
   }
 

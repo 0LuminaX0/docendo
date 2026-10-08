@@ -1,25 +1,38 @@
 {
   "title": "Before you start",
-  "note": "About 2 minutes, before the video. Two background questions (b1 screens out people who took a reinforcement learning course: they are flagged, not stopped) and three knowledge items. The items measure prior knowledge on neighbouring ideas (an average payoff, regret, what exploring means in general), not the practice or test items, so they don't prime them. Each has an 'I don't know' option to cut guessing. Answers stay on the server; nothing is shown back.",
+  "note": "About 2 minutes, before the video. Two background questions (b1 screens out people who took a reinforcement learning course: they are flagged, not stopped) and three knowledge items. The items measure prior knowledge on neighbouring ideas (an average payoff, regret, and how sample size changes a confidence interval, the idea behind UCB's bonus), not the practice or test items, so they don't prime them. Each has an 'I don't know' option to cut guessing. Answers stay on the server; nothing is shown back.",
   "items": [
     {
       "id": "b1",
       "kind": "background",
       "prompt": "Have you taken a course on reinforcement learning?",
-      "options": ["Yes", "No"],
+      "options": [
+        "Yes",
+        "No"
+      ],
       "exclude": 0
     },
     {
       "id": "b2",
       "kind": "background",
       "prompt": "Before today, had you heard of multi-armed bandits?",
-      "options": ["No", "I've heard the name", "Yes, I know roughly how they work"]
+      "options": [
+        "No",
+        "I've heard the name",
+        "Yes, I know roughly how they work"
+      ]
     },
     {
       "id": "k1",
       "kind": "knowledge",
       "prompt": "A game pays 10 francs with probability 0.2 and nothing otherwise. If you play it many times, what do you win per game on average?",
-      "options": ["2 francs", "8 francs", "10 francs", "It can't be said", "I don't know"],
+      "options": [
+        "2 francs",
+        "8 francs",
+        "10 francs",
+        "It can't be said",
+        "I don't know"
+      ],
       "answer": 0
     },
     {
@@ -38,15 +51,15 @@
     {
       "id": "k3",
       "kind": "knowledge",
-      "prompt": "When people talk about \"exploration versus exploitation\", what does exploiting mean?",
+      "prompt": "You estimate the true average of a noisy sensor twice: once from 10 readings and once from 1,000 readings. How do the two 95% confidence intervals for the true average compare?",
       "options": [
-        "Trying options you know little about, to learn more",
-        "Choosing at random so that every option gets a fair chance",
-        "Going with the option that looks best given what you know so far",
-        "Avoiding options that have disappointed you once",
+        "The one from 10 readings is wider",
+        "The one from 1,000 readings is wider",
+        "They are equally wide",
+        "It depends only on the average itself",
         "I don't know"
       ],
-      "answer": 2
+      "answer": 0
     }
   ]
 }

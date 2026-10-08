@@ -115,3 +115,61 @@ describe("pretest", () => {
     for (const q of items) expect(q.prompt, q.id).not.toMatch(/food truck|headline|slot machine|banner|coffee|podcast|study app|greedy|UCB|ε/i);
   });
 });
+
+import { initialState } from "../engine/tutor/state";
+import { isRight, notesOf, offlineSolve } from "../engine/tutor/solve";
+
+describe("Kai solving practice problems (recursive feedback)", () => {
+  const base = initialState(bundle);
+  const p1 = item("p1");
+  const taught = {
+    ...base,
+    notebook: (["n03.f1", "n05.f1", "n05.f2", "n06.f1"] as const).map((fact, i) => ({ fact, verdict: "correct" as const, words: `note about ${fact}`, turn: i + 1 })),
+  };
+
+  it("gets a problem right when the notebook holds every fact it needs, citing the notes", () => {
+    const s = offlineSolve(bundle, p1, taught);
+    expect(s.correct).toBe(true);
+    expect(s.steps.every((st) => st.notes.length > 0)).toBe(true);
+  });
+
+  it("goes wrong where a fact is missing, and says it guessed", () => {
+    const s = offlineSolve(bundle, p1, base);
+    expect(s.correct).toBe(false);
+    expect(s.steps[0]!.text).toMatch(/didn't tell me/);
+    expect(s.steps[0]!.notes).toEqual([]);
+  });
+
+  it("follows a stated misconception and points to the learner's words", () => {
+    const st = { ...taught, misconceptions: [{ node: "n05", words: "greedy checks the other trucks now and then", turn: 5 }], notebook: taught.notebook.map((e) => (e.fact === "n05.f2" ? { ...e, verdict: "wrong" as const } : e)) };
+    const s = offlineSolve(bundle, p1, st);
+    expect(s.correct).toBe(false);
+    const bad = s.steps.find((x) => x.text.includes("now and then"))!;
+    expect(s.notes[bad.notes[0]! - 1]).toBe("greedy checks the other trucks now and then");
+  });
+
+  it("numbers the notes without lesson text, and reads Kai's answer as a letter or a number", () => {
+    expect(notesOf(taught)).toEqual(taught.notebook.map((e) => e.words));
+    expect(isRight(p1, "D")).toBe(true);
+    expect(isRight(p1, "d) At B")).toBe(true);
+    expect(isRight(p1, "A")).toBe(false);
+    expect(isRight(item("p5"), "about 867 visitors")).toBe(true);
+    expect(isRight(item("p5"), "800")).toBe(false);
+    expect(isRight(item("p5"), "I'm not sure")).toBe(false);
+  });
+});
+
+describe("misconceptions Kai still believes", () => {
+  it("are replaced by a later correct explanation of the same idea", async () => {
+    const { activeMisconceptions } = await import("../engine/tutor/state");
+    const base = initialState(bundle);
+    const told = { ...base, misconceptions: [{ node: "n07", words: "it explores the least visited one", turn: 1 }] };
+    expect(activeMisconceptions(told)).toHaveLength(1);
+    const corrected = { ...told, notebook: [{ fact: "n07.f2", verdict: "correct" as const, words: "it picks any of them at random", turn: 2 }] };
+    expect(activeMisconceptions(corrected)).toHaveLength(0);
+    expect(notesOf(corrected)).toEqual(["it picks any of them at random"]);
+    // a correct statement made before the misconception doesn't cancel it
+    const earlier = { ...told, notebook: [{ fact: "n07.f2", verdict: "correct" as const, words: "x", turn: 0 }] };
+    expect(activeMisconceptions(earlier)).toHaveLength(1);
+  });
+});

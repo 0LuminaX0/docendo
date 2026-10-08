@@ -95,7 +95,8 @@ function tables(events: Ev[]) {
       pid: start?.pid ?? null,
       condition: start?.condition ?? "direct", // sessions before conditions existed were all direct
       entry: start?.entry ?? null, // participant (own code), team (shared code) or open
-      practiceAs: start?.practiceAs ?? "direct",
+      // the practice the learner actually did: their condition, or the view a team session switched to
+      practiceView: of("practice_kai_solve").length ? "recursive" : of("practice_check").length ? "direct" : null,
       demo: start?.demo ?? null,
       browser: (start?.device as { browser?: string })?.browser ?? null,
       os: (start?.device as { os?: string })?.os ?? null,
@@ -161,6 +162,14 @@ function tables(events: Ev[]) {
       practiceRound1: new Set(of("practice_check").filter((e) => e.correct && Number(e.round) === 1).map((e) => e.id)).size,
       practiceRound2: new Set(of("practice_check").filter((e) => e.correct && Number(e.round) === 2).map((e) => e.id)).size,
       practiceSkipped: of("client_practice_skip").length,
+      // recursive feedback: Kai's attempts from its notebook
+      kaiSolved: of("practice_kai_solve").length,
+      kaiFirstTry: count(of("practice_kai_solve"), (e) => e.correct === true),
+      kaiOnRetry: count(of("practice_kai_reteach"), (e) => e.correct === true),
+      reteaches: of("practice_kai_reteach").length,
+      kaiStepClicks: of("client_practice_kai_step_click").length,
+      kaiOffline: count([...of("practice_kai_solve"), ...of("practice_kai_reteach")], (e) => e.by === "offline"),
+      kaiLeakSteps: count([...of("practice_kai_solve"), ...of("practice_kai_reteach")], (e) => ((e.leaked as unknown[]) ?? []).length > 0),
       practiceHints: of("practice_hint").length,
       practiceSolutions: of("practice_solution").length, // older sessions only: solutions now come after the test
       practiceTimeUp: of("client_practice_time_up").length > 0,
@@ -217,7 +226,7 @@ function tables(events: Ev[]) {
       });
     }
 
-    const ids = [...new Set([...of("practice_check"), ...of("practice_hint"), ...of("practice_solution"), ...of("client_practice_problem_show")].map((e) => String(e.id)))].sort();
+    const ids = [...new Set([...of("practice_check"), ...of("practice_hint"), ...of("practice_solution"), ...of("practice_kai_solve"), ...of("client_practice_problem_show")].map((e) => String(e.id)))].sort();
     for (const id of ids) {
       const checks = of("practice_check").filter((e) => e.id === id);
       const firstRight = checks.findIndex((e) => e.correct);
@@ -229,6 +238,10 @@ function tables(events: Ev[]) {
         round: checks[0]?.round ?? first("client_practice_problem_show", (e) => e.id === id)?.round ?? null,
         // time on the problem, from when it was shown until the learner moved on
         sec: Math.round(sum(of("client_practice_problem_leave").filter((e) => e.id === id).map((e) => Number(e.ms ?? 0))) / 1000),
+        kaiFirstTry: first("practice_kai_solve", (e) => e.id === id)?.correct ?? null,
+        kaiRetry: first("practice_kai_reteach", (e) => e.id === id)?.correct ?? null,
+        reteach: first("practice_kai_reteach", (e) => e.id === id)?.message ?? null,
+        stepClicks: of("client_practice_kai_step_click").filter((e) => e.id === id).map((e) => e.step).join(" "),
         firstTryCorrect: checks.length ? !!checks[0]!.correct : null,
         retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
         skipped: of("client_practice_skip").some((e) => e.id === id),

@@ -16,17 +16,17 @@
   html { background: #fff; }
   body { margin: 0; color: var(--ink); font: 400 10.2pt/1.55 "Source Serif 4", Georgia, serif; font-optical-sizing: auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .sans, h1, h2, h3, table, figcaption, .masthead, .facts { font-family: "Figtree", system-ui, sans-serif; }
-  p { margin: 0 0 8pt; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
+  p { margin: 0 0 6pt; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
   em { font-style: italic; }
   a { color: var(--blue); text-decoration: none; }
 
   /* masthead */
-  .masthead { padding-bottom: 13pt; margin-bottom: 14pt; border-bottom: 1.2pt solid var(--ink); }
+  .masthead { padding-bottom: 11pt; margin-bottom: 10pt; border-bottom: 1.2pt solid var(--ink); }
   .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8.4pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
   .bars { display: inline-flex; gap: 3pt; }
   .bars i { width: 15pt; height: 5pt; border-radius: 3pt; display: block; }
-  .masthead h1 { font: 800 31pt/1 "Bricolage Grotesque", sans-serif; letter-spacing: -0.035em; margin: 12pt 0 5pt; }
-  .masthead .sub { font: 500 13.5pt/1.3 "Bricolage Grotesque", sans-serif; letter-spacing: -0.01em; color: var(--ink2); margin: 0 0 14pt; max-width: 150mm; }
+  .masthead h1 { font: 800 28pt/1 "Bricolage Grotesque", sans-serif; letter-spacing: -0.035em; margin: 10pt 0 4pt; }
+  .masthead .sub { font: 500 12.5pt/1.3 "Bricolage Grotesque", sans-serif; letter-spacing: -0.01em; color: var(--ink2); margin: 0 0 11pt; }
   .facts { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 3pt 14pt; font-size: 8.8pt; line-height: 1.45; }
   .facts dt { color: var(--muted); font-weight: 500; }
   .facts dd { margin: 0; font-weight: 600; }
@@ -34,20 +34,19 @@
   .facts code { font: 600 8.8pt "Figtree", sans-serif; background: var(--sunk); padding: 0.5pt 4pt; border-radius: 3pt; }
 
   /* sections */
-  h2 { font: 700 15pt/1.2 "Bricolage Grotesque", sans-serif; letter-spacing: -0.02em; margin: 21pt 0 8pt; break-after: avoid; }
-  h2 .n { display: inline-block; min-width: 22pt; font: inherit; color: #b3b8c1; font-variant-numeric: tabular-nums; }
-  h3 { font: 700 10.6pt/1.3 "Figtree", sans-serif; margin: 14pt 0 5pt; break-after: avoid; }
-  .masthead + h2 { margin-top: 4pt; }
+  h2 { font: 700 14pt/1.2 "Bricolage Grotesque", sans-serif; letter-spacing: -0.02em; margin: 12pt 0 5pt; break-after: avoid; }
+  h2 .n { display: inline-block; min-width: 20pt; font: inherit; color: #b3b8c1; font-variant-numeric: tabular-nums; }
+  .masthead + h2 { margin-top: 2pt; }
 
-  .goal { margin: 10pt 0 6pt; padding: 11pt 15pt; background: var(--sunk); border-radius: 6pt; }
-  .goal .label { font: 700 8pt "Figtree", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4pt; }
-  .goal p { margin: 0; font-size: 11.4pt; line-height: 1.45; text-align: left; }
+  .goal { margin: 7pt 0 7pt; padding: 9pt 14pt; background: var(--sunk); border-radius: 6pt; }
+  .goal .label { font: 700 8pt "Figtree", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3pt; }
+  .goal p { margin: 0; font-size: 11pt; line-height: 1.42; text-align: left; }
 
   /* tables */
-  table { width: 100%; margin: 10pt 0 14pt; border-collapse: collapse; font-size: 9pt; line-height: 1.42; break-inside: avoid; }
+  table { width: 100%; margin: 6pt 0 9pt; border-collapse: collapse; font-size: 8.8pt; line-height: 1.38; break-inside: avoid; }
   /* every cell has the same padding on both sides, so rows (and the highlighted one) share one inner edge */
-  th { text-align: left; font-weight: 600; font-size: 8pt; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0 10pt 6pt; border-bottom: 1pt solid var(--ink); }
-  td { padding: 6pt 10pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; background: #fff; }
+  th { text-align: left; font-weight: 600; font-size: 7.8pt; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0 8pt 5pt; border-bottom: 1pt solid var(--ink); }
+  td { padding: 4.5pt 8pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; background: #fff; }
 
   td.k { font-weight: 600; white-space: nowrap; }
   .num { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -56,31 +55,31 @@
   tr.diff td { background: var(--green-soft); }
 
   /* figures */
-  figure { margin: 16pt 0 18pt; break-inside: avoid; }
-  figcaption { font-size: 8.6pt; line-height: 1.45; color: var(--ink2); margin-top: 7pt; }
+  figure { margin: 9pt 0 11pt; break-inside: avoid; }
+  figcaption { font-size: 8.4pt; line-height: 1.42; color: var(--ink2); margin-top: 6pt; }
   figcaption b { color: var(--ink); font-weight: 700; }
-  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; width: 146mm; margin: 0 auto; align-items: start; }
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; width: 86mm; margin: 0 auto; align-items: start; }
   .shots img { width: 100%; display: block; border: 0.6pt solid var(--rule); border-radius: 5pt; }
 
   /* recursive feedback mockup, in the app's style */
-  .mock { border: 0.6pt solid var(--rule); border-radius: 8pt; padding: 13pt 16pt 14pt; font-family: "Figtree", sans-serif; font-size: 8.9pt; line-height: 1.45; background: #fff; }
-  .mock .q { color: var(--ink2); margin-bottom: 9pt; }
+  .mock { border: 0.6pt solid var(--rule); border-radius: 8pt; padding: 11pt 14pt 12pt; font-family: "Figtree", sans-serif; font-size: 8.7pt; line-height: 1.42; background: #fff; }
+  .mock .q { color: var(--ink2); margin-bottom: 8pt; }
   .mock .q b { color: var(--ink); }
-  .mock .who { display: flex; align-items: center; gap: 7pt; font-weight: 700; margin-bottom: 6pt; }
+  .mock .who { display: flex; align-items: center; gap: 7pt; font-weight: 700; margin-bottom: 5pt; }
   .mock .face { width: 17pt; height: 17pt; flex: none; }
-  .mock ol { margin: 0 0 9pt; padding-left: 16pt; }
-  .mock li { margin: 0 0 4pt; padding: 1pt 4pt; border-radius: 3pt; }
+  .mock ol { margin: 0 0 8pt; padding-left: 16pt; }
+  .mock li { margin: 0 0 3pt; padding: 1pt 4pt; border-radius: 3pt; }
   .mock li.bad { background: var(--red-soft); box-shadow: inset 0 -1.2pt 0 var(--red); }
   .mock .row { display: flex; gap: 10pt; align-items: flex-start; }
   .mock .light { display: inline-flex; align-items: center; gap: 5pt; font-weight: 700; color: #b42318; background: var(--red-soft); border-radius: 99pt; padding: 2pt 9pt 2pt 6pt; white-space: nowrap; }
   .mock .light i { width: 8pt; height: 8pt; border-radius: 50%; background: var(--red); display: block; }
-  .mock .bubble { position: relative; margin: 2pt 0 0 30pt; background: var(--sunk); border-radius: 9pt 9pt 9pt 3pt; padding: 7pt 10pt; max-width: 120mm; }
+  .mock .bubble { position: relative; margin: 2pt 0 0 30pt; background: var(--sunk); border-radius: 9pt 9pt 9pt 3pt; padding: 6pt 10pt; max-width: 120mm; }
   .mock .bubble q { font-style: italic; }
   .mock .hint { color: var(--muted); font-size: 8.2pt; }
 
-  .refs { font-size: 8.8pt; line-height: 1.45; }
-  .refs p { text-align: left; padding-left: 14pt; text-indent: -14pt; margin: 0 0 4.5pt; hyphens: manual; }
-  .note { font-family: "Figtree", sans-serif; font-size: 8.8pt; line-height: 1.5; color: var(--ink2); border-top: 0.6pt solid var(--rule); padding-top: 9pt; margin-top: 16pt; }
+  .refs { font-size: 7.6pt; line-height: 1.4; columns: 2; column-gap: 16pt; }
+  .refs p { text-align: left; padding-left: 11pt; text-indent: -11pt; margin: 0 0 3.5pt; hyphens: manual; break-inside: avoid; }
+  .note { font-family: "Figtree", sans-serif; font-size: 7.8pt; line-height: 1.4; color: var(--ink2); border-top: 0.6pt solid var(--rule); padding-top: 5pt; margin-top: 6pt; }
   .keep { break-inside: avoid; }
 </style>
 </head>
@@ -99,46 +98,39 @@
 </header>
 
 <h2><span class="n">1</span>Topic and audience</h2>
-<p>Our lesson is about multi-armed bandits. A bandit problem is any repeated choice between options whose average payoff you don't know: which restaurant to eat at, which ad to show, which slot machine to play. Every choice pays something and also tells you a little about that option, so there is a constant pull between <em>exploiting</em> the option that looks best and <em>exploring</em> the others in case one of them is better. We chose it because it fits into half an hour, has a clear structure to teach, and has a misconception worth catching: people tend to trust the option that looked best after a few tries.</p>
-<p>Our audience, and our study participants, are EPFL bachelor's and master's students in engineering and computer science. They know what an average and a probability are, but have not seen bandits or reinforcement learning before.</p>
+<p>Our lesson is about multi-armed bandits: repeated choices between options with an unknown average payoff, such as which restaurant to eat at. Each choice pays something and also tells you about that option, so <em>exploiting</em> the option that looks best competes with <em>exploring</em> the others. Participants are EPFL engineering and computer science students who know averages, probabilities and confidence intervals but not bandits; students who took a reinforcement learning course are excluded.</p>
 
 <h2><span class="n">2</span>Learning goal</h2>
-<p>Our first draft had three goals: compute the regret of a strategy, compare ε-greedy and UCB, and model a new problem as a bandit. Covering all three needed fifteen minutes of video and twenty facts to teach, far too much for a 30–40 minute session, and the TA advised us to focus on one goal. We kept the part of the topic that the three classic strategies have in common. Learners have to apply each rule to situations they have not seen and explain how the rules differ:</p>
+<p>Our C2 draft had three goals, too many for 30 minutes, so following the TA and the C2 reviewers we kept one, a slightly modified LG2:</p>
 <div class="goal">
   <div class="label">Learning goal</div>
-  <p>Given what has happened so far, predict which option <b>greedy</b>, <b>ε-greedy</b> and <b>UCB</b> will pick next, and explain why greedy can get stuck on a worse option while ε-greedy and UCB keep exploring, each in its own way.</p>
+  <p><b>Transfer</b> the decision rules of greedy, ε-greedy and UCB to a situation the learner has not seen, and predict which option each rule picks, with a justification of how the rule explores.</p>
 </div>
-<table>
-  <tr><th style="width:24%">Part</th><th>A learner can…</th><th class="num" style="width:13%">Test items</th></tr>
-  <tr><td class="k">Greedy and lock-in</td><td>say which option greedy picks from the averages so far, and why one unlucky first try can hide the best option for good</td><td class="num">q03–q04</td></tr>
-  <tr><td class="k">ε-greedy</td><td>work out how often ε-greedy shows its current favourite, and explain that its random picks ignore everything it has learned</td><td class="num">q05–q07</td></tr>
-  <tr><td class="k">UCB</td><td>pick the option with the highest average plus bonus, and explain why the bonus, and with it the exploring, shrinks with every try</td><td class="num">q08–q10</td></tr>
-</table>
+<p>Practice and test items cover why greedy can lock onto a worse option after one unlucky try (q03 to q04), how often ε-greedy picks its favourite (q05 to q07), and why a UCB bonus shrinks with every try, so that UCB moves on from an option that is only average (q08 to q10).</p>
 
 <h2><span class="n">3</span>The lesson</h2>
-<p>A session runs in four chapters and takes about 35 minutes. Only the third chapter differs between the two conditions of our study.</p>
+<p>A session takes about 40 minutes, the lesson itself about 28. Only chapter 3 differs between the two conditions.</p>
 <table>
-  <tr><th style="width:24%">Chapter</th><th class="num" style="width:13%">Time</th><th>What the learner does</th></tr>
-  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--red)"></span>1 Watch</span></td><td class="num">8 min</td><td>Watches one lesson made of three parts of two YouTube videos (ritvikmath and DataMListic), played back to back in a single player.</td></tr>
-  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--yellow)"></span>2 Teach Kai</span></td><td class="num">≈ 9 min</td><td>Explains the lesson to Kai, an AI classmate who missed it, until Kai feels ready.</td></tr>
-  <tr class="diff"><td class="k"><span class="lab"><span class="chip" style="background:var(--green)"></span>3 Practice</span></td><td class="num">8 min</td><td>Works on eight problems with right/wrong feedback and worked solutions. <b>This is where the conditions differ</b> (Section 5).</td></tr>
-  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--blue)"></span>4 Final test</span></td><td class="num">≈ 10 min</td><td>Answers ten multiple-choice questions set in new situations. Graded on the server.</td></tr>
+  <tr><th style="width:21%">Chapter</th><th class="num" style="width:11%">Time</th><th>What the learner does</th></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--muted)"></span>0 Pretest</span></td><td class="num">2 min</td><td>Two background questions and three items on prior knowledge, such as confidence interval width.</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--red)"></span>1 Watch</span></td><td class="num">8 min</td><td>One lesson cut from two YouTube videos (ritvikmath, DataMListic).</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--yellow)"></span>2 Teach Kai</span></td><td class="num">≈ 10 min</td><td>Explains the lesson to Kai, an AI classmate who missed it, until Kai feels ready.</td></tr>
+  <tr class="diff"><td class="k"><span class="lab"><span class="chip" style="background:var(--green)"></span>3 Practice</span></td><td class="num">10 min</td><td>Six problems in two rounds. <b>Recursive feedback:</b> Kai solves them from what it was taught, and a light shows the learner whether Kai is right; after a red light the learner finds Kai's faulty step and may reteach it before one retry. <b>Direct feedback:</b> the learner solves them, writing down the working, and the same light shows whether they are right, with one retry.</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--blue)"></span>4 Final test</span></td><td class="num">≈ 10 min</td><td>Ten multiple choice items in new situations; worked solutions afterwards.</td></tr>
 </table>
 
 <h2><span class="n">4</span>The main activity: teaching Kai</h2>
-<p>The heart of the lesson is the conversation with Kai (Figure 2, left). Kai is a language model, but it is not allowed to know the topic. Behind the chat, the lesson is stored as a small knowledge graph of nine ideas and thirteen facts. After each message a second model, the judge, decides which facts the learner just explained and has to quote the learner's own words as evidence; a verdict whose quote is not in the learner's message is thrown away. The quotes go into Kai's notebook. Kai's replies are written from that notebook and the conversation only, and a filter blocks lesson vocabulary the learner has not used yet. So Kai knows what it was told, in the learner's words, mistakes included.</p>
-<p>Kai is not a passive listener. Every reply ends with one concrete question about the next fact it is still missing ("Do I know in advance how good each restaurant is?"). When an idea is complete, Kai says what it now understands; later it offers a common misconception as its own guess, which the learner has to correct. If the learner is stuck, a button replays the right moment of the video, but only after they have tried to answer. Kai feels ready once 80% of the facts have been explained, or 50% after eight minutes of teaching.</p>
-<p>Teaching is a strong learning activity in its own right. Students who prepare to teach and then explain to someone else work harder on the material than students who learn for themselves, the so-called protégé effect (Chase et al., 2009). The gain depends on what kind of explaining happens: tutors learn most when their pupil's questions make them repair and extend their explanations (knowledge-building) rather than recite what they know (knowledge-telling; Roscoe &amp; Chi, 2007). Kai's targeted questions are meant to push learners into the first kind. In terms of the ICAP framework (Chi &amp; Wylie, 2014) this makes teaching Kai an interactive activity, not just a constructive one. Keeping Kai ignorant matters too. Jin et al. (2024) found that learners stop really teaching when the AI tutee already seems to know the answers.</p>
+<p>Teaching is identical in both conditions (Figure 2, left). Kai runs on Gemini 2.5 Flash but may not know the topic. After each message a judge model decides which of the lesson's thirteen facts the learner explained, quoting the learner's words; these quotes, mistakes included, form Kai's notebook, which is all Kai knows. A filter blocks lesson words the learner has not used, since learners stop building knowledge once a tutee seems to know the answers (Jin et al., 2024). Kai feels ready at 80% of the facts (50% after eight minutes) and offers a common misconception to correct; after an attempt, a button replays the matching moment of the video.</p>
+<p>Teaching drives learning through the protégé effect (Chase et al., 2009), most when tutors repair and extend their explanations rather than recite them (Roscoe &amp; Chi, 2007). In the lecture's terms, this chapter combines teaching and self explanation, with Kai's questions as scaffolding and the replay as just in time telling.</p>
+<p><b>Still open: how much Kai asks.</b> Now each reply ends with a question about a missing fact, and such tutee questions foster knowledge building (Roscoe &amp; Chi, 2008; Shahriar &amp; Matsuda, 2023). The alternative, like the pupil in Experiment 1 of Okita and Schwartz (2013), only acknowledges the answers to four fixed questions, which keeps question quality constant. The pilot decides, and both conditions will use the same version.</p>
 
 <h2><span class="n">5</span>What the AI adds: recursive feedback</h2>
-<p>Teachers learn not only from teaching but from seeing what their students do with it afterwards. Okita and Schwartz (2013) call this <em>recursive feedback</em>. In their second experiment, high-school students taught logic rules to a computer agent, Moby, and then watched it play a prediction game in which every move was marked right or wrong. A control group played the same game themselves and received the same marks. On a later test the students who had taught Moby did better (d = 0.75), although both groups saw the same feedback for the same amount of time. Our study is a conceptual replication of that experiment with Kai.</p>
-
-<h3>The experimental condition</h3>
-<p>After teaching, Kai solves the practice problems itself, step by step, using only its notebook. Each step of a correct solution relies on a specific fact from the lesson. If the learner never taught that fact, or taught it wrongly, Kai's step goes wrong in the same way. A light shows whether Kai's final answer is right. A red light says only that something is wrong, not where. The learner clicks the sentence they think is faulty, and Kai shows which of the learner's own statements it was relying on. The learner can then correct that point in the chat and let Kai try again. Figure 1 shows the idea on a problem from our practice set, with a misconception we expect to be common: mixing up how ε-greedy and UCB explore.</p>
+<p>Okita and Schwartz (2013) found that tutors learn from watching their pupil use what they taught, which they call <em>recursive feedback</em>. In their Experiment 2, students taught logic rules to an agent, Moby, and watched it play a game in which every move was marked right or wrong; a control group played the same game with the same marks. The Moby group did better on a later test (d = 0.75). We replicate this, as far as we know for the first time, with an LLM tutee, which unlike Moby can apply whatever a learner said to a new problem.</p>
+<p><b>Procedure.</b> Kai solves each practice problem step by step from its notebook alone, so a fact the learner never taught, or taught wrongly, makes a step go wrong in the same way (Figure 1). A light shows only whether the answer is right. The learner clicks the step they think is faulty, Kai shows which of their statements it used, and the learner may send one correction before Kai tries again.</p>
 
 <figure class="keep">
   <div class="mock">
-    <div class="q"><b>Problem 3: an explore day.</b> You use ε-greedy with ε = 0.1, and today is an explore day. Your averages so far: truck A 5.5 (tried 20 times), B 4.0 (18 times), C 1.2 (15 times). Where can you end up eating?</div>
+    <div class="q"><b>Problem 2: an explore day.</b> You use ε-greedy with ε = 0.1, and today is an explore day. Your averages so far: truck A 5.5 (tried 20 times), B 4.0 (18 times), C 1.2 (15 times). Where can you end up eating today?</div>
     <div class="who">
       <svg class="face" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#F7B32B"/><circle cx="14" cy="17" r="2.2" fill="#1B1F27"/><circle cx="26" cy="17" r="2.2" fill="#1B1F27"/><path d="M13 26 Q20 30 27 26" stroke="#1B1F27" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>
       Kai's solution
@@ -151,43 +143,55 @@
     <div class="row"><span class="light"><i></i>Kai's answer is wrong</span><span class="hint">Click the step where Kai goes wrong.</span></div>
     <div class="bubble">I got step 2 from you. You said: <q>when it explores it goes for the restaurant it has visited the least</q>.</div>
   </div>
-  <figcaption><b>Figure 1.</b> Design mockup of the recursive-feedback practice (not built yet). Kai's step 2 comes from something the learner taught. In fact, ε-greedy explores completely at random; aiming at the least-tried option is closer to what UCB does. Finding the step makes the learner notice the confusion in their own explanation.</figcaption>
+  <figcaption><b>Figure 1.</b> Recursive feedback (mockup; now built in the prototype). Kai's step 2 comes from the learner's teaching. In fact ε-greedy explores at random; aiming at the least tried option is closer to what UCB does.</figcaption>
 </figure>
 
-<p>Only an AI tutee can offer this. In Okita and Schwartz's first experiment the "pupil" was a recording, the same for every participant, and Moby could only be taught through a formal rule language. A language model can take whatever a learner actually said and apply it to new problems. It is also why we restrict Kai so strictly: if it solved problems from its own background knowledge, its mistakes would no longer come from the teaching.</p>
-<p>There are several reasons to expect this to help. Seeing their explanation used on a new problem lets learners find gaps they could not see while explaining, and fix them in their own understanding as well as Kai's. This is the production–appropriation cycle described by Okita and Schwartz. The feedback is also about the learner's reasoning, not just about a single answer, which is the level at which feedback tends to work best (Hattie &amp; Timperley, 2007). Because the mistake is Kai's, learners can look at it without feeling judged; Chase et al. (2009) describe this as an ego-protective buffer. Finally, spotting errors in someone else's reasoning is easier than catching your own while you solve a problem, and practising it improves self-correction (Okita, 2014).</p>
+<p><b>Keeping Kai honest.</b> LLM student simulators tend to fall back on their own knowledge, especially after a correction (Do, Sonkar &amp; Sachan, 2026). So the solver sees only the notebook and must treat everything else as unknown, an explicit constraint of the kind that beat novice personas (Miller &amp; Bosch, 2026); it never sees its marks, and a filter checks every step for untaught lesson words. If the model fails, a fallback builds Kai's attempt from the notebook.</p>
+<p><b>Why it should help.</b> In the lecture's terms, recursive feedback joins teaching and feedback: the marks concern the learner's own reasoning, the level at which feedback works best (Hattie &amp; Timperley, 2007), and a wrong step caused by a misconception works as undoing. Kai works on its own, so the learner must teach rules that hold in general. Since the mistake is Kai's, it can be examined without feeling judged (Chase et al., 2009), and errors are easier to spot in someone else's reasoning (Okita, 2014).</p>
 
 <h2><span class="n">6</span>The control condition: direct feedback</h2>
-<p>In the control condition everything stays the same except one thing: the learner solves the practice problems themselves (Figure 2, right). They get the same eight problems in the same eight minutes, and the same light, which they can check as often as they like. A space next to each problem lets them write down their working, much like the control group in the original study, which also had to write down its rules. Two levels of help are available. The first replays the moment of the video that explains what the problem needs; the second shows the full worked solution, the same solution the experimental group can open.</p>
-<p>We made the control strong on purpose. Practice with immediate feedback and worked solutions is a good way to learn, so if the experimental group does better, it cannot be because it saw more content, more solutions or spent more time. As in the original experiment, the only difference is whose answers the feedback is about.</p>
+<p>The learner solves the same problems in the same time, with the same light and retry, and writes down their working, like the control group in Experiment 2 (Figure 2, right). This control is strong on purpose, since answering yourself is retrieval practice (Koh, Lee &amp; Lim, 2018). In both conditions practice gives only right or wrong marks, as in Experiment 2, and worked solutions follow the final test: explanations usually help more (Moreno, 2004) and would do for everyone what recursive feedback should do.</p>
 
 <figure class="keep">
   <div class="shots"><img src="img/teach.png" alt="Teaching Kai"><img src="img/practice.png" alt="Practice in the control condition"></div>
-  <figcaption><b>Figure 2.</b> The prototype. <i>Left:</i> teaching Kai, a real exchange with the live model. When the learner asks to move on, Kai first asks for the one fact still missing; once the idea is complete, it confirms what it understood and offers a misconception to be corrected. <i>Right:</i> practice in the control condition: the learner's working, a "pick and why" question, the right/wrong light, and the two levels of help.</figcaption>
+  <figcaption><b>Figure 2.</b> The prototype. <i>Left:</i> teaching Kai with the live model. <i>Right:</i> practice in the control condition, with the learner's working and the light; worked solutions follow the final test.</figcaption>
 </figure>
 
 <h2><span class="n">7</span>Evaluation plan</h2>
-<p><b>Procedure.</b> Participants will open the study link, read what is recorded and start. The server will assign each session to a condition at random. The whole session runs in the browser in about 35 minutes, without accounts or names: each session gets a random id, and an optional participant code in the link lets us match it with other data, such as a questionnaire.</p>
-<p><b>Hypothesis and test.</b> We expect learners in the recursive-feedback condition to score higher on the final test than learners in the direct-feedback condition. The test has ten multiple-choice items, one or more for each part of the goal. None of them repeats a practice problem. Each tests the same principle in a different setting: banner ads, office coffee machines, a study app and podcasts, where practice used food trucks, slot machines and headlines. Most items ask the learner to pick an option <em>and</em> the right reason for it, so understanding counts, not only the final pick.</p>
-<p><b>Process data.</b> The prototype logs every step of a session, from each message to Kai and the facts the judge credited to every practice check, opened solution and test answer. Kai's understanding at the end of teaching measures how well someone taught. It is recorded before the conditions start to differ, so we can use it as a covariate.</p>
-<p><b>Manipulation checks.</b> The first check, suggested by the TA, is leakage: after the sessions, an independent model will check every reply and solution step Kai produced for lesson content that was not in its notebook, and we will review a sample by hand. If Kai leaks more than rarely, its mistakes no longer reflect the teaching. We will also check that Kai's wrong steps really trace back to gaps or errors in what the learner said, and that both groups spent the same time in practice and opened a similar number of worked solutions.</p>
-<p><b>Analysis and power.</b> We will compare test scores with an analysis of covariance (condition, plus teaching quality as covariate) and report the effect size with its confidence interval. To detect the original effect of d = 0.75 with 80% power, we would need about 29 participants per condition, or 22 with a one-sided test. With the 15 to 20 per condition we can realistically recruit, power lies between about 0.55 and 0.75, depending on the final sample and on whether we test one-sided. Our setting also differs from the original (university students, 35 minutes instead of 75, a language model instead of a rule-based agent), so the true effect may be smaller. We will report effect sizes, not only significance, and use the process data to explain what we find.</p>
+<p>Sessions run in the browser without accounts; each participant's access code sets their condition, in random balanced blocks of four. The <b>pretest</b> flags students with a reinforcement learning course and measures prior knowledge: one item on confidence intervals, the idea behind UCB's bonus, one on an expected payoff and one on regret.</p>
+<p><b>Hypothesis and test.</b> The recursive feedback group scores higher on the final test: ten multiple choice items that test each principle in a new setting, mostly asking for the pick and the reason, with wrong options that match misconceptions. The pilot tunes difficulty towards half correct to avoid a ceiling.</p>
+<p><b>Process data and manipulation checks.</b> We log every message, judge verdict, notebook state, step of Kai and answer, and Kai's understanding after teaching shows whether both groups taught equally well. As the TA suggested, an independent model checks Kai's replies and steps for content not in its notebook; we report this leak rate and rerun the analysis without leaked problems.</p>
+<p><b>Power.</b> Detecting the original d = 0.75 with 80% power needs about 29 participants per condition (22 one sided). With the 15 to 20 we can recruit, power is about 0.5 to 0.75, likely less in our shorter, LLM based setting, so we report effect sizes with intervals.</p>
 
-<h2><span class="n">8</span>Status and next steps</h2>
-<p>The prototype at <a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a> (access code <code style="font:600 9pt Figtree,sans-serif">bandits2026</code>) runs the complete direct-feedback condition, from the video to the test results, with logging switched on. Learners can also open "Kai's mind", which shows which ideas Kai has understood without revealing what it still lacks. The next step is the recursive-feedback practice of Figure 1, followed by a pilot with two or three people.</p>
-<p>Two design questions are still open, and the pilot will settle them. The first is how much Kai should ask while being taught. The pupil in the original first experiment only acknowledged what she heard; our Kai asks a targeted question after every message, which is closer to good tutoring but further from the original. We want to see both with real learners before deciding, as agreed with the TA, and the chosen version will be the same in both conditions. The second is Kai's readiness rule, which we will tune to keep the session close to 35 minutes.</p>
+<h2><span class="n">8</span>Decisions and open questions</h2>
+<table>
+  <tr><th style="width:16%">Topic</th><th style="width:40%">Decision</th><th>Fallback or open</th></tr>
+  <tr><td class="k">Study design</td><td>Replicate Experiment 2, which separates recursive feedback from feedback as such and has not been replicated</td><td>Experiment 1 (watch Kai answer versus prepare again, d = 1.3), already replicated (Okita et al., 2013)</td></tr>
+  <tr><td class="k">Learning goal</td><td>One goal across the three rules</td><td>Narrow to UCB, keeping greedy and ε-greedy as contrasts or skipping them completely</td></tr>
+  <tr><td class="k">Preparation</td><td>8 minute video covering the setting, lock in, ε-greedy's random pick and UCB's bonus</td><td>Our own text, or the <a href="https://youtu.be/bkw6hWvh_3k">Academic Gamer video</a> with less mathematical questions</td></tr>
+  <tr><td class="k">Practice</td><td>Six problems, two rounds, one retry, marks only</td><td>Kind, number and difficulty of problems; a formula sheet for both conditions</td></tr>
+</table>
 
-<h2 style="break-before: page; margin-top: 0">References</h2>
+<h2><span class="n">9</span>Status and next steps</h2>
+<p>The prototype runs both conditions with logging; with the access code, a switch on the practice page shows either. Next we refine both for a pilot with two or three people, test kinds of exercises, difficulty levels and practice material, and settle how much Kai asks.</p>
+
+<h2><span class="n">&nbsp;</span>References</h2>
 <div class="refs">
-<p>Chase, C. C., Chin, D. B., Oppezzo, M. A., &amp; Schwartz, D. L. (2009). Teachable agents and the protégé effect: Increasing the effort towards learning. <em>Journal of Science Education and Technology, 18</em>(4), 334–352.</p>
-<p>Chi, M. T. H., &amp; Wylie, R. (2014). The ICAP framework: Linking cognitive engagement to active learning outcomes. <em>Educational Psychologist, 49</em>(4), 219–243.</p>
-<p>Hattie, J., &amp; Timperley, H. (2007). The power of feedback. <em>Review of Educational Research, 77</em>(1), 81–112.</p>
-<p>Jin, H., Lee, S., Shin, H., &amp; Kim, J. (2024). Teach AI how to code: Using large language models as teachable agents for programming education. In <em>Proceedings of CHI 2024</em>.</p>
-<p>Okita, S. Y. (2014). Learning from the folly of others: Learning to self-correct by monitoring the reasoning of virtual characters in a computer-supported mathematics learning environment. <em>Computers &amp; Education, 71</em>, 257–278.</p>
-<p>Okita, S. Y., &amp; Schwartz, D. L. (2013). Learning by teaching human pupils and teachable agents: The importance of recursive feedback. <em>Journal of the Learning Sciences, 22</em>(3), 375–412.</p>
-<p>Roscoe, R. D., &amp; Chi, M. T. H. (2007). Understanding tutor learning: Knowledge-building and knowledge-telling in peer tutors' explanations and questions. <em>Review of Educational Research, 77</em>(4), 534–574.</p>
+<p>Chase, C. C., Chin, D. B., Oppezzo, M. A., &amp; Schwartz, D. L. (2009). Teachable agents and the protégé effect: Increasing the effort towards learning. <em>J. of Science Education and Technology, 18</em>(4), 334 to 352.</p>
+<p>Do, H., Sonkar, S., &amp; Sachan, M. (2026). Simulating students or sycophantic problem solving? On misconception faithfulness of LLM simulators. arXiv:2605.12748.</p>
+<p>Hattie, J., &amp; Timperley, H. (2007). The power of feedback. <em>Review of Educational Research, 77</em>(1), 81 to 112.</p>
+<p>Jin, H., Lee, S., Shin, H., &amp; Kim, J. (2024). Teach AI how to code: Using large language models as teachable agents for programming education. <em>CHI 2024</em>.</p>
+<p>Koh, A. W. L., Lee, S. C., &amp; Lim, S. W. H. (2018). The learning benefits of teaching: A retrieval practice hypothesis. <em>Applied Cognitive Psychology, 32</em>(3), 401 to 410.</p>
+<p>Miller &amp; Bosch (2026). Prompting for teachability: Designing novice personas in LLMs for learning by teaching contexts. <em>LAK 2026</em>.</p>
+<p>Moreno, R. (2004). Decreasing cognitive load for novice students: Effects of explanatory versus corrective feedback in discovery based multimedia. <em>Instructional Science, 32</em>, 99 to 113.</p>
+<p>Okita, S. Y. (2014). Learning from the folly of others: Learning to self correct by monitoring the reasoning of virtual characters. <em>Computers &amp; Education, 71</em>, 257 to 278.</p>
+<p>Okita, S. Y., &amp; Schwartz, D. L. (2013). Learning by teaching human pupils and teachable agents: The importance of recursive feedback. <em>J. of the Learning Sciences, 22</em>(3), 375 to 412.</p>
+<p>Okita, S. Y., Turkay, S., Kim, M., &amp; Murai, Y. (2013). Learning by teaching with virtual peers and the effects of technological design choices on learning. <em>Computers &amp; Education, 63</em>, 176 to 196.</p>
+<p>Roscoe, R. D., &amp; Chi, M. T. H. (2007). Understanding tutor learning: Knowledge building and knowledge telling in peer tutors' explanations and questions. <em>Review of Educational Research, 77</em>(4), 534 to 574.</p>
+<p>Roscoe, R. D., &amp; Chi, M. T. H. (2008). Tutor learning: The role of explaining and responding to questions. <em>Instructional Science, 36</em>(4), 321 to 350.</p>
+<p>Shahriar, T., &amp; Matsuda, N. (2023). What and how you explain matters: Inquisitive teachable agent scaffolds knowledge building for tutor learning. <em>AIED 2023</em>.</p>
 </div>
-<p class="note"><b>Use of AI.</b> We used an AI coding assistant (Claude Code) to build the prototype and to help draft this report. Kai runs on Gemini 2.5 Flash. The design decisions are ours, and we reviewed everything before submitting. Each team member's AI interaction logs are attached to the submission.</p>
+<p class="note"><b>Use of AI.</b> Claude Code and Claude helped with the prototype, literature and drafting; Kai runs on Gemini 2.5 Flash. The decisions are ours; each member's AI logs are attached.</p>
 
 </body>
 </html>

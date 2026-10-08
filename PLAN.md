@@ -6,7 +6,7 @@
 
 ## Where we are (2026-10-08)
 
-The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2). The MVP is the **direct-feedback pipeline, end to end**; the recursive condition is built next, on the same hooks.
+The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2). Both conditions run end to end at MVP depth.
 
 | Part | State |
 | --- | --- |
@@ -15,15 +15,15 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | 1 Watch | Done: 8:12 lesson, three video parts in one player |
 | 2 Teach Kai | Done: judge with quote check (facts and open-ended misconceptions), notebook, policy, writer with term filter, readiness 80% or 50% after 8 min, Kai's mind; participants can stop after 12 messages or 8 min |
 | 3 Practice, direct | Done: 2 rounds × 3 problems, two tries, Rewatch, 10 min, then the test |
-| 3 Practice, recursive | Not built (hooks: `steps[].facts`, notebook with misconceptions, `cond` in the token) |
+| 3 Practice, recursive | First version: Kai solves with the LLM from its notes, light, click a step to see the notes behind it, one correction (judged like teaching), second try; offline fallback; team sessions switch views |
 | 4 Final test | Done: 10 MCQs checked against the item rules; results with explanations and practice solutions |
 | Research log | Done: every turn, try, click and video event; notebook snapshots; `pnpm events export` |
-| Checks | 70 unit tests (incl. recomputed keys), `pnpm e2e` (21 browser checks on its own safe server, including a scan of everything the browser downloads for solutions, explanations and lesson facts) |
+| Checks | 75 unit tests (incl. recomputed keys), `pnpm e2e` (23 browser checks on its own safe server, including a scan of everything the browser downloads for solutions, explanations and lesson facts) |
 
 ## Next, in order
 
 1. **Pilot the direct pipeline** with 2–3 people on the real model, on participant codes: total time, judge quality on real explanations, the export.
-2. **Recursive practice**: Kai solves each problem with the LLM from its notebook only (closed world: numbered quotes, no lesson facts), shown step by step with the light; on red the learner clicks the faulty step and sees the notebook statement; one correction in the chat (judged like teaching), then one retry. Same problems, time and tries as direct.
+2. **Recursive practice, second pass**: steps revealed one by one; a verifier model on each step (now only a term check); check over several runs that Kai's mistakes follow the notebook (Phil's rf-pipeline-test). Verified so far (2026-10-08, live model in the browser): a taught misconception makes Kai go wrong at that step, clicking it shows the learner's quote, one correction makes Kai right; 2.5 to 5.6 s per call.
 3. **Leak check** (the TA's manipulation check): an LLM audit of every Kai message and solution step after the study, with the leak rate.
 4. Before the study: a team member who didn't write them reviews practice and test items; the M3 report is being updated by Phil (it still says 8 problems, unlimited checks, solutions during practice, 35 min, no pretest).
 

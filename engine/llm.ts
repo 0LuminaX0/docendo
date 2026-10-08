@@ -59,8 +59,9 @@ export async function chatJson<T extends z.ZodType>(opts: {
   temperature?: number;
   maxTokens?: number;
   retries?: number;
+  timeoutMs?: number; // per attempt; a timeout is not retried
 }): Promise<{ data: z.infer<T>; usage: Usage; ms: number }> {
-  const { model, messages, schema, name, temperature = 0, maxTokens = 4000, retries = 2 } = opts;
+  const { model, messages, schema, name, temperature = 0, maxTokens = 4000, retries = 2, timeoutMs = TIMEOUT_MS } = opts;
   const body = {
     model,
     messages,
@@ -85,7 +86,7 @@ export async function chatJson<T extends z.ZodType>(opts: {
         "X-Title": "Docendo",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) {
       lastError = `${res.status} ${await res.text()}`;

@@ -28,8 +28,15 @@ export type PracticeEntry = {
   firstCorrect?: boolean; // result of the first check
   ms?: number; // time spent on this problem
 };
-// one problem at a time, in order; `current` is its index
-export type PracticeState = { startedAt: number | null; current?: number; items: Record<string, PracticeEntry> };
+export type Condition = "direct" | "recursive";
+
+/** Recursive feedback: Kai's attempts at one problem (two at most), and the learner's one correction. */
+export type KaiStep = { text: string; notes: number[] };
+export type KaiAttempt = { steps: KaiStep[]; answer: string; correct: boolean; notes: string[] };
+export type KaiEntry = { attempts: KaiAttempt[]; clicks: number[]; correction: string | null; ms?: number };
+
+// one problem at a time, in order; `current` is its index. `view` is the condition a team session looks at.
+export type PracticeState = { startedAt: number | null; current?: number; items: Record<string, PracticeEntry>; kai?: Record<string, KaiEntry>; view?: Condition };
 export const blankEntry = (): PracticeEntry => ({ work: "", answer: "", checks: 0, correct: null });
 
 export type Saved = {
@@ -38,6 +45,7 @@ export type Saved = {
   expiresAt: number;
   demo: boolean;
   team?: boolean; // started with the shared code (or no code): test shortcuts are on. Participants' own codes: false
+  condition?: Condition; // from the participant's code (team sessions: direct, with a switch on the practice page)
   startedAt: number;
   step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
   pretest?: (number | null)[]; // answers before the video (sessions started before the pretest have none)
@@ -113,13 +121,14 @@ export function useSaved(): [Saved | null | undefined, (f: (s: Saved) => Saved) 
   return [value, update];
 }
 
-export function newSession(token: string, expiresAt: number, demo: boolean, team = true): Saved {
+export function newSession(token: string, expiresAt: number, demo: boolean, team = true, condition: Condition = "direct"): Saved {
   return {
     v: 1,
     token,
     expiresAt,
     demo,
     team,
+    condition,
     startedAt: Date.now(),
     step: "pretest",
     watched: [],
