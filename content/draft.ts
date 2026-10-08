@@ -40,7 +40,7 @@ Rules:
 - Facts must come from the sources. Prefer what the learner-facing sources say; use the reference sources for precision.`;
 
 function sourceBlock(chunks: Chunk[]) {
-  return chunks.map((c) => `[${c.id} · ${formatLoc(c.loc)}] ${c.text}`).join("\n");
+  return chunks.map((c) => `[${c.id}, ${formatLoc(c.loc)}] ${c.text}`).join("\n");
 }
 
 export async function runDraft(topic: Topic, { force = false } = {}) {

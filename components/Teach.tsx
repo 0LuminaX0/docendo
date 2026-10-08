@@ -185,7 +185,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                     <button key={k} className="src" onClick={() => v && openHelp({ video: v.id, start: t.help!.start, end: t.help!.start }, false)} title="Watch this moment again">
                       {v && <VideoThumb videoId={v.videoId} start={t.help.start} duration={v.durationSec} width={112} label={mmss(t.help.start)} />}
                       <span className="meta-t">
-                        <small>You opened part {t.help.part}{v ? ` · ${videoName(v.title)}` : ""}</small>
+                        <small>You opened part {t.help.part}{v ? `: ${videoName(v.title)}` : ""}</small>
                         <b>
                           <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch from <em>{mmss(t.help.start)}</em>
                         </b>

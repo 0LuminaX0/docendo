@@ -1,6 +1,8 @@
 # Docendo plan
 
-Design history and research grounding: https://claude.ai/artifact/TFPVnezekaraxiz7VQtxoP · Graph review: https://claude.ai/artifact/MB6a5XmLjoZBJSmSiyubHm · Rules: [CLAUDE.md](CLAUDE.md) · Deploy: [README.md](README.md)
+- Design history and research grounding: https://claude.ai/artifact/TFPVnezekaraxiz7VQtxoP
+- Graph review: https://claude.ai/artifact/MB6a5XmLjoZBJSmSiyubHm
+- Rules: [CLAUDE.md](CLAUDE.md); deploy: [README.md](README.md)
 
 ## Direction (2026-10-07)
 

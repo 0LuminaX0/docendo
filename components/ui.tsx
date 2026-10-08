@@ -24,7 +24,7 @@ export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 |
             ))}
           </div>
           <span className="phase-name">
-            {label ?? PHASES[phase - 1]} {!label && <span>· step {phase} of {PHASES.length}</span>}
+            {label ?? PHASES[phase - 1]}{!label && <span className="of">Step {phase} of {PHASES.length}</span>}
           </span>
         </div>
       )}

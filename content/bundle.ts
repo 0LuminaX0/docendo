@@ -93,5 +93,5 @@ export async function runBundle(topic: Topic) {
   await writeJson(out, bundle);
   const teachable = nodes.flatMap((n) => n.facts.filter((f) => f.teachable && f.required));
   const watchSec = lesson ? lesson.segments.reduce((a, x) => a + x.end - x.start, 0) : videos.reduce((a, v) => a + (v.durationSec ?? 0), 0);
-  console.log(`bundle  ${out}  ·  ${nodes.length} nodes, ${teachable.length} teachable required facts, ${Math.floor(watchSec / 60)}:${String(Math.round(watchSec % 60)).padStart(2, "0")} of video`);
+  console.log(`bundle  ${out}:  ${nodes.length} nodes, ${teachable.length} teachable required facts, ${Math.floor(watchSec / 60)}:${String(Math.round(watchSec % 60)).padStart(2, "0")} of video`);
 }

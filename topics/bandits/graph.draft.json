@@ -536,7 +536,7 @@
         "open": "What happens to an arm's chances right after I finally try it again?",
         "why": "Why does trying an arm make it less likely to be chosen the next day?",
         "whatIf": "What if I never pick an arm for a very long time, does it get forgotten?",
-        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2·2/4) = 1. What's its bonus after 16 tries at the same round?"
+        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
       }
     },
     {
@@ -576,7 +576,7 @@
         "open": "So which of the two rules ends up costing me less if I live in this town for years?",
         "why": "Why does UCB's extra cost stop piling up the way ε-greedy's does?",
         "whatIf": "What if I only had 20 days, would UCB still come out ahead?",
-        "compute": "If regret grows like 10 · ln T, how much regret is there at T = 100 and at T = 10,000? (ln 100 ≈ 4.6, ln 10,000 ≈ 9.2)"
+        "compute": "If regret grows like 10 × ln T, how much regret is there at T = 100 and at T = 10,000? (ln 100 ≈ 4.6, ln 10,000 ≈ 9.2)"
       }
     },
     {

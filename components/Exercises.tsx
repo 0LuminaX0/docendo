@@ -54,7 +54,7 @@ export default function Exercises({ items }: { items: Item[] }) {
       <Header phase={4} demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 4 · Final test</span>
+          <span className="eyebrow">Step 4 of 4</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Ten questions on what you learned</h1>
           <p className="lede" style={{ fontSize: 16 }}>No calculator needed. Pick one answer per question; you&apos;ll see the explanations afterwards.</p>
         </div>

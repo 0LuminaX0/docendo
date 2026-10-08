@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
   const session = verifyToken(body.data.token);
   if (!session) return fail(401, "Your session has expired.", { expired: true });
   const r = await limitAll([
-    [`log:sidmin:${session.sid}`, 120, 60],
-    [`log:sid:${session.sid}`, 3000, 6 * 3600],
+    // per instance: logging costs no model calls, and every request still needs a signed session
+    [`log:sidmin:${session.sid}`, 60, 60, "local"],
+    [`log:sid:${session.sid}`, 1500, 6 * 3600, "local"],
   ]);
   if (!r.ok) return fail(429, "Too many events.");
   // the event's own fields come last, so client data can never overwrite them

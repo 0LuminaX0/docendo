@@ -197,10 +197,10 @@ export default function Watch({ segments }: { segments: Segment[] }) {
       <Header phase={1} demo={saved.demo} />
       <main className="page">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 1 · Watch the lesson</span>
+          <span className="eyebrow">Step 1 of 4</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>{s.title}</h1>
           <p className="note">
-            Part {i + 1} of {segments.length} · {s.channel} · the whole lesson is {mmss(total)}
+            Part {i + 1} of {segments.length}, by {s.channel}. The whole lesson is {mmss(total)}.
           </p>
         </div>
         <div className="watch">
@@ -225,13 +225,13 @@ export default function Watch({ segments }: { segments: Segment[] }) {
               ))}
             </div>
             <p className="note">
-              {mmss(watchedTotal)} of {mmss(total)} watched{mode === "api" ? " · the parts play one after another" : ""}
+              {mmss(watchedTotal)} of {mmss(total)} watched.{mode === "api" ? " The parts play one after another." : ""}
             </p>
           </div>
           <aside className="aside">
             <nav className="playlist" aria-label="Lesson parts">
               <span className="eyebrow">
-                The lesson · {segments.length} parts · {mmss(total)}
+                The lesson: {segments.length} parts, {mmss(total)}
               </span>
               {segments.map((x, k) => (
                 <button key={k} className="pl-item chapter" aria-current={k === i} onClick={() => (track("video_select", { seg: k }), mode === "api" ? loadSegment(k, true) : setI(k))}>
@@ -239,7 +239,7 @@ export default function Watch({ segments }: { segments: Segment[] }) {
                   <span style={{ minWidth: 0 }}>
                     <span className="t">{x.title}</span>
                     <span className="m">
-                      {mmss(len(k))} · {x.channel}
+                      {mmss(len(k))}, {x.channel}
                     </span>
                   </span>
                 </button>

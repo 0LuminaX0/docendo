@@ -88,7 +88,7 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
               <div className="fill" style={{ width: `${Math.max(2, pct)}%` }} />
             </div>
             <p className="note">
-              {pct}% of what Kai needs to feel ready · {mind.facts.correct} facts explained{mind.facts.partial ? `, ${mind.facts.partial} partly` : ""}, of {mind.facts.total} · message {mind.turn} of {mind.maxTurns}
+              {pct}% of what Kai needs to feel ready. {mind.facts.correct} of {mind.facts.total} facts explained{mind.facts.partial ? `, ${mind.facts.partial} partly` : ""}. Message {mind.turn} of {mind.maxTurns}.
             </p>
           </div>
         </div>

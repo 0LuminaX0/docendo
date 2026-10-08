@@ -24,7 +24,7 @@ The app runs start to finish on the web, in four chapters:
 
 - **Secrets stay on the server.** `OPENROUTER_API_KEY`, `SESSION_SECRET`, Upstash credentials and exercise answers are only read in `lib/server/*` (marked `server-only`) and API routes. Never use `NEXT_PUBLIC_` for them. After a build, `.next/static` must contain no key, answer or lesson fact text.
 - **The browser never calls OpenRouter.** Only `/api/session`, `/api/chat`, `/api/practice`, `/api/grade` and `/api/log` exist. Each validates input with zod, caps sizes, checks the Origin, requires a signed session token (except `/api/session`), and is rate-limited (`lib/server/limit.ts`: Upstash when configured, in-memory otherwise).
-- **Limits are per learner first.** A lab room shares one IP, so per-IP caps stay generous (120 chat turns/min). Per-session caps do the real work (10/min, 60 per session), plus a site-wide daily cap.
+- **Limits are per learner first.** A lab room shares one IP, so per-IP caps stay generous (120 chat turns/min). Per-session caps do the real work (10/min, 60 per session), plus a site-wide daily cap. Only checks that protect the model budget (chat per session, site-wide daily) and the once-per-session ones (session start, grading) go to Upstash; bursts, `/api/practice` and `/api/log` count in memory (`"local"` in `limitAll`), because each shared check costs about 5 Redis commands (measured: about 90% of the commands used, the event log itself only about 7%). Client events are batched every 15 s and sent at once on page change or tab hide.
 - **No key means demo mode** (`config.demo`): an offline judge and writer, with a visible "Demo mode" badge. The full flow must keep working without a key.
 - **Kai's state lives in the browser** (localStorage) and is re-validated on every request (`engine/tutor/state.ts`). Tampering only affects that learner's own session.
 - **Engine stays pure TypeScript** in `engine/tutor/` (no Next imports), so it can be unit-tested and reused by a CLI.
@@ -55,11 +55,14 @@ pnpm content review bandits      # topics/bandits/review.html (team review page)
 pnpm content freeze bandits      # strict validate, then graph.json with hash + help locations
 pnpm content all bandits         # ingest, locate, verify (if key), validate, review
 pnpm content bundle bandits      # graph + coverage + questions → bundle.json (what the web app reads)
-pnpm dev · pnpm build · pnpm start
+pnpm dev
+pnpm build
+pnpm start
 pnpm chat [--demo]               # terminal chat with Kai, prints judge verdicts and moves
 pnpm e2e [url]                   # browser walkthrough (puppeteer-core + installed Chrome), screenshots in .e2e/
                                  # .env has a real key: start the server with DOCENDO_DEMO=1 (or OPENROUTER_API_KEY=) or the run spends credits
-pnpm test · pnpm typecheck
+pnpm test
+pnpm typecheck
 ```
 
 ## Content pipeline rules
@@ -79,7 +82,7 @@ pnpm test · pnpm typecheck
 - Learner videos (2026-10-07, ~15 min total as the user asked): ritvikmath e3L4VocZnnQ (11:43; setup, regret, greedy, ε-greedy, zero regret) + DataMListic 8CquWcViBfg (3:19; UCB, linear vs logarithmic regret). The old ritvikmath UCB video (FgmMK6RPU1c) is now a reference source. 20 teachable required facts; 4 required facts are not in the videos (n12.f2 growth of ln t, n14.f1/f2 assumptions, n17.f3 many arms vs few rounds). No single ≤15-min video covered regret and UCB together (Academic Gamer bkw6hWvh_3k lacks regret).
 - A node has: `id`, `label`, `needs` (prerequisites), `goals`, `facts` (2–4, some `required`), `lexicon` (terms Kai may not use before the node is taught), `misconception`, `probes` {why, whatIf, compute}, `source` locators.
 - Node states: unseen → mentioned → explained (required facts correct) → checked (probe asked); parked once all its questions are used up; a correct fact unparks it. Wrong facts stay in Kai's notebook as taught.
-- Policy priorities (`engine/tutor/policy.ts`): wrap up if ready or at 30 messages → answer the learner's question, then carry on → contradict a new wrong fact → move_on: nudge once, then park → focus explained: misconception, deepen, move on → next missing fact's question → park and move on. Next idea score: 10·unlocked + 3·mentioned now + 2·serves least-covered goal + 1·child of focus − 2·parked; ties by graph order.
+- Policy priorities (`engine/tutor/policy.ts`): wrap up if ready or at 30 messages → answer the learner's question, then carry on → contradict a new wrong fact → move_on: nudge once, then park → focus explained: misconception, deepen, move on → next missing fact's question → park and move on. Next idea score: 10 × unlocked + 3 × mentioned now + 2 × serves least-covered goal + 1 × child of focus − 2 × parked; ties by graph order.
 
 ## Practice and final test
 
@@ -114,3 +117,7 @@ Layout conventions (user feedback, 2026-10-07):
 ## Source documents
 
 The design PDFs (C2 draft, background, study design options) are not in the repo. Key facts from them are in this file and the plan artifact. Learning goals: LG1 compute the regret of greedy and ε-greedy; LG2 compare ε-greedy and UCB1 by how they explore; LG3 model a new problem as a bandit and choose a strategy.
+
+## Writing style (user feedback, 2026-10-08)
+
+Don't use " · " as a separator in text, UI copy, titles, docs or console output; it reads as AI-generated. Use ordinary punctuation instead: a comma, colon, full stop, parentheses or a line break. Be sparing with decorative symbols in general (arrows, slashes, stars). A multiplication dot in maths is fine, but prefer ×.

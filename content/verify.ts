@@ -58,7 +58,7 @@ export async function runVerify(topic: Topic, { force = false } = {}) {
           role: "user",
           content:
             `Facts:\n${todo.map((f) => `${f.id}: ${f.text}`).join("\n")}\n\nPassages:\n` +
-            passages.map((c) => `[${c.id} · ${formatLoc(c.loc)}] ${c.text}`).join("\n"),
+            passages.map((c) => `[${c.id}, ${formatLoc(c.loc)}] ${c.text}`).join("\n"),
         },
       ],
     });

@@ -24,8 +24,8 @@ function token(): string | null {
 export function track(type: string, data?: Record<string, Value>) {
   if (typeof window === "undefined") return;
   queue.push({ type, at: Date.now(), path: location.pathname.slice(0, 40), seq: seq++, data });
-  if (queue.length >= 40) flush();
-  else if (!timer) timer = setTimeout(() => flush(), 4000);
+  if (queue.length >= 40 || type === "page_view") flush(); // a new page: send what the last one collected
+  else if (!timer) timer = setTimeout(() => flush(), 15_000); // batched: one request per 15 s at most (tab hide/close sends at once)
 }
 
 export function flush(keepalive = false) {

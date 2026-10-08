@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "8fe27d4c1e2faab6",
-  "builtAt": "2026-10-08T10:02:38.274Z",
+  "hash": "df4d9249c018e70c",
+  "builtAt": "2026-10-08T12:36:25.821Z",
   "goals": [
     {
       "id": "G",
@@ -565,7 +565,7 @@
         "open": "What happens to an arm's chances right after I finally try it again?",
         "why": "Why does trying an arm make it less likely to be chosen the next day?",
         "whatIf": "What if I never pick an arm for a very long time, does it get forgotten?",
-        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2·2/4) = 1. What's its bonus after 16 tries at the same round?"
+        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
       },
       "help": [
         {

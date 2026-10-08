@@ -247,7 +247,7 @@ function draw() {
     s += '<g class="gn ' + n.kind + (sel === n.id ? " sel" : "") + (dim ? " dim" : "") + '" data-n="' + n.id + '" tabindex="0" role="button" aria-label="' + n.id + " " + esc(n.label) + '" transform="translate(' + p.x + "," + p.y + ')">';
     s += '<rect class="b" width="' + W + '" height="' + H + '" rx="10"/>';
     s += '<rect class="st ' + st + '" x="0" y="8" width="4" height="' + (H - 16) + '" rx="2"/>';
-    s += '<text class="id" x="12" y="17">' + n.id + (n.kind === "branch" ? " · branch" : "") + "</text>";
+    s += '<text class="id" x="12" y="17">' + n.id + (n.kind === "branch" ? " (branch)" : "") + "</text>";
     s += '<text class="lb" x="12" y="34">' + esc(n.label) + "</text>";
     n.goals.forEach((g, i) => { s += '<circle class="c-' + g + '" cx="' + (W - 12 - (n.goals.length - 1 - i) * 11) + '" cy="13" r="4"/>'; });
     s += "</g>";
@@ -265,7 +265,7 @@ function panel() {
   if (!n) { $("panel").innerHTML = '<p class="empty">Select a node to see its details.</p>'; return; }
   const issues = D.issues.filter((i) => i.where === n.id || i.where.startsWith(n.id + "."));
   const contra = D.questions && n.misconception ? D.questions.contradictions.find((c) => c.misconception === n.misconception.id) : null;
-  let h = '<div class="head"><span class="kick">' + n.id + " · " + n.kind + (n.goals.length ? " · " + n.goals.join(", ") : "") + '</span><h2>' + esc(n.label) + "</h2>";
+  let h = '<div class="head"><span class="kick">' + n.id + ", " + n.kind + (n.goals.length ? ", " + n.goals.join(", ") : "") + '</span><h2>' + esc(n.label) + "</h2>";
   h += '<p class="note">Needs: ' + (n.needs.length ? n.needs.map((x) => '<a href="#' + x + '" data-go="' + x + '">' + x + " " + esc(byId.get(x)?.label) + "</a>").join(", ") : "nothing (a starting point)") + "</p></div>";
   h += '<div class="col"><span class="kick">Facts</span><ul class="facts">';
   for (const f of n.facts) {
@@ -273,7 +273,7 @@ function panel() {
     h += '<li class="fact"><div class="t"><code>' + f.id.split(".")[1] + "</code><span>" + esc(f.text) + "</span></div>";
     h += '<div class="chips">' + (f.required ? '<span class="tag req">required</span>' : "") + (n.kind === "core" ? '<span class="tag ' + c + '">' + (d ? (d.accepted ? "accepted gap" : d.status) : "not decided") + "</span>" : "") + "</div>";
     if (d && (d.where.length || d.note || d.accepted)) {
-      h += '<div class="note">' + d.where.map((w) => { const l = D.whereLabels[w]; return l && l.href ? '<a href="' + l.href + '" target="_blank" rel="noopener">' + esc(l.label) + "</a>" : esc(l ? l.label : w); }).join(" · ") + (d.note ? (d.where.length ? " — " : "") + esc(d.note) : "") + (d.accepted ? " · accepted: " + esc(d.accepted) : "") + "</div>";
+      h += '<div class="note">' + d.where.map((w) => { const l = D.whereLabels[w]; return l && l.href ? '<a href="' + l.href + '" target="_blank" rel="noopener">' + esc(l.label) + "</a>" : esc(l ? l.label : w); }).join(", ") + (d.note ? (d.where.length ? ". " : "") + esc(d.note) : "") + (d.accepted ? ". Accepted: " + esc(d.accepted) : "") + "</div>";
     }
     const pl = D.places[f.id] || [];
     if (pl.length) {
@@ -286,7 +286,7 @@ function panel() {
   h += '</ul></div><div class="col">';
   h += '<div><span class="kick">Terms Kai may not use before this is taught</span><div class="terms" style="margin-top:6px">' + (n.lexicon.length ? n.lexicon.map((t) => "<span>" + esc(t) + "</span>").join("") : '<span class="empty">none</span>') + "</div></div>";
   h += '<span class="kick">Kai\\'s questions</span>' + "<dl><dt>open</dt><dd>" + esc(n.probes.open) + "</dd><dt>why</dt><dd>" + esc(n.probes.why) + "</dd><dt>what if</dt><dd>" + esc(n.probes.whatIf) + "</dd><dt>compute</dt><dd>" + esc(n.probes.compute) + "</dd></dl>";
-  if (n.misconception) h += '<div class="mis"><span class="kick">Misconception · ' + esc(n.misconception.id) + "</span><span>Kai says: “" + esc(n.misconception.says) + "”</span><span>Truth: " + esc(n.misconception.truth) + "</span>" + (contra ? "<span>If the learner teaches it: “" + esc(contra.question) + "”</span>" : "") + "</div>";
+  if (n.misconception) h += '<div class="mis"><span class="kick">Misconception: ' + esc(n.misconception.id) + "</span><span>Kai says: “" + esc(n.misconception.says) + "”</span><span>Truth: " + esc(n.misconception.truth) + "</span>" + (contra ? "<span>If the learner teaches it: “" + esc(contra.question) + "”</span>" : "") + "</div>";
   if (issues.length) h += '<ul class="issues">' + issues.map((i) => '<li><span class="lv ' + i.level + '">' + i.level + "</span><code>" + esc(i.where) + "</code><span>" + esc(i.msg) + "</span></li>").join("") + "</ul>";
   h += "</div>";
   $("panel").innerHTML = h;

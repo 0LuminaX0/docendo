@@ -114,7 +114,7 @@ export default function Practice({ items, minutes }: { items: Item[]; minutes: n
       <Header phase={3} demo={saved.demo} right={clock} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 3 · Practice</span>
+          <span className="eyebrow">Step 3 of 4</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Practice problems</h1>
           <p className="lede" style={{ fontSize: 16 }}>
             You have {minutes} minutes. Work through as many problems as you like: check your answer as often as you want, or open the worked solution. Nothing here is graded.

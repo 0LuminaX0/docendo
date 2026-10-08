@@ -32,7 +32,7 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
       <Header phase={0} demo={demo} />
       <main className="page intro">
         <div className="intro-head">
-          <span className="eyebrow">A learning-by-teaching study · CS-411 Digital Education, EPFL</span>
+          <span className="eyebrow">A learning-by-teaching study for CS-411 Digital Education, EPFL</span>
           <h1 className="title">Learn {topic.toLowerCase()} by teaching them</h1>
           <p className="lede">
             You&apos;ll watch a short lesson, then explain it to Kai, a classmate who missed the lecture. Kai only knows what you tell it, so the better you explain, the more it understands.

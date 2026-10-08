@@ -52,9 +52,10 @@ export async function POST(req: NextRequest) {
 
   const ip = clientIp(req);
   const r = await limitAll([
-    [`chat:sidmin:${session.sid}`, config.sessionTurnsPerMin, 60], // one learner's burst
-    [`chat:ip:${ip}`, config.ipTurnsPerMin, 60], // one network (generous: a lab room shares an IP)
-    [`chat:sid:${session.sid}`, config.sessionTurnLimit, config.sessionHours * 3600], // one learner, whole session
+    // bursts: per server instance is enough; the shared checks below are what protect the model budget
+    [`chat:sidmin:${session.sid}`, config.sessionTurnsPerMin, 60, "local"], // one learner's burst
+    [`chat:ip:${ip}`, config.ipTurnsPerMin, 60, "local"], // one network (generous: a lab room shares an IP)
+    [`chat:sid:${session.sid}`, config.sessionTurnLimit, config.sessionHours * 3600], // one learner, whole session (shared)
     ...(config.demo ? [] : ([["chat:global", config.dailyTurnLimit, 86_400]] as [string, number, number][])), // the whole site
   ]);
   if (!r.ok) {

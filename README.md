@@ -14,7 +14,7 @@
 [![Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
 [![EPFL CS-411](https://img.shields.io/badge/EPFL-CS--411%20Digital%20Education-E2001A)](https://www.epfl.ch)
 
-**[A session](#a-session)** · **[How Kai works](#how-kai-works)** · **[Running it](#running-it)** · **[Changing the lesson](#changing-the-lesson)** · **[Credits](#credits)**
+**[A session](#a-session)** &nbsp;&nbsp; **[How Kai works](#how-kai-works)** &nbsp;&nbsp; **[Running it](#running-it)** &nbsp;&nbsp; **[Changing the lesson](#changing-the-lesson)** &nbsp;&nbsp; **[Credits](#credits)**
 
 ![Teaching Kai: chat with Kai's reactions, a card to rewatch the video, and Kai's understanding bar](docs/teach.png)
 
@@ -154,4 +154,4 @@ Kai itself also runs on language models, through OpenRouter. That is part of the
 
 ---
 
-<sub><img src="docs/logo.svg" width="16" height="16" alt="" align="absmiddle">&nbsp; Made with patience and a lot of questions from Kai · EPFL, 2026</sub>
+<sub><img src="docs/logo.svg" width="16" height="16" alt="" align="absmiddle">&nbsp; Made with patience and a lot of questions from Kai. EPFL, 2026</sub>

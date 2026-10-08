@@ -55,10 +55,15 @@ export async function limit(key: string, max: number, windowSec: number): Promis
   }
 }
 
-/** Run several limits; the first one that refuses wins. */
-export async function limitAll(checks: [key: string, max: number, windowSec: number][]): Promise<LimitResult> {
-  for (const [key, max, win] of checks) {
-    const r = await limit(key, max, win);
+/**
+ * Run several limits; the first one that refuses wins. A check marked "local"
+ * is counted in this server instance's memory only. Use that for bursts and for
+ * endpoints that cost nothing: each shared (Upstash) check costs about five Redis
+ * commands, and those add up against the free tier much faster than the research log.
+ */
+export async function limitAll(checks: [key: string, max: number, windowSec: number, where?: "local"][]): Promise<LimitResult> {
+  for (const [key, max, win, where] of checks) {
+    const r = where === "local" ? memoryLimit(key, max, win) : await limit(key, max, win);
     if (!r.ok) return r;
   }
   return { ok: true, retryAfter: 0 };

@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
   const session = verifyToken(body.data.token);
   if (!session) return fail(401, "Your session has expired. Start again from the first page.", { expired: true });
   const r = await limitAll([
-    [`practice:sidmin:${session.sid}`, 30, 60],
-    [`practice:sid:${session.sid}`, 400, 6 * 3600],
-    [`practice:ip:${clientIp(req)}`, 600, 60],
+    // no model calls here, so per-instance limits are enough
+    [`practice:sidmin:${session.sid}`, 30, 60, "local"],
+    [`practice:sid:${session.sid}`, 400, 6 * 3600, "local"],
+    [`practice:ip:${clientIp(req)}`, 600, 60, "local"],
   ]);
   if (!r.ok) {
     record({ t: "practice_limited", sid: session.sid, id: body.data.id });

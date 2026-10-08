@@ -155,10 +155,10 @@ export async function runValidate(topic: Topic, { strict }: { strict: boolean })
   const core = graph.nodes.filter((n) => n.kind === "core").length;
   console.log(
     `validate  ${core} core + ${graph.nodes.length - core} branch nodes, ${graph.nodes.reduce((a, n) => a + n.facts.length, 0)} facts` +
-      `  ·  ${errors.length} errors, ${warns.length} warnings${strict ? " (strict)" : ""}` +
-      (questions ? "" : "  ·  no questions.json") +
-      (locations ? "" : "  ·  no locations.json (run locate)") +
-      (coverage ? "" : "  ·  no coverage.json (run verify)"),
+      `;  ${errors.length} errors, ${warns.length} warnings${strict ? " (strict)" : ""}` +
+      (questions ? "" : ";  no questions.json") +
+      (locations ? "" : ";  no locations.json (run locate)") +
+      (coverage ? "" : ";  no coverage.json (run verify)"),
   );
   return errors.length === 0;
 }

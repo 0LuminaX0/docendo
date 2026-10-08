@@ -41,7 +41,7 @@ for await (const line of rl) {
   if (message === "/quit") break;
   if (message === "/mind") {
     const m = mindView(bundle, state);
-    console.log(dim(`understanding ${Math.round(m.understanding * 100)}% · ${m.facts.correct}+${m.facts.partial}½ of ${m.facts.total} · ready at ${m.facts.needed}`));
+    console.log(dim(`understanding ${Math.round(m.understanding * 100)}%, ${m.facts.correct}+${m.facts.partial}½ of ${m.facts.total}, ready at ${m.facts.needed}`));
     console.log(dim(m.nodes.map((n) => `${n.focus ? "▶" : " "} ${n.id} ${n.status.padEnd(9)} ${n.correct}/${n.total}`).join("\n")));
     prompt();
     continue;
@@ -51,8 +51,8 @@ for await (const line of rl) {
   history.push({ role: "learner", text: message }, { role: "kai", text: r.reply });
   state = r.state;
   console.log(dim(`  judged: ${r.trace.judged.map((f) => `${f.fact}:${f.verdict}`).join(", ") || "nothing"}`));
-  console.log(dim(`  move:   ${r.trace.move.type}${r.trace.move.node ? ` ${r.trace.move.node}` : ""}${r.trace.leaked.length ? ` · leaked ${r.trace.leaked.join(", ")}${r.trace.fallback ? " → fallback" : " → rewritten"}` : ""} · ${Date.now() - t0} ms`));
-  console.log(`\nKai ${face[r.mood]}  ${r.reply}\n${dim(`  understanding ${Math.round(r.progress * 100)}% · message ${state.turn}`)}\n`);
+  console.log(dim(`  move:   ${r.trace.move.type}${r.trace.move.node ? ` ${r.trace.move.node}` : ""}${r.trace.leaked.length ? `, leaked ${r.trace.leaked.join(", ")}${r.trace.fallback ? " → fallback" : " → rewritten"}` : ""}, ${Date.now() - t0} ms`));
+  console.log(`\nKai ${face[r.mood]}  ${r.reply}\n${dim(`  understanding ${Math.round(r.progress * 100)}%, message ${state.turn}`)}\n`);
   if (r.done) {
     console.log("Kai feels ready. Done.");
     break;

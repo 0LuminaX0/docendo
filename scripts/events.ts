@@ -240,7 +240,7 @@ if (cmd === "export") {
   console.log(`wrote ${dir}: events.jsonl (${events.length}), ${Object.entries(t).map(([n, r]) => `${n}.csv (${r.length})`).join(", ")}`);
 } else {
   const done = t.sessions.filter((s) => s.testScore !== null);
-  console.log(`${events.length} events · ${t.sessions.length} sessions · ${done.length} finished the test`);
-  console.log(`mean turns ${mean(t.sessions.map((s) => Number(s.turns)))} · mean test score ${mean(done.map((s) => Number(s.testScore)))} · Kai unhappy in ${mean(t.sessions.filter((s) => Number(s.turns) > 0).map((s) => Number(s.kaiUnhappyShare) * 100))}% of turns`);
+  console.log(`${events.length} events, ${t.sessions.length} sessions, ${done.length} finished the test`);
+  console.log(`mean turns ${mean(t.sessions.map((s) => Number(s.turns)))}, mean test score ${mean(done.map((s) => Number(s.testScore)))}, Kai unhappy in ${mean(t.sessions.filter((s) => Number(s.turns) > 0).map((s) => Number(s.kaiUnhappyShare) * 100))}% of turns`);
   console.log(`mean minutes: watch ${mean(t.sessions.filter((s) => s.minWatch !== null).map((s) => Number(s.minWatch)))}, teach ${mean(t.sessions.filter((s) => s.minTeach !== null).map((s) => Number(s.minTeach)))}, practice ${mean(t.sessions.filter((s) => s.minPractice !== null).map((s) => Number(s.minPractice)))}, test ${mean(t.sessions.filter((s) => s.minTest !== null).map((s) => Number(s.minTest)))}`);
 }

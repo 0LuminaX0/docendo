@@ -57,10 +57,14 @@ button { font: inherit; color: inherit; }
 .arms i.on4 { background: var(--blue); }
 .phase-name { font-weight: 600; font-size: 14px; white-space: nowrap; }
 .phase-name span { color: var(--muted); font-weight: 500; }
+.phase-name .of { margin-left: 10px; }
 .top-right { display: flex; align-items: center; justify-content: flex-end; gap: 14px; min-width: 0; grid-column: 3; }
 .demo { font-size: 12px; font-weight: 600; color: #8a5a00; background: #fff4dc; padding: 5px 10px; border-radius: 99px; white-space: nowrap; }
 @media (max-width: 860px) {
-  .top.has-tools .phase-name { display: none; }
+  /* the page tools (Chat / Kai's mind) need the room: drop the step bars, as on phones */
+  .top.has-tools .phase { display: none; }
+  .top.has-tools { grid-template-columns: auto auto; justify-content: space-between; }
+  .top.has-tools .top-right { grid-column: 2; }
 }
 @media (max-width: 640px) {
   .top { padding-inline: 14px; gap: 10px; }
@@ -406,7 +410,7 @@ button { font: inherit; color: inherit; }
 .send { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--ink); color: #fff; display: grid; place-items: center; cursor: pointer; transition: background 0.15s, transform 0.15s; flex: none; }
 .send:hover { transform: translateY(-1px); }
 .send[disabled] { background: #d9dde3; color: #fff; cursor: not-allowed; transform: none; }
-.seg button { display: inline-flex; align-items: center; gap: 7px; }
+.seg button { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
 @media (max-width: 640px) { .seg .lbl { display: none; } .seg button { padding: 7px 12px; } }
 .vthumb { position: relative; display: block; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 8px; overflow: hidden; background: #0f1520; flex: none; }
 .vthumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
