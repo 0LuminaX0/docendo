@@ -1,106 +1,156 @@
 {
-  "title": "Multi-armed bandits: exercises",
-  "note": "Server-only: answers and explanations never reach the browser before grading. Every question must make sense on its own; sections follow the order of the lesson.",
+  "title": "Multi-armed bandits: final test",
+  "note": "Goal G only (how greedy, ε-greedy and UCB choose). Every item is parallel to a practice principle but uses a setting the practice doesn't (banner ads, office coffee machines, a study app, podcasts), so the test measures transfer, not recall of practice items. type: base = recognise the idea; apply = pick and justify in a given state; transfer = a new situation.",
   "items": [
     {
-      "id": "q01", "goal": "LG3", "type": "base", "section": "The problem",
-      "prompt": "You spend 300 days in a small town. Every night you eat at one of three restaurants, and how much you enjoy the meal is random around that restaurant's average, which you don't know. Seen as a multi-armed bandit, what is an “arm”?",
-      "options": ["Each of the 300 days", "Each restaurant you can choose", "How much you enjoy one meal", "Your average enjoyment over the stay"],
-      "answer": 1,
-      "explain": "An arm is an option you choose between in every round. Here the days are the rounds, and the enjoyment of a meal is the reward."
-    },
-    {
-      "id": "q02", "goal": "LG3", "type": "transfer", "section": "The problem",
-      "prompt": "A news site shows each visitor one of four possible headlines and wants as many clicks as possible. Which description fits the bandit model?",
+      "id": "q01",
+      "goal": "G",
+      "type": "base",
+      "section": "The problem",
+      "prompt": "An online shop shows each visitor one of five banner ads and wants as many clicks as possible. Seen as a multi-armed bandit, what are the options you choose between (the “arms”)?",
       "options": [
-        "Arms: the visitors · reward: the headline length · rounds: the four headlines",
-        "Arms: the four headlines · reward: click or no click · rounds: the visitors",
-        "Arms: the clicks · reward: the number of visitors · rounds: the days",
-        "There are no arms, because the site already knows which headline is best"
+        "The visitors",
+        "The five banners",
+        "The clicks",
+        "The days the shop is open"
       ],
       "answer": 1,
-      "explain": "The site chooses between headlines (arms) for every visitor (round) and only learns whether that visitor clicked (reward)."
+      "explain": "The arms are what you choose between in every round. Each visitor is a round, and a click is the reward."
     },
     {
-      "id": "q03", "goal": "LG1", "type": "apply", "section": "Measuring regret",
-      "prompt": "Three restaurants have average enjoyment 10, 8 and 5. For 300 days you pick a restaurant at random every night. What is your expected regret compared with always eating at the best restaurant?",
-      "options": ["230", "2300", "700", "3000"],
-      "answer": 2,
-      "explain": "Picking at random earns 300 × (10 + 8 + 5) / 3 = 2300 on average. Always eating at the best restaurant earns 300 × 10 = 3000. Regret = 3000 − 2300 = 700."
-    },
-    {
-      "id": "q04", "goal": "LG1", "type": "apply", "section": "Measuring regret",
-      "prompt": "The best option has an average reward of 0.8. Over 100 rounds a strategy picks it 60 times and picks an option with average 0.5 the other 40 times. What is the strategy's regret?",
-      "options": ["12", "20", "30", "40"],
-      "answer": 0,
-      "explain": "Each pick of the worse option loses 0.8 − 0.5 = 0.3 on average, so the regret is 40 × 0.3 = 12."
-    },
-    {
-      "id": "q05", "goal": "LG1", "type": "deep", "section": "Greedy and ε-greedy",
-      "prompt": "A strategy tries each of three restaurants once and then eats only at the one that gave the best first meal. Restaurant 1 (average 10) happens to give 7, restaurant 2 (average 8) gives 8, restaurant 3 (average 5) gives 5. What happens for the remaining 297 days?",
+      "id": "q02",
+      "goal": "G",
+      "type": "transfer",
+      "section": "The problem",
+      "prompt": "Why can't the shop simply pick the best banner on its first day?",
       "options": [
-        "It eats at restaurant 1, because its true average is the highest",
-        "It keeps switching between restaurants 1 and 2",
-        "It eats at restaurant 2 and never finds out that restaurant 1 is better",
-        "It picks a random restaurant each night"
+        "Because the shop is only allowed to change banners once a week",
+        "Because all banners have the same click rate at first",
+        "Because each banner's true click rate is unknown, and single visitors click more or less at random, so the shop has to learn the rates by showing the banners",
+        "Because the best banner changes every day"
       ],
       "answer": 2,
-      "explain": "After one sample each it commits for good. One unlucky meal hid the best restaurant, so it misses about 2 units of enjoyment on every remaining day."
+      "explain": "The averages are hidden and each reward is random, so the only way to learn how good a banner is, is to show it and average the results."
     },
     {
-      "id": "q06", "goal": "LG2", "type": "base", "section": "Greedy and ε-greedy",
-      "prompt": "You choose between three restaurants every night using ε-greedy with ε = 10%. How does it choose?",
+      "id": "q03",
+      "goal": "G",
+      "type": "apply",
+      "section": "Greedy",
+      "prompt": "Your office has three coffee machines. So far you rated the coffee from machine A 7 and 5, from B 8, and from C 6, 6 and 7. Following greedy, which machine do you use next, and why?",
       "options": [
-        "With 10% chance it picks a restaurant at random; otherwise it picks the one with the best average so far",
-        "With 10% chance it picks the restaurant it has visited least; otherwise the best one",
-        "It visits each restaurant 10% of the time, in turn",
-        "It picks the best restaurant until it has been unlucky on 10% of the nights"
+        "B, because its average so far (8) is the highest",
+        "A, because its best cup (7) is as good as C's",
+        "C, because it has the most ratings and is the most reliable",
+        "Any of them, chosen at random"
       ],
       "answer": 0,
-      "explain": "The exploring picks are uniformly random. They ignore how often each restaurant has been tried, which is the weakness UCB fixes."
+      "explain": "The averages are A = 6, B = 8, C ≈ 6.3. Greedy always picks the best average so far, even if it rests on a single cup."
     },
     {
-      "id": "q07", "goal": "LG2", "type": "deep", "section": "Upper confidence bound (UCB)",
-      "prompt": "Two options have the same average reward so far. One has been tried 100 times, the other only once. Which one does UCB prefer, and why?",
+      "id": "q04",
+      "goal": "G",
+      "type": "transfer",
+      "section": "Greedy",
+      "prompt": "A study app uses greedy to choose between two lesson formats. Format A is truly better (70% of students pass, against 55% for B). The first student who got A happened to fail; the first who got B passed. What does the app do from then on?",
       "options": [
-        "The one tried 100 times, because its average is more reliable",
-        "The one tried once, because it gets a bigger exploration bonus for being uncertain",
-        "Neither: UCB picks at random when the averages are equal",
-        "Whichever gave the better most recent reward"
+        "It soon switches to A, because A is better on average",
+        "It alternates between A and B to be fair",
+        "It picks A or B at random for every student",
+        "It keeps using B: after one try A's pass rate looks like 0%, and greedy never tries A again to find out"
       ],
-      "answer": 1,
-      "explain": "UCB adds an exploration bonus to each average, and the bonus is bigger for options with few samples (“optimism in the face of uncertainty”). The rarely tried option gets the benefit of the doubt."
-    },
-    {
-      "id": "q08", "goal": "LG2", "type": "apply", "section": "Upper confidence bound (UCB)",
-      "prompt": "UCB1 picks the option with the highest score: average + √(2 ln t / n), where t is the number of rounds so far and n the number of times that option was tried. After 10 rounds (ln 10 ≈ 2.3), option A was tried 5 times with average 0.6 and option B 3 times with average 0.7. Which option does UCB1 pick?",
-      "options": [
-        "A, with a score of about 1.56",
-        "A, because it has been tried more often",
-        "B, with a score of about 1.94",
-        "They tie, so it picks at random"
-      ],
-      "answer": 2,
-      "explain": "A: 0.6 + √(4.6 / 5) ≈ 0.6 + 0.96 = 1.56. B: 0.7 + √(4.6 / 3) ≈ 0.7 + 1.24 = 1.94. B has both the higher average and the bigger bonus."
-    },
-    {
-      "id": "q09", "goal": "LG2", "type": "deep", "section": "Upper confidence bound (UCB)",
-      "prompt": "Under UCB, what happens to an option's exploration bonus right after you try it once more?",
-      "options": ["It grows, so you are likely to try it again", "It stays exactly the same", "It drops to zero", "It shrinks, because you now have one more sample of it"],
       "answer": 3,
-      "explain": "The bonus reflects uncertainty, and each new sample reduces it. Options you have tried a lot stop getting picked just for exploring."
+      "explain": "Greedy only uses the option with the best average so far. One unlucky first result can hide the better option for good, because greedy never tries it again."
     },
     {
-      "id": "q10", "goal": "LG2", "type": "transfer", "section": "Comparing strategies",
-      "prompt": "Over a very long run (thousands of rounds), why does UCB usually end up with lower regret than ε-greedy with a fixed ε = 10%?",
+      "id": "q05",
+      "goal": "G",
+      "type": "apply",
+      "section": "ε-greedy",
+      "prompt": "The shop switches to ε-greedy with ε = 0.1 for its five banners. When it explores, it shows one of the five at random. What share of visitors see the banner with the best average so far?",
       "options": [
-        "ε-greedy keeps picking at random in 10% of rounds forever, while UCB explores less and less as its estimates become reliable",
-        "UCB never explores, so it never wastes a round",
-        "ε-greedy never uses what it has learned",
-        "UCB knows the true averages from the start"
+        "90%",
+        "92%",
+        "98%",
+        "10%"
+      ],
+      "answer": 1,
+      "explain": "90% of visitors get the favourite on exploit visits, and 1 in 5 of the remaining 10% get it by chance: 0.9 + 0.1/5 = 0.92."
+    },
+    {
+      "id": "q06",
+      "goal": "G",
+      "type": "base",
+      "section": "ε-greedy",
+      "prompt": "Which statement describes how ε-greedy explores?",
+      "options": [
+        "It always explores the option it has tried least",
+        "It explores less and less as its averages become reliable",
+        "On a fixed share of rounds it picks any option at random, even ones it already knows are bad",
+        "It explores only until it has found the best option, then stops"
+      ],
+      "answer": 2,
+      "explain": "With probability ε it picks at random, ignoring what it knows. That share stays the same however long it runs, so known-bad options keep getting picked."
+    },
+    {
+      "id": "q07",
+      "goal": "G",
+      "type": "transfer",
+      "section": "ε-greedy",
+      "prompt": "A friend tries one dish at a new restaurant, likes it, and orders exactly that dish on every visit from then on. What does this strategy risk?",
+      "options": [
+        "Missing a better dish, because other dishes are never tried",
+        "Wasting many meals on dishes already known to be worse",
+        "Nothing: one visit tells you how good a dish really is",
+        "Spending too much, because favourites are expensive"
       ],
       "answer": 0,
-      "explain": "Random picks of worse options keep costing reward, so a fixed ε keeps adding regret round after round. UCB's bonus shrinks as samples add up, so its regret grows only logarithmically."
+      "explain": "Only exploiting means never exploring: a dish that wasn't tried (or was unlucky once) never gets another chance, so a better one can stay hidden. Too much exploring would be the opposite risk."
+    },
+    {
+      "id": "q08",
+      "goal": "G",
+      "type": "transfer",
+      "section": "UCB",
+      "prompt": "A podcast app recommends shows with UCB. Show A has an average rating of 4.1 from 500 listeners; show B has 3.9 from 4 listeners. Why might UCB recommend B next?",
+      "options": [
+        "Because UCB picks at random on some rounds",
+        "Because B has the higher average",
+        "Because UCB always recommends the newest show",
+        "Because B's average comes from very few listeners, so B gets a large bonus, and its average plus bonus can beat A's"
+      ],
+      "answer": 3,
+      "explain": "An average from 4 listeners is much less reliable than one from 500. UCB adds a bonus that is bigger for options tried less, giving B the benefit of the doubt."
+    },
+    {
+      "id": "q09",
+      "goal": "G",
+      "type": "apply",
+      "section": "UCB",
+      "prompt": "Under UCB right now, option A has average 6.0 and bonus 0.3, B has average 5.2 and bonus 1.2, and C has average 5.8 and bonus 0.4. Which option does UCB pick?",
+      "options": [
+        "A",
+        "B",
+        "C",
+        "One of them at random"
+      ],
+      "answer": 1,
+      "explain": "Scores: A = 6.3, B = 6.4, C = 6.2. UCB picks the highest average plus bonus: B, although A has the best average."
+    },
+    {
+      "id": "q10",
+      "goal": "G",
+      "type": "base",
+      "section": "UCB",
+      "prompt": "UCB keeps picking option B, which turns out to be only average. What happens?",
+      "options": [
+        "B's bonus grows with every pick, so UCB sticks with B",
+        "B's bonus stays the same, so UCB picks B forever",
+        "B's bonus shrinks with every pick; once its average plus bonus falls below another option's score, UCB moves on",
+        "UCB switches to a random option after a fixed number of picks"
+      ],
+      "answer": 2,
+      "explain": "Each pick makes B's average more reliable, so its bonus shrinks. If B isn't really the best, its score drops below another option's and UCB moves on, without any random picks."
     }
   ]
 }

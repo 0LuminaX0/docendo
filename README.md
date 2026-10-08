@@ -18,7 +18,7 @@
 
 ![Teaching Kai: chat with Kai's reactions, a card to rewatch the video, and Kai's understanding bar](docs/teach.png)
 
-Docendo is a small web app for learning a topic by teaching it. You watch a short lesson, then explain it to Kai, a classmate who missed the lecture and only knows what you tell it. Kai asks questions, gets confused when an explanation doesn't land, and says when it finally feels ready. Ten exercises at the end show what stuck.
+Docendo is a small web app for learning a topic by teaching it. You watch a short lesson, then explain it to Kai, a classmate who missed the lecture and only knows what you tell it. Kai asks questions, gets confused when an explanation doesn't land, and says when it finally feels ready. A short practice round and a final test show what stuck.
 
 The current lesson is on **multi-armed bandits**. The app is built so the topic can be swapped.
 
@@ -32,22 +32,19 @@ That only works if the pupil genuinely knows nothing beyond what it was taught. 
 
 A multi-armed bandit is a repeated choice between options whose average payoff you don't know: slot machines, restaurants, headlines on a website. Each round you pick one option and only see what that one gives you. The interesting part is the trade-off between *exploring* (trying options to learn about them) and *exploiting* (going with the best one so far).
 
-After a session, a learner should be able to:
+After a session, a learner should be able to **predict which option greedy, ε-greedy and UCB pick next, and explain why greedy can lock onto a worse option while ε-greedy and UCB keep exploring**, each in its own way.
 
-1. compute the **regret** of a strategy, including what greedy loses by locking onto a worse option;
-2. compare how **ε-greedy** and **UCB** decide when to explore, and explain why UCB's regret grows more slowly;
-3. model a new problem as a bandit (arms, reward, rounds) and choose a strategy for it.
+The lesson is about 8 minutes, three parts of two videos that play one after another:
 
-The lesson is two videos, about 15 minutes together:
-
-- [Multi-Armed Bandit: Data Science Concepts](https://www.youtube.com/watch?v=e3L4VocZnnQ) by ritvikmath (11:43): the restaurant example, regret, greedy and ε-greedy;
-- [Multi-Armed Bandits Explained: Epsilon-Greedy vs UCB](https://www.youtube.com/watch?v=8CquWcViBfg) by DataMListic (3:19): UCB and how regret grows.
+- [Multi-Armed Bandit: Data Science Concepts](https://www.youtube.com/watch?v=e3L4VocZnnQ) by ritvikmath: the restaurant problem (0:00–1:51), then exploit only, its lock-in and ε-greedy (4:58–9:07);
+- [Multi-Armed Bandits Explained: Epsilon-Greedy vs UCB](https://www.youtube.com/watch?v=8CquWcViBfg) by DataMListic: the trade-off, ε-greedy and UCB (0:27–2:39).
 
 ## A session
 
 1. **Watch** the two videos.
-2. **Teach Kai.** Explain the ideas in your own words. Kai reacts to every answer and asks follow-up questions. If you're stuck on what Kai asks, a help button replays the exact moment in the video, but only after you've had a go. The session ends when Kai feels ready, after 30 messages, or when you decide you've taught all you can.
-3. **Exercises.** Ten multiple-choice questions, graded on the server, with explanations afterwards.
+2. **Teach Kai.** Explain the ideas in your own words. Kai reacts to every answer and asks follow-up questions. If you're stuck on what Kai asks, a help button replays the exact moment in the video, but only after you've had a go. The session ends when Kai feels ready (80% of what it needs, or 50% after 8 minutes of teaching), after 30 messages, or when you decide you've taught all you can.
+3. **Practice.** A few timed problems. Check your answer as often as you like, or open the worked solution. Nothing is graded.
+4. **Final test.** Ten multiple-choice questions on new examples, graded on the server, with explanations afterwards.
 
 <table>
   <tr>
@@ -62,7 +59,7 @@ The lesson is two videos, about 15 minutes together:
 
 ## How Kai works
 
-The lesson is stored as a small knowledge graph: 17 ideas (regret, ε-greedy, the UCB bonus, …), each with two to four facts, the ideas it builds on, and the learning goals it serves. On every message:
+The lesson is stored as a small knowledge graph: 9 ideas (greedy, lock-in, ε-greedy, the UCB bonus, …), each with two to four facts and the ideas it builds on. They are a slice of a larger 17-idea graph of the topic. On every message:
 
 1. A **judge** (a language model) decides which facts your message explains, and how well. Informal wording and examples count. It has to quote your own words, or the verdict is dropped.
 2. Those facts go into **Kai's notebook**, in your words.
@@ -70,7 +67,7 @@ The lesson is stored as a small knowledge graph: 17 ideas (regret, ε-greedy, th
 4. A **writer** (a language model) phrases Kai's reply. It sees only the notebook and the chosen move, never the lesson.
 5. A **term check** blocks lesson terms you haven't used yet. A leaking reply is rewritten once and otherwise replaced with a safe question.
 
-**Understanding** is counted over the required facts the videos actually cover (20 for this lesson). An explained fact counts 1 and a partly explained one ½. A wrong statement replaces a correct one; a vague later remark doesn't. Kai feels ready at 80%, once every learning goal has at least one fully explained idea.
+**Understanding** is counted over the required facts the lesson actually covers (13). An explained fact counts 1 and a partly explained one ½. A wrong statement replaces a correct one; a vague later remark doesn't. Kai feels ready at 80%, or at 50% once you have been teaching for 8 minutes, as long as at least one idea is fully explained.
 
 **Kai's face** reacts to each answer: delighted when you explained two or more new things, content when you explained one, confused when nothing landed or something was wrong.
 
@@ -106,15 +103,20 @@ pnpm build && pnpm start   # production build
 pnpm test                  # unit tests
 pnpm chat --demo           # talk to Kai in the terminal and see the judge's verdicts and Kai's moves
 pnpm e2e                   # click through a whole session in Chrome; screenshots go to .e2e/
+pnpm events export         # the research log as JSONL and CSV tables in data/
 ```
+
+### Research data
+
+Docendo logs every step of a session for the study: each chat message with Kai's reply and the reasoning behind it (judge verdicts, Kai's move and mood), timings and typing, video playback, practice tries, hints and solutions, and the test answers. Sessions are identified by a random id, plus an optional participant code from the study link (`/?pid=P07`). Events are stored in Upstash Redis (set it up before running the study, or the data is lost) and exported with `pnpm events export`. The export holds what participants wrote, so keep it out of git and share it carefully.
 
 ### Deploying
 
-Docendo is a standard Next.js app and runs on Vercel or any Node host. Set `SESSION_SECRET` and, for a real Kai, `OPENROUTER_API_KEY`. On a public deployment, also add Upstash Redis so rate limits are shared between server instances, and give the OpenRouter key a credit limit in its dashboard.
+Docendo is a standard Next.js app and runs on Vercel or any Node host. Set `SESSION_SECRET` and, for a real Kai, `OPENROUTER_API_KEY`. Add Upstash Redis (Vercel → Storage → Marketplace): it stores the research log and shares rate limits between server instances. Give the OpenRouter key a credit limit in its dashboard.
 
 ### Security
 
-The API key never leaves the server. The browser only talks to Docendo's own endpoints, which require a signed session token, validate and size-cap every request, refuse other sites, and are rate-limited per learner, per network and per day. Exercise answers and the lesson's facts are never sent to the browser.
+The API key never leaves the server. The browser only talks to Docendo's own endpoints, which require a signed session token, validate and size-cap every request, refuse other sites, and are rate-limited per learner, per network and per day. Test answers, practice answers and worked solutions (until a learner opens one), and the lesson's facts are never sent to the browser.
 
 ### Changing the lesson
 

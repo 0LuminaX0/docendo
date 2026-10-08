@@ -1,5 +1,5 @@
 import type { Bundle } from "../../content/schema";
-import { chatText, MODELS } from "../llm";
+import { chatText, MODELS, type OnCall } from "../llm";
 import type { Move } from "./policy";
 import { latest, type State } from "./state";
 
@@ -82,13 +82,14 @@ export function promptFor(bundle: Bundle, state: State, move: Move, history: Tur
   ];
 }
 
-export async function llmWrite(bundle: Bundle, state: State, move: Move, history: Turn[], avoid: string[] = [], mood: keyof typeof REACTION = "neutral"): Promise<string> {
+export async function llmWrite(bundle: Bundle, state: State, move: Move, history: Turn[], avoid: string[] = [], mood: keyof typeof REACTION = "neutral", onCall?: OnCall): Promise<string> {
   const r = await chatText({
     model: MODELS.writer,
     messages: promptFor(bundle, state, move, history, avoid, mood),
     temperature: 0.6,
     maxTokens: move.type === "wrapUp" ? 260 : 180,
   });
+  onCall?.({ role: avoid.length ? "writer-rewrite" : "writer", model: MODELS.writer, ms: r.ms, usage: r.usage });
   return r.text
     .trim()
     .replace(/^kai:\s*/i, "")

@@ -25,7 +25,7 @@ export default function Results({ items }: { items: Item[] }) {
 
   return (
     <div className="shell">
-      <Header phase={3} label="Results" demo={saved.demo} />
+      <Header phase={4} label="Results" demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <span className="eyebrow">Results</span>

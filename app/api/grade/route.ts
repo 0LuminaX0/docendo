@@ -4,6 +4,7 @@ import { exercises } from "@/lib/server/content";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
+import { record } from "@/lib/server/events";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,6 @@ export async function POST(req: NextRequest) {
     explain: q.explain,
   }));
   const score = items.filter((x) => x.correct).length;
-  console.log(JSON.stringify({ t: "grade", sid: session.sid, score, of: items.length, answers: body.data.answers }));
+  record({ t: "grade", sid: session.sid, score, of: items.length, answers: body.data.answers, items: items.map((x) => ({ id: x.id, chosen: x.chosen, answer: x.answer, correct: x.correct })) });
   return ok({ score, of: items.length, items });
 }

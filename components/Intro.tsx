@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, ListChecks, MessagesSquare, Play, RotateCcw } from "lucide-react";
+import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
 
-const STEP_PATH = { watch: "/watch", teach: "/teach", exercises: "/exercises", results: "/results" } as const;
+const STEP_PATH = { watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" } as const;
 
-export default function Intro({ topic, accessRequired, demo, parts, videoMinutes }: { topic: string; accessRequired: boolean; demo: boolean; parts: number; videoMinutes: number }) {
+export default function Intro({ topic, accessRequired, demo, parts, videoMinutes, practiceMinutes }: { topic: string; accessRequired: boolean; demo: boolean; parts: number; videoMinutes: number; practiceMinutes: number }) {
   const router = useRouter();
   const [saved] = useSaved();
   const [code, setCode] = useState("");
@@ -18,7 +18,9 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
   async function start() {
     setBusy(true);
     setError(null);
-    const r = await post<{ token: string; expiresAt: number; demo: boolean }>("/api/session", accessRequired ? { accessCode: code } : {});
+    // ?pid=… in the study link identifies the participant across our other data (questionnaires)
+    const pid = new URLSearchParams(window.location.search).get("pid")?.slice(0, 40) || undefined;
+    const r = await post<{ token: string; expiresAt: number; demo: boolean }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
     setBusy(false);
     if (!r.ok) return setError(r.error);
     save(newSession(r.data.token, r.data.expiresAt, r.data.demo));
@@ -53,18 +55,24 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
             <span className="ico"><Play size={22} fill="currentColor" strokeWidth={0} /></span>
             <span className="eyebrow">Step 1</span>
             <h3>Watch</h3>
-            <p>{parts > 1 ? `A lesson in ${parts} short videos` : "A short video lesson"} on multi-armed bandits. About {videoMinutes} minutes.</p>
+            <p>A short video lesson on multi-armed bandits{parts > 1 ? `, in ${parts} parts that play one after another` : ""}. About {videoMinutes} minutes.</p>
           </li>
           <li>
             <span className="ico"><MessagesSquare size={22} strokeWidth={2.2} /></span>
             <span className="eyebrow">Step 2</span>
             <h3>Teach Kai</h3>
-            <p>Explain the ideas in your own words. Kai asks questions until it feels it understands, at most 30 messages. About 20 minutes.</p>
+            <p>Explain the ideas in your own words. Kai asks questions until it feels it understands. About 8 to 10 minutes.</p>
+          </li>
+          <li>
+            <span className="ico"><PencilLine size={22} strokeWidth={2.2} /></span>
+            <span className="eyebrow">Step 3</span>
+            <h3>Practice</h3>
+            <p>A few problems to solve. Check your answers and look at worked solutions. {practiceMinutes} minutes.</p>
           </li>
           <li>
             <span className="ico"><ListChecks size={22} strokeWidth={2.2} /></span>
-            <span className="eyebrow">Step 3</span>
-            <h3>Exercises</h3>
+            <span className="eyebrow">Step 4</span>
+            <h3>Final test</h3>
             <p>Ten multiple-choice questions to see what stuck. About 10 minutes.</p>
           </li>
         </ol>
@@ -102,7 +110,7 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
           )}
           {error && <p className="error" role="alert">{error}</p>}
           <p className="note">
-            Your progress is kept in this browser only. What you write to Kai is sent to an AI model to generate its replies, so please don&apos;t include personal details.
+            This is a study: what you write, your answers and how you use the app (clicks, timings, video playback) are recorded under a random session id, without your name. What you write to Kai is also sent to an AI model to generate its replies, so please don&apos;t include personal details.
           </p>
         </div>
         </div>

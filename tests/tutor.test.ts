@@ -25,11 +25,11 @@ describe("tutor engine", () => {
 
   it("drops judge verdicts whose quote is not in the message", () => {
     const facts: Judgement["facts"] = [
-      { fact: "n09.f1", verdict: "correct", quote: "regret is the difference" },
-      { fact: "n09.f2", verdict: "correct", quote: "something the learner never wrote" },
-      { fact: "zz.f1", verdict: "correct", quote: "regret" },
+      { fact: "n07.f1", verdict: "correct", quote: "you pick a random option" },
+      { fact: "n07.f2", verdict: "correct", quote: "something the learner never wrote" },
+      { fact: "zz.f1", verdict: "correct", quote: "random" },
     ];
-    expect(checkQuotes(bundle, "So regret is the difference between best and ours.", facts).map((f) => f.fact)).toEqual(["n09.f1"]);
+    expect(checkQuotes(bundle, "Sometimes you pick a random option, ten percent of the time.", facts).map((f) => f.fact)).toEqual(["n07.f1"]);
   });
 
   // a judge that returns a fixed judgement, to drive the policy step by step
@@ -145,9 +145,11 @@ describe("tutor engine", () => {
 
   it("blocks lesson terms the learner hasn't taught or used", () => {
     const s = initialState(bundle);
+    expect(forbiddenTerms(bundle, s, "So that's the upper confidence bound?")).toEqual(["upper confidence bound", "upper confidence", "confidence bound"]);
+    const taught: State = { ...s, notebook: [{ fact: "n11.f2", verdict: "correct", words: "x", turn: 1 }] };
+    expect(forbiddenTerms(bundle, taught, "So that's the upper confidence bound?")).toEqual([]);
+    // ideas outside the lesson stay off limits until the learner brings them up
     expect(forbiddenTerms(bundle, s, "So that's why we measure regret!")).toEqual(["regret"]);
-    const taught: State = { ...s, notebook: [{ fact: "n09.f1", verdict: "correct", words: "x", turn: 1 }] };
-    expect(forbiddenTerms(bundle, taught, "So that's why we measure regret!")).toEqual([]);
     expect(forbiddenTerms(bundle, { ...s, usedTerms: ["regret"] }, "regret again")).toEqual([]);
   });
 
@@ -218,9 +220,9 @@ describe("understanding, moods and Kai's mind", () => {
   });
 
   it("feels great, okay or confused depending on the answer", () => {
-    const two = j([{ fact: "n09.f1", verdict: "correct", quote: "a" }, { fact: "n09.f2", verdict: "correct", quote: "b" }]);
+    const two = j([{ fact: "n07.f1", verdict: "correct", quote: "a" }, { fact: "n07.f2", verdict: "correct", quote: "b" }]);
     expect(moodFor(bundle, s0, applyJudgement(s0, two), two, open)).toBe("great");
-    const one = j([{ fact: "n09.f1", verdict: "correct", quote: "a" }]);
+    const one = j([{ fact: "n07.f1", verdict: "correct", quote: "a" }]);
     expect(moodFor(bundle, s0, applyJudgement(s0, one), one, open)).toBe("okay");
     const none = j([]);
     expect(moodFor(bundle, s0, applyJudgement(s0, none), none, open)).toBe("confused");
@@ -235,15 +237,14 @@ describe("understanding, moods and Kai's mind", () => {
     let s = applyJudgement(s0, j([{ fact: "n01.f1", verdict: "correct", quote: "you choose between options" }]));
     s = applyMove(bundle, s, { type: "followUp", node: "n01", seed: node("n01").facts[1]!.ask!, fact: "n01.f2" });
     const m = mindView(bundle, s);
-    expect(m.facts.total).toBe(20);
-    expect(m.facts.needed).toBe(16);
+    expect(m.facts.total).toBe(13);
+    expect(m.facts.needed).toBe(11);
     expect(m.maxTurns).toBe(30);
     const n01 = m.nodes.find((n) => n.id === "n01")!;
     expect(n01).toMatchObject({ status: "mentioned", correct: 1, focus: true, unasked: 0 });
     expect(n01.questions.map((q) => q.state)).toEqual(["answered", "current"]);
     expect(n01.asking).toBe(node("n01").facts[1]!.ask);
-    expect(m.nodes.find((n) => n.id === "n03")).toMatchObject({ questions: [], unasked: 2 }); // not asked yet: a count only
-    expect(m.nodes.find((n) => n.id === "n04")?.status).toBe("off"); // not in the videos
+    expect(m.nodes.find((n) => n.id === "n03")).toMatchObject({ questions: [], unasked: 1 }); // not asked yet: a count only
     const text = JSON.stringify(m);
     for (const n of bundle.nodes)
       for (const f of n.facts) {
@@ -253,9 +254,37 @@ describe("understanding, moods and Kai's mind", () => {
   });
 
   it("marks an idea outside the videos as a bonus when the learner explains it anyway", () => {
-    const s = applyJudgement(s0, j([{ fact: "n04.f1", verdict: "correct", quote: "a" }]));
-    const m = mindView(bundle, s);
-    expect(m.nodes.find((n) => n.id === "n04")).toMatchObject({ status: "bonus", correct: 1, total: 1 });
+    // pretend the lesson's videos don't cover n16
+    const cut = structuredClone(bundle);
+    for (const f of cut.nodes.find((n) => n.id === "n16")!.facts) f.teachable = false;
+    const s = applyJudgement(s0, j([{ fact: "n16.f1", verdict: "correct", quote: "a" }]));
+    const m = mindView(cut, s);
+    expect(m.nodes.find((n) => n.id === "n16")).toMatchObject({ status: "bonus", correct: 1, total: 1 });
     expect(m.facts.correct).toBe(0); // doesn't count towards the score
+  });
+});
+
+import { readyReason } from "../engine/tutor/policy";
+
+describe("when Kai feels ready", () => {
+  // explain the first k required facts, in lesson order
+  const taught = (k: number): State => {
+    const facts = bundle.nodes.flatMap((n) => n.facts.filter((f) => f.required && f.teachable).map((f) => f.id)).slice(0, k);
+    return { ...initialState(bundle), turn: 5, notebook: facts.map((fact, i) => ({ fact, verdict: "correct" as const, words: "x", turn: i + 1 })) };
+  };
+  const min = 60_000;
+
+  it("is ready at 80% at any time", () => {
+    expect(readyReason(bundle, taught(11), 2 * min)).toBe("score"); // 11 of 13
+  });
+
+  it("is ready at 50% only after 8 minutes of teaching", () => {
+    expect(readyReason(bundle, taught(7), 7 * min)).toBeNull(); // 7 of 13 = 54%, too early
+    expect(readyReason(bundle, taught(7), 8 * min)).toBe("time");
+    expect(readyReason(bundle, taught(5), 20 * min)).toBeNull(); // 38%: still not enough
+  });
+
+  it("always stops after the message limit", () => {
+    expect(readyReason(bundle, { ...taught(0), turn: CONFIG.maxTurns }, 0)).toBe("maxTurns");
   });
 });

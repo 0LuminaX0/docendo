@@ -17,15 +17,29 @@ export type GradeResult = {
   items: { id: string; chosen: number | null; answer: number; correct: boolean; explain: string }[];
 };
 
+export type PracticeEntry = {
+  work: string; // the learner's own working
+  answer: string; // typed number, or the chosen option index as a string
+  checks: number; // how many times the learner checked
+  hints?: number; // how many times the learner replayed the lesson moment
+  correct: boolean | null; // result of the last check
+  solution: { steps: string[]; answer: string } | null; // once revealed
+};
+export type PracticeState = { startedAt: number | null; items: Record<string, PracticeEntry> };
+export const blankEntry = (): PracticeEntry => ({ work: "", answer: "", checks: 0, correct: null, solution: null });
+
 export type Saved = {
   v: 1;
   token: string;
   expiresAt: number;
   demo: boolean;
   startedAt: number;
-  step: "watch" | "teach" | "exercises" | "results";
-  watched: string[];
+  step: "watch" | "teach" | "practice" | "exercises" | "results";
+  practice?: PracticeState; // absent in sessions started before the practice chapter existed
+  watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
+  watchedSec?: number[]; // seconds watched per lesson part
   chat: {
+    startedAt?: number; // when the teach page first opened (for Kai's 8-minute rule and the log)
     turns: Turn[];
     state: State | null;
     progress: number;
@@ -103,6 +117,7 @@ export function newSession(token: string, expiresAt: number, demo: boolean): Sav
     step: "watch",
     watched: [],
     chat: { turns: [], state: null, progress: 0, mind: null, done: false, skipped: false, mood: "neutral", help: null, helpAvailable: false },
+    practice: { startedAt: null, items: {} },
     answers: [],
     result: null,
   };

@@ -7,6 +7,7 @@ import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
+import { track } from "@/lib/client/log";
 import { MESSAGE_MAX as MAX, type State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
@@ -27,12 +28,19 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const [view, setView] = useState<"chat" | "mind">("chat");
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  // for the research log: how each message was written
+  const compose = useRef<{ start: number | null; pasted: number; keys: number; deletes: number }>({ start: null, pasted: 0, keys: 0, deletes: 0 });
 
   // first visit: Kai opens the conversation
   useEffect(() => {
     if (saved && !saved.chat.state)
-      update((s) => ({ ...s, chat: { ...s.chat, state: initial, mind: initialMind, turns: [{ role: "kai", text: opening, mood: "neutral" }] } }));
+      update((s) => ({ ...s, chat: { ...s.chat, startedAt: Date.now(), state: initial, mind: initialMind, turns: [{ role: "kai", text: opening, mood: "neutral" }] } }));
   }, [saved, update, initial, initialMind, opening]);
+
+  const doneNow = !!saved?.chat.done;
+  useEffect(() => {
+    if (doneNow) track("teach_ready");
+  }, [doneNow]);
 
   const turns = saved?.chat.turns ?? [];
   useEffect(() => {
@@ -62,7 +70,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     const history = turns.filter((t) => !t.help).map(({ role, text }) => ({ role, text }));
     update((s) => ({ ...s, chat: { ...s.chat, turns: [...s.chat.turns, { role: "learner", text: message }] } }));
     setText("");
-    const r = await post<TurnReply>("/api/chat", { token: saved.token, message, history, state: chat.state });
+    const c = compose.current;
+    const composeMs = c.start ? Date.now() - c.start : 0;
+    const elapsedMs = Math.max(0, Date.now() - (chat.startedAt ?? saved.startedAt));
+    track("message_send", { turn: chat.state.turn + 1, chars: message.length, composeMs, pastedChars: c.pasted, keys: c.keys, deletes: c.deletes, retry: !!again, elapsedMs });
+    compose.current = { start: null, pasted: 0, keys: 0, deletes: 0 };
+    const t0 = Date.now();
+    const r = await post<TurnReply>("/api/chat", { token: saved.token, message, history, state: chat.state, elapsedMs, composeMs, pastedChars: c.pasted });
+    track("reply_received", { ok: r.ok, waitMs: Date.now() - t0, status: r.ok ? 200 : r.status });
     setBusy(false);
     if (!r.ok) {
       // take the message back out so nothing is lost or duplicated
@@ -99,24 +114,27 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     const v = videos.find((x) => x.id === h.video);
     if (!v) return;
     setVideo({ v, start: h.start });
+    track("help_open", { video: h.video, start: h.start, focus: chat.state?.focus ?? null, fromLog: !log });
     if (log) update((s) => ({ ...s, chat: { ...s.chat, turns: [...s.chat.turns, { role: "learner", text: "", help: { part: v.part, start: h.start } }] } }));
   }
 
-  function goExercises() {
-    update((s: Saved) => ({ ...s, step: "exercises" }));
-    router.push("/exercises");
+  function goPractice() {
+    track("teach_continue", { skipped: chat.skipped, done: chat.done, progress: chat.progress });
+    update((s: Saved) => ({ ...s, step: s.step === "teach" ? "practice" : s.step }));
+    router.push("/practice");
   }
 
   // "I've taught all I can": end the chat here with a closing line from Kai; the learner moves on when ready
   function stopTeaching() {
     setConfirmSkip(false);
+    track("skip_confirm", { progress: chat.progress, turns: learnerCount });
     update((s: Saved) => ({
       ...s,
       chat: {
         ...s.chat,
         skipped: true,
         mood: "okay",
-        turns: [...s.chat.turns, { role: "kai", text: "Okay, thanks for teaching me! I'll go with what you told me so far. Good luck with the exercises!", mood: "okay" }],
+        turns: [...s.chat.turns, { role: "kai", text: "Okay, thanks for teaching me! I'll go with what you told me so far. Good luck with the practice problems!", mood: "okay" }],
       },
     }));
   }
@@ -124,11 +142,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const pct = Math.round(mind.understanding * 100);
   const tools = (
     <div className="seg" role="group" aria-label="View">
-        <button type="button" aria-pressed={view === "chat"} onClick={() => setView("chat")} aria-label="Chat">
+        <button type="button" aria-pressed={view === "chat"} onClick={() => (setView("chat"), track("view_toggle", { to: "chat" }))} aria-label="Chat">
           <MessageCircle size={16} strokeWidth={2.2} />
           <span className="lbl">Chat</span>
         </button>
-        <button type="button" aria-pressed={view === "mind"} onClick={() => setView("mind")} aria-label="Kai's mind">
+        <button type="button" aria-pressed={view === "mind"} onClick={() => (setView("mind"), track("view_toggle", { to: "mind" }))} aria-label="Kai's mind">
           <Brain size={16} strokeWidth={2.2} />
           <span className="lbl">Kai&apos;s mind</span>
         </button>
@@ -139,7 +157,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
         <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
           {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
         </span>
-        <button type="button" className="meter" onClick={() => setView("mind")} title={`${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.`} style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>
+        <button type="button" className="meter" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={`${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.`} style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <span className="fill" style={{ display: "block", width: `${Math.max(4, pct)}%` }} />
@@ -202,14 +220,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                 <h2>{chat.done ? "Kai feels ready" : "Teaching finished"}</h2>
                 <p>
                   {chat.done
-                    ? `Kai reached ${pct}% understanding. Time to check what stuck with you.`
-                    : `You stopped at ${pct}% of what Kai needed. Let's check what stuck with you.`}
+                    ? `Kai reached ${pct}% understanding. Next, practise on a few problems.`
+                    : `You stopped at ${pct}% of what Kai needed. Next, practise on a few problems.`}
                 </p>
                 <div className="row">
-                  <button className="btn primary" onClick={goExercises}>
-                    Go to the exercises <ArrowRight size={17} />
+                  <button className="btn primary" onClick={goPractice}>
+                    Go to practice <ArrowRight size={17} />
                   </button>
-                  <button className="btn ghost" onClick={() => setView("mind")}>
+                  <button className="btn ghost" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "ready" }))}>
                     <Brain size={17} /> See Kai&apos;s mind
                   </button>
                 </div>
@@ -243,8 +261,18 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   maxLength={MAX}
                   rows={2}
                   placeholder={learnerCount === 0 ? "Start explaining: what problem are we solving?" : "Explain it to Kai…"}
-                  onChange={(e) => setText(e.target.value)}
+                  onChange={(e) => {
+                    if (!compose.current.start && e.target.value) compose.current.start = Date.now();
+                    setText(e.target.value);
+                  }}
+                  onPaste={(e) => {
+                    const n = e.clipboardData.getData("text").length;
+                    compose.current.pasted += n;
+                    track("paste", { chars: n });
+                  }}
                   onKeyDown={(e) => {
+                    if (e.key === "Backspace" || e.key === "Delete") compose.current.deletes++;
+                    else if (e.key.length === 1) compose.current.keys++;
                     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                       e.preventDefault();
                       void send();
@@ -279,10 +307,10 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                     <button className="btn small" onClick={stopTeaching}>
                       Stop here <ArrowRight size={15} />
                     </button>
-                    <button className="btn ghost small" onClick={() => setConfirmSkip(false)}>Keep teaching</button>
+                    <button className="btn ghost small" onClick={() => (setConfirmSkip(false), track("skip_cancel"))}>Keep teaching</button>
                   </div>
                 ) : (
-                  <button className="btn ghost small skip" onClick={() => setConfirmSkip(true)} disabled={busy}>
+                  <button className="btn ghost small skip" onClick={() => (setConfirmSkip(true), track("skip_open", { progress: chat.progress }))} disabled={busy}>
                     <FastForward size={15} /> I&apos;ve taught all I can
                   </button>
                 )}

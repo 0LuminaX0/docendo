@@ -18,7 +18,15 @@ Single-version MVP: watch → teach Kai until it feels ready → 10 exercises. T
 
 - [x] 2026-10-07 round 3 (after the first live test): one question per required fact (`ask`), follow-ups ask the next missing fact, "what's next?" gets one "before we move on…", ideas close with "got it" or "let's come back to it", every Kai message ends with a question; gibberish no longer parks ideas and a correct fact unparks one; fuzzy quote check; judge fact ids constrained by schema (the live judge's "id: text" answers had been dropping every verdict); Kai's mind lists asked questions with the learner's answers (unasked ones as a count only), bonus status, goal shapes instead of dots
 
+- [x] 2026-10-08 round 4: study plan = replicate Okita & Schwartz (2013) Exp. 2 (recursive vs direct feedback). Practice chapter (step 3, base case = direct feedback): 8 timed problems, Check with a right/wrong light, Show solution, per-step fact links for the later "Kai solves it" condition; `/api/practice`. Final test is now step 4. Graph variants page (`/variants`) with 3 focused options, video cuts and fit to practice.
+
+- [x] 2026-10-08 round 5: scope "How strategies choose" (one goal, 9 ideas, 13 facts, `lesson` in topic.yaml); lesson = 8:12 in three parts played as one video (YouTube IFrame API); readiness = 80%, or 50% after 8 min of teaching; practice rewritten for the scope with "pick and why" items and Rewatch hints; final test rewritten as parallel transfer items; research log (`lib/server/events.ts`, `/api/log`, `pnpm events export`)
+
 ## Next
+
+- [ ] **Upstash Redis on Vercel** before any participant: it is where the research log lives
+- [ ] Pilot with 2–3 people end to end on the real model; check the total time (target ≈ 35 min) and the export
+- [ ] Recursive-feedback condition: Kai solves the practice problems from its notebook (steps from `practice.json`), right/wrong light, click a sentence to see the notebook statement behind it; equal access to correct solutions
 
 - [ ] **Deploy**: GitHub repo → Vercel import → `SESSION_SECRET` → Upstash Redis → redeploy (README)
 - [ ] **OpenRouter key** (now in `.env`) with a credit limit → test real Kai end to end in the browser; tune the judge prompt on real explanations

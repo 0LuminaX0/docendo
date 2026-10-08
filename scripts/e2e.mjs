@@ -6,7 +6,7 @@
 // It sends ~20 messages quickly: start the server with SESSION_TURNS_PER_MIN=200 for the run.
 
 import puppeteer from "puppeteer-core";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const BASE = process.argv[2] ?? "http://localhost:3000";
@@ -15,11 +15,13 @@ mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
 const answers = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.answer);
+const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
 const CHROME =
   process.env.CHROME_PATH ??
   { darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", win32: "C:/Program Files/Google/Chrome/Application/chrome.exe" }[process.platform] ??
   "/usr/bin/google-chrome";
 
+const runStarted = new Date();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-first-run", "--disable-gpu"] });
 const errors = [];
 const checks = [];
@@ -42,7 +44,15 @@ async function start(page, welcomeShot = null) {
   if (welcomeShot) await shot(page, welcomeShot);
   await page.click("button[type=submit]");
   await page.waitForFunction(() => location.pathname === "/watch");
-  await page.waitForSelector(".frame iframe");
+  await page.waitForSelector(".frame iframe", { timeout: 15000 }); // YouTube's player (or the plain fallback)
+}
+
+/** Leave the watch page without watching: the button asks to confirm first. */
+async function leaveWatch(p) {
+  await p.click(".aside .btn.primary");
+  await p.waitForSelector(".aside .btn.primary.small");
+  await p.click(".aside .btn.primary.small");
+  await p.waitForFunction(() => location.pathname === "/teach");
 }
 
 // ---------- 1. full run: watch, teach until Kai is ready, exercises ----------
@@ -51,12 +61,9 @@ await start(page, "00-welcome");
 const imagesLoaded = (p) => p.waitForFunction(() => [...document.images].every((i) => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {});
 await imagesLoaded(page);
 await wait(2500); // let the YouTube player paint
+check((await page.$$(".lb-part")).length === (bundle.segments?.length || bundle.videos.length), "the lesson plays as one video with a part per segment");
 await shot(page, "01-watch");
-for (let i = 0; i < bundle.videos.length; i++) {
-  await page.click(".aside .btn.primary");
-  await wait(300);
-}
-await page.waitForFunction(() => location.pathname === "/teach");
+await leaveWatch(page);
 await page.waitForSelector(".bubble");
 check(!!(await page.$(".skip")), "“I've taught all I can” is there from the first message");
 await shot(page, "02-teach-start");
@@ -120,6 +127,43 @@ await shot(mindPage, "07-mind-final", true);
 await mindPage.close();
 
 await page.click(".ready .btn.primary");
+
+// practice: a right answer, a wrong one, a revealed solution, then leave early (asks to confirm)
+await page.waitForFunction(() => location.pathname === "/practice");
+await page.waitForSelector(".practice .q");
+const prob = await page.$$(".practice .q");
+// click Check only once React has re-rendered with the answer (the button is disabled until then)
+const checkWhenReady = async (i) => {
+  await page.waitForFunction((k) => !document.querySelectorAll(".practice .q")[k].querySelector(".pact .btn.small").disabled, {}, i);
+  await prob[i].$eval(".pact .btn.small", (el) => el.click());
+};
+try {
+  await prob[0].$eval(`.opt:nth-child(${practiceItems[0].answer + 1}) input`, (el) => el.click()); // p1: the right option
+  await checkWhenReady(0);
+  await page.waitForFunction(() => document.querySelector(".practice .q .bulb.on"), { timeout: 10000 });
+} catch (e) {
+  await shot(page, "07b-practice-FAILED", true);
+  throw e;
+}
+// p2: a wrong option on purpose, then the two levels of help: rewatch the lesson moment, then the solution
+const p2 = practiceItems[1];
+await prob[1].$eval(`.opt:nth-child(${((p2.answer + 1) % p2.options.length) + 1}) input`, (el) => el.click());
+await checkWhenReady(1);
+await page.waitForFunction(() => document.querySelectorAll(".practice .q")[1].querySelector(".bulb.off"));
+const [rewatch, showSolution] = await prob[1].$$(".pact .btn.ghost");
+await rewatch.click();
+await page.waitForSelector(".modal iframe");
+await shot(page, "07c-practice-rewatch");
+await page.click(".modal header .iconbtn");
+await page.waitForSelector(".scrim", { hidden: true });
+await showSolution.click();
+await page.waitForFunction(() => document.querySelectorAll(".practice .q")[1].querySelector(".solution"));
+const clock = await page.$eval(".clock", (e) => e.textContent);
+check(/\d:\d\d/.test(clock), `practice shows a countdown (${clock}), checks answers, replays the lesson and opens solutions`);
+await shot(page, "07b-practice", true);
+await page.click(".submitbar .btn.primary");
+await page.waitForSelector(".submitbar .note");
+await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
 const choose = answers.map((a, i) => (i === 3 || i === 7 ? (a + 1) % 4 : a));
@@ -136,8 +180,7 @@ await shot(page, "08-results", true);
 // ---------- 2. skip straight to the exercises ----------
 const skip = await newPage(1366, 900, await browser.createBrowserContext()); // fresh storage
 await start(skip);
-for (let i = 0; i < bundle.videos.length; i++) await skip.click(".aside .btn.primary");
-await skip.waitForFunction(() => location.pathname === "/teach");
+await leaveWatch(skip);
 await skip.waitForSelector(".skip");
 await skip.click(".skip");
 await skip.waitForSelector(".composer-foot .btn.small");
@@ -149,14 +192,15 @@ await wait(1200);
 const stayed = await skip.evaluate(() => location.pathname === "/teach");
 await shot(skip, "09b-skip-finished");
 await skip.click(".ready .btn.primary");
-await skip.waitForFunction(() => location.pathname === "/exercises");
-check(stayed, "stopping from the first message waits for a click, then reaches the exercises");
+await skip.waitForFunction(() => location.pathname === "/practice");
+check(stayed, "stopping from the first message waits for a click, then reaches practice");
 
 // ---------- 3. phone width ----------
 const phone = await newPage(390, 844);
 await phone.goto(BASE + "/", { waitUntil: "load" });
-await phone.evaluate((v) => localStorage.setItem("docendo:session:v1", v), JSON.stringify(s));
-for (const path of ["/teach", "/mind", "/results"]) {
+const finalSession = await saved(page); // after the test: every page is unlocked
+await phone.evaluate((v) => localStorage.setItem("docendo:session:v1", v), JSON.stringify(finalSession));
+for (const path of ["/teach", "/mind", "/practice", "/results"]) {
   await phone.goto(BASE + path, { waitUntil: "load" });
   await wait(700);
   const over = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -177,6 +221,19 @@ const phoneHome = await newPage(390, 844, await browser.createBrowserContext());
 await phoneHome.goto(BASE + "/", { waitUntil: "load" });
 await phoneHome.waitForSelector("button[type=submit]");
 await shot(phoneHome, "10-phone-welcome", true);
+
+// the research log (local server without Upstash: .data/events.jsonl, written right after each response)
+await wait(1500);
+const logFile = join(process.cwd(), ".data", "events.jsonl");
+if (existsSync(logFile)) {
+  const since = runStarted.toISOString();
+  const evs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.at >= since);
+  const has = (t) => evs.some((e) => e.t === t);
+  const need = ["session_start", "chat_turn", "practice_check", "practice_solution", "practice_hint", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm"];
+  const missing = need.filter((t) => !has(t));
+  const turn = evs.find((e) => e.t === "chat_turn");
+  check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
+} else check(false, "research log written to .data/events.jsonl");
 
 await browser.close();
 console.log(checks.join("\n"));

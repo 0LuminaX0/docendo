@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, CircleDashed, CircleHelp, ExternalLink, MessageCircleQuestion, X } from "lucide-react";
 import type { Mind, MindStatus, Question } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
+import { track } from "@/lib/client/log";
 
 const STATUS_TEXT: Record<MindStatus, string> = {
   off: "Not in the videos, so Kai doesn't wait for it.",
@@ -137,8 +138,8 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
                 tabIndex={0}
                 role="button"
                 aria-label={`${n.label}: ${STATUS_NAME[status]}`}
-                onClick={() => setSel(n.id)}
-                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSel(n.id))}
+                onClick={() => (setSel(n.id), track("mind_select", { node: n.id, status }))}
+                onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSel(n.id), track("mind_select", { node: n.id, status }))}
               >
                 {st?.focus && <rect className="ring" x={-5} y={-5} width={W + 10} height={H + 10} rx={14} />}
                 <rect className="b" width={W} height={H} rx={10} />
@@ -238,13 +239,13 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
           )}
       </section>
 
-      <details className="mind-how">
+      <details className="mind-how" onToggle={(e) => track("scoring_toggle", { open: (e.currentTarget as HTMLDetailsElement).open })}>
         <summary>How Kai&apos;s understanding is scored</summary>
         <ul>
           <li>Kai waits for the <b>{mind.facts.total} facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
           <li>Kai asks about one fact at a time. After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
           <li>If an answer only partly lands, Kai asks once more; then it moves on and the question stays open here. An idea is <b>done</b> once Kai has no questions left about it.</li>
-          <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth) once every learning goal has at least one explained idea. The bar shows progress towards that point.</li>
+          <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth), or at 50% once you have been teaching for 8 minutes, as long as at least one idea is fully explained. The bar shows progress towards 80%.</li>
           <li>Kai always wraps up after {mind.maxTurns} messages.</li>
         </ul>
       </details>

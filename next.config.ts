@@ -2,14 +2,15 @@ import type { NextConfig } from "next";
 
 const dev = process.env.NODE_ENV !== "production";
 
-// Only our own code runs on the page; the one third-party frame is YouTube's privacy-enhanced player.
+// Only our own code runs on the page, plus YouTube's player API (it plays the lesson's parts back to
+// back in one player). The video frame itself is YouTube's privacy-enhanced player.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://i.ytimg.com",
   "font-src 'self'",
-  "frame-src https://www.youtube-nocookie.com",
+  "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
   `connect-src 'self'${dev ? " ws:" : ""}`,
   "object-src 'none'",
   "base-uri 'self'",

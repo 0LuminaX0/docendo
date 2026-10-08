@@ -2,7 +2,9 @@ import "server-only";
 import { z } from "zod";
 import bundleJson from "../../topics/bandits/bundle.json";
 import exercisesJson from "../../topics/bandits/exercises.json";
+import practiceJson from "../../topics/bandits/practice.json";
 import { Bundle } from "../../content/schema";
+import { PracticeFile, checkPractice } from "../../content/practice";
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 
 // The MVP serves one topic. To switch topics, point these imports at another
@@ -25,6 +27,17 @@ export const exercises = z.object({ title: z.string(), items: z.array(Exercise).
 /** What the browser may see before grading: no answers, no explanations. */
 export const publicExercises = exercises.map(({ id, section, prompt, options }) => ({ id, section, prompt, options }));
 export type PublicExercise = (typeof publicExercises)[number];
+
+// ---------- practice (chapter 3) ----------
+
+const practiceFile = PracticeFile.parse(practiceJson);
+export const practice = practiceFile.items;
+export const practiceMinutes = practiceFile.minutes;
+export { checkPractice };
+
+/** What the browser may see before checking: no answers, no solutions. */
+export const publicPractice = practice.map(({ id, title, kind, prompt, options, unit }) => ({ id, title, kind, prompt, options: options ?? null, unit: unit ?? null }));
+export type PublicPractice = (typeof publicPractice)[number];
 
 /** Video list for the watch page and the help card. */
 export const videos = bundle.videos.map((v, i) => ({ ...v, part: i + 1 }));

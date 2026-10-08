@@ -37,6 +37,17 @@ export const Source = z.discriminatedUnion("kind", [
 ]);
 export type Source = z.infer<typeof Source>;
 
+// The part of the graph a study actually teaches: one goal, a slice of the
+// nodes, and the video segments learners watch (played back to back as one
+// lesson). The full graph stays the source; the bundle is built from the slice.
+export const Lesson = z.object({
+  goal: Goal.extend({ id: z.string().regex(/^[A-Z][A-Z0-9]{0,5}$/) }), // its own id, so it never collides with the full graph's LG1–LG3
+  scope: z.array(z.string().regex(/^(n\d{2}|b\d)$/)).min(1),
+  optional: z.array(z.string().regex(/^(n\d{2}|b\d)\.f\d$/)).default([]), // required in the full graph, but not waited for here
+  segments: z.array(z.object({ video: z.string(), start: z.number().min(0), end: z.number().positive(), title: z.string() })).min(1),
+});
+export type Lesson = z.infer<typeof Lesson>;
+
 export const Topic = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/),
   title: z.string(),
@@ -44,6 +55,7 @@ export const Topic = z.object({
   goals: z.array(Goal).min(1),
   nodeBudget: z.object({ min: z.number().int(), max: z.number().int() }),
   sources: z.array(Source).min(1),
+  lesson: Lesson.optional(),
 });
 export type Topic = z.infer<typeof Topic>;
 
@@ -220,7 +232,11 @@ export const Bundle = z.object({
   builtAt: z.string(),
   goals: z.array(z.object({ id: z.string(), level: z.string(), text: z.string() })),
   videos: z.array(z.object({ id: z.string(), videoId: z.string(), title: z.string(), durationSec: z.number().optional() })),
+  // the lesson as watched: segments of the videos, played back to back (empty = whole videos)
+  segments: z.array(z.object({ video: z.string(), videoId: z.string(), start: z.number(), end: z.number(), title: z.string() })).default([]),
   nodes: z.array(BundleNode),
+  // lexicon of graph nodes left out of the lesson: Kai may only use these after the learner does
+  outOfScopeTerms: z.array(z.string()).default([]),
   questions: Questions,
 });
 export type Bundle = z.infer<typeof Bundle>;

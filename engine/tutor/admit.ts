@@ -16,5 +16,7 @@ export function forbiddenTerms(bundle: Bundle, state: State, draft: string): str
     if (touched.has(n.id)) continue;
     for (const t of n.lexicon) if (!used.has(t.toLowerCase()) && hasTerm(draft, t)) hits.push(t);
   }
+  // terms from ideas outside this lesson (e.g. "regret"): only once the learner has used them
+  for (const t of bundle.outOfScopeTerms) if (!used.has(t.toLowerCase()) && hasTerm(draft, t)) hits.push(t);
   return [...new Set(hits)];
 }

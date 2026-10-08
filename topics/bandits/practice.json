@@ -1,0 +1,257 @@
+{
+  "title": "Practice: how greedy, ε-greedy and UCB choose",
+  "minutes": 8,
+  "note": "Answers and solutions stay on the server. Each solution step lists the facts it relies on, so a later 'Kai solves it' version can build Kai's solution from the learner's notebook and mark the step where a missing or wrong fact breaks it. The final test uses other settings (banners, coffee machines, a study app, podcasts), so its items are parallel, not repeats.",
+  "items": [
+    {
+      "id": "p1",
+      "title": "Greedy's next pick",
+      "kind": "choice",
+      "prompt": "You pick one of three food trucks for lunch every day. So far, Truck A gave you 3 and 5 happiness points, Truck B gave 6, and Truck C gave 2, 4 and 3. If you follow greedy (exploit only), which truck do you pick next, and why?",
+      "options": [
+        "Truck A, because it has been tried twice and is the safer bet",
+        "Truck B, because it has the best average so far",
+        "Truck C, because it has been tried the most",
+        "A random truck, to keep exploring"
+      ],
+      "answer": 1,
+      "steps": [
+        {
+          "text": "Estimate each truck by the average of what it gave so far: A = (3 + 5) / 2 = 4, B = 6, C = (2 + 4 + 3) / 3 = 3.",
+          "facts": [
+            "n03.f1"
+          ]
+        },
+        {
+          "text": "Greedy always picks the truck with the best average so far and never picks at random.",
+          "facts": [
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "B has the best average (6), so greedy picks B, even though B has been tried only once.",
+          "facts": [
+            "n05.f1",
+            "n16.f1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Greedy gets stuck",
+      "kind": "choice",
+      "prompt": "The three trucks really average 6, 4 and 1 points (A, B, C), but you don't know that. On days 1 to 3 you try each once: A happens to serve a bad lunch (2 points), B gives 5 and C gives 1. From day 4 on you follow greedy. Where do you eat on day 50, and why?",
+      "options": [
+        "At A: by day 50 greedy has noticed that A is the best truck",
+        "At a different truck each day, because greedy rotates between them",
+        "At C, because it has the most room to improve",
+        "At B: A's single bad lunch keeps A's average at 2, and greedy never goes back to A to find out"
+      ],
+      "answer": 3,
+      "steps": [
+        {
+          "text": "After day 3 the averages are A = 2, B = 5, C = 1, so greedy picks B.",
+          "facts": [
+            "n03.f1",
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "Greedy only ever picks the current best average. It never tries A again, so A's average stays at 2 and B keeps winning.",
+          "facts": [
+            "n05.f2"
+          ]
+        },
+        {
+          "text": "One unlucky first lunch hid the best truck for good: on day 50 you still eat at B.",
+          "facts": [
+            "n06.f1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "An explore day",
+      "kind": "choice",
+      "prompt": "You use ε-greedy with ε = 0.1. Today the random number says: explore. Your averages so far are A = 5.5 (tried 20 times), B = 4.0 (18 times) and C = 1.2 (15 times). Where can you end up eating today?",
+      "options": [
+        "Only at B or C, the trucks that aren't the favourite",
+        "Only at C, the truck tried least",
+        "At any of A, B or C, each equally likely",
+        "At A, because exploring still prefers the best average"
+      ],
+      "answer": 2,
+      "steps": [
+        {
+          "text": "On an explore day ε-greedy picks a truck completely at random.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "The random pick ignores the averages and the counts: A, B and C each have a 1 in 3 chance, even C, which is already known to be bad.",
+          "facts": [
+            "n07.f2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "title": "How often ε-greedy shows its favourite",
+      "kind": "number",
+      "prompt": "A news site tests 4 headlines with ε-greedy and ε = 0.2. When it explores, it picks one of the 4 headlines at random, so it can land on the current favourite too. What is the probability that a visitor sees the current favourite? Give a decimal (for example 0.5) or a percentage.",
+      "unit": "",
+      "answer": 0.85,
+      "tolerance": 0.005,
+      "steps": [
+        {
+          "text": "With probability 1 − ε = 0.8 it exploits and shows the headline with the best average so far.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "With probability 0.2 it explores, and each of the 4 headlines is equally likely, the favourite included: 0.2 × 1/4 = 0.05.",
+          "facts": [
+            "n07.f1",
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "Together: 0.8 + 0.05 = 0.85, so 85% of visitors see the favourite.",
+          "facts": [
+            "n07.f1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "title": "The headline everyone knows is bad",
+      "kind": "number",
+      "prompt": "Same site: ε-greedy, ε = 0.2, 4 headlines. Headline D has done worst by far for weeks. What share of visitors still see D? Give a decimal or a percentage.",
+      "unit": "",
+      "answer": 0.05,
+      "tolerance": 0.002,
+      "steps": [
+        {
+          "text": "D is never the favourite, so it is only shown on explore visits, which happen with probability 0.2.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "An explore visit picks one of the 4 headlines at random, D included: 0.2 × 1/4 = 0.05.",
+          "facts": [
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "So 5% of visitors keep seeing D for as long as the test runs, although the site already knows D is bad.",
+          "facts": [
+            "n07.f2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "title": "Which machine does UCB pull?",
+      "kind": "choice",
+      "prompt": "Four slot machines. UCB gives each machine a score: its average so far plus an exploration bonus that is bigger for machines tried fewer times. Right now: A has average 5.0 (tried 40 times, bonus 0.4), B has 4.2 (tried 3 times, bonus 1.5), C has 3.0 (tried 10 times, bonus 0.8) and D has 4.6 (tried 25 times, bonus 0.5). Which machine does UCB pull next, and why?",
+      "options": [
+        "A, because it has the best average",
+        "B, because its average plus its bonus is the highest",
+        "C, because it has the lowest average and needs more tries",
+        "D, because it has been tried a medium number of times"
+      ],
+      "answer": 1,
+      "steps": [
+        {
+          "text": "Add each bonus to the average: A = 5.4, B = 5.7, C = 3.8, D = 5.1.",
+          "facts": [
+            "n11.f2"
+          ]
+        },
+        {
+          "text": "UCB pulls the machine with the highest score: B. A has the best average, but B has been tried only 3 times and might be better than it looks.",
+          "facts": [
+            "n11.f2",
+            "n16.f1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p7",
+      "title": "After B has been tried more",
+      "kind": "choice",
+      "prompt": "UCB keeps pulling B from the last problem. After 20 more pulls, B's average settles at 4.0 and its bonus has shrunk to 0.6. A, C and D have about the same scores as before (5.4, 3.8 and 5.1). What does UCB do next?",
+      "options": [
+        "It pulls A, because B's score has dropped below A's",
+        "It keeps pulling B, because B was picked last time",
+        "It pulls C, because C now has the biggest bonus",
+        "It picks a machine at random to explore"
+      ],
+      "answer": 0,
+      "steps": [
+        {
+          "text": "B's score is now 4.0 + 0.6 = 4.6.",
+          "facts": [
+            "n11.f2"
+          ]
+        },
+        {
+          "text": "Each pull of B shrank its bonus. Its score fell below A's 5.4 (and D's 5.1), so UCB pulls A.",
+          "facts": [
+            "n12.f1"
+          ]
+        },
+        {
+          "text": "UCB moved on without any random pick: it only keeps exploring an option while the bonus keeps its score on top.",
+          "facts": [
+            "n12.f1",
+            "n11.f2"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p8",
+      "title": "Two ways to explore",
+      "kind": "choice",
+      "prompt": "Slot machine C has been pulled 300 times and is clearly the worst of four. Which strategy still keeps pulling C regularly, a fixed share of the time, for as long as you play?",
+      "options": [
+        "UCB, because it always gives every machine the same bonus",
+        "Greedy, because it re-checks every machine now and then",
+        "ε-greedy, because its random pulls ignore what it already knows, so C keeps getting its share",
+        "None of them: all three stop pulling C once it looks bad"
+      ],
+      "answer": 2,
+      "steps": [
+        {
+          "text": "ε-greedy's explore pulls are random: C gets ε × 1/4 of all pulls forever, however bad it looks.",
+          "facts": [
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "UCB's bonus for C is small after 300 pulls and its average is low, so C's score stays below the others and UCB rarely pulls it.",
+          "facts": [
+            "n12.f1",
+            "n11.f2"
+          ]
+        },
+        {
+          "text": "Greedy never pulls a machine that doesn't have the best average.",
+          "facts": [
+            "n05.f2"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "e2e": "node scripts/e2e.mjs",
-    "chat": "tsx scripts/chat.ts"
+    "chat": "tsx scripts/chat.ts",
+    "events": "tsx scripts/events.ts"
   },
   "packageManager": "pnpm@10.20.0",
   "dependencies": {

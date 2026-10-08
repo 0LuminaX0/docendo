@@ -28,6 +28,27 @@ goals:
 # core nodes the draft may use (branch nodes are extra)
 nodeBudget: { min: 14, max: 20 }
 
+# What the study teaches (chosen 2026-10-08, "How strategies choose"): one goal, a
+# slice of the graph above, and parts of the videos played back to back as one
+# lesson. The full graph (goals LG1-LG3) stays the source; `pnpm content bundle`
+# builds the app's bundle from this slice.
+lesson:
+  goal:
+    id: G
+    level: Analyze
+    text: >-
+      Predict which option greedy, ε-greedy and UCB pick next, and explain why greedy can
+      lock onto a worse option while ε-greedy and UCB keep exploring, each in its own way.
+  scope: [n01, n03, n05, n06, n07, n08, n16, n11, n12]
+  # facts the full graph requires that this lesson doesn't wait for (they repeat another fact)
+  optional:
+    - n03.f2 # few tries are unreliable: taught as n16.f1
+    - n06.f2 # the restaurant example of lock-in: n06.f1 states the idea
+  segments: # 8:12 in total
+    - { video: mab-intro, start: 0, end: 111, title: "The problem: three restaurants, hidden averages" }
+    - { video: mab-intro, start: 298, end: 547, title: "Exploit only, its lock-in, and ε-greedy" }
+    - { video: mab-dml, start: 27, end: 159, title: "The trade-off, ε-greedy and UCB" }
+
 sources:
   # what participants watch: about 15 minutes in total (ritvikmath for the problem, regret and ε-greedy; DataMListic for UCB and regret growth)
   - id: mab-intro

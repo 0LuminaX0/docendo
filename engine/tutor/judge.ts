@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Bundle } from "../../content/schema";
 import { hasTerm } from "../../content/terms";
-import { chatJson, MODELS } from "../llm";
+import { chatJson, MODELS, type OnCall } from "../llm";
 import { Verdict } from "./state";
 import { tokens } from "./text";
 
@@ -102,7 +102,7 @@ Only include facts the message actually addresses. Most messages address 0–3 f
 
 intent: "explain" (teaching), "answer" (replying to the classmate's question), "ask_kai" (asking the classmate a question), "unsure" (saying they don't know), "move_on" (asking to move on or saying they're done with this part, e.g. "what's next?", "that's it", "next one"), "off_topic" (anything else, including chit-chat and messages that make no sense).`;
 
-export async function llmJudge(bundle: Bundle, message: string, kaiLast: string): Promise<Judgement> {
+export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall): Promise<Judgement> {
   const facts = bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => `[${f.id}] ${f.text}`));
   const r = await chatJson({
     model: MODELS.judge,
@@ -117,6 +117,7 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string)
       },
     ],
   });
+  onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
   const { kept, dropped } = screenQuotes(bundle, message, r.data.facts);
   return { intent: r.data.intent, facts: kept, dropped, termsUsed: termsUsed(bundle, message) };
 }

@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { Header } from "./ui";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type GradeResult } from "@/lib/client/store";
+import { track } from "@/lib/client/log";
 
 type Item = { id: string; section: string; prompt: string; options: string[] };
 const KEYS = "ABCDEF";
@@ -20,17 +21,20 @@ export default function Exercises({ items }: { items: Item[] }) {
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
   const answered = answers.filter((a) => a !== null).length;
-  const choose = (i: number, k: number) =>
+  const choose = (i: number, k: number) => {
+    track("test_option", { q: items[i]!.id, k, changed: saved.answers[i] != null && saved.answers[i] !== k });
     update((s) => {
       const a = items.map((_, j) => s.answers[j] ?? null);
       a[i] = k;
       return { ...s, answers: a };
     });
+  };
 
   async function submit() {
     if (!saved) return;
     setBusy(true);
     setError(null);
+    track("test_submit", { answered });
     const r = await post<GradeResult>("/api/grade", { token: saved.token, answers });
     setBusy(false);
     if (!r.ok) {
@@ -47,11 +51,11 @@ export default function Exercises({ items }: { items: Item[] }) {
 
   return (
     <div className="shell">
-      <Header phase={3} demo={saved.demo} />
+      <Header phase={4} demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 3 · Exercises</span>
-          <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Ten questions on what you taught</h1>
+          <span className="eyebrow">Step 4 · Final test</span>
+          <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Ten questions on what you learned</h1>
           <p className="lede" style={{ fontSize: 16 }}>No calculator needed. Pick one answer per question; you&apos;ll see the explanations afterwards.</p>
         </div>
         <div className="quiz">

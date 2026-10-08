@@ -1,7 +1,7 @@
 import type { Bundle } from "../../content/schema";
 import { forbiddenTerms } from "./admit";
 import type { Judgement } from "./judge";
-import { CONFIG, isReady, nextMove, type Move } from "./policy";
+import { CONFIG, isReady, nextMove, readyReason, type Move, type ReadyReason } from "./policy";
 import { blankMemo, latest, memo, nodeStatus, progress, type State } from "./state";
 import { mindView, type Mind } from "./mind";
 import type { Turn } from "./writer";
@@ -29,7 +29,17 @@ export type TurnResult = {
   done: boolean;
   help: { video: string; start: number; end: number } | null; // for the current question
   helpAvailable: boolean; // answer first: help opens after one attempt on the current idea
-  trace: { move: Move; intent: Judgement["intent"]; judged: Judgement["facts"]; dropped: Judgement["dropped"]; leaked: string[]; fallback: boolean }; // for logs, not shown
+  // for the research log, never sent to the browser
+  trace: {
+    move: Move;
+    intent: Judgement["intent"];
+    judged: Judgement["facts"];
+    dropped: Judgement["dropped"];
+    leaked: string[];
+    fallback: boolean;
+    readyReason: ReadyReason | null;
+    drafts: string[]; // every reply the writer produced, in order (a leaking draft, then its rewrite)
+  };
 };
 
 export function opening(bundle: Bundle, state: State): string {
@@ -111,14 +121,15 @@ export function applyMove(bundle: Bundle, state: State, move: Move): State {
 
 export async function takeTurn(
   bundle: Bundle,
-  input: { message: string; history: Turn[]; state: State },
+  input: { message: string; history: Turn[]; state: State; elapsedMs?: number }, // elapsedMs: time since teaching started
   deps: Deps,
 ): Promise<TurnResult> {
   const kaiLast = [...input.history].reverse().find((t) => t.role === "kai")?.text ?? "";
   const j = await deps.judge(bundle, input.message, kaiLast);
   let state = applyJudgement(input.state, j);
 
-  const move = nextMove(bundle, state, j);
+  const elapsedMs = input.elapsedMs ?? 0;
+  const move = nextMove(bundle, state, j, elapsedMs);
   state = applyMove(bundle, state, move);
 
   const mood = moodFor(bundle, input.state, state, j, move);
@@ -126,10 +137,12 @@ export async function takeTurn(
   // write, then admit: one rewrite with the offending words named, then a safe fallback
   const history: Turn[] = [...input.history, { role: "learner", text: input.message }];
   let reply = await deps.write(bundle, state, move, history, mood, []);
+  const drafts = [reply];
   let leaked = forbiddenTerms(bundle, state, reply);
   let fallback = false;
   if (leaked.length) {
     reply = await deps.write(bundle, state, move, history, mood, leaked);
+    drafts.push(reply);
     const again = forbiddenTerms(bundle, state, reply);
     if (again.length) {
       fallback = true;
@@ -141,7 +154,8 @@ export async function takeTurn(
   }
 
   const focus = state.focus ? bundle.nodes.find((n) => n.id === state.focus) : undefined;
-  const done = state.done || isReady(bundle, state);
+  const reason = readyReason(bundle, state, elapsedMs);
+  const done = state.done || isReady(bundle, state, elapsedMs);
   return {
     reply,
     mood,
@@ -151,7 +165,7 @@ export async function takeTurn(
     done,
     help: !done && focus?.help[0] ? focus.help[0] : null,
     helpAvailable: !!focus && memo(state, focus.id).attempts > 0,
-    trace: { move, intent: j.intent, judged: j.facts, dropped: j.dropped ?? [], leaked, fallback },
+    trace: { move, intent: j.intent, judged: j.facts, dropped: j.dropped ?? [], leaked, fallback, readyReason: done ? (reason ?? "maxTurns") : null, drafts },
   };
 }
 

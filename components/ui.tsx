@@ -5,10 +5,10 @@ import { useEffect, useRef } from "react";
 import { FlaskConical, Play, X } from "lucide-react";
 import type { Mood } from "@/lib/client/store";
 
-const PHASES = ["Watch", "Teach Kai", "Exercises"] as const;
+const PHASES = ["Watch", "Teach Kai", "Practice", "Test"] as const;
 
 /** One header row: brand, optional page tools (left), the step indicator (centre), status and demo badge (right). */
-export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 | 3; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
+export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 | 3 | 4; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
   return (
     <div className="topwrap">
     <header className={`top${left ? " has-tools" : ""}`}>
@@ -17,14 +17,14 @@ export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 |
         {left}
       </div>
       {phase > 0 && (
-        <div className="phase" aria-label={`Step ${phase} of 3: ${PHASES[phase - 1]}`}>
+        <div className="phase" aria-label={`Step ${phase} of ${PHASES.length}: ${PHASES[phase - 1]}`}>
           <div className="arms" aria-hidden="true">
             {PHASES.map((_, i) => (
               <i key={i} className={i < phase ? `on${i + 1}` : ""} />
             ))}
           </div>
           <span className="phase-name">
-            {label ?? PHASES[phase - 1]} {!label && <span>· step {phase} of 3</span>}
+            {label ?? PHASES[phase - 1]} {!label && <span>· step {phase} of {PHASES.length}</span>}
           </span>
         </div>
       )}
@@ -102,8 +102,8 @@ export function KaiFace({ mood = "neutral", size = 32 }: { mood?: Mood | string;
 }
 
 /** YouTube's privacy-enhanced player; `start` in seconds. */
-export function VideoFrame({ videoId, title, start = 0, autoplay = false }: { videoId: string; title: string; start?: number; autoplay?: boolean }) {
-  const src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0&modestbranding=1&hl=en&cc_lang_pref=en&start=${Math.floor(start)}${autoplay ? "&autoplay=1" : ""}`;
+export function VideoFrame({ videoId, title, start = 0, end, autoplay = false }: { videoId: string; title: string; start?: number; end?: number; autoplay?: boolean }) {
+  const src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?rel=0&modestbranding=1&hl=en&cc_lang_pref=en&start=${Math.floor(start)}${end ? `&end=${Math.ceil(end)}` : ""}${autoplay ? "&autoplay=1" : ""}`;
   return (
     <div className="frame">
       <iframe src={src} title={title} allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />

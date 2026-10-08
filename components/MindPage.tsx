@@ -14,8 +14,8 @@ export default function MindPage({ graph }: { graph: GraphView }) {
   const allowed = useGuard(saved, "teach");
   if (!allowed || !saved) return <div className="center">Loading…</div>;
   const back = (
-    <Link className="btn small" href={saved.step === "results" ? "/results" : saved.step === "exercises" ? "/exercises" : "/teach"}>
-      <ArrowLeft size={16} /> <span className="lbl">Back to {saved.step === "results" ? "results" : saved.step === "exercises" ? "the exercises" : "the chat"}</span>
+    <Link className="btn small" href={saved.step === "results" ? "/results" : saved.step === "exercises" ? "/exercises" : saved.step === "practice" ? "/practice" : "/teach"}>
+      <ArrowLeft size={16} /> <span className="lbl">Back to {saved.step === "results" ? "results" : saved.step === "exercises" ? "the test" : saved.step === "practice" ? "practice" : "the chat"}</span>
     </Link>
   );
   return (

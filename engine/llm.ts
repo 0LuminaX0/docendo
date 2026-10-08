@@ -9,6 +9,10 @@ export type Message = { role: "system" | "user" | "assistant"; content: string }
 
 export type Usage = { promptTokens: number; completionTokens: number; costUsd?: number };
 
+/** One model call, for the research log: who asked, which model, how long, how much. */
+export type LlmCall = { role: string; model: string; ms: number; usage: Usage };
+export type OnCall = (c: LlmCall) => void;
+
 // One model per role, overridable from the environment. Pinned IDs, never "~latest".
 export const MODELS = {
   draft: process.env.DOCENDO_MODEL_DRAFT ?? "google/gemini-2.5-flash",

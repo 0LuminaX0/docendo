@@ -7,7 +7,9 @@ import type { Judgement } from "./judge";
 // knows what Kai is waiting for.
 
 export const CONFIG = {
-  ready: 0.8, // share of teachable required facts explained before Kai feels ready
+  ready: 0.8, // share of teachable required facts explained before Kai feels ready…
+  readyLate: 0.5, // …or this share once the learner has taught for lateAfterMin minutes
+  lateAfterMin: 8,
   maxTurns: 30, // learner messages; Kai wraps up after this many regardless
   tries: 1, // Kai asks each fact's question once…
   triesIfClose: 2, // …or twice when the answer was partly right (or wrong)
@@ -25,15 +27,30 @@ export type Move = {
 
 const PROBES = ["why", "whatIf", "compute"] as const;
 
-export function isReady(bundle: Bundle, state: State): boolean {
+export type ReadyReason = "score" | "time" | "maxTurns";
+
+/**
+ * Why Kai feels ready, or null. Ready at 80% of what it waits for, or at 50%
+ * once the learner has taught for 8 minutes (elapsedMs, from the teach page).
+ * Either way every goal needs at least one explained idea.
+ */
+export function readyReason(bundle: Bundle, state: State, elapsedMs = 0): ReadyReason | null {
+  if (state.turn >= CONFIG.maxTurns) return "maxTurns";
   const facts = latest(state);
   const p = progress(bundle, state);
-  // every goal needs at least one explained node, so Kai doesn't finish on one goal alone
   const goalsOk = bundle.goals.every((g) =>
     bundle.nodes.some((n) => n.goals.includes(g.id) && teachableRequired(n).length > 0 && nodeStatus(n, state, facts) === "explained"),
   );
-  return p >= CONFIG.ready && goalsOk;
+  if (!goalsOk) return null;
+  if (p >= CONFIG.ready) return "score";
+  if (p >= CONFIG.readyLate && elapsedMs >= CONFIG.lateAfterMin * 60_000) return "time";
+  return null;
 }
+
+export const isReady = (bundle: Bundle, state: State, elapsedMs = 0): boolean => {
+  const r = readyReason(bundle, state, elapsedMs);
+  return r === "score" || r === "time";
+};
 
 /** How often Kai asks a fact's question: once, or twice if the first answer was close. */
 const limitFor = (e: Entry | undefined) => (e && e.verdict !== "correct" ? CONFIG.triesIfClose : CONFIG.tries);
@@ -51,9 +68,9 @@ export function nextFact(n: Node, state: State, skip: string | null = null, igno
   );
 }
 
-export function nextMove(bundle: Bundle, state: State, j: Judgement): Move {
+export function nextMove(bundle: Bundle, state: State, j: Judgement, elapsedMs = 0): Move {
   const wrapUp: Move = { type: "wrapUp", node: null, seed: null };
-  if (isReady(bundle, state) || state.turn >= CONFIG.maxTurns) return wrapUp;
+  if (readyReason(bundle, state, elapsedMs)) return wrapUp;
 
   // 1. a question for Kai: answer from the notebook, then carry on with a question
   if (j.intent === "ask_kai") {
