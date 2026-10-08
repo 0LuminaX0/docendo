@@ -90,6 +90,44 @@ export default function Results({ items }: { items: Item[] }) {
           ))}
         </div>
 
+        {r.practice && r.practice.length > 0 && (
+          <section className="review" aria-labelledby="review-h">
+            <h2 className="quiz-section" id="review-h">Practice problems: worked solutions</h2>
+            {r.practice.map((p, i) => {
+              const e = saved.practice?.items[p.id];
+              const mine = !e?.answer ? null : p.options ? (p.options[Number(e.answer)] ?? null) : e.answer;
+              const how = !e || !e.checks ? "Not tried" : e.correct ? (e.firstCorrect ? "Correct on the first try" : "Correct on the second try") : "Not solved";
+              return (
+                <article className="pq" key={p.id}>
+                  <div className="qt">
+                    <span className="ptitle">
+                      Round {p.round}, problem {i + 1}: {p.title}
+                    </span>
+                    <p>{p.prompt}</p>
+                  </div>
+                  <p className="note" style={{ margin: 0 }}>
+                    <span className={`tag ${e?.correct ? "ok" : "no"}`} style={{ marginRight: 10 }}>
+                      {e?.correct ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
+                      {how}
+                    </span>
+                    {mine && !e?.correct ? <>Your last answer: {mine}</> : null}
+                  </p>
+                  <div className="explain solution">
+                    <ol>
+                      {p.steps.map((st, k) => (
+                        <li key={k}>{st}</li>
+                      ))}
+                    </ol>
+                    <p>
+                      <b>Answer:</b> {p.answer}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+        )}
+
         <div className="row">
           <button
             className="btn"

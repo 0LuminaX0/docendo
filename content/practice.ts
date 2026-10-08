@@ -7,6 +7,8 @@ import { z } from "zod";
 export const PracticeItem = z
   .object({
     id: z.string(),
+    round: z.number().int().min(1).max(3).default(1), // round 2 repeats round 1's ideas in new settings
+    idea: z.string().optional(), // which idea it practises (greedy, epsilon, ucb), to pair items across rounds
     title: z.string(),
     kind: z.enum(["choice", "number"]),
     prompt: z.string(),

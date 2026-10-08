@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import bundleJson from "../topics/bandits/bundle.json";
 import { Bundle } from "../content/schema";
 import { initialState, latest, State } from "../engine/tutor/state";
-import { mockJudge, checkQuotes, findQuote, type Judgement } from "../engine/tutor/judge";
-import { mockWrite, type Turn } from "../engine/tutor/writer";
+import { mockJudge, checkQuotes, findQuote, screenMisconceptions, type Judgement } from "../engine/tutor/judge";
+import { mockWrite, notebookLines, type Turn } from "../engine/tutor/writer";
 import { forbiddenTerms } from "../engine/tutor/admit";
 import { takeTurn, opening, type Deps } from "../engine/tutor/turn";
 import { nextMove, CONFIG, type Move } from "../engine/tutor/policy";
@@ -141,6 +141,33 @@ describe("tutor engine", () => {
     const move = nextMove(bundle, { ...s, notebook: [{ fact: "n05.f1", verdict: "wrong", words: "greedy is always optimal", turn: 1 }] }, j);
     expect(move.type).toBe("contradict");
     expect(move.seed).toBe(bundle.questions.contradictions.find((c) => c.misconception === "m_greedy_optimal")!.question);
+  });
+
+  it("keeps misconceptions in the learner's words, and Kai believes them", async () => {
+    const msg = "When you explore you pick one of the other restaurants, never the favourite one.";
+    const judge = async (): Promise<Judgement> => ({
+      intent: "explain",
+      facts: [],
+      misconceptions: [{ node: "n07", quote: "you pick one of the other restaurants, never the favourite one", belief: "exploring never picks the favourite" }],
+      termsUsed: [],
+    });
+    const r = await takeTurn(bundle, { message: msg, history: [], state: initialState(bundle) }, { ...mock, judge });
+    expect(r.state.misconceptions).toEqual([{ node: "n07", words: "you pick one of the other restaurants, never the favourite one", turn: 1 }]);
+    expect(r.trace.misconceptions).toHaveLength(1);
+    expect(notebookLines(bundle, r.state)).toContain("never the favourite one");
+    // an older saved state without the field still parses
+    const { misconceptions: _m, ...old } = initialState(bundle);
+    expect(State.parse(old).misconceptions).toEqual([]);
+  });
+
+  it("drops misconceptions whose quote isn't in the message or whose idea isn't real", () => {
+    const { kept, dropped } = screenMisconceptions(bundle, "greedy tries every option now and then", [
+      { node: "n05", quote: "greedy tries every option now and then", belief: "greedy re-checks options" },
+      { node: "n05", quote: "greedy is random", belief: "x" },
+      { node: "n99", quote: "greedy tries every option", belief: "x" },
+    ]);
+    expect(kept.map((k) => k.node)).toEqual(["n05"]);
+    expect(dropped).toHaveLength(2);
   });
 
   it("blocks lesson terms the learner hasn't taught or used", () => {

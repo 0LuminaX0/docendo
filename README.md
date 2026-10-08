@@ -41,10 +41,12 @@ The lesson is about 8 minutes, three parts of two videos that play one after ano
 
 ## A session
 
-1. **Watch** the two videos.
+1. **Watch** the 8-minute lesson (after five quick questions on what you already know).
 2. **Teach Kai.** Explain the ideas in your own words. Kai reacts to every answer and asks follow-up questions. If you're stuck on what Kai asks, a help button replays the exact moment in the video, but only after you've had a go. The session ends when Kai feels ready (80% of what it needs, or 50% after 8 minutes of teaching), after 30 messages, or when you decide you've taught all you can.
-3. **Practice.** A few timed problems. Check your answer as often as you like, or open the worked solution. Nothing is graded.
-4. **Final test.** Ten multiple-choice questions on new examples, graded on the server, with explanations afterwards.
+3. **Practice.** Two rounds of three problems, one at a time, in 10 minutes. Each gets a first try and one retry, with a light that says right or wrong. Nothing is graded.
+4. **Final test.** Ten multiple-choice questions on new examples, graded on the server. Afterwards: explanations, and the worked solutions of the practice problems.
+
+The app is the instrument for a small study. It replicates Okita and Schwartz's (2013) comparison of *recursive* feedback (the pupil you taught solves the problems, and you see its answers marked) with *direct* feedback (you solve them yourself). The direct condition is built; the recursive one comes next.
 
 <table>
   <tr>
@@ -62,8 +64,8 @@ The lesson is about 8 minutes, three parts of two videos that play one after ano
 The lesson is stored as a small knowledge graph: 9 ideas (greedy, lock-in, ε-greedy, the UCB bonus, …), each with two to four facts and the ideas it builds on. They are a slice of a larger 17-idea graph of the topic. On every message:
 
 1. A **judge** (a language model) decides which facts your message explains, and how well. Informal wording and examples count. It has to quote your own words, or the verdict is dropped.
-2. Those facts go into **Kai's notebook**, in your words.
-3. A small deterministic **policy** picks Kai's next move. Kai keeps one beginner's question for each fact it needs, and asks about one missing fact at a time. When an answer only partly lands, it asks once more, then moves on. When an idea is complete, Kai says so, checks it with a "why" or "what if" question or voices a common misconception for you to correct, and then moves on to the next idea. Every message from Kai ends with one clear question.
+2. Those facts go into **Kai's notebook**, in your words. So do mistakes: the judge also records any wrong belief you state, quoting you, and Kai believes it.
+3. A small **policy** picks Kai's next move. Kai keeps one beginner's question for each fact it needs, and asks about one missing fact at a time. When an answer only partly lands, it asks once more, then moves on. When an idea is complete, Kai says so, checks it with a "why" or "what if" question or voices a common misconception for you to correct, and then moves on to the next idea. Every message from Kai ends with one clear question.
 4. A **writer** (a language model) phrases Kai's reply. It sees only the notebook and the chosen move, never the lesson.
 5. A **term check** blocks lesson terms you haven't used yet. A leaking reply is rewritten once and otherwise replaced with a safe question.
 
@@ -91,8 +93,9 @@ To use a real model, create a `.env` file (see `.env.example`):
 |---|---|
 | `OPENROUTER_API_KEY` | An [OpenRouter](https://openrouter.ai) key. Without it, demo mode. |
 | `SESSION_SECRET` | Random string that signs session tokens (`openssl rand -hex 32`). Required in production. |
-| `ACCESS_CODE` | Optional. Visitors must enter it before starting. |
-| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional. Shared rate-limit counters when running on several servers. |
+| `ACCESS_CODE` | Optional. One shared code for the team and demos. |
+| `CODE_SECRET` | For the study. Each participant gets their own code (`pnpm codes 40`), and the code decides their condition. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Required for the study: the research log. Also shares rate-limit counters between servers. |
 
 The rate limits and model names can also be changed; `.env.example` lists them all.
 
@@ -102,13 +105,14 @@ Other commands:
 pnpm build && pnpm start   # production build
 pnpm test                  # unit tests
 pnpm chat --demo           # talk to Kai in the terminal and see the judge's verdicts and Kai's moves
-pnpm e2e                   # click through a whole session in Chrome; screenshots go to .e2e/
+pnpm e2e                   # after pnpm build: click through a whole session in Chrome on a safe demo server; screenshots in .e2e/
+pnpm codes 40              # 40 participant codes in balanced blocks of 4, written to data/
 pnpm events export         # the research log as JSONL and CSV tables in data/
 ```
 
 ### Research data
 
-Docendo logs every step of a session for the study: each chat message with Kai's reply and the reasoning behind it (judge verdicts, Kai's move and mood), timings and typing, video playback, practice tries, hints and solutions, and the test answers. Sessions are identified by a random id, plus an optional participant code from the study link (`/?pid=P07`). Events are stored in Upstash Redis (set it up before running the study, or the data is lost) and exported with `pnpm events export`. The export holds what participants wrote, so keep it out of git and share it carefully.
+Docendo logs every step of a session for the study: each chat message with Kai's reply and the reasoning behind it (judge verdicts, Kai's move and mood), timings and typing, video playback, practice tries and time per problem, Kai's notebook at the end of teaching, and the test answers. Sessions are identified by a random id and the participant's code id, which joins them with our questionnaires (the link `/?code=…` fills in the code). Events are stored in Upstash Redis (set it up before running the study, or the data is lost) and exported with `pnpm events export`. The export holds what participants wrote, so keep it out of git and share it carefully.
 
 ### Deploying
 
@@ -116,16 +120,19 @@ Docendo is a standard Next.js app and runs on Vercel or any Node host. Set `SESS
 
 ### Security
 
-The API key never leaves the server. The browser only talks to Docendo's own endpoints, which require a signed session token, validate and size-cap every request, refuse other sites, and are rate-limited per learner, per network and per day. Test answers, practice answers and worked solutions (until a learner opens one), and the lesson's facts are never sent to the browser.
+The API key never leaves the server. The browser only talks to Docendo's own endpoints, which require a signed session token, validate and size-cap every request, refuse other sites, and are rate-limited per learner, per network and per day. Test answers, practice answers and worked solutions (until the test is graded), the participant's condition and the lesson's facts are never sent to the browser.
 
 ### Changing the lesson
 
-Each topic lives in `topics/<name>/`. Sources (YouTube videos, PDFs or web pages) are listed in `topic.yaml`, next to the knowledge graph, the question bank and the exercises. The content pipeline fetches transcripts, finds where each fact is covered, checks the graph, and builds the bundle the app reads:
+Each topic lives in `topics/<name>/`: the sources and the lesson slice in `topic.yaml`, the knowledge graph (`graph.draft.json`), which facts the videos state (`coverage.json`), Kai's extra lines (`questions.json`), the pretest, the practice problems and the test. For bandits these were written by hand. Then:
 
 ```bash
-pnpm content all bandits      # fetch sources, locate facts, validate, write a review page
-pnpm content bundle bandits   # build topics/bandits/bundle.json for the app
+pnpm content ingest bandits     # fetch the videos' captions
+pnpm content validate bandits   # check the graph, and that Kai's questions don't give away lesson terms
+pnpm content bundle bandits     # build topics/bandits/bundle.json for the app
 ```
+
+For a new topic, an authoring pipeline in `content/authoring/` can draft the graph with a language model, find where each fact is covered in the sources, check coverage, and write a review page for the team (`pnpm content all <topic>`, `pnpm content draft <topic>`). It isn't part of the study's flow.
 
 ## Project structure
 
@@ -133,11 +140,11 @@ pnpm content bundle bandits   # build topics/bandits/bundle.json for the app
 app/          pages and API routes (Next.js)
 components/   interface
 engine/tutor/ Kai: judge, notebook, policy, writer, term check
-content/      content pipeline: ingest, locate, validate, review, bundle
+content/      content tools: ingest, validate, bundle, practice checking, graph layout; authoring/ (LLM drafting, locate, verify, review)
 topics/       lessons: sources, knowledge graph, questions, exercises
 lib/          server configuration, sessions, rate limits; browser storage
 tests/        unit tests
-scripts/      terminal chat and browser walkthrough
+scripts/      terminal chat, browser walkthrough, participant codes, data export
 ```
 
 ## Credits

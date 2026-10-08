@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
       focusBefore: before.focus,
       focusAfter: result.state.focus,
       judged: tr.judged,
+      misconceptions: tr.misconceptions,
       newCorrect: tr.judged.filter((v) => v.verdict === "correct" && old.get(v.fact)?.verdict !== "correct").map((v) => v.fact),
       dropped: tr.dropped ?? [],
       leaked: tr.leaked,
@@ -107,6 +108,8 @@ export async function POST(req: NextRequest) {
       llm: calls,
       latencyMs: Date.now() - t0,
     });
+    if (result.done)
+      record({ t: "notebook_snapshot", sid: session.sid, source: "server", reason: "kai_ready", readyReason: tr.readyReason, turn: result.state.turn, notebook: result.state.notebook, misconceptions: result.state.misconceptions });
     const { trace: _trace, ...visible } = result;
     return ok({ ...visible, demo: config.demo });
   } catch (e) {

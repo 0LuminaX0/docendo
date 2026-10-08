@@ -18,6 +18,19 @@ export const Entry = z.object({
 });
 export type Entry = z.infer<typeof Entry>;
 
+/**
+ * A wrong belief the learner stated, in their own words. Not tied to a fixed
+ * list: misconceptions arise while explaining, so the judge records whatever it
+ * finds, under the idea it is about. Kai believes it like everything else it was
+ * told; the practice chapter can later show where it leads.
+ */
+export const Belief = z.object({
+  node: z.string().max(12),
+  words: z.string().max(400), // the learner's own words
+  turn: z.number().int().min(0).max(1000),
+});
+export type Belief = z.infer<typeof Belief>;
+
 export const NodeMemo = z.object({
   attempts: z.number().int().min(0).max(100), // real answers (not chit-chat) while this node was the focus
   followUps: z.number().int().min(0).max(100),
@@ -38,6 +51,7 @@ export const State = z.object({
   turn: z.number().int().min(0).max(1000),
   focus: z.string().max(12).nullable(),
   notebook: z.array(Entry).max(300),
+  misconceptions: z.array(Belief).max(100).default([]), // older saved states have none
   memo: z.record(z.string().max(12), NodeMemo),
   contradicted: z.array(z.string().max(60)).max(50),
   usedTerms: z.array(z.string().max(60)).max(300), // lesson terms the learner has used
@@ -57,6 +71,7 @@ export function initialState(bundle: Bundle): State {
     turn: 0,
     focus: first?.id ?? null,
     notebook: [],
+    misconceptions: [],
     memo: {},
     contradicted: [],
     usedTerms: [],

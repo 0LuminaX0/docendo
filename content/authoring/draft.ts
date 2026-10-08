@@ -1,10 +1,10 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { chatJson, MODELS } from "../engine/llm";
-import { ChunkFile, Graph, Questions, type Chunk, type Topic } from "./schema";
-import { existsSync, readJson, topicPaths, writeJson } from "./paths";
-import { checkGraph } from "./validate";
+import { chatJson, MODELS } from "../../engine/llm";
+import { ChunkFile, Graph, Questions, type Chunk, type Topic } from "../schema";
+import { existsSync, readJson, topicPaths, writeJson } from "../paths";
+import { checkGraph } from "../validate";
 import { formatLoc } from "./format";
 
 // The LLM sees plain shapes; ids, patterns and counts are enforced afterwards

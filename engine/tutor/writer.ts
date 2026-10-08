@@ -52,9 +52,11 @@ const clipText = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0
 
 export function notebookLines(_bundle: Bundle, state: State): string {
   const facts = latest(state);
-  if (!facts.size) return "(empty: they haven't taught you anything yet)";
   // the learner's words only: Kai never sees the lesson's own fact text
-  return [...facts.values()].map((e) => `- ${e.verdict === "partial" ? "(vague) " : ""}"${e.words}"`).join("\n");
+  const lines = [...facts.values()].map((e) => `- ${e.verdict === "partial" ? "(vague) " : ""}"${e.words}"`);
+  // wrong beliefs are things Kai was told too, and it believes them
+  for (const m of state.misconceptions ?? []) if (!lines.some((l) => l.includes(m.words))) lines.push(`- "${m.words}"`);
+  return lines.length ? lines.join("\n") : "(empty: they haven't taught you anything yet)";
 }
 
 const REACTION: Record<"neutral" | "great" | "okay" | "confused", string> = {

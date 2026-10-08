@@ -1,4 +1,4 @@
-import type { Loc } from "./schema";
+import type { Loc } from "../schema";
 
 export function mmss(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));

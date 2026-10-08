@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Learning by teaching an AI tutee: prompted vs managed knowledge (CS-411 Digital Education)",
+  "description": "Learning by teaching an AI tutee: recursive vs direct feedback (CS-411 Digital Education)",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "e2e": "node scripts/e2e.mjs",
     "chat": "tsx scripts/chat.ts",
-    "events": "tsx scripts/events.ts"
+    "events": "tsx scripts/events.ts",
+    "codes": "tsx scripts/codes.ts"
   },
   "packageManager": "pnpm@10.20.0",
   "dependencies": {

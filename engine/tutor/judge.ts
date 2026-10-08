@@ -10,19 +10,45 @@ export const Intent = z.enum(["explain", "answer", "ask_kai", "unsure", "move_on
 export type Judgement = {
   intent: z.infer<typeof Intent>;
   facts: { fact: string; verdict: Verdict; quote: string }[];
+  // wrong beliefs the learner stated, open-ended (no fixed list); `belief` is the judge's summary, for the log only
+  misconceptions?: { node: string; quote: string; belief: string }[];
   termsUsed: string[]; // lexicon terms in the learner's message (computed, not judged)
   dropped?: { fact: string; quote: string }[]; // verdicts thrown out by the quote check (for logs)
 };
 
-// the fact field may only hold real ids, so the model can't return "n01.f1: <text>"
-const replyCache = new WeakMap<Bundle, z.ZodType<{ intent: z.infer<typeof Intent>; facts: Judgement["facts"] }>>();
+type Reply = { intent: z.infer<typeof Intent>; facts: Judgement["facts"]; misconceptions?: { node: string; quote: string; belief: string }[] };
+
+// the fact and node fields may only hold real ids, so the model can't return "n01.f1: <text>"
+const replyCache = new WeakMap<Bundle, z.ZodType<Reply>>();
 function replySchema(bundle: Bundle) {
   const hit = replyCache.get(bundle);
   if (hit) return hit;
-  const ids = bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => f.id));
-  const schema = z.object({ intent: Intent, facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string() })) });
+  const core = bundle.nodes.filter((n) => n.kind === "core");
+  const ids = core.flatMap((n) => n.facts.map((f) => f.id));
+  const nodes = core.map((n) => n.id);
+  const schema = z.object({
+    intent: Intent,
+    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string() })),
+    misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), quote: z.string(), belief: z.string() })).optional(),
+  });
   replyCache.set(bundle, schema);
   return schema;
+}
+
+/** Keep misconceptions about real ideas whose quote is in the message, in the learner's words. */
+export function screenMisconceptions(bundle: Bundle, message: string, list: NonNullable<Judgement["misconceptions"]>) {
+  const nodes = new Set(bundle.nodes.filter((n) => n.kind === "core").map((n) => n.id));
+  const kept: NonNullable<Judgement["misconceptions"]> = [];
+  const dropped: { fact: string; quote: string }[] = [];
+  for (const m of list.slice(0, 6)) {
+    const quote = nodes.has(m.node) ? findQuote(message, m.quote) : null;
+    if (!quote) {
+      dropped.push({ fact: `${m.node.slice(0, 12)} (misconception)`, quote: m.quote.slice(0, 200) });
+      continue;
+    }
+    if (!kept.some((k) => k.node === m.node && k.quote === quote)) kept.push({ node: m.node, quote, belief: m.belief.slice(0, 300) });
+  }
+  return { kept, dropped };
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -100,6 +126,12 @@ For every fact the message explains, return:
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
 Only include facts the message actually addresses. Most messages address 0–3 facts.
 
+misconceptions: every belief in the message that is wrong about the topic, whether or not it contradicts one of the listed facts. Misconceptions are not limited to a list; record whatever the teacher gets wrong. For each:
+- node: the id of the idea it is about, e.g. "n07" (the part before the dot in the fact ids).
+- quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words).
+- belief: one short sentence saying what the teacher believes, e.g. "exploring never picks the current favourite". Don't state the correct version.
+Leave the list empty when nothing is wrong. Vague or incomplete is not wrong.
+
 intent: "explain" (teaching), "answer" (replying to the classmate's question), "ask_kai" (asking the classmate a question), "unsure" (saying they don't know), "move_on" (asking to move on or saying they're done with this part, e.g. "what's next?", "that's it", "next one"), "off_topic" (anything else, including chit-chat and messages that make no sense).`;
 
 export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall): Promise<Judgement> {
@@ -108,7 +140,7 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
     model: MODELS.judge,
     name: "judgement",
     schema: replySchema(bundle),
-    maxTokens: 900,
+    maxTokens: 1200,
     messages: [
       { role: "system", content: SYSTEM },
       {
@@ -119,7 +151,8 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
   });
   onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
   const { kept, dropped } = screenQuotes(bundle, message, r.data.facts);
-  return { intent: r.data.intent, facts: kept, dropped, termsUsed: termsUsed(bundle, message) };
+  const mis = screenMisconceptions(bundle, message, r.data.misconceptions ?? []);
+  return { intent: r.data.intent, facts: kept, misconceptions: mis.kept, dropped: [...dropped, ...mis.dropped], termsUsed: termsUsed(bundle, message) };
 }
 
 /**

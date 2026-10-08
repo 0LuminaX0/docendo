@@ -1,15 +1,15 @@
 import { writeFile } from "node:fs/promises";
-import { Coverage, Graph, Locations, Questions, type Node, type Topic } from "./schema";
-import { existsSync, readJson, topicPaths } from "./paths";
-import { checkGraph } from "./validate";
-import { graphHash } from "./hash";
+import { Coverage, Graph, Locations, Questions, type Node, type Topic } from "../schema";
+import { existsSync, readJson, topicPaths } from "../paths";
+import { checkGraph } from "../validate";
+import { graphHash } from "../hash";
 import { formatLoc } from "./format";
 
 // review.html: one self-contained page for the team review. The graph is laid
 // out from the file (columns = longest prerequisite chain, rows ordered to
 // reduce crossings), so it always matches graph.draft.json.
 
-import { BOX_H, BOX_W, layout, routePath } from "./layout";
+import { BOX_H, BOX_W, layout, routePath } from "../layout";
 export { layout };
 
 export async function runReview(topic: Topic) {

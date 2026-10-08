@@ -8,8 +8,8 @@ import { cueChunks, parseTimedText, parseVtt } from "../content/ingest/youtube";
 import { detectSection, pdfChunks } from "../content/ingest/pdf";
 import { webChunks } from "../content/ingest/web";
 import { splitWords } from "../content/ingest/text";
-import { buildIndex, rank, tokens } from "../content/locate";
-import { layout } from "../content/review";
+import { buildIndex, rank, tokens } from "../content/authoring/locate";
+import { layout } from "../content/authoring/review";
 import { graphHash } from "../content/hash";
 
 // ---------- fixtures ----------

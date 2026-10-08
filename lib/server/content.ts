@@ -3,9 +3,11 @@ import { z } from "zod";
 import bundleJson from "../../topics/bandits/bundle.json";
 import exercisesJson from "../../topics/bandits/exercises.json";
 import practiceJson from "../../topics/bandits/practice.json";
+import pretestJson from "../../topics/bandits/pretest.json";
 import { Bundle } from "../../content/schema";
 import { PracticeFile, checkPractice } from "../../content/practice";
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
+import { config } from "./env";
 
 // The MVP serves one topic. To switch topics, point these imports at another
 // topics/<slug>/ folder after running `pnpm content bundle <slug>`.
@@ -28,16 +30,42 @@ export const exercises = z.object({ title: z.string(), items: z.array(Exercise).
 export const publicExercises = exercises.map(({ id, section, prompt, options }) => ({ id, section, prompt, options }));
 export type PublicExercise = (typeof publicExercises)[number];
 
+// ---------- pretest (before the video) ----------
+
+const PretestItem = z.object({
+  id: z.string(),
+  kind: z.enum(["background", "knowledge"]),
+  prompt: z.string(),
+  options: z.array(z.string()).min(2).max(6),
+  answer: z.number().int().min(0).optional(), // knowledge items
+  exclude: z.number().int().min(0).optional(), // background: this answer flags the session as excluded from the analysis
+});
+export const pretest = z.object({ title: z.string(), items: z.array(PretestItem).min(1) }).parse(pretestJson).items;
+/** No answers, no exclusion rule: the browser only shows the questions. */
+export const publicPretest = pretest.map(({ id, prompt, options }) => ({ id, prompt, options }));
+
 // ---------- practice (chapter 3) ----------
 
 const practiceFile = PracticeFile.parse(practiceJson);
 export const practice = practiceFile.items;
-export const practiceMinutes = practiceFile.minutes;
+export const practiceMinutes = config.practiceMinutes ?? practiceFile.minutes;
 export { checkPractice };
 
 /** What the browser may see before checking: no answers, no solutions. */
-export const publicPractice = practice.map(({ id, title, kind, prompt, options, unit }) => ({ id, title, kind, prompt, options: options ?? null, unit: unit ?? null }));
+export const publicPractice = practice.map(({ id, round, title, kind, prompt, options, unit }) => ({ id, round, title, kind, prompt, options: options ?? null, unit: unit ?? null }));
 export type PublicPractice = (typeof publicPractice)[number];
+
+/** The worked solutions, for the results page: sent only with the graded final test. */
+export const practiceReview = practice.map((p) => ({
+  id: p.id,
+  round: p.round,
+  title: p.title,
+  prompt: p.prompt,
+  options: p.options ?? null,
+  answer: p.kind === "choice" ? p.options![p.answer]! : `about ${Math.round(p.answer * 100) / 100}${p.unit ? ` ${p.unit}` : ""}`,
+  answerIndex: p.kind === "choice" ? p.answer : null,
+  steps: p.steps.map((s) => s.text),
+}));
 
 /** Video list for the watch page and the help card. */
 export const videos = bundle.videos.map((v, i) => ({ ...v, part: i + 1 }));

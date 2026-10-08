@@ -7,13 +7,16 @@ import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
-import { track } from "@/lib/client/log";
+import { logNotebook, track } from "@/lib/client/log";
 import { MESSAGE_MAX as MAX, type State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
 
 type Video = { id: string; videoId: string; title: string; part: number; durationSec?: number };
 const videoName = (t: string) => t.replace(/^[^:]{2,30}:\s+/, "");
+/** When a participant may end teaching early: after this many messages or this long. */
+const STOP_AFTER = { messages: 12, ms: 8 * 60_000 };
+
 type TurnReply = { reply: string; mood: Mood; state: State; progress: number; mind: Mind; done: boolean; help: Help | null; helpAvailable: boolean; demo: boolean };
 
 export default function Teach({ opening, initial, initialMind, videos, graph }: { opening: string; initial: State; initialMind: Mind; videos: Video[]; graph: GraphView }) {
@@ -26,6 +29,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const [video, setVideo] = useState<{ v: Video; start: number } | null>(null);
   const [confirmSkip, setConfirmSkip] = useState(false);
   const [view, setView] = useState<"chat" | "mind">("chat");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   // for the research log: how each message was written
@@ -36,6 +44,12 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     if (saved && !saved.chat.state)
       update((s) => ({ ...s, chat: { ...s.chat, startedAt: Date.now(), state: initial, mind: initialMind, turns: [{ role: "kai", text: opening, mood: "neutral" }] } }));
   }, [saved, update, initial, initialMind, opening]);
+
+  // once practice has started, the chat (and Kai's mind) stay closed until the results
+  const closed = saved?.step === "practice" || saved?.step === "exercises";
+  useEffect(() => {
+    if (closed) router.replace(saved?.step === "practice" ? "/practice" : "/exercises");
+  }, [closed, saved?.step, router]);
 
   const doneNow = !!saved?.chat.done;
   useEffect(() => {
@@ -55,10 +69,12 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     ta.style.height = `${ta.scrollHeight}px`;
   }, [text, view]);
 
-  if (!allowed || !saved || !saved.chat.state) return <div className="center">Loading…</div>;
+  if (!allowed || !saved || !saved.chat.state || closed) return <div className="center">Loading…</div>;
   const chat = saved.chat;
   const mind = chat.mind ?? initialMind;
   const learnerCount = turns.filter((t) => t.role === "learner" && !t.help).length;
+  // participants can stop teaching once they've given it a real go; team sessions (shared code) any time, for testing
+  const canStop = saved.team !== false || learnerCount >= STOP_AFTER.messages || now - (chat.startedAt ?? saved.startedAt) >= STOP_AFTER.ms;
   const finished = chat.done || chat.skipped;
   const left = mind.maxTurns - learnerCount;
 
@@ -120,6 +136,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
 
   function goPractice() {
     track("teach_continue", { skipped: chat.skipped, done: chat.done, progress: chat.progress });
+    logNotebook(chat.done ? "teach_end_ready" : chat.skipped ? "teach_end_stopped" : "teach_end", chat.state);
     update((s: Saved) => ({ ...s, step: s.step === "teach" ? "practice" : s.step }));
     router.push("/practice");
   }
@@ -309,7 +326,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                     </button>
                     <button className="btn ghost small" onClick={() => (setConfirmSkip(false), track("skip_cancel"))}>Keep teaching</button>
                   </div>
-                ) : (
+                ) : !canStop ? null : (
                   <button className="btn ghost small skip" onClick={() => (setConfirmSkip(true), track("skip_open", { progress: chat.progress }))} disabled={busy}>
                     <FastForward size={15} /> I&apos;ve taught all I can
                   </button>

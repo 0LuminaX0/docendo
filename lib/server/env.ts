@@ -7,7 +7,10 @@ import { z } from "zod";
 const Env = z.object({
   OPENROUTER_API_KEY: z.string().min(20).optional(),
   SESSION_SECRET: z.string().min(32).optional(),
-  ACCESS_CODE: z.string().min(4).max(64).optional(),
+  ACCESS_CODE: z.string().min(4).max(64).optional(), // one shared code: team and demo sessions
+  CODE_SECRET: z.string().min(16).optional(), // participant codes (lib/codes.ts): each code carries its condition
+  PRACTICE_MINUTES: z.coerce.number().positive().max(60).optional(), // overrides practice.json
+  PRACTICE_TRIES: z.coerce.number().int().min(1).max(10).default(2), // checks per practice problem (a first try and one retry)
   UPSTASH_REDIS_REST_URL: z.url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(10).optional(),
   // the same database under the names Vercel's Upstash integration may use
@@ -40,6 +43,9 @@ export class ConfigError extends Error {}
 export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
   accessCode: env.ACCESS_CODE,
+  codeSecret: env.CODE_SECRET,
+  practiceMinutes: env.PRACTICE_MINUTES,
+  practiceTries: env.PRACTICE_TRIES,
   upstash:
     env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
       ? { url: env.UPSTASH_REDIS_REST_URL, token: env.UPSTASH_REDIS_REST_TOKEN }

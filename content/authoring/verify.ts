@@ -1,10 +1,10 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import { chatJson, MODELS } from "../engine/llm";
-import { ChunkFile, Coverage, Graph, Locations, type Chunk, type Topic } from "./schema";
-import { existsSync, readJson, topicPaths, writeJson } from "./paths";
-import { graphHash } from "./hash";
+import { chatJson, MODELS } from "../../engine/llm";
+import { ChunkFile, Coverage, Graph, Locations, type Chunk, type Topic } from "../schema";
+import { existsSync, readJson, topicPaths, writeJson } from "../paths";
+import { graphHash } from "../hash";
 import { formatLoc } from "./format";
 
 // Decide, per fact, whether the learner-facing source states it. One call per

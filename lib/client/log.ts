@@ -42,6 +42,17 @@ export function flush(keepalive = false) {
   }
 }
 
+/**
+ * Kai's whole notebook at a moment that matters for the analysis (leaving the
+ * teaching chapter). Sent on its own, outside the event batches.
+ */
+export function logNotebook(reason: string, state: { turn: number; notebook: unknown[]; misconceptions?: unknown[] } | null) {
+  const t = token();
+  if (!t || !state) return;
+  const notebook = { reason, turn: state.turn, notebook: state.notebook, misconceptions: state.misconceptions ?? [] };
+  void fetch("/api/log", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: t, events: [], notebook }), keepalive: true }).catch(() => {});
+}
+
 let installed = false;
 /** Page-level listeners, once per tab: visibility (tab switches) and page hide. */
 export function installTelemetry() {

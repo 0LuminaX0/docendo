@@ -1,8 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { ChunkFile, Coverage, FrozenGraph, Graph, type Loc, type Topic } from "./schema";
-import { readJson, topicPaths, writeJson } from "./paths";
-import { graphHash } from "./hash";
+import { ChunkFile, Coverage, FrozenGraph, Graph, type Loc, type Topic } from "../schema";
+import { readJson, topicPaths, writeJson } from "../paths";
+import { graphHash } from "../hash";
 
 /** Write graph.json: the draft plus a content hash, the sources, and per-node help locations. Run after strict validation. */
 export async function runFreeze(topic: Topic) {

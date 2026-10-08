@@ -1,8 +1,8 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { ChunkFile, Graph, type Chunk, type Location, type Locations, type Topic } from "./schema";
-import { readJson, topicPaths, writeJson } from "./paths";
-import { graphHash } from "./hash";
+import { ChunkFile, Graph, type Chunk, type Location, type Locations, type Topic } from "../schema";
+import { readJson, topicPaths, writeJson } from "../paths";
+import { graphHash } from "../hash";
 
 // Locate proposes candidates; it does not decide coverage. BM25 over the fact's
 // words plus the node's label and terms, top 3 chunks per source. On the bandits

@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Saved } from "@/lib/client/store";
 
-const ORDER: Saved["step"][] = ["watch", "teach", "practice", "exercises", "results"];
-const PATH: Record<Saved["step"], string> = { watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" };
+const ORDER: Saved["step"][] = ["pretest", "watch", "teach", "practice", "exercises", "results"];
+const PATH: Record<Saved["step"], string> = { pretest: "/pretest", watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" };
 
 /** Send the visitor home without a session, or back to the furthest step they have unlocked. */
 export function useGuard(saved: Saved | null | undefined, here: Saved["step"]) {

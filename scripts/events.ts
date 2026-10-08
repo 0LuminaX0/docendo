@@ -93,6 +93,9 @@ function tables(events: Ev[]) {
     sessions.push({
       sid,
       pid: start?.pid ?? null,
+      condition: start?.condition ?? "direct", // sessions before conditions existed were all direct
+      entry: start?.entry ?? null, // participant (own code), team (shared code) or open
+      practiceAs: start?.practiceAs ?? "direct",
       demo: start?.demo ?? null,
       browser: (start?.device as { browser?: string })?.browser ?? null,
       os: (start?.device as { os?: string })?.os ?? null,
@@ -103,7 +106,7 @@ function tables(events: Ev[]) {
       minPractice: minutes(tAt.practice, tAt.test),
       minTest: minutes(tAt.test, tAt.results),
       minTotal: minutes(tAt.start, tAt.results),
-      reachedStep: tAt.results ? "results" : tAt.test ? "test" : tAt.practice ? "practice" : tAt.teach ? "teach" : tAt.watch ? "watch" : "start",
+      reachedStep: tAt.results ? "results" : tAt.test ? "test" : tAt.practice ? "practice" : tAt.teach ? "teach" : tAt.watch ? "watch" : first("pretest") || view("/pretest") ? "pretest" : "start",
       watchedSec: watchDone?.watchedTotal ?? null,
       lessonSec: watchDone?.totalSec ?? null,
       watchedAll: watchDone?.allWatched ?? null,
@@ -127,7 +130,8 @@ function tables(events: Ev[]) {
       ideasOpened: count(moves, (m) => m === "open"),
       ideasParked: chat.filter((c) => (c.move as { closure?: string })?.closure === "parked").length,
       answersToLearner: count(moves, (m) => m === "answer"),
-      misconceptions: count(moves, (m) => m === "misconception"),
+      misconceptionMoves: count(moves, (m) => m === "misconception"),
+      misconceptionsStated: sum(chat.map((c) => ((c.misconceptions as unknown[]) ?? []).length)),
       contradictions: count(moves, (m) => m === "contradict"),
       intentOffTopic: count(intents, (i) => i === "off_topic"),
       intentUnsure: count(intents, (i) => i === "unsure"),
@@ -146,12 +150,28 @@ function tables(events: Ev[]) {
       helpOpens: of("client_help_open").length,
       mindViews: count(of("client_view_toggle"), (e) => e.to === "mind"),
       skipOpened: of("client_skip_open").length,
+      notebookEntriesAtEnd: (() => {
+        const snap = [...of("notebook_snapshot")].pop();
+        return snap ? ((snap.notebook as unknown[]) ?? []).length : null;
+      })(),
       practiceChecks: of("practice_check").length,
       practiceSolved: new Set(of("practice_check").filter((e) => e.correct).map((e) => e.id)).size,
+      practiceFirstTry: count(of("practice_check"), (e) => e.correct === true && Number(e.attempt ?? 1) === 1),
+      practiceOnRetry: count(of("practice_check"), (e) => e.correct === true && Number(e.attempt ?? 1) > 1),
+      practiceRound1: new Set(of("practice_check").filter((e) => e.correct && Number(e.round) === 1).map((e) => e.id)).size,
+      practiceRound2: new Set(of("practice_check").filter((e) => e.correct && Number(e.round) === 2).map((e) => e.id)).size,
+      practiceSkipped: of("client_practice_skip").length,
       practiceHints: of("practice_hint").length,
-      practiceSolutions: of("practice_solution").length,
+      practiceSolutions: of("practice_solution").length, // older sessions only: solutions now come after the test
       practiceTimeUp: of("client_practice_time_up").length > 0,
       practiceLeftSec: first("client_practice_leave")?.leftMs != null ? Math.round(Number(first("client_practice_leave")!.leftMs) / 1000) : null,
+      pretestScore: first("pretest")?.score ?? null, // knowledge items right, of pretestOf
+      pretestOf: first("pretest")?.of ?? null,
+      pretestDontKnow: first("pretest")?.dontKnow ?? null,
+      rlCourse: (first("pretest")?.answers as Record<string, number> | undefined)?.b1 === 0 ? true : first("pretest") ? false : null,
+      heardOfBandits: (first("pretest")?.answers as Record<string, number> | undefined)?.b2 ?? null, // 0 no, 1 the name, 2 roughly how they work
+      excluded: first("pretest")?.excluded ?? null, // took an RL course: keep the data, leave out of the main analysis
+      minPretest: minutes(ms(view("/pretest")), tAt.watch),
       testScore: grade?.score ?? null,
       testOf: grade?.of ?? null,
       tabHidden: of("client_tab_hidden").length,
@@ -197,14 +217,21 @@ function tables(events: Ev[]) {
       });
     }
 
-    const ids = [...new Set([...of("practice_check"), ...of("practice_hint"), ...of("practice_solution")].map((e) => String(e.id)))].sort();
+    const ids = [...new Set([...of("practice_check"), ...of("practice_hint"), ...of("practice_solution"), ...of("client_practice_problem_show")].map((e) => String(e.id)))].sort();
     for (const id of ids) {
       const checks = of("practice_check").filter((e) => e.id === id);
       const firstRight = checks.findIndex((e) => e.correct);
       const sol = first("practice_solution", (e) => e.id === id);
       practice.push({
         sid,
+        condition: start?.condition ?? "direct",
         id,
+        round: checks[0]?.round ?? first("client_practice_problem_show", (e) => e.id === id)?.round ?? null,
+        // time on the problem, from when it was shown until the learner moved on
+        sec: Math.round(sum(of("client_practice_problem_leave").filter((e) => e.id === id).map((e) => Number(e.ms ?? 0))) / 1000),
+        firstTryCorrect: checks.length ? !!checks[0]!.correct : null,
+        retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
+        skipped: of("client_practice_skip").some((e) => e.id === id),
         checks: checks.length,
         solved: firstRight >= 0,
         checksToSolve: firstRight >= 0 ? firstRight + 1 : null,

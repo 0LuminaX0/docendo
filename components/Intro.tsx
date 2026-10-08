@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
 
-const STEP_PATH = { watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" } as const;
+const STEP_PATH = { pretest: "/pretest", watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" } as const;
 
 export default function Intro({ topic, accessRequired, demo, parts, videoMinutes, practiceMinutes }: { topic: string; accessRequired: boolean; demo: boolean; parts: number; videoMinutes: number; practiceMinutes: number }) {
   const router = useRouter();
@@ -15,16 +15,22 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // a participant's link carries their own code (?code=…), so they only press Start
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("code");
+    if (c) setCode(c.slice(0, 64));
+  }, []);
+
   async function start() {
     setBusy(true);
     setError(null);
-    // ?pid=… in the study link identifies the participant across our other data (questionnaires)
+    // team sessions: ?pid=… in the link joins the session with our other data (a participant's code does this itself)
     const pid = new URLSearchParams(window.location.search).get("pid")?.slice(0, 40) || undefined;
-    const r = await post<{ token: string; expiresAt: number; demo: boolean }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
+    const r = await post<{ token: string; expiresAt: number; demo: boolean; team: boolean }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
     setBusy(false);
     if (!r.ok) return setError(r.error);
-    save(newSession(r.data.token, r.data.expiresAt, r.data.demo));
-    router.push("/watch");
+    save(newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team));
+    router.push("/pretest");
   }
 
   return (
@@ -35,7 +41,7 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
           <span className="eyebrow">A learning-by-teaching study for CS-411 Digital Education, EPFL</span>
           <h1 className="title">Learn {topic.toLowerCase()} by teaching them</h1>
           <p className="lede">
-            You&apos;ll watch a short lesson, then explain it to Kai, a classmate who missed the lecture. Kai only knows what you tell it, so the better you explain, the more it understands.
+            You&apos;ll watch a short lesson, then explain it to Kai, a classmate who missed the lecture. Kai only knows what you tell it, so the better you explain, the more it understands. About 40 minutes in all, starting with five quick questions.
           </p>
         </div>
 
@@ -61,13 +67,13 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
             <span className="ico"><MessagesSquare size={22} strokeWidth={2.2} /></span>
             <span className="eyebrow">Step 2</span>
             <h3>Teach Kai</h3>
-            <p>Explain the ideas in your own words. Kai asks questions until it feels it understands. About 8 to 10 minutes.</p>
+            <p>Explain the ideas in your own words. Kai asks questions until it feels it understands. About 10 minutes.</p>
           </li>
           <li>
             <span className="ico"><PencilLine size={22} strokeWidth={2.2} /></span>
             <span className="eyebrow">Step 3</span>
             <h3>Practice</h3>
-            <p>A few problems to solve. Check your answers and look at worked solutions. {practiceMinutes} minutes.</p>
+            <p>Two short rounds of problems, with two tries each. {practiceMinutes} minutes.</p>
           </li>
           <li>
             <span className="ico"><ListChecks size={22} strokeWidth={2.2} /></span>
@@ -99,7 +105,7 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
             >
               {accessRequired && (
                 <div className="field">
-                  <label htmlFor="code">Access code</label>
+                  <label htmlFor="code">Your access code</label>
                   <input id="code" className="input" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" maxLength={64} required />
                 </div>
               )}

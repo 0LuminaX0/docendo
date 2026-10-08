@@ -15,26 +15,32 @@ export type GradeResult = {
   score: number;
   of: number;
   items: { id: string; chosen: number | null; answer: number; correct: boolean; explain: string }[];
+  // the practice problems' worked solutions, shown only after the test (absent in older sessions)
+  practice?: { id: string; round: number; title: string; prompt: string; options: string[] | null; answer: string; answerIndex: number | null; steps: string[] }[];
 };
 
 export type PracticeEntry = {
   work: string; // the learner's own working
   answer: string; // typed number, or the chosen option index as a string
-  checks: number; // how many times the learner checked
+  checks: number; // how many times the learner checked (at most the number of tries)
   hints?: number; // how many times the learner replayed the lesson moment
   correct: boolean | null; // result of the last check
-  solution: { steps: string[]; answer: string } | null; // once revealed
+  firstCorrect?: boolean; // result of the first check
+  ms?: number; // time spent on this problem
 };
-export type PracticeState = { startedAt: number | null; items: Record<string, PracticeEntry> };
-export const blankEntry = (): PracticeEntry => ({ work: "", answer: "", checks: 0, correct: null, solution: null });
+// one problem at a time, in order; `current` is its index
+export type PracticeState = { startedAt: number | null; current?: number; items: Record<string, PracticeEntry> };
+export const blankEntry = (): PracticeEntry => ({ work: "", answer: "", checks: 0, correct: null });
 
 export type Saved = {
   v: 1;
   token: string;
   expiresAt: number;
   demo: boolean;
+  team?: boolean; // started with the shared code (or no code): test shortcuts are on. Participants' own codes: false
   startedAt: number;
-  step: "watch" | "teach" | "practice" | "exercises" | "results";
+  step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
+  pretest?: (number | null)[]; // answers before the video (sessions started before the pretest have none)
   practice?: PracticeState; // absent in sessions started before the practice chapter existed
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
   watchedSec?: number[]; // seconds watched per lesson part
@@ -107,14 +113,15 @@ export function useSaved(): [Saved | null | undefined, (f: (s: Saved) => Saved) 
   return [value, update];
 }
 
-export function newSession(token: string, expiresAt: number, demo: boolean): Saved {
+export function newSession(token: string, expiresAt: number, demo: boolean, team = true): Saved {
   return {
     v: 1,
     token,
     expiresAt,
     demo,
+    team,
     startedAt: Date.now(),
-    step: "watch",
+    step: "pretest",
     watched: [],
     chat: { turns: [], state: null, progress: 0, mind: null, done: false, skipped: false, mood: "neutral", help: null, helpAvailable: false },
     practice: { startedAt: null, items: {} },

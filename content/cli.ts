@@ -1,4 +1,7 @@
 // pnpm content <step> <topic> [--source <id>] [--strict]
+// The MVP uses ingest, validate and bundle. draft, locate, verify, review and freeze are the
+// authoring pipeline (content/authoring/): kept for building new topics later, not part of the
+// study's flow. The bandits content was written by hand; locations.json is a kept output of locate.
 //   ingest    sources → sources/chunks/*.json
 //   draft     chunks + goals → graph.draft.json and questions.json (needs OPENROUTER_API_KEY)
 //   locate    graph facts → candidate places in every source → locations.json
@@ -41,12 +44,12 @@ async function ingest() {
 }
 
 async function locate() {
-  const { runLocate } = await import("./locate");
+  const { runLocate } = await import("./authoring/locate");
   await runLocate(topic);
 }
 
 async function verify() {
-  const { runVerify } = await import("./verify");
+  const { runVerify } = await import("./authoring/verify");
   await runVerify(topic, { force: flag("force") });
 }
 
@@ -58,7 +61,7 @@ async function validate(strict: boolean) {
 }
 
 async function review() {
-  const { runReview } = await import("./review");
+  const { runReview } = await import("./authoring/review");
   await runReview(topic);
 }
 
@@ -67,7 +70,7 @@ switch (step) {
     await ingest();
     break;
   case "draft": {
-    const { runDraft } = await import("./draft");
+    const { runDraft } = await import("./authoring/draft");
     await runDraft(topic, { force: flag("force") });
     break;
   }
@@ -84,7 +87,7 @@ switch (step) {
     await review();
     break;
   case "freeze": {
-    const { runFreeze } = await import("./freeze");
+    const { runFreeze } = await import("./authoring/freeze");
     if (await validate(true)) await runFreeze(topic);
     break;
   }

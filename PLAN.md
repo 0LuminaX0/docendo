@@ -1,38 +1,35 @@
 # Docendo plan
 
 - Design history and research grounding: https://claude.ai/artifact/TFPVnezekaraxiz7VQtxoP
-- Graph review: https://claude.ai/artifact/MB6a5XmLjoZBJSmSiyubHm
+- Phil's handoff, triaged item by item: https://claude.ai/artifact/CobG3jpsLRdSPhBnzumNej
 - Rules: [CLAUDE.md](CLAUDE.md); deploy: [README.md](README.md)
 
-## Direction (2026-10-07)
+## Where we are (2026-10-08)
 
-Single-version MVP: watch → teach Kai until it feels ready → 10 exercises. The two-condition comparison is on hold (the TA judged the difference too small). The knowledge graph stays as Kai's internal structure.
+The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2). The MVP is the **direct-feedback pipeline, end to end**; the recursive condition is built next, on the same hooks.
 
-## Done
+| Part | State |
+| --- | --- |
+| Start | Access by participant code (condition inside the code, balanced blocks of 4) or the shared team code; consent note |
+| Pretest | Done: 2 background questions (RL course flags `excluded`) and 3 knowledge items with "I don't know"; nothing shown back |
+| 1 Watch | Done: 8:12 lesson, three video parts in one player |
+| 2 Teach Kai | Done: judge with quote check (facts and open-ended misconceptions), notebook, policy, writer with term filter, readiness 80% or 50% after 8 min, Kai's mind; participants can stop after 12 messages or 8 min |
+| 3 Practice, direct | Done: 2 rounds × 3 problems, two tries, Rewatch, 10 min, then the test |
+| 3 Practice, recursive | Not built (hooks: `steps[].facts`, notebook with misconceptions, `cond` in the token) |
+| 4 Final test | Done: 10 MCQs checked against the item rules; results with explanations and practice solutions |
+| Research log | Done: every turn, try, click and video event; notebook snapshots; `pnpm events export` |
+| Checks | 70 unit tests (incl. recomputed keys), `pnpm e2e` (21 browser checks on its own safe server, including a scan of everything the browser downloads for solutions, explanations and lesson facts) |
 
-- [x] Content pipeline: ingest (YouTube, PDF, web), locate, verify, validate, review, freeze, bundle
-- [x] Bandits graph: 17 core + 2 branch nodes; coverage decisions; question bank (all hand-written, no API key yet)
-- [x] Tutor engine (`engine/tutor`): judge with quote check, notebook, deterministic policy, writer, term-leak check with fallback; offline demo mode
-- [x] Web app: welcome, watch (2 videos), teach chat (help card with video timestamps, Kai's moods, readiness meter), exercises (graded on the server), results
-- [x] Security: server-only secrets, signed session tokens, Origin check, zod validation and size caps, per-learner/per-network/daily rate limits (Upstash or memory), CSP and security headers; build scanned for leaked answers and keys
-- [x] Tests (49) + `pnpm e2e` browser walkthrough (demo mode, 10 checks: ready within 30 messages, all three reactions, Kai's mind, server grading, skip from the start, no sideways scroll at phone width)
-- [x] 2026-10-07 round 2: Kai's faces per message (great / okay / confused + neutral, thinking), max 30 messages, "I've taught all I can" from the start, partial facts count ½ (never downgrade a correct one), "Kai's mind" view (toggle + `/mind`, live graph, goal progress, scoring explained, what you told Kai), video durations, retry on errors, auto-growing input, `pnpm chat` terminal tester, mood passed to the writer so words match the face
+## Next, in order
 
-- [x] 2026-10-07 round 3 (after the first live test): one question per required fact (`ask`), follow-ups ask the next missing fact, "what's next?" gets one "before we move on…", ideas close with "got it" or "let's come back to it", every Kai message ends with a question; gibberish no longer parks ideas and a correct fact unparks one; fuzzy quote check; judge fact ids constrained by schema (the live judge's "id: text" answers had been dropping every verdict); Kai's mind lists asked questions with the learner's answers (unasked ones as a count only), bonus status, goal shapes instead of dots
+1. **Pilot the direct pipeline** with 2–3 people on the real model, on participant codes: total time, judge quality on real explanations, the export.
+2. **Recursive practice**: Kai solves each problem with the LLM from its notebook only (closed world: numbered quotes, no lesson facts), shown step by step with the light; on red the learner clicks the faulty step and sees the notebook statement; one correction in the chat (judged like teaching), then one retry. Same problems, time and tries as direct.
+3. **Leak check** (the TA's manipulation check): an LLM audit of every Kai message and solution step after the study, with the leak rate.
+4. Before the study: a team member who didn't write them reviews practice and test items; the M3 report is being updated by Phil (it still says 8 problems, unlimited checks, solutions during practice, 35 min, no pretest).
 
-- [x] 2026-10-08 round 4: study plan = replicate Okita & Schwartz (2013) Exp. 2 (recursive vs direct feedback). Practice chapter (step 3, base case = direct feedback): 8 timed problems, Check with a right/wrong light, Show solution, per-step fact links for the later "Kai solves it" condition; `/api/practice`. Final test is now step 4. Graph variants page (`/variants`) with 3 focused options, video cuts and fit to practice.
+## Decided and dropped
 
-- [x] 2026-10-08 round 5: scope "How strategies choose" (one goal, 9 ideas, 13 facts, `lesson` in topic.yaml); lesson = 8:12 in three parts played as one video (YouTube IFrame API); readiness = 80%, or 50% after 8 min of teaching; practice rewritten for the scope with "pick and why" items and Rewatch hints; final test rewritten as parallel transfer items; research log (`lib/server/events.ts`, `/api/log`, `pnpm events export`)
-
-## Next
-
-- [ ] **Upstash Redis on Vercel** before any participant: it is where the research log lives
-- [ ] Pilot with 2–3 people end to end on the real model; check the total time (target ≈ 35 min) and the export
-- [ ] Recursive-feedback condition: Kai solves the practice problems from its notebook (steps from `practice.json`), right/wrong light, click a sentence to see the notebook statement behind it; equal access to correct solutions
-
-- [ ] **Deploy**: GitHub repo → Vercel import → `SESSION_SECRET` → Upstash Redis → redeploy (README)
-- [ ] **OpenRouter key** (now in `.env`) with a credit limit → test real Kai end to end in the browser; tune the judge prompt on real explanations
-- [ ] Tutee name (placeholder: Kai)
-- [x] Videos cut to ~15 min: ritvikmath part 1 + DataMListic (UCB, regret growth). 4 required facts remain outside the videos; Kai doesn't wait for them and the exercises don't test them
-- [ ] Exercises reviewed by a team member who didn't write the prompts
-- [ ] Optional: store session results (Neon Postgres) instead of Vercel logs only; pre-test before watching; LLM claim check in `admit`
+- Prompted-vs-managed design (dropped 2026-10-08 for recursive vs direct feedback).
+- Prewritten Kai solution variants and fixed misconception ids (Phil's handoff): misconceptions arise while explaining; the LLM keeps that job.
+- A second "acknowledge" teaching mode, the paste block, Phil's T1 and T2 test items.
+- The LLM authoring pipeline (draft, locate, verify, review, freeze) is not part of the study flow: stashed in `content/authoring/` with its outputs, for building new topics later.

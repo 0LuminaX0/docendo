@@ -24,13 +24,13 @@
       "section": "The problem",
       "prompt": "Why can't the shop simply pick the best banner on its first day?",
       "options": [
-        "Because the shop is only allowed to change banners once a week",
+        "Because a banner's click rate only settles to a fixed value after it has been shown many times",
         "Because all banners have the same click rate at first",
         "Because each banner's true click rate is unknown, and single visitors click more or less at random, so the shop has to learn the rates by showing the banners",
         "Because the best banner changes every day"
       ],
       "answer": 2,
-      "explain": "The averages are hidden and each reward is random, so the only way to learn how good a banner is, is to show it and average the results."
+      "explain": "The averages are hidden and each reward is random, so the only way to learn how good a banner is, is to show it and average the results. The true click rate doesn't change; only the shop's estimate of it gets better with more showings."
     },
     {
       "id": "q03",
@@ -67,7 +67,7 @@
       "goal": "G",
       "type": "apply",
       "section": "ε-greedy",
-      "prompt": "The shop switches to ε-greedy with ε = 0.1 for its five banners. When it explores, it shows one of the five at random. What share of visitors see the banner with the best average so far?",
+      "prompt": "The shop switches to ε-greedy with ε = 0.1 for its five banners. One banner has the best average so far. What share of visitors see that banner?",
       "options": [
         "90%",
         "92%",
@@ -75,7 +75,7 @@
         "10%"
       ],
       "answer": 1,
-      "explain": "90% of visitors get the favourite on exploit visits, and 1 in 5 of the remaining 10% get it by chance: 0.9 + 0.1/5 = 0.92."
+      "explain": "90% of visitors get the favourite on exploit visits. Explore visits pick one of all five banners at random, the favourite included, so 1 in 5 of the remaining 10% get it too: 0.9 + 0.1/5 = 0.92."
     },
     {
       "id": "q06",
@@ -97,15 +97,15 @@
       "goal": "G",
       "type": "transfer",
       "section": "ε-greedy",
-      "prompt": "A friend tries one dish at a new restaurant, likes it, and orders exactly that dish on every visit from then on. What does this strategy risk?",
+      "prompt": "A new colleague tries one of the office coffee machines on their first day, likes the coffee, and uses only that machine from then on. What does this strategy risk?",
       "options": [
-        "Missing a better dish, because other dishes are never tried",
-        "Wasting many meals on dishes already known to be worse",
-        "Nothing: one visit tells you how good a dish really is",
-        "Spending too much, because favourites are expensive"
+        "Missing a better machine, because the others never get another try",
+        "Wasting many coffees on machines already known to be worse",
+        "Nothing: a good first cup shows that this machine is the best",
+        "Switching machines too often to settle on a good one"
       ],
       "answer": 0,
-      "explain": "Only exploiting means never exploring: a dish that wasn't tried (or was unlucky once) never gets another chance, so a better one can stay hidden. Too much exploring would be the opposite risk."
+      "explain": "Only exploiting means never exploring: a machine that wasn't tried (or was unlucky once) never gets another chance, so a better one can stay hidden. One cup says little about a machine's average. Too much exploring would be the opposite risk."
     },
     {
       "id": "q08",
@@ -127,15 +127,15 @@
       "goal": "G",
       "type": "apply",
       "section": "UCB",
-      "prompt": "Under UCB right now, option A has average 6.0 and bonus 0.3, B has average 5.2 and bonus 1.2, and C has average 5.8 and bonus 0.4. Which option does UCB pick?",
+      "prompt": "A study app chooses between three quiz formats with UCB. Right now format A has average 6.0 and bonus 0.3, B has average 5.2 and bonus 1.2, and C has average 5.8 and bonus 0.4. Which format does UCB pick, and why?",
       "options": [
-        "A",
-        "B",
-        "C",
-        "One of them at random"
+        "A, because it has the best average",
+        "B, because its average plus its bonus is the highest",
+        "C, because both its average and its bonus are in the middle",
+        "One of them at random, because UCB explores on some rounds"
       ],
       "answer": 1,
-      "explain": "Scores: A = 6.3, B = 6.4, C = 6.2. UCB picks the highest average plus bonus: B, although A has the best average."
+      "explain": "Scores: A = 6.3, B = 6.4, C = 6.2. UCB picks the highest average plus bonus: B, although A has the best average. Nothing is random in UCB."
     },
     {
       "id": "q10",
