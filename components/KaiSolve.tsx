@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { BookOpen, Send } from "lucide-react";
 import { KaiFace } from "./ui";
 import KaiNotebook from "./KaiNotebook";
@@ -18,8 +18,9 @@ const KEYS = "ABCDEF";
  * goes into Kai's notebook and Kai tries once more.
  *
  * Two columns: the task (the problem, then Kai's tries) and Kai's notebook,
- * tall and sticky beside it. The correction is an edit to what Kai knows, so it
- * is written on the notebook's last lines, not in a box under the task.
+ * tall and sticky beside it. The correction box sits under the notebook: the
+ * learner tells Kai, and Kai writes down what it takes from it (the notebook is
+ * Kai's, so the learner never writes in it).
  */
 export default function KaiSolve({
   q,
@@ -50,43 +51,12 @@ export default function KaiSolve({
   const last = attempts.at(-1);
   const canReteach = attempts.length === 1 && !!last && !last.correct && !entry.correction;
   const done = !!last && (last.correct || attempts.length >= 2);
-
-  const foot =
-    canReteach && !busy ? (
-      <div className="nb-fix">
-        <p className="nb-fix-head">
-          <b>Your correction</b> Kai got it wrong. Write what it should know (you aren&apos;t told which step is wrong): it goes into this notebook and Kai tries once more.
-        </p>
-        <Scratchpad
-          paper
-          id={`${q.id}-fix`}
-          where={`practice-fix:${q.id}`}
-          label="Your correction for Kai"
-          value={text}
-          onChange={setText}
-          rows={3}
-          maxLength={1500}
-          disabled={disabled}
-          placeholder="For example: when ε-greedy explores, it picks…"
-        />
-        <div className="pact">
-          <span className="grow" />
-          <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
-            <Send size={14} /> Send to Kai
-          </button>
-        </div>
-      </div>
-    ) : (
-      <p className="nb-pencil nb-foot-note">
-        {busy && attempts.length
-          ? "Kai is writing your correction in."
-          : !last
-            ? "If Kai gets it wrong, you write one correction here."
-            : last.correct && attempts.length === 1
-              ? "Kai got it right: nothing to correct."
-              : "You've used your one correction for this problem."}
-      </p>
-    );
+  // when the correction box appears, bring it into view (only as far as needed: the notebook column is sticky)
+  const fixBox = useRef<HTMLDivElement>(null);
+  const asking = canReteach && !busy;
+  useEffect(() => {
+    if (asking) fixBox.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [asking]);
 
   return (
     <section className="pq kai-solve" aria-labelledby={`${q.id}-q`}>
@@ -144,9 +114,30 @@ export default function KaiSolve({
       </div>
 
       <div className="ks-note">
-        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit}>
-          {foot}
-        </KaiNotebook>
+        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
+        {asking && (
+          <div className="ks-fix" ref={fixBox}>
+            <h3>Correct Kai</h3>
+            <p className="note">Kai got it wrong. Tell it what it should know (you aren&apos;t told which step is wrong). Kai writes down what it takes from it and tries once more.</p>
+            <Scratchpad
+              id={`${q.id}-fix`}
+              where={`practice-fix:${q.id}`}
+              label="Your correction for Kai"
+              value={text}
+              onChange={setText}
+              rows={3}
+              maxLength={1500}
+              disabled={disabled}
+              placeholder="For example: when ε-greedy explores, it picks…"
+            />
+            <div className="pact">
+              <span className="grow" />
+              <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
+                <Send size={14} /> Send to Kai
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

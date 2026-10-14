@@ -356,7 +356,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
                 onChange={(v) => set(q.id, (x) => ({ ...x, work: v }))}
                 rows={3}
                 disabled={over}
-                placeholder="Your working: what the rule says here, and your sums"
+                placeholder="Work it out here if it helps: which rule applies, and any calculations"
                 onUse={q.kind === "number" && !finished ? (v) => set(q.id, (x) => ({ ...x, answer: String(Math.round(v * 100) / 100), correct: null })) : undefined}
               />
               {q.kind === "choice" && q.options ? (

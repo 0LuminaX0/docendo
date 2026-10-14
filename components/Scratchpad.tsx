@@ -38,7 +38,6 @@ export default function Scratchpad({
   disabled,
   onUse,
   label,
-  paper,
 }: {
   id: string;
   where: string; // for the log
@@ -50,7 +49,6 @@ export default function Scratchpad({
   disabled?: boolean;
   onUse?: (value: number) => void; // number problems: put the last result in the answer box
   label: string;
-  paper?: boolean; // written on Kai's notebook page (the correction), in Kai's hand
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState(0);
@@ -111,7 +109,7 @@ export default function Scratchpad({
   }
 
   return (
-    <div className={`scratch${paper ? " paper" : ""}${disabled ? " off" : ""}`}>
+    <div className={`scratch${disabled ? " off" : ""}`}>
       <label className="sr-only" htmlFor={id}>{label}</label>
       <textarea
         ref={ref}
@@ -134,7 +132,7 @@ export default function Scratchpad({
               Result: <b>{format(sum.value)}</b>. Type = to add it.
             </>
           ) : (
-            "To calculate, write it and end with =, e.g. 0.8 × 1000 + 200 ÷ 3 ="
+            "To calculate, type it and end with =, like 12 × 0.9 + 3 ="
           )}
         </span>
         <span className="grow" />
