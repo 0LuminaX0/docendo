@@ -120,3 +120,17 @@ export function format(v: number): string {
   const r = Math.round(v * 1e6) / 1e6;
   return Object.is(r, -0) ? "0" : String(r);
 }
+
+/** The sum at the end of a line ("A: 6.1 + 0.5" → "6.1 + 0.5"), if there is one: words alone are not a sum. */
+export function sumAtEnd(line: string): { expr: string; value: number } | null {
+  const text = line.replace(/=\s*$/, "").trimEnd();
+  // try from the earliest start that still parses, so "A: 6.1 + 0.5" finds "6.1 + 0.5"
+  const starts = [0, ...[...text.matchAll(/[\s:;,(]/g)].map((m) => (m.index ?? 0) + 1)];
+  for (const s of starts) {
+    const expr = text.slice(s).trim();
+    if (!expr || !/[+\-*/×÷^%√]|\b(sqrt|ln|log|exp)\b|\bof\b/i.test(expr) || !/\d/.test(expr)) continue;
+    const r = calculate(expr);
+    if (r.ok) return { expr, value: r.value };
+  }
+  return null;
+}

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Lightbulb, Play, Timer } from "lucide-react";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
 import KaiSolve from "./KaiSolve";
-import Calculator from "./Calculator";
+import Scratchpad from "./Scratchpad";
 import { track } from "@/lib/client/log";
 import { useGuard } from "./useGuard";
 import { blankEntry, post, save, useSaved, type Condition, type KaiAttempt, type KaiEntry, type PracticeEntry, type PracticeState, type Saved } from "@/lib/client/store";
@@ -272,7 +272,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
           ) : undefined
         }
       />
-      <main className="page narrow">
+      <main className={`page narrow${mode === "recursive" ? " wide" : ""}`}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <span className="eyebrow">Step 3 of 4</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Practice problems</h1>
@@ -348,31 +348,17 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
               <p id={`${q.id}-q`}>{q.prompt}</p>
             </div>
             <div className="pwork">
-              <label className="sr-only" htmlFor={`${q.id}-work`}>Your working</label>
-              <textarea
+              <Scratchpad
                 id={`${q.id}-work`}
-                className="work"
-                rows={2}
-                maxLength={4000}
-                placeholder="Your working: what the rule says here, and your sums"
+                where={`practice:${q.id}`}
+                label="Your working"
                 value={e.work}
+                onChange={(v) => set(q.id, (x) => ({ ...x, work: v }))}
+                rows={3}
                 disabled={over}
-                onChange={(ev) => set(q.id, (x) => ({ ...x, work: ev.target.value }))}
-                onBlur={(ev) => ev.target.value && track("practice_work", { id: q.id, chars: ev.target.value.length, text: ev.target.value.slice(0, 2000) })}
+                placeholder="Your working: what the rule says here, and your sums"
+                onUse={q.kind === "number" && !finished ? (v) => set(q.id, (x) => ({ ...x, answer: String(Math.round(v * 100) / 100), correct: null })) : undefined}
               />
-              {!over && !finished && (
-                <Calculator
-                  where={`practice:${q.id}`}
-                  onResult={(line, value) =>
-                    set(q.id, (x) => ({
-                      ...x,
-                      work: x.work.trim() ? `${x.work.trimEnd()}\n${line}` : line,
-                      // a number problem: the result also goes into the answer box if it's still empty
-                      answer: q.kind === "number" && !x.answer.trim() ? String(Math.round(value * 100) / 100) : x.answer,
-                    }))
-                  }
-                />
-              )}
               {q.kind === "choice" && q.options ? (
                 <fieldset className="opts" aria-labelledby={`${q.id}-q`} disabled={over || finished}>
                   {q.options.map((o, k) => (

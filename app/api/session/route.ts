@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
   else if (config.accessCode && codeMatches(given, config.accessCode)) who = { cond: "direct", entry: "team", pid: body.data.pid ?? null };
   else if (!config.accessCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
   else {
-    await limit(`session:badcode:${ip}`, 1, 2); // slow down guessing
+    // wrong codes: 10 per 15 minutes per network, then a pause (a lab room's typos fit; guessing doesn't)
+    const tries = await limit(`session:badcode:${ip}`, 10, 900);
+    if (!tries.ok) return fail(429, "Too many wrong codes. Wait a few minutes and try again.", { retryAfter: tries.retryAfter }, { "Retry-After": String(tries.retryAfter) });
     return fail(401, "That access code isn't right.");
   }
   try {

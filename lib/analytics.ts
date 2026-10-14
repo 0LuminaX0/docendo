@@ -8,7 +8,10 @@ export type Tables = ReturnType<typeof tables>;
 
 export const csvCell = (v: unknown) => {
   if (v === null || v === undefined) return "";
-  const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+  let s = typeof v === "object" ? JSON.stringify(v) : String(v);
+  // what learners type ends up here: a cell starting with = + - @ (or a tab/CR) would run as a formula in Excel or
+  // Sheets, so it gets a leading apostrophe (shown as text). Plain negative numbers stay numbers.
+  if (typeof v !== "number" && /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 export const toCsv = (rows: Record<string, unknown>[]) => {

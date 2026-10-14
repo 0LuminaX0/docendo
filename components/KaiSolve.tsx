@@ -1,10 +1,10 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { BookOpen, Calculator as CalcIcon, Send } from "lucide-react";
+import { BookOpen, Send } from "lucide-react";
 import { KaiFace } from "./ui";
 import KaiNotebook from "./KaiNotebook";
-import Calculator from "./Calculator";
+import Scratchpad from "./Scratchpad";
 import type { KaiAttempt, KaiEntry } from "@/lib/client/store";
 
 type Item = { id: string; round: number; title: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
@@ -40,7 +40,6 @@ export default function KaiSolve({
 }) {
   const [text, setText] = useState("");
   const [lit, setLit] = useState<string[]>([]);
-  const [calc, setCalc] = useState(false);
   const attempts = entry.attempts;
   const last = attempts.at(-1);
   const canReteach = attempts.length === 1 && !!last && !last.correct && !entry.correction;
@@ -48,23 +47,24 @@ export default function KaiSolve({
 
   return (
     <section className="pq kai-solve" aria-labelledby={`${q.id}-q`}>
-      <div className="ks-grid">
-        <div className="ks-main">
-          <div className="qt">
-            {head}
-            <p id={`${q.id}-q`}>{q.prompt}</p>
-          </div>
-          {q.options && (
-            <ol className="kopts" aria-label="Options">
-              {q.options.map((o, k) => (
-                <li key={k}>
-                  <span className="key" aria-hidden="true">{KEYS[k]}</span>
-                  <span>{o}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+      <div className="qt">
+        {head}
+        <p id={`${q.id}-q`}>{q.prompt}</p>
+      </div>
+      {q.options && (
+        <ol className="kopts" aria-label="Options">
+          {q.options.map((o, k) => (
+            <li key={k}>
+              <span className="key" aria-hidden="true">{KEYS[k]}</span>
+              <span>{o}</span>
+            </li>
+          ))}
+        </ol>
+      )}
 
+      {/* Kai's work and its notebook side by side; the correction goes under Kai's work */}
+      <div className="ks-grid">
+        <div className="ks-work">
           {attempts.map((a, n) => (
             <Fragment key={n}>
               {n === 1 && entry.correction && (
@@ -98,45 +98,37 @@ export default function KaiSolve({
           {done && last!.correct && attempts.length === 2 && <p className="note ks-end">Your correction did it: Kai got it right this time.</p>}
         </div>
 
-        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
-      </div>
+        <div className="ks-note">
+          <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
+        </div>
 
-      {canReteach && !busy && (
-        <div className="ks-fix">
-          <div>
+        {canReteach && !busy && (
+          <div className="ks-fix">
             <h3>Help Kai with one correction</h3>
             <p className="note">You don&apos;t see which step went wrong. Explain what Kai should know: your words go into its notebook, and Kai tries once more.</p>
-          </div>
-          <label className="sr-only" htmlFor={`${q.id}-fix`}>Your correction for Kai</label>
-          <textarea
-            id={`${q.id}-fix`}
-            className="work"
-            rows={3}
-            maxLength={1500}
-            placeholder="For example: when ε-greedy explores, it picks…"
-            value={text}
-            disabled={disabled}
-            onChange={(e) => setText(e.target.value)}
-          />
-          {calc && <Calculator where={`practice-fix:${q.id}`} onResult={(line) => setText((t) => (t.trim() ? `${t.trimEnd()}\n${line}` : line))} />}
-          <div className="pact">
-            <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
-              <Send size={14} /> Send to Kai
-            </button>
-            <span className="grow" />
-            {!calc && (
-              <button type="button" className="btn ghost small" onClick={() => setCalc(true)}>
-                <CalcIcon size={14} /> Calculator
+            <Scratchpad
+              id={`${q.id}-fix`}
+              where={`practice-fix:${q.id}`}
+              label="Your correction for Kai"
+              value={text}
+              onChange={setText}
+              rows={4}
+              maxLength={1500}
+              disabled={disabled}
+              placeholder="For example: when ε-greedy explores, it picks…"
+            />
+            <div className="pact">
+              <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
+                <Send size={14} /> Send to Kai
               </button>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
 
-/** One try. Its steps cite notebook lines; only the latest try shows their numbers (the notebook is numbered for it). */
 function Attempt({ a, n, q, lit, onLight, numbered }: { a: KaiAttempt; n: number; q: Item; lit: string[]; onLight: (notes: string[]) => void; numbered: boolean }) {
   const used = (s: { notes: number[] }) => s.notes.map((x) => a.notes[x - 1]).filter((t): t is string => !!t);
   const k = KEYS.indexOf(a.answer.trim().charAt(0).toUpperCase());

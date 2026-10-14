@@ -42,7 +42,7 @@ export default function AdminLogin({ enabled }: { enabled: boolean }) {
         ) : (
           <>
             <h1>The admin panel is off</h1>
-            <p className="note">Set ADMIN_PASSWORD (10 characters or more) in the server&apos;s environment and redeploy.</p>
+            <p className="note">The admin panel isn&apos;t set up on this server.</p>
           </>
         )}
       </form>

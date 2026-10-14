@@ -12,7 +12,7 @@ const Body = z.object({ password: z.string().min(1).max(200) });
 /** Admin login: the password, then a signed httpOnly cookie. Slow to guess: 5 tries per 15 minutes per network. */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return fail(403, "Requests from other sites are not allowed.");
-  if (!adminEnabled()) return fail(404, "The admin panel is off (no ADMIN_PASSWORD).");
+  if (!adminEnabled()) return fail(404, "Not found.");
   const r = await limitAll([[`admin:login:${clientIp(req)}`, 5, 900]]);
   if (!r.ok) return fail(429, "Too many tries. Wait a few minutes.", { retryAfter: r.retryAfter });
   const body = Body.safeParse(await readBody(req, 1_000));

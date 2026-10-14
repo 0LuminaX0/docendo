@@ -84,6 +84,7 @@ button { font: inherit; color: inherit; }
 :root { --col: clamp(720px, 64vw, 1040px); }
 .page { width: 100%; max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; display: flex; flex-direction: column; gap: 28px; }
 .page.narrow { max-width: calc(var(--col) + 48px); }
+.page.narrow.wide { max-width: 1240px; } /* the recursive practice view: Kai's work and its notebook side by side */
 @media (max-width: 640px) { .page { padding: 28px 16px 64px; } }
 
 /* ---------- type & buttons ---------- */
@@ -276,9 +277,11 @@ button { font: inherit; color: inherit; }
 .review { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 
 /* recursive feedback: Kai solves next to its notebook */
-.ks-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(260px, 1fr); gap: 28px; align-items: start; }
-.ks-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-@media (max-width: 900px) { .ks-grid { grid-template-columns: minmax(0, 1fr); } }
+.ks-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "work note" "fix note"; column-gap: 32px; row-gap: 20px; align-items: start; }
+.ks-work { grid-area: work; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ks-note { grid-area: note; min-width: 0; align-self: stretch; }
+.ks-fix { grid-area: fix; }
+@media (max-width: 900px) { .ks-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "work" "note" "fix"; } }
 .kopts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.45; }
 .kopts li { display: flex; gap: 12px; align-items: baseline; color: var(--ink-2); }
 .kopts .key { flex: none; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; font: 700 12px var(--font-display), sans-serif; background: var(--sunk); color: var(--ink-2); transform: translateY(2px); }
@@ -300,39 +303,41 @@ button { font: inherit; color: inherit; }
 .ks-end { margin: 0; }
 .ks-fix-shown { border-left: 3px solid var(--blue); padding: 2px 0 2px 12px; display: flex; flex-direction: column; gap: 2px; }
 .ks-fix-shown p { margin: 0; white-space: pre-wrap; }
-.ks-fix { margin-top: 8px; padding-top: 18px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; }
+.ks-fix { padding-top: 18px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; }
 .ks-fix h3 { margin: 0 0 2px; font: 700 16px var(--font-display), sans-serif; }
 .ks-fix .note { margin: 0; }
 .linkish { border: 0; background: none; color: var(--blue); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
 
-/* Kai's notebook: ruled paper, the learner's words in Kai's hand; corrections in pencil and a second ink */
-.nb { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.nb-head { display: flex; flex-direction: column; gap: 0; padding-left: 4px; }
-.nb-head h3 { margin: 0; font: 700 15px var(--font-display), sans-serif; }
+/* Kai's notebook: white paper with blue rules and a red margin line; the learner's words in Kai's hand.
+   Corrections: struck through in pencil, new notes in green ink. No spiral or other props. */
+.nb { position: sticky; top: 84px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.nb-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 2px; }
+.nb-head h3 { margin: 0; font: 700 16px var(--font-display), sans-serif; }
 .nb-head span { font-size: 12.5px; color: var(--muted); }
 .nb-paper {
-  --lh: 30px;
+  --lh: 34px;
   position: relative;
-  padding: 10px 16px calc(var(--lh) - 4px) 44px;
-  min-height: calc(var(--lh) * 6);
-  border-radius: 3px 10px 10px 3px;
+  padding: 14px 20px var(--lh) 58px;
+  min-height: calc(var(--lh) * 9);
+  border-radius: 6px 14px 14px 6px;
+  border: 1px solid #dde6f2;
   background:
-    linear-gradient(to right, transparent 33px, #f0c3bd 33px, #f0c3bd 34.5px, transparent 34.5px),
-    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--lh) - 1px), #d9e2ee calc(var(--lh) - 1px), #d9e2ee var(--lh)) 0 10px / 100% var(--lh),
-    #fffdf7;
-  box-shadow: 0 1px 1px rgba(27, 31, 39, 0.05), 0 10px 26px -14px rgba(27, 31, 39, 0.28);
+    linear-gradient(to right, transparent 43px, #ef9f9b 43px, #ef9f9b 44.5px, transparent 44.5px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--lh) - 1px), #d4e2f4 calc(var(--lh) - 1px), #d4e2f4 var(--lh)) 0 7px / 100% var(--lh),
+    #fcfdff;
+  box-shadow: 0 1px 2px rgba(27, 39, 64, 0.06), 0 14px 32px -18px rgba(27, 52, 104, 0.3);
 }
 /* the sheet underneath: offset, not rotated (a rotation swings a long page's corners off a phone screen) */
-.nb-paper::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 3px 10px 10px 3px; background: #f4efe4; box-shadow: 0 1px 1px rgba(27, 31, 39, 0.05); transform: translate(4px, 5px); }
+.nb-paper::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: 6px 14px 14px 6px; background: #eef3fa; border: 1px solid #dde6f2; transform: translate(5px, 6px); }
 .nb-lines { list-style: none; margin: 0; padding: 0; }
-.nb-line { position: relative; font: 400 17px/var(--lh) var(--font-hand), cursive; color: #1d3474; padding: 0 2px; cursor: default; }
-.nb-n { position: absolute; left: -32px; width: 22px; text-align: right; font: 400 13px/var(--lh) var(--font-hand), cursive; color: #9aa2ae; }
+.nb-line { position: relative; font: 400 17.5px/var(--lh) var(--font-hand), cursive; letter-spacing: -0.005em; color: #1e3a8a; padding: 0 2px; cursor: default; }
+.nb-n { position: absolute; left: -42px; width: 26px; text-align: right; font: 500 13px/var(--lh) var(--font-hand), cursive; color: #9db1cf; }
 .nb-t { box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background 0.2s; }
-.nb-line.lit .nb-t { background: linear-gradient(to bottom, transparent 42%, rgba(255, 214, 64, 0.55) 42%, rgba(255, 214, 64, 0.55) 88%, transparent 88%); }
-.nb-line.fresh { color: #1b6b45; }
+.nb-line.lit .nb-t { background: linear-gradient(to bottom, transparent 40%, rgba(255, 214, 64, 0.5) 40%, rgba(255, 214, 64, 0.5) 86%, transparent 86%); }
+.nb-line.fresh { color: #19704a; }
 /* the text is written on; the margin number stays outside the clip */
 .nb-line.fresh .nb-t { display: block; animation: nbwrite 1.1s ease-out both; }
-.nb-line.crossed { color: #8b93a0; }
+.nb-line.crossed { color: #8a96a8; }
 .nb-line.crossed s { text-decoration: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='8' viewBox='0 0 120 8'%3E%3Cpath d='M1 5 C 20 2, 35 7, 60 4 S 100 2, 119 5' fill='none' stroke='%235b6573' stroke-width='1.6' stroke-linecap='round' opacity='0.85'/%3E%3C/svg%3E"); background-repeat: repeat-x; background-position: 0 55%; background-size: 120px 8px; animation: nbcross 0.9s ease-out both; }
 @keyframes nbwrite { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes nbcross { from { background-size: 0 8px; } to { background-size: 120px 8px; } }
@@ -341,16 +346,16 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .ksteps li, .kanswer, .nb-line.fresh .nb-t, .nb-line.crossed s { animation: none; } }
 @media (max-width: 900px) { .nb { position: static; } }
 
-/* the calculator, under the working (practice) and in the final test */
-.calc { display: flex; flex-direction: column; gap: 6px; }
-.calc-line { display: flex; align-items: center; gap: 8px; border: 1px solid var(--rule); border-radius: 10px; padding: 4px 4px 4px 12px; background: #fff; }
-.calc-line:focus-within { border-color: var(--blue); }
-.calc-in { flex: 1; min-width: 0; border: 0; outline: none; font: 500 15px var(--font-body), sans-serif; font-variant-numeric: tabular-nums; background: none; padding: 6px 0; }
-.calc-out { font: 600 14px var(--font-body), sans-serif; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
-.calc-out.err { color: var(--muted); font-weight: 500; font-size: 12.5px; }
-.calc-go { flex: none; width: 32px; height: 32px; border-radius: 8px; border: 0; background: var(--sunk); color: var(--ink-2); display: grid; place-items: center; cursor: pointer; }
-.calc-go:not(:disabled):hover { background: var(--blue); color: #fff; }
-.calc-go:disabled { opacity: 0.45; cursor: default; }
+/* the working field: one place for notes and sums ("=" works the sum out), keys on demand */
+.scratch { display: flex; flex-direction: column; gap: 6px; }
+.scratch .work { font-variant-numeric: tabular-nums; }
+.scratch-bar { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.scratch-hint b { color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; margin-right: 4px; }
+.scratch-hint span { color: var(--muted); }
+.scratch-bar .grow { flex: 1; }
+.scratch-toggle { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); background: #fff; color: var(--ink-2); border-radius: 8px; padding: 3px 9px; font: 600 12.5px var(--font-body), sans-serif; cursor: pointer; }
+.scratch-toggle.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.scratch.off .scratch-bar { opacity: 0.5; }
 .calc-keys { display: flex; flex-wrap: wrap; gap: 4px; }
 .calc-keys button { min-width: 32px; height: 28px; padding: 0 8px; border-radius: 7px; border: 1px solid var(--rule); background: #fff; font: 600 13.5px var(--font-body), sans-serif; color: var(--ink-2); cursor: pointer; }
 .calc-keys button:hover { border-color: #c9d0da; background: #fafbfc; }
@@ -540,7 +545,6 @@ button { font: inherit; color: inherit; }
 .submitbar .grow { flex: 1; }
 .calc-pop { position: absolute; right: 24px; bottom: calc(100% + 10px); width: min(380px, calc(100vw - 32px)); background: #fff; border: 1px solid var(--rule); border-radius: 14px; padding: 12px; box-shadow: 0 16px 40px -18px rgba(27, 31, 39, 0.35); display: flex; flex-direction: column; gap: 8px; }
 .calc-pop-head { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--font-display), sans-serif; }
-.calc-tape { list-style: none; margin: 0; padding: 8px 10px; background: var(--sunk); border-radius: 8px; font: 500 13.5px var(--font-body), sans-serif; font-variant-numeric: tabular-nums; color: var(--ink-2); display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow: auto; }
 @media (max-width: 640px) { .calc-pop { right: 16px; } }
 
 /* ---------- end-of-session feedback ---------- */

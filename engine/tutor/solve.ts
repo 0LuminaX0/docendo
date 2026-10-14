@@ -195,6 +195,19 @@ function leaks(bundle: Bundle, item: PracticeItem, state: State, steps: Step[]):
   return forbiddenTerms(bundle, seen, steps.map((s) => s.text).join(" "));
 }
 
+/** The problem's wrong rule that best matches what the learner said (shared content words), if any match. */
+function closestBelief(item: PracticeItem, said: string): Guess | null {
+  const words = (t: string) => new Set(t.toLowerCase().match(/[a-zε]{4,}/g) ?? []);
+  const w = words(said);
+  let best: Guess | null = null;
+  let score = 0;
+  for (const b of item.beliefs ?? []) {
+    const n = [...words(b.belief)].filter((x) => w.has(x)).length;
+    if (n > score) (best = b, (score = n));
+  }
+  return score >= 2 ? best : null;
+}
+
 /** A wrong answer at random, for a problem without beliefs. */
 function wrongAnswer(item: PracticeItem, seed: string): number {
   if (item.kind === "choice") {
@@ -222,6 +235,7 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
   const guess = g.canBeRight ? null : chooseGuess(item, g, seed);
   const steps: Step[] = [];
   let broken = false;
+  let followed: Guess | null = null;
   for (const s of item.steps) {
     const inNeed = (list: string[], f: string) => list.some((n) => alts(n).includes(f));
     const gap = s.facts.find((f) => inNeed(g.needs, f) && (inNeed(g.missing, f) || misledIdeas.has(ideaOf(f))));
@@ -234,7 +248,12 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
     const belief = activeMisconceptions(state).filter((m) => m.node === gap.split(".")[0]).at(-1);
     // what Kai was told wins (a misconception, or a wrong statement of the fact); otherwise its own guess
     const words = belief?.words ?? (told && told.verdict === "wrong" ? told.words : undefined);
-    if (words) steps.push({ text: `You told me: "${words}". So I go with that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
+    if (words) {
+      steps.push({ text: `You told me: "${words}". So I go with that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
+      // the answer must be the one that follows from what Kai was told: the wrong rule closest in wording to it
+      const match = closestBelief(item, words);
+      if (match) followed = match;
+    }
     else if (told && guess) steps.push({ text: `You only told me vaguely: "${told.words}". I understood it like this: ${guess.belief}`, notes: [notes.indexOf(told.words) + 1].filter((n) => n > 0) });
     else steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
     broken = true;
@@ -244,7 +263,7 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
     steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
     broken = true;
   }
-  const value = g.canBeRight ? item.answer : (guess?.answer ?? wrongAnswer(item, seed));
+  const value = g.canBeRight ? item.answer : (followed?.answer ?? guess?.answer ?? wrongAnswer(item, seed));
   const answer = item.kind === "choice" ? LETTERS[value]! : String(Math.round(value * 100) / 100);
   if (broken) steps.push({ text: `So my answer is ${answerText(item, value)}.`, notes: [] });
   return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess };

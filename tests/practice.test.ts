@@ -305,3 +305,25 @@ describe("the admin dashboard's numbers", () => {
     expect(s.testMean.direct).toBe(6);
   });
 });
+
+import { csvCell } from "../lib/analytics";
+
+describe("exports", () => {
+  it("never let a learner's text run as a spreadsheet formula", () => {
+    expect(csvCell('=HYPERLINK("http://x","click")')).toBe(`"'=HYPERLINK(""http://x"",""click"")"`);
+    expect(csvCell("+1+1")).toBe("'+1+1");
+    expect(csvCell("@SUM(A1)")).toBe("'@SUM(A1)");
+    expect(csvCell(-3)).toBe("-3");
+    expect(csvCell("-0.5")).toBe("-0.5");
+    expect(csvCell("greedy picks the best")).toBe("greedy picks the best");
+  });
+});
+
+describe("the offline attempt with a misconception", () => {
+  it("answers what the misconception leads to", () => {
+    const st = { ...initialState(bundle), turn: 2, notebook: [{ fact: "n07.f1", verdict: "correct" as const, words: "epsilon greedy sometimes explores at random", turn: 1 }], misconceptions: [{ node: "n07", words: "when it explores it goes to the restaurant it has visited the least", turn: 2 }] };
+    const s = offlineSolve(bundle, item("p2"), st);
+    expect(s.steps[0]!.text).toContain("visited the least");
+    expect(s.answer).toBe("B"); // "Only at C, the truck you have tried least"
+  });
+});

@@ -184,11 +184,11 @@ const checkWhenReady = async () => {
   await page.$eval(".pq .pact .btn.small", (el) => el.click());
 };
 const pick = (k) => page.$eval(`.pq .opt:nth-child(${k + 1}) input`, (el) => el.click());
-// the calculator writes its sums into the working
-await page.type(".pq .calc-in", "0.8 * 1000 + 200 / 3");
-await page.keyboard.press("Enter");
-await page.waitForFunction(() => /= 866\.666667/.test(document.querySelector(".pq textarea.work")?.value ?? ""));
-check(true, "the practice calculator adds its result to the working");
+// the working field does sums: "=" writes the result after the sum
+await page.focus(".pq textarea.work");
+await page.keyboard.type("explore picks: 0.8 * 1000 + 200 / 3 =");
+await page.waitForFunction(() => /= 866\.666667$/.test(document.querySelector(".pq textarea.work")?.value ?? ""));
+check(true, "the working field works out a sum when you type =");
 try {
   await pick(practiceItems[0].answer); // p1: the right option
   await checkWhenReady();
@@ -230,11 +230,11 @@ const choose = answers.map((a, i) => (i === 3 || i === 7 ? (a + 1) % 4 : a));
 const cards = await page.$$(".q");
 for (let i = 0; i < choose.length; i++) await cards[i].$eval(`.opt:nth-child(${choose[i] + 1}) input`, (el) => el.click());
 await page.$eval(".submitbar .btn.ghost", (e) => e.click());
-await page.waitForSelector(".calc-pop .calc-in");
-await page.type(".calc-pop .calc-in", "0.9 + 0.1/5");
-await page.keyboard.press("Enter");
-await page.waitForSelector(".calc-tape li");
-check((await page.$eval(".calc-tape li", (e) => e.textContent)).endsWith("= 0.92"), "the final test has the same calculator");
+await page.waitForSelector(".calc-pop textarea");
+await page.focus(".calc-pop textarea");
+await page.keyboard.type("0.9 + 0.1/5 =");
+await page.waitForFunction(() => /= 0\.92$/.test(document.querySelector(".calc-pop textarea")?.value ?? ""));
+check(true, "the final test has the same working field");
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");

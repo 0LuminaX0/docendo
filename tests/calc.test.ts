@@ -35,3 +35,19 @@ describe("the learners' calculator", () => {
     expect(calculate("")).toMatchObject({ ok: false });
   });
 });
+
+import { sumAtEnd } from "../lib/calc";
+
+describe("sums in the working field", () => {
+  it("find the sum at the end of a line, after words", () => {
+    expect(sumAtEnd("0.8 * 1000 + 200 / 3 =")?.value).toBeCloseTo(866.667, 2);
+    expect(sumAtEnd("A: 6.1 + 0.5 =")).toMatchObject({ expr: "6.1 + 0.5", value: 6.6 });
+    expect(sumAtEnd("B gets 4.8 + 1.9")?.value).toBeCloseTo(6.7);
+    expect(sumAtEnd("so 20% of 1000 =")?.value).toBe(200);
+  });
+  it("leave words and plain numbers alone", () => {
+    expect(sumAtEnd("score = average")).toBeNull();
+    expect(sumAtEnd("greedy picks B =")).toBeNull();
+    expect(sumAtEnd("the answer is 42 =")).toBeNull();
+  });
+});
