@@ -16,6 +16,10 @@ const KEYS = "ABCDEF";
  * step is marked with the notebook lines it used. After a wrong answer the
  * learner writes one correction (without being told which step is wrong); it
  * goes into Kai's notebook and Kai tries once more.
+ *
+ * Two columns: the task (the problem, then Kai's tries) and Kai's notebook,
+ * tall and sticky beside it. The correction is an edit to what Kai knows, so it
+ * is written on the notebook's last lines, not in a box under the task.
  */
 export default function KaiSolve({
   q,
@@ -24,6 +28,7 @@ export default function KaiSolve({
   busy,
   disabled,
   head,
+  tools,
   onReteach,
   onRetry,
   failed,
@@ -34,6 +39,7 @@ export default function KaiSolve({
   busy: boolean;
   disabled: boolean;
   head: React.ReactNode;
+  tools: React.ReactNode; // under Kai's work: Rewatch
   onReteach: (message: string) => void;
   onRetry: () => void;
   failed: boolean;
@@ -45,85 +51,102 @@ export default function KaiSolve({
   const canReteach = attempts.length === 1 && !!last && !last.correct && !entry.correction;
   const done = !!last && (last.correct || attempts.length >= 2);
 
+  const foot =
+    canReteach && !busy ? (
+      <div className="nb-fix">
+        <p className="nb-fix-head">
+          <b>Your correction</b> Kai got it wrong. Write what it should know (you aren&apos;t told which step is wrong): it goes into this notebook and Kai tries once more.
+        </p>
+        <Scratchpad
+          paper
+          id={`${q.id}-fix`}
+          where={`practice-fix:${q.id}`}
+          label="Your correction for Kai"
+          value={text}
+          onChange={setText}
+          rows={3}
+          maxLength={1500}
+          disabled={disabled}
+          placeholder="For example: when ε-greedy explores, it picks…"
+        />
+        <div className="pact">
+          <span className="grow" />
+          <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
+            <Send size={14} /> Send to Kai
+          </button>
+        </div>
+      </div>
+    ) : (
+      <p className="nb-pencil nb-foot-note">
+        {busy && attempts.length
+          ? "Kai is writing your correction in."
+          : !last
+            ? "If Kai gets it wrong, you write one correction here."
+            : last.correct && attempts.length === 1
+              ? "Kai got it right: nothing to correct."
+              : "You've used your one correction for this problem."}
+      </p>
+    );
+
   return (
     <section className="pq kai-solve" aria-labelledby={`${q.id}-q`}>
-      <div className="qt">
-        {head}
-        <p id={`${q.id}-q`}>{q.prompt}</p>
-      </div>
-      {q.options && (
-        <ol className="kopts" aria-label="Options">
-          {q.options.map((o, k) => (
-            <li key={k}>
-              <span className="key" aria-hidden="true">{KEYS[k]}</span>
-              <span>{o}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      <div className="ks-task">
+        <div className="qt">
+          {head}
+          <p id={`${q.id}-q`}>{q.prompt}</p>
+        </div>
+        {q.options && (
+          <ol className="kopts" aria-label="Options">
+            {q.options.map((o, k) => (
+              <li key={k}>
+                <span className="key" aria-hidden="true">{KEYS[k]}</span>
+                <span>{o}</span>
+              </li>
+            ))}
+          </ol>
+        )}
 
-      {/* Kai's work and its notebook side by side; the correction goes under Kai's work */}
-      <div className="ks-grid">
-        <div className="ks-work">
-          {attempts.map((a, n) => (
-            <Fragment key={n}>
-              {n === 1 && entry.correction && (
-                <div className="ks-fix-shown">
-                  <span className="eyebrow">Your correction</span>
-                  <p>{entry.correction}</p>
-                </div>
-              )}
-              <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} />
-            </Fragment>
-          ))}
-
-          {busy && (
-            <div className="msg ks-think">
-              <KaiFace mood="thinking" size={30} />
-              <div className="think" style={{ paddingLeft: 0 }}>
-                <span className="levers" aria-hidden="true"><i /><i /><i /></span>
-                {attempts.length ? "Kai is adding your correction to its notebook and trying again" : "Kai is solving it from its notebook"}
+        {attempts.map((a, n) => (
+          <Fragment key={n}>
+            {n === 1 && entry.correction && (
+              <div className="ks-fix-shown">
+                <span className="eyebrow">Your correction</span>
+                <p>{entry.correction}</p>
               </div>
-            </div>
-          )}
-          {failed && !busy && !attempts.length && (
-            <p className="note">
-              Kai couldn&apos;t start.{" "}
-              <button type="button" className="linkish" onClick={onRetry}>
-                Try again
-              </button>
-            </p>
-          )}
-          {done && !last!.correct && <p className="note ks-end">Kai still got it wrong. You&apos;ll see the worked solution after the final test.</p>}
-          {done && last!.correct && attempts.length === 2 && <p className="note ks-end">Your correction did it: Kai got it right this time.</p>}
-        </div>
+            )}
+            <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} />
+          </Fragment>
+        ))}
 
-        <div className="ks-note">
-          <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
-        </div>
-
-        {canReteach && !busy && (
-          <div className="ks-fix">
-            <h3>Help Kai with one correction</h3>
-            <p className="note">You don&apos;t see which step went wrong. Explain what Kai should know: your words go into its notebook, and Kai tries once more.</p>
-            <Scratchpad
-              id={`${q.id}-fix`}
-              where={`practice-fix:${q.id}`}
-              label="Your correction for Kai"
-              value={text}
-              onChange={setText}
-              rows={4}
-              maxLength={1500}
-              disabled={disabled}
-              placeholder="For example: when ε-greedy explores, it picks…"
-            />
-            <div className="pact">
-              <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
-                <Send size={14} /> Send to Kai
-              </button>
+        {busy && (
+          <div className="msg ks-think">
+            <KaiFace mood="thinking" size={30} />
+            <div className="think" style={{ paddingLeft: 0 }}>
+              <span className="levers" aria-hidden="true"><i /><i /><i /></span>
+              {attempts.length ? "Kai is adding your correction to its notebook and trying again" : "Kai is solving it from its notebook"}
             </div>
           </div>
         )}
+        {failed && !busy && !attempts.length && (
+          <p className="note">
+            Kai couldn&apos;t start.{" "}
+            <button type="button" className="linkish" onClick={onRetry}>
+              Try again
+            </button>
+          </p>
+        )}
+        {done && !last!.correct && <p className="note ks-end">Kai still got it wrong. You&apos;ll see the worked solution after the final test.</p>}
+        {done && last!.correct && attempts.length === 2 && <p className="note ks-end">Your correction did it: Kai got it right this time.</p>}
+        <div className="pact">
+          <span className="grow" />
+          {tools}
+        </div>
+      </div>
+
+      <div className="ks-note">
+        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit}>
+          {foot}
+        </KaiNotebook>
       </div>
     </section>
   );
@@ -132,7 +155,7 @@ export default function KaiSolve({
 function Attempt({ a, n, q, lit, onLight, numbered }: { a: KaiAttempt; n: number; q: Item; lit: string[]; onLight: (notes: string[]) => void; numbered: boolean }) {
   const used = (s: { notes: number[] }) => s.notes.map((x) => a.notes[x - 1]).filter((t): t is string => !!t);
   const k = KEYS.indexOf(a.answer.trim().charAt(0).toUpperCase());
-  const shown = q.options && k >= 0 && q.options[k] ? `${KEYS[k]}: ${q.options[k]}` : `${a.answer}${q.unit && !a.answer.includes(q.unit) ? ` ${q.unit}` : ""}`;
+  const option = q.options && k >= 0 ? q.options[k] : undefined;
   return (
     <div className="kattempt">
       <div className="who-row">
@@ -164,8 +187,17 @@ function Attempt({ a, n, q, lit, onLight, numbered }: { a: KaiAttempt; n: number
           </li>
         ))}
       </ol>
-      <p className="kanswer" style={{ animationDelay: `${a.steps.length * 260}ms` }}>
-        <span>Kai&apos;s answer:</span> {shown}
+      <p className={`kanswer ${a.correct ? "on" : "off"}`} style={{ animationDelay: `${a.steps.length * 260}ms` }}>
+        <span className="lbl">Kai&apos;s answer</span>
+        {option ? (
+          <>
+            <span className="key" aria-hidden="true">{KEYS[k]}</span>
+            <span className="sr-only">{KEYS[k]}: </span>
+            <span>{option}</span>
+          </>
+        ) : (
+          <span>{`${a.answer}${q.unit && !a.answer.includes(q.unit) ? ` ${q.unit}` : ""}`}</span>
+        )}
       </p>
     </div>
   );

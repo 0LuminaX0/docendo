@@ -273,19 +273,19 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
         }
       />
       <main className={`page narrow${mode === "recursive" ? " wide" : ""}`}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 3 of 4</span>
-          <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Practice problems</h1>
-          {mode === "recursive" ? (
-            <p className="lede" style={{ fontSize: 16 }}>
-              Now Kai tries two rounds of three problems, using only what you taught it: you see its reasoning, its notebook and a light that says whether its answer is right. If Kai gets one wrong, you can correct it once, and it tries again. {minutes} minutes in all. The worked solutions come after the final test.
-            </p>
-          ) : (
-            <p className="lede" style={{ fontSize: 16 }}>
-              Two rounds of three problems, {minutes} minutes in all. Each problem gets a first try and one retry; a light tells you if your answer is right. Nothing here is graded, and the worked solutions come after the final test.
-            </p>
-          )}
-        </div>
+        <div className="prac-head">
+          <div className="prac-title">
+            <h1 className="title">Practice problems</h1>
+            {mode === "recursive" ? (
+              <p className="lede">
+                Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {minutes} minutes; solutions after the final test.
+              </p>
+            ) : (
+              <p className="lede">
+                Two rounds of three problems, {minutes} minutes. A first try and one retry each; a light says if you&apos;re right. Solutions after the final test.
+              </p>
+            )}
+          </div>
 
         <nav className="prog" aria-label="Problems">
           {rounds.map((r) => (
@@ -313,6 +313,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
             </div>
           ))}
         </nav>
+        </div>
 
         {mode === "recursive" ? (
           <>
@@ -330,14 +331,13 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
                   Round {q.round}, problem {inRound.indexOf(q) + 1} of {inRound.length}: {q.title}
                 </span>
               }
+              tools={
+                <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
+                  <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
+                </button>
+              }
               onReteach={(m) => void reteach(m)}
             />
-            <div className="pact">
-              <span className="grow" />
-              <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
-                <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
-              </button>
-            </div>
           </>
         ) : (
           <section className="pq" key={q.id} aria-labelledby={`${q.id}-q`}>

@@ -38,6 +38,7 @@ export default function Scratchpad({
   disabled,
   onUse,
   label,
+  paper,
 }: {
   id: string;
   where: string; // for the log
@@ -49,6 +50,7 @@ export default function Scratchpad({
   disabled?: boolean;
   onUse?: (value: number) => void; // number problems: put the last result in the answer box
   label: string;
+  paper?: boolean; // written on Kai's notebook page (the correction), in Kai's hand
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState(0);
@@ -109,7 +111,7 @@ export default function Scratchpad({
   }
 
   return (
-    <div className={`scratch${disabled ? " off" : ""}`}>
+    <div className={`scratch${paper ? " paper" : ""}${disabled ? " off" : ""}`}>
       <label className="sr-only" htmlFor={id}>{label}</label>
       <textarea
         ref={ref}
@@ -129,10 +131,10 @@ export default function Scratchpad({
         <span className="scratch-hint" aria-live="polite">
           {sum ? (
             <>
-              <b>= {format(sum.value)}</b> <span>type = to write it down</span>
+              Result: <b>{format(sum.value)}</b>. Type = to add it.
             </>
           ) : (
-            "Sums work here: type 0.8 × 1000 + 200 ÷ 3 ="
+            "To calculate, write it and end with =, e.g. 0.8 × 1000 + 200 ÷ 3 ="
           )}
         </span>
         <span className="grow" />
@@ -141,12 +143,12 @@ export default function Scratchpad({
             Use {lastResult} as the answer
           </button>
         )}
-        <button type="button" className={`scratch-toggle${keys ? " on" : ""}`} aria-pressed={keys} onClick={toggleKeys} disabled={disabled} title="Keys for × ÷ √ and more">
-          <CalcIcon size={14} /> Keys
+        <button type="button" className={`scratch-toggle${keys ? " on" : ""}`} aria-pressed={keys} onClick={toggleKeys} disabled={disabled} title="Buttons for the maths symbols that are hard to type">
+          <CalcIcon size={14} /> {keys ? "Hide" : "Show"} × ÷ √
         </button>
       </div>
       {keys && !disabled && (
-        <div className="calc-keys" role="group" aria-label="Calculator keys">
+        <div className="calc-keys" role="group" aria-label="Maths symbols">
           {KEYS.map(([k, s]) => (
             <button key={k} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(s)} aria-label={`Insert ${k}`}>
               {k}

@@ -271,13 +271,14 @@ await skip.waitForSelector(".kattempt .light", { timeout: 30000 });
 const kaiWrong = await skip.$eval(".kattempt .light", (e) => e.classList.contains("off"));
 const hasNotebook = !!(await skip.$(".nb-paper"));
 const knote = await skip.$eval(".kattempt .ksteps", (e) => e.textContent);
-await skip.type(".ks-fix textarea", bundle.nodes.find((n) => n.id === "n05").facts.map((f) => f.text).join(" "));
+await skip.type(".nb-fix textarea", bundle.nodes.find((n) => n.id === "n05").facts.map((f) => f.text).join(" "));
 await shot(skip, "07d-kai-solves");
-await skip.$eval(".ks-fix .btn.primary", (e) => e.click());
+await skip.$eval(".nb-fix .btn.primary", (e) => e.click());
 await skip.waitForFunction(() => document.querySelectorAll(".kattempt").length === 2, { timeout: 30000 });
 const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
 check(kaiWrong && hasNotebook && /didn't tell me|guessing|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
-await shot(skip, "07e-kai-second-try", true);
+await wait(2500); // the steps and the new notes finish appearing
+await shot(skip, "07e-kai-second-try");
 // on to the test and the results: they report Kai's outcome on the problems Kai worked on
 for (let n = 1; n < practiceItems.length; n++) {
   await skip.$eval(".submitbar .btn", (e) => e.click());

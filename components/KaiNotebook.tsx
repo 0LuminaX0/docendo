@@ -12,11 +12,13 @@ export default function KaiNotebook({
   before,
   lit,
   onLight,
+  children,
 }: {
   notes: string[]; // the notes Kai solved with, note n = notes[n - 1]
   before?: string[]; // the notes of Kai's previous try, to show what the correction changed
   lit: string[]; // notes to highlight (the ones the step under the pointer used), by their text
   onLight: (notes: string[]) => void;
+  children?: React.ReactNode; // the page's last lines: where the learner writes a correction
 }) {
   const crossed = before ? before.filter((b) => !notes.includes(b)) : [];
   const fresh = new Set(before ? notes.filter((n) => !before.includes(n)) : []);
@@ -29,6 +31,7 @@ export default function KaiNotebook({
         <span>{before ? "after your correction" : "what you taught Kai, in your words"}</span>
       </div>
       <div className="nb-paper">
+        <div className="nb-body ruled">
         {notes.length === 0 && !crossed.length ? (
           <p className="nb-empty">Empty. You haven&apos;t taught Kai anything it could write down.</p>
         ) : (
@@ -55,6 +58,8 @@ export default function KaiNotebook({
           </ol>
         )}
         {unchanged && <p className="nb-pencil">Kai couldn&apos;t find anything new to write down from your correction.</p>}
+        </div>
+        {children && <div className="nb-foot">{children}</div>}
       </div>
     </aside>
   );
