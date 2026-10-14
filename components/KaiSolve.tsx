@@ -1,136 +1,144 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { Lightbulb, RotateCcw, Sparkles } from "lucide-react";
+import { BookOpen, Calculator as CalcIcon, Send } from "lucide-react";
 import { KaiFace } from "./ui";
+import KaiNotebook from "./KaiNotebook";
+import Calculator from "./Calculator";
 import type { KaiAttempt, KaiEntry } from "@/lib/client/store";
 
 type Item = { id: string; round: number; title: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
 const KEYS = "ABCDEF";
 
 /**
- * Recursive feedback: Kai solves the problem from its notebook, step by step,
- * and a light says whether its answer is right. After a wrong answer the
- * learner clicks the step they think is faulty, sees which of their own
- * statements Kai used there, and may correct Kai once; Kai then tries again.
+ * Recursive feedback: Kai solves the problem from its notebook while the learner
+ * reads it, step by step, and a light says whether its answer is right. Each
+ * step is marked with the notebook lines it used. After a wrong answer the
+ * learner writes one correction (without being told which step is wrong); it
+ * goes into Kai's notebook and Kai tries once more.
  */
 export default function KaiSolve({
   q,
   entry,
+  notebook,
   busy,
   disabled,
   head,
-  onSolve,
-  onClick,
   onReteach,
+  onRetry,
+  failed,
 }: {
   q: Item;
   entry: KaiEntry;
+  notebook: string[]; // Kai's notes before it has tried (shown while it works)
   busy: boolean;
   disabled: boolean;
   head: React.ReactNode;
-  onSolve: () => void;
-  onClick: (step: number) => void;
   onReteach: (message: string) => void;
+  onRetry: () => void;
+  failed: boolean;
 }) {
   const [text, setText] = useState("");
-  const [sel, setSel] = useState<number | null>(null);
+  const [lit, setLit] = useState<string[]>([]);
+  const [calc, setCalc] = useState(false);
   const attempts = entry.attempts;
   const last = attempts.at(-1);
-  const canReteach = attempts.length === 1 && last && !last.correct && !entry.correction;
+  const canReteach = attempts.length === 1 && !!last && !last.correct && !entry.correction;
   const done = !!last && (last.correct || attempts.length >= 2);
 
   return (
     <section className="pq kai-solve" aria-labelledby={`${q.id}-q`}>
-      <div className="qt">
-        {head}
-        <p id={`${q.id}-q`}>{q.prompt}</p>
-      </div>
-      {q.options && (
-        <ol className="kopts" aria-label="Options">
-          {q.options.map((o, k) => (
-            <li key={k}>
-              <span className="key" aria-hidden="true">{KEYS[k]}</span>
-              <span>{o}</span>
-            </li>
+      <div className="ks-grid">
+        <div className="ks-main">
+          <div className="qt">
+            {head}
+            <p id={`${q.id}-q`}>{q.prompt}</p>
+          </div>
+          {q.options && (
+            <ol className="kopts" aria-label="Options">
+              {q.options.map((o, k) => (
+                <li key={k}>
+                  <span className="key" aria-hidden="true">{KEYS[k]}</span>
+                  <span>{o}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+
+          {attempts.map((a, n) => (
+            <Fragment key={n}>
+              {n === 1 && entry.correction && (
+                <div className="ks-fix-shown">
+                  <span className="eyebrow">Your correction</span>
+                  <p>{entry.correction}</p>
+                </div>
+              )}
+              <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} />
+            </Fragment>
           ))}
-        </ol>
-      )}
 
-      {!attempts.length && !busy && (
-        <div className="pact">
-          <button className="btn primary small" onClick={onSolve} disabled={disabled}>
-            <Sparkles size={15} /> Let Kai solve it
-          </button>
-          <span className="note">Kai only knows what you taught it.</span>
-        </div>
-      )}
-
-      {attempts.map((a, n) => (
-        <Fragment key={n}>
-          <Attempt
-            a={a}
-            n={n}
-            q={q}
-            clickable={!!canReteach && n === 0 && !disabled}
-            selected={n === 0 ? (canReteach ? sel : (entry.clicks.at(-1) ?? null)) : null}
-            onClick={(i) => (setSel(i), onClick(i))}
-          />
-          {/* the correction sits between Kai's two attempts */}
-          {n === 0 && entry.correction && (
-            <div className="msg you">
-              <div className="col">
-                <span className="who" style={{ textAlign: "right" }}>Your correction</span>
-                <div className="bubble">{entry.correction}</div>
+          {busy && (
+            <div className="msg ks-think">
+              <KaiFace mood="thinking" size={30} />
+              <div className="think" style={{ paddingLeft: 0 }}>
+                <span className="levers" aria-hidden="true"><i /><i /><i /></span>
+                {attempts.length ? "Kai is adding your correction to its notebook and trying again" : "Kai is solving it from its notebook"}
               </div>
             </div>
           )}
-        </Fragment>
-      ))}
+          {failed && !busy && !attempts.length && (
+            <p className="note">
+              Kai couldn&apos;t start.{" "}
+              <button type="button" className="linkish" onClick={onRetry}>
+                Try again
+              </button>
+            </p>
+          )}
+          {done && !last!.correct && <p className="note ks-end">Kai still got it wrong. You&apos;ll see the worked solution after the final test.</p>}
+          {done && last!.correct && attempts.length === 2 && <p className="note ks-end">Your correction did it: Kai got it right this time.</p>}
+        </div>
 
-      {busy && (
-        <div className="msg">
-          <KaiFace mood="thinking" size={32} />
-          <div className="think" style={{ paddingLeft: 0 }}>
-            <span className="levers" aria-hidden="true"><i /><i /><i /></span>
-            {attempts.length ? "Kai is reading your correction and trying again" : "Kai is working on it"}
+        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
+      </div>
+
+      {canReteach && !busy && (
+        <div className="ks-fix">
+          <div>
+            <h3>Help Kai with one correction</h3>
+            <p className="note">You don&apos;t see which step went wrong. Explain what Kai should know: your words go into its notebook, and Kai tries once more.</p>
+          </div>
+          <label className="sr-only" htmlFor={`${q.id}-fix`}>Your correction for Kai</label>
+          <textarea
+            id={`${q.id}-fix`}
+            className="work"
+            rows={3}
+            maxLength={1500}
+            placeholder="For example: when ε-greedy explores, it picks…"
+            value={text}
+            disabled={disabled}
+            onChange={(e) => setText(e.target.value)}
+          />
+          {calc && <Calculator where={`practice-fix:${q.id}`} onResult={(line) => setText((t) => (t.trim() ? `${t.trimEnd()}\n${line}` : line))} />}
+          <div className="pact">
+            <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
+              <Send size={14} /> Send to Kai
+            </button>
+            <span className="grow" />
+            {!calc && (
+              <button type="button" className="btn ghost small" onClick={() => setCalc(true)}>
+                <CalcIcon size={14} /> Calculator
+              </button>
+            )}
           </div>
         </div>
       )}
-
-      {canReteach && !busy && (
-        <div className="reteach">
-          {sel === null ? (
-            <p className="note">Click the step where you think Kai went wrong.</p>
-          ) : (
-            <>
-              <label htmlFor={`${q.id}-fix`} className="eyebrow">Correct Kai (once)</label>
-              <textarea
-                id={`${q.id}-fix`}
-                className="work"
-                rows={3}
-                maxLength={1500}
-                placeholder="Explain to Kai what it got wrong in this step"
-                value={text}
-                disabled={disabled}
-                onChange={(e) => setText(e.target.value)}
-              />
-              <div className="pact">
-                <button className="btn primary small" disabled={disabled || !text.trim()} onClick={() => onReteach(text.trim())}>
-                  <RotateCcw size={15} /> Send, and let Kai try again
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {done && !last!.correct && <p className="note">Kai still got it wrong. You&apos;ll see the worked solution after the final test.</p>}
     </section>
   );
 }
 
-function Attempt({ a, n, q, clickable, selected, onClick }: { a: KaiAttempt; n: number; q: Item; clickable: boolean; selected: number | null; onClick: (i: number) => void }) {
+/** One try. Its steps cite notebook lines; only the latest try shows their numbers (the notebook is numbered for it). */
+function Attempt({ a, n, q, lit, onLight, numbered }: { a: KaiAttempt; n: number; q: Item; lit: string[]; onLight: (notes: string[]) => void; numbered: boolean }) {
+  const used = (s: { notes: number[] }) => s.notes.map((x) => a.notes[x - 1]).filter((t): t is string => !!t);
   const k = KEYS.indexOf(a.answer.trim().charAt(0).toUpperCase());
   const shown = q.options && k >= 0 && q.options[k] ? `${KEYS[k]}: ${q.options[k]}` : `${a.answer}${q.unit && !a.answer.includes(q.unit) ? ` ${q.unit}` : ""}`;
   return (
@@ -138,41 +146,35 @@ function Attempt({ a, n, q, clickable, selected, onClick }: { a: KaiAttempt; n: 
       <div className="who-row">
         <KaiFace mood={a.correct ? "great" : "confused"} size={30} />
         <b>{n === 0 ? "Kai's solution" : "Kai's second try"}</b>
+        <span className={`light ${a.correct ? "on" : "off"}`} role="status">
+          <i aria-hidden="true" />
+          {a.correct ? "Right" : "Wrong"}
+        </span>
       </div>
       <ol className="ksteps">
         {a.steps.map((s, i) => (
-          <li key={i} className={selected === i ? "bad" : ""}>
-            {clickable ? (
-              <button type="button" onClick={() => onClick(i)} aria-pressed={selected === i}>
-                {s.text}
-              </button>
-            ) : (
-              <span>{s.text}</span>
-            )}
-            {selected === i && (
-              <div className="knote">
-                {s.notes.length ? (
-                  <>
-                    I got this from you. You said:{" "}
-                    {s.notes.map((x, j) => (
-                      <q key={j}>{a.notes[x - 1]}</q>
-                    ))}
-                  </>
-                ) : (
-                  <>You didn&apos;t tell me this, so I guessed.</>
-                )}
-              </div>
+          <li
+            key={i}
+            style={{ animationDelay: `${i * 260}ms` }}
+            className={used(s).some((t) => lit.includes(t)) ? "lit" : ""}
+            onMouseEnter={() => onLight(used(s))}
+            onMouseLeave={() => onLight([])}
+            tabIndex={s.notes.length ? 0 : -1}
+            onFocus={() => onLight(used(s))}
+            onBlur={() => onLight([])}
+          >
+            <span>{s.text}</span>
+            {s.notes.length > 0 && (
+              <span className="kcite" aria-label={numbered ? `from notebook line${s.notes.length > 1 ? "s" : ""} ${s.notes.join(", ")}` : "from Kai's notebook"}>
+                {numbered ? s.notes.map((x) => <i key={x}>{x}</i>) : <i><BookOpen size={10} strokeWidth={2.6} /></i>}
+              </span>
             )}
           </li>
         ))}
       </ol>
-      <p className="kanswer">
+      <p className="kanswer" style={{ animationDelay: `${a.steps.length * 260}ms` }}>
         <span>Kai&apos;s answer:</span> {shown}
       </p>
-      <span className={`bulb ${a.correct ? "on" : "off"}`} role="status">
-        <Lightbulb size={18} strokeWidth={2.2} />
-        {a.correct ? "Kai's answer is right" : "Kai's answer is wrong"}
-      </span>
     </div>
   );
 }

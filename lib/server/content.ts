@@ -77,7 +77,7 @@ export const videos = bundle.videos.map((v, i) => ({ ...v, part: i + 1 }));
 export const graphView = (() => {
   const { pos, routes, width, height } = layout(bundle.nodes);
   return {
-    nodes: bundle.nodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, needs: n.needs, goals: n.goals })),
+    nodes: bundle.nodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, needs: n.needs, goals: n.goals, inLesson: n.inLesson })),
     // SVG path per prerequisite edge, keyed "from>to"
     edges: Object.entries(routes).map(([key, pts]) => {
       const [from, to] = key.split(">") as [string, string];

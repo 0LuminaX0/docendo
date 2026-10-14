@@ -77,3 +77,32 @@ export function generateCodes(secret: string, n: number, block = 4, taken: Set<s
   }
   return out;
 }
+
+// ---------- codes made in the admin panel (lib/server/admindata.ts stores them) ----------
+
+type PanelCode = { id: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive" };
+
+/**
+ * The condition for this use: fixed, or for "random" the code's drawn condition on the first use, then
+ * alternating. A batch of one-use codes is therefore balanced in blocks of 4, like the HMAC codes.
+ */
+export function conditionFor(c: PanelCode, use: number): "direct" | "recursive" {
+  if (c.condition !== "random") return c.condition;
+  const first = c.draw ?? (c.id.charCodeAt(c.id.length - 1) % 2 ? "recursive" : "direct");
+  return use % 2 === 1 ? first : first === "direct" ? "recursive" : "direct";
+}
+
+/** Balanced, shuffled blocks of 4 (2 direct, 2 recursive), as long as needed. */
+export function balancedDraws(n: number): ("direct" | "recursive")[] {
+  const out: ("direct" | "recursive")[] = [];
+  while (out.length < n) {
+    const block: ("direct" | "recursive")[] = ["direct", "direct", "recursive", "recursive"];
+    for (let i = block.length - 1; i > 0; i--) {
+      const j = randomInt(i + 1);
+      [block[i], block[j]] = [block[j]!, block[i]!];
+    }
+    out.push(...block);
+  }
+  return out.slice(0, n);
+}
+

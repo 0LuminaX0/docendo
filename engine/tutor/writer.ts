@@ -89,7 +89,8 @@ export async function llmWrite(bundle: Bundle, state: State, move: Move, history
     model: MODELS.writer,
     messages: promptFor(bundle, state, move, history, avoid, mood),
     temperature: 0.6,
-    maxTokens: move.type === "wrapUp" ? 260 : 180,
+    // room to finish: the prompt keeps replies short, the limit is only a backstop (a reply that hits it is retried)
+    maxTokens: move.type === "wrapUp" ? 600 : 450,
   });
   onCall?.({ role: avoid.length ? "writer-rewrite" : "writer", model: MODELS.writer, ms: r.ms, usage: r.usage });
   return r.text

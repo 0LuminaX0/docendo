@@ -1,11 +1,14 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
   "minutes": 10,
-  "note": "Two rounds of three problems. Round 2 matches round 1 idea by idea (greedy locking in, ε-greedy's random picks, UCB's score), in new settings, so a correction in round 1 can carry over to round 2. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on, and `needs` lists the facts without which the answer can't be reached: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. The final test uses other settings (banner ads, coffee machines, a study app, podcasts).",
+  "note": "Two rounds of three problems. Round 2 matches round 1 idea by idea (greedy locking in, ε-greedy's random picks, UCB's score), in new settings, so a correction in round 1 can carry over to round 2. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on, and `needs` lists the facts without which the answer can't be reached: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. The final test uses other settings (banner ads, coffee machines, a study app, podcasts). `beliefs` are beginner's wrong rules, one or more per needed fact, each with the answer it leads to: when Kai lacks a needed fact, it reasons from one of them (picked at random), so its wrong answer follows from its reasoning instead of being swapped in at the end.",
   "items": [
     {
       "id": "p1",
-      "needs": ["n05.f1", "n05.f2"],
+      "needs": [
+        "n05.f1",
+        "n05.f2"
+      ],
       "round": 1,
       "idea": "greedy",
       "title": "Greedy gets stuck",
@@ -19,14 +22,51 @@
       ],
       "answer": 3,
       "steps": [
-        { "text": "After day 3 the averages are A = 2, B = 5 and C = 1, so greedy picks B.", "facts": ["n03.f1", "n05.f1"] },
-        { "text": "B keeps averaging about 4, well above A's 2. Greedy only ever picks the best average so far, so it never tries A again, and A's average can't change.", "facts": ["n05.f1", "n05.f2"] },
-        { "text": "One unlucky first lunch hid the best truck for good: on day 50 you still eat at B.", "facts": ["n06.f1"] }
+        {
+          "text": "After day 3 the averages are A = 2, B = 5 and C = 1, so greedy picks B.",
+          "facts": [
+            "n03.f1",
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "B keeps averaging about 4, well above A's 2. Greedy only ever picks the best average so far, so it never tries A again, and A's average can't change.",
+          "facts": [
+            "n05.f1",
+            "n05.f2"
+          ]
+        },
+        {
+          "text": "One unlucky first lunch hid the best truck for good: on day 50 you still eat at B.",
+          "facts": [
+            "n06.f1"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n05.f1",
+          "belief": "Greedy is fair: it takes turns between the trucks so each one gets a chance.",
+          "answer": 1
+        },
+        {
+          "replaces": "n05.f1",
+          "belief": "Greedy goes where there is the most room to improve, so it keeps trying the weakest truck.",
+          "answer": 2
+        },
+        {
+          "replaces": "n05.f2",
+          "belief": "Greedy mostly eats at the best truck but checks the others again now and then, so it notices when one of them is really better.",
+          "answer": 0
+        }
       ]
     },
     {
       "id": "p2",
-      "needs": ["n07.f1", "n07.f2"],
+      "needs": [
+        "n07.f1",
+        "n07.f2"
+      ],
       "round": 1,
       "idea": "epsilon",
       "title": "An explore day",
@@ -40,14 +80,53 @@
       ],
       "answer": 2,
       "steps": [
-        { "text": "On an explore day ε-greedy picks a truck at random instead of the best average.", "facts": ["n07.f1"] },
-        { "text": "The random pick ignores the averages and how often each truck was tried: A, B and C each have a 1 in 3 chance, your favourite A included, and C too, although it is known to be bad.", "facts": ["n07.f2"] },
-        { "text": "Going to the truck tried least would be closer to what UCB does; ε-greedy doesn't look at the counts.", "facts": ["n07.f2"] }
+        {
+          "text": "On an explore day ε-greedy picks a truck at random instead of the best average.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "The random pick ignores the averages and how often each truck was tried: A, B and C each have a 1 in 3 chance, your favourite A included, and C too, although it is known to be bad.",
+          "facts": [
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "Going to the truck tried least would be closer to what UCB does; ε-greedy doesn't look at the counts.",
+          "facts": [
+            "n07.f2"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n07.f2",
+          "belief": "Exploring means leaving your favourite: on an explore day you pick one of the other trucks.",
+          "answer": 0
+        },
+        {
+          "replaces": "n07.f2",
+          "belief": "Exploring means going to the truck you have tried the least, to learn the most about it.",
+          "answer": 1
+        },
+        {
+          "replaces": "n07.f2",
+          "belief": "Even when exploring you still lean towards the trucks with good averages.",
+          "answer": 3
+        },
+        {
+          "replaces": "n07.f1",
+          "belief": "An explore day means trying the truck you know the least about.",
+          "answer": 1
+        }
       ]
     },
     {
       "id": "p3",
-      "needs": ["n11.f2"],
+      "needs": [
+        "n11.f1|n11.f2"
+      ],
       "round": 1,
       "idea": "ucb",
       "title": "Which truck does UCB pick?",
@@ -61,14 +140,50 @@
       ],
       "answer": 1,
       "steps": [
-        { "text": "Add each bonus to the average: A = 6.6, B = 6.7, C = 6.3.", "facts": ["n11.f2"] },
-        { "text": "UCB picks the highest score: B. Its average is the lowest, but two lunches say little, so B gets the benefit of the doubt.", "facts": ["n11.f2", "n16.f1"] },
-        { "text": "Nothing here is random: with the same history UCB always picks the same truck.", "facts": ["n11.f2"] }
+        {
+          "text": "Add each bonus to the average: A = 6.6, B = 6.7, C = 6.3.",
+          "facts": [
+            "n11.f2"
+          ]
+        },
+        {
+          "text": "UCB picks the highest score: B. Its average is the lowest, but two lunches say little, so B gets the benefit of the doubt.",
+          "facts": [
+            "n11.f2",
+            "n16.f1"
+          ]
+        },
+        {
+          "text": "Nothing here is random: with the same history UCB always picks the same truck.",
+          "facts": [
+            "n11.f2"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n11.f2",
+          "belief": "UCB works like greedy: it simply picks the truck with the best average.",
+          "answer": 0
+        },
+        {
+          "replaces": "n11.f2",
+          "belief": "UCB explores at random on some days, like ε-greedy, so it can send you anywhere.",
+          "answer": 3
+        },
+        {
+          "replaces": "n11.f2",
+          "belief": "UCB prefers a truck that has been tried a medium number of times, neither too often nor too rarely.",
+          "answer": 2
+        }
       ]
     },
     {
       "id": "p4",
-      "needs": ["n05.f1", "n05.f2"],
+      "needs": [
+        "n05.f1",
+        "n05.f2"
+      ],
       "round": 2,
       "idea": "greedy",
       "title": "Greedy and the headlines",
@@ -82,14 +197,50 @@
       ],
       "answer": 0,
       "steps": [
-        { "text": "After the first three visitors the averages are A = 0, B = 1 and C = 0, so greedy shows B.", "facts": ["n03.f1", "n05.f1"] },
-        { "text": "B's average settles near 0.20 but can't fall to 0 after its first click, while A and C stay at 0 because greedy never shows them again.", "facts": ["n05.f2"] },
-        { "text": "So the site shows B forever, although A has the best click rate: one unlucky first visitor hid it.", "facts": ["n06.f1"] }
+        {
+          "text": "After the first three visitors the averages are A = 0, B = 1 and C = 0, so greedy shows B.",
+          "facts": [
+            "n03.f1",
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "B's average settles near 0.20 but can't fall to 0 after its first click, while A and C stay at 0 because greedy never shows them again.",
+          "facts": [
+            "n05.f2"
+          ]
+        },
+        {
+          "text": "So the site shows B forever, although A has the best click rate: one unlucky first visitor hid it.",
+          "facts": [
+            "n06.f1"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n05.f2",
+          "belief": "Greedy shows its best headline but checks the others again now and then, so over time it finds the one with the best click rate.",
+          "answer": 1
+        },
+        {
+          "replaces": "n05.f1",
+          "belief": "Greedy is fair: it takes turns between the headlines.",
+          "answer": 2
+        },
+        {
+          "replaces": "n05.f1",
+          "belief": "Greedy goes for the headline that has been shown the least.",
+          "answer": 3
+        }
       ]
     },
     {
       "id": "p5",
-      "needs": ["n07.f1", "n07.f2"],
+      "needs": [
+        "n07.f1",
+        "n07.f2"
+      ],
       "round": 2,
       "idea": "epsilon",
       "title": "How often ε-greedy shows its favourite",
@@ -99,14 +250,45 @@
       "answer": 866.67,
       "tolerance": 8,
       "steps": [
-        { "text": "With probability 1 − ε = 0.8 the site exploits and shows its favourite: 800 of the 1,000 visitors see A directly.", "facts": ["n07.f1"] },
-        { "text": "The other 200 visitors get one of the three headlines at random, A included, so about a third of them, 67, see A too.", "facts": ["n07.f1", "n07.f2"] },
-        { "text": "In total about 800 + 67 = 867 visitors see A.", "facts": ["n07.f1"] }
+        {
+          "text": "With probability 1 − ε = 0.8 the site exploits and shows its favourite: 800 of the 1,000 visitors see A directly.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "The other 200 visitors get one of the three headlines at random, A included, so about a third of them, 67, see A too.",
+          "facts": [
+            "n07.f1",
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "In total about 800 + 67 = 867 visitors see A.",
+          "facts": [
+            "n07.f1"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n07.f2",
+          "belief": "When ε-greedy picks at random, it never lands on the favourite: the random picks go to the other headlines.",
+          "answer": 800
+        },
+        {
+          "replaces": "n07.f1",
+          "belief": "ε is the share of visitors who see the favourite; the rest are spread over all three headlines.",
+          "answer": 467
+        }
       ]
     },
     {
       "id": "p6",
-      "needs": ["n11.f2", "n12.f1"],
+      "needs": [
+        "n11.f1|n11.f2",
+        "n12.f1"
+      ],
       "round": 2,
       "idea": "ucb",
       "title": "After B has been tried more",
@@ -120,9 +302,42 @@
       ],
       "answer": 2,
       "steps": [
-        { "text": "B's score is now 4.0 + 0.6 = 4.6.", "facts": ["n11.f2"] },
-        { "text": "Each play of B made its bonus smaller. Its score fell below A's 5.4 (and D's 5.1), so UCB plays A, the highest score.", "facts": ["n11.f2", "n12.f1"] },
-        { "text": "UCB moved on without any random pick: it only keeps exploring an option while the bonus keeps its score on top.", "facts": ["n12.f1"] }
+        {
+          "text": "B's score is now 4.0 + 0.6 = 4.6.",
+          "facts": [
+            "n11.f2"
+          ]
+        },
+        {
+          "text": "Each play of B made its bonus smaller. Its score fell below A's 5.4 (and D's 5.1), so UCB plays A, the highest score.",
+          "facts": [
+            "n11.f2",
+            "n12.f1"
+          ]
+        },
+        {
+          "text": "UCB moved on without any random pick: it only keeps exploring an option while the bonus keeps its score on top.",
+          "facts": [
+            "n12.f1"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n12.f1",
+          "belief": "Once UCB starts playing a machine it keeps playing it, because it was picked last time.",
+          "answer": 0
+        },
+        {
+          "replaces": "n11.f2",
+          "belief": "UCB gives more tries to the machine with the lowest score, so it can catch up.",
+          "answer": 1
+        },
+        {
+          "replaces": "n11.f2",
+          "belief": "UCB explores by picking a machine at random from time to time.",
+          "answer": 3
+        }
       ]
     }
   ]

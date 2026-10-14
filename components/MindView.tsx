@@ -7,8 +7,8 @@ import type { GraphView } from "@/lib/server/content";
 import { track } from "@/lib/client/log";
 
 const STATUS_TEXT: Record<MindStatus, string> = {
-  off: "Not in the videos, so Kai doesn't wait for it.",
-  bonus: "Not in the videos, but you explained some of it anyway. Kai noted it; it doesn't count towards the score.",
+  off: "Not part of this lesson, so Kai doesn't wait for it. It's here to show what the lesson connects to; if you know something about it, you can tell Kai anyway.",
+  bonus: "Not part of this lesson, but you explained some of it anyway. Kai noted it; it doesn't count towards the score.",
   unseen: "Not taught yet.",
   mentioned: "Started: Kai still has questions about it.",
   explained: "Done: Kai has no more questions about it.",
@@ -16,7 +16,7 @@ const STATUS_TEXT: Record<MindStatus, string> = {
   parked: "Set aside: Kai asked its questions, but some answers didn't settle them, so it moved on. Answer an open question below any time and the idea comes back.",
 };
 const STATUS_NAME: Record<MindStatus, string> = {
-  off: "Not in videos",
+  off: "Not in this lesson",
   bonus: "Bonus",
   unseen: "Not taught",
   mentioned: "Started",
@@ -107,7 +107,8 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
       </section>
 
       <div className="mind-canvas">
-        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} width={graph.width} height={graph.height} role="img" aria-label="Kai's knowledge graph">
+        {/* scales down to the column (the whole topic is wide), but never below 760 px: narrower screens scroll */}
+        <svg viewBox={`0 0 ${graph.width} ${graph.height}`} width={graph.width} height={graph.height} style={{ width: "100%", height: "auto", maxWidth: graph.width, minWidth: Math.min(graph.width, 760) }} role="img" aria-label="Kai's knowledge graph">
           <defs>
             <marker id="mh" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto">
               <path d="M0 0 L8 4 L0 8 z" fill="#C3C9D2" />
@@ -121,9 +122,12 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
             .sort((a, b) => Number(a.from === selected || a.to === selected) - Number(b.from === selected || b.to === selected))
             .map((e) => {
               const hot = e.to === selected || e.from === selected;
-              const branch = graph.nodes.find((n) => n.id === e.to)?.kind === "branch";
+              const to = graph.nodes.find((n) => n.id === e.to);
+              const branch = to?.kind === "branch";
+              // edges that reach beyond the lesson are drawn faintly
+              const outside = to?.inLesson === false || graph.nodes.find((n) => n.id === e.from)?.inLesson === false;
               return (
-                <path key={`${e.from}-${e.to}`} className={`m-edge${hot ? " hot" : ""}${branch ? " br" : ""}`} markerEnd={`url(#${hot ? "mhf" : "mh"})`} d={e.d} />
+                <path key={`${e.from}-${e.to}`} className={`m-edge${hot ? " hot" : ""}${branch ? " br" : ""}${outside ? " out" : ""}`} markerEnd={`url(#${hot ? "mhf" : "mh"})`} d={e.d} />
               );
             })}
           {graph.nodes.map((n) => {
@@ -195,7 +199,7 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
                 {node.goals.map((g) => (
                   <GoalMark key={g} index={goalIndex(g)} size={9} />
                 ))}
-                {node.goals.length ? node.goals.join(", ") : "branch"}
+                {node.inLesson === false ? "Around the lesson" : node.goals.length ? node.goals.join(", ") : "branch"}
               </span>
               <h3>{node.label}</h3>
               <p>{STATUS_TEXT[ns.status]}</p>

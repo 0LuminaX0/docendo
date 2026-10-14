@@ -6,6 +6,7 @@ import { limit } from "@/lib/server/limit";
 import { codeMatches, issueToken } from "@/lib/server/token";
 import { deviceOf, record } from "@/lib/server/events";
 import { readCode, type Condition } from "@/lib/codes";
+import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,13 +25,22 @@ export async function POST(req: NextRequest) {
 
   const body = Body.safeParse(await readBody(req, 2_000));
   if (!body.success) return fail(400, "Bad request.");
-  // a participant's own code decides the condition; the shared code and open access get the direct condition
+  // a code made in the admin panel, or a participant's own code, decides the condition; the shared code and open
+  // access get the direct condition
   const given = body.data.accessCode ?? "";
-  const participant = config.codeSecret && given ? readCode(config.codeSecret, given) : null;
+  const stored = given ? await findCode(given).catch(() => null) : null;
+  const participant = !stored && config.codeSecret && given ? readCode(config.codeSecret, given) : null;
   let who: { cond: Condition; entry: "participant" | "team" | "open"; pid: string | null };
-  if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
+  let code: { id: string; label: string; use: number } | null = null;
+  if (stored) {
+    if (!stored.active) return fail(401, "That access code is no longer active.");
+    const use = await useCode(stored);
+    if (stored.maxUses && use > stored.maxUses) return fail(401, "That access code has already been used.");
+    code = { id: stored.id, label: stored.label, use };
+    who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : "participant", pid: stored.id };
+  } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
   else if (config.accessCode && codeMatches(given, config.accessCode)) who = { cond: "direct", entry: "team", pid: body.data.pid ?? null };
-  else if (!config.accessCode && !config.codeSecret) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
+  else if (!config.accessCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
   else {
     await limit(`session:badcode:${ip}`, 1, 2); // slow down guessing
     return fail(401, "That access code isn't right.");
@@ -43,6 +53,7 @@ export async function POST(req: NextRequest) {
       pid: who.pid,
       condition: who.cond,
       entry: who.entry, // participant (own code), team (shared code) or open
+      code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
       demo: config.demo,
       device: deviceOf(req.headers.get("user-agent")),
       config: { practiceTries: config.practiceTries, practiceMinutes: config.practiceMinutes ?? null },

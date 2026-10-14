@@ -14,7 +14,10 @@
     "e2e": "node scripts/e2e.mjs",
     "chat": "tsx scripts/chat.ts",
     "events": "tsx scripts/events.ts",
-    "codes": "tsx scripts/codes.ts"
+    "codes": "tsx scripts/codes.ts",
+    "eval:solver": "tsx scripts/eval-solver.ts",
+    "eval:chat": "tsx scripts/eval-chat.ts",
+    "eval:judge": "tsx scripts/eval-judge.ts"
   },
   "packageManager": "pnpm@10.20.0",
   "dependencies": {

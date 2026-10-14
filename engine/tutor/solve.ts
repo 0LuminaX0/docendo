@@ -3,30 +3,32 @@ import type { Bundle } from "../../content/schema";
 import { checkPractice, parseNumber, type PracticeItem } from "../../content/practice";
 import { chatJson, MODELS, type OnCall } from "../llm";
 import { forbiddenTerms } from "./admit";
-import { activeMisconceptions, latest, type State } from "./state";
+import { activeMisconceptions, latest, notesOf, type State } from "./state";
 import { termsUsed } from "./judge";
 
 // Recursive feedback: Kai solves a practice problem from its notebook alone.
 // The solver model sees only the problem and Kai's numbered notes (the
 // learner's own words, mistakes included), never the lesson's facts, the key or
-// the worked solution. Each step cites the notes it relies on; the learner sees
-// those notes when they click a step.
+// the worked solution. Each step cites the notes it relies on.
 //
 // A model told to "use only your notes" still reads rules out of the answer
-// options or falls back on what it knows, so the code enforces it: the GATE.
-// Kai can only be right when its notebook holds every fact the problem needs
-// (`needs` in practice.json), explained correctly, and it still believes no
-// misconception about those ideas. Otherwise Kai cannot land on the key:
-// - facts missing (choice problem): the code picks Kai's guess at random among
-//   the wrong options, and the model only explains, from the notes, why that
-//   guess seemed plausible to a beginner;
-// - a misconception still believed, or a number problem: the model solves
-//   freely (so the error comes from the misconception), and any right answer
-//   without the facts is replaced by the offline attempt, which is wrong.
-// Without a model (demo mode) or when it fails, the offline solver builds Kai's
-// attempt from the worked solution and the notebook.
+// options or falls back on what it knows, so the code decides when Kai can be
+// right: the GATE. Kai can only be right when its notebook holds every fact the
+// problem needs (`needs` in practice.json), explained correctly, and it still
+// believes no misconception about those ideas. Otherwise Kai's mistake has to
+// come from its own reasoning, never from an answer swapped in at the end:
+// - a misconception still believed: the model solves freely from the notes, so
+//   the misconception leads it astray;
+// - a fact missing: Kai reasons from a beginner's wrong rule for that fact (one
+//   of the problem's `beliefs`, picked at random), so its wrong answer follows
+//   from its steps.
+// A right answer without the facts, or an answer that doesn't follow from the
+// guess, is replaced by the offline attempt (also built on the guess). Without
+// a model (demo mode) or when the model fails, the offline solver answers.
 
 export type Step = { text: string; notes: number[] };
+export type Gate = { needs: string[]; missing: string[]; absent: string[]; vague: string[]; misled: string[]; canBeRight: boolean };
+export type Guess = { replaces: string; belief: string; answer: number };
 export type Solution = {
   steps: Step[];
   answer: string; // option letter, or the number as Kai wrote it
@@ -35,28 +37,54 @@ export type Solution = {
   leaked: string[]; // lesson terms Kai used that the learner never taught or used (for the log)
   by: "model" | "offline";
   gate: Gate;
+  guess: Guess | null; // the beginner's rule Kai reasoned from, when a needed fact was missing
 };
-export type Gate = { needs: string[]; missing: string[]; misled: string[]; canBeRight: boolean };
 
 const LETTERS = "ABCDEF";
 
-/** Kai's notes, numbered: the latest word on each fact, then the misconceptions it still believes. */
-export function notesOf(state: State): string[] {
-  const out: string[] = [];
-  for (const e of latest(state).values()) out.push(e.words);
-  for (const m of activeMisconceptions(state)) if (!out.includes(m.words)) out.push(m.words);
-  return out.slice(-40);
-}
+export { notesOf };
 
-/** Can Kai get this problem right? Only with every needed fact explained correctly and no misconception left about them. */
+/** A need is a fact id, or alternatives "n11.f1|n11.f2": facts that each carry the rule the problem needs. */
+export const alts = (need: string) => need.split("|");
+const ideaOf = (fact: string) => fact.split(".")[0]!;
+
+/**
+ * Can Kai get this problem right? Only with every need met (one of its facts explained correctly; a vague,
+ * partial explanation isn't enough) and no misconception left about the ideas involved.
+ */
 export function gate(item: PracticeItem, state: State): Gate {
   const needs = item.needs ?? [...new Set(item.steps.flatMap((s) => s.facts))];
   const facts = latest(state);
-  const missing = needs.filter((f) => facts.get(f)?.verdict !== "correct"); // a vague (partial) explanation isn't enough
-  const ideas = new Set(needs.map((f) => f.split(".")[0]));
-  const misled = activeMisconceptions(state).filter((m) => ideas.has(m.node)).map((m) => m.words);
-  return { needs, missing, misled, canBeRight: !missing.length && !misled.length };
+  const missing = needs.filter((n) => !alts(n).some((f) => facts.get(f)?.verdict === "correct"));
+  const ideas = new Set(needs.flatMap(alts).map(ideaOf));
+  const believed = activeMisconceptions(state).filter((m) => ideas.has(m.node));
+  const misled = believed.map((m) => m.words);
+  // a misconception is what Kai was told about its idea: those needs it reasons from, they get no guess
+  const open = missing.filter((n) => !believed.some((m) => alts(n).some((f) => ideaOf(f) === m.node)));
+  const absent = open.filter((n) => !alts(n).some((f) => facts.has(f))); // told nothing about it
+  const vague = open.filter((n) => alts(n).some((f) => facts.has(f))); // told only vaguely (or wrongly) about it
+  return { needs, missing, absent, vague, misled, canBeRight: !missing.length && !misled.length };
 }
+
+/** A small deterministic hash: a guess is random across notebooks but the same for the same notebook. */
+function pick(seed: string, n: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return (h >>> 0) % n;
+}
+
+/** The beginner's rule Kai falls back on: one for a fact it was told nothing or only vaguely about, picked at random. */
+export function chooseGuess(item: PracticeItem, g: Gate, seed: string): Guess | null {
+  const all = item.beliefs ?? [];
+  const ideas = new Set(g.misled.length ? (item.needs ?? []).flatMap(alts).map(ideaOf) : []);
+  const forMissing = all.filter((b) => [...g.absent, ...g.vague].some((n) => alts(n).includes(b.replaces)));
+  const pool = forMissing.length ? forMissing : all.filter((b) => ideas.has(ideaOf(b.replaces)));
+  const list = pool.length ? pool : all;
+  return list.length ? list[pick(seed, list.length)]! : null;
+}
+
+const answerText = (item: PracticeItem, answer: number) =>
+  item.kind === "choice" ? `${LETTERS[answer]}) ${item.options![answer]}` : `about ${Math.round(answer)}${item.unit ? ` ${item.unit}` : ""}`;
 
 const Reply = z.object({
   steps: z.array(z.object({ text: z.string(), notes: z.array(z.number().int()) })),
@@ -65,50 +93,88 @@ const Reply = z.object({
 
 const SYSTEM = `You are Kai, a student who missed a lecture. Everything you know about its topic is in YOUR NOTES: what a classmate told you, in their words. You believe your notes, even where they might be wrong.
 
-Solve the problem using ONLY your notes:
-- Write 2 to 4 short steps in the first person, like a student thinking aloud. Each step lists the numbers of the notes it relies on in "notes"; don't write the numbers in the step's text.
-- If you need a rule your notes don't give, say so honestly in that step ("You didn't tell me how ..., so I'll guess ..."), make the guess a beginner would make, and list no notes for it.
+Solve the problem using ONLY your notes, thinking aloud like a student:
+- Write 3 to 5 steps in the first person. Each step is one or two complete sentences and does one thing: applies one thing from your notes, works something out from the problem, or draws the conclusion. Each step follows from the one before.
+- Each step lists in "notes" the numbers of the notes it relies on (none for a step that only uses the problem's numbers). Don't write note numbers in the text.
 - Never use knowledge from outside your notes, even if you think you know better: no formulas, rules or technical words that are not in your notes or in the problem.
 - The answer options are not notes. Never take a rule from an option's wording: an option only says what someone might answer.
 - Do the arithmetic the problem needs, as your notes suggest it.
-- answer: the letter of the option you choose (A, B, …), or just the number for a number question.`;
+- In the last step, say your conclusion in words (not as an option number).
+- answer: for a question with options, the number of the option you choose (1, 2, 3 or 4); for a number question, just the number.`;
 
-const GUESSING = `\n\nYour notes don't tell you everything this problem needs. Where they are silent, guess like a beginner and say so; never fill the gap with what you think the right rule is.`;
+// a misconception or a vague note: the model solves freely, its notes lead it
+const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say so and guess like a beginner; never fill the gap with what you think the right rule is.`;
 
-const guessing = (letter: string, option: string) =>
-  `\n\nYour notes don't tell you how to decide this problem, so you guessed: your answer is ${letter} ("${option}"). In 2 or 3 short steps, explain from your notes and the problem only why that guess seemed plausible to you, and say plainly that it is a guess because you weren't told how this works. Don't argue for any other option. answer: ${letter}.`;
+// a missing fact: Kai's own guess for it, and where that guess leads; the steps must get there honestly
+const fromGuess = (guess: Guess, item: PracticeItem, vague: boolean) => `
 
-export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall): Promise<Solution> {
+${vague ? "Your notes are vague about one thing this problem needs, and you understood them this way" : "Your classmate never told you one thing this problem needs. For that part you rely on your own guess"}, which you believe:
+"${guess.belief}"
+Reason from your notes and this ${vague ? "understanding" : "guess"}, so that your conclusion follows from it: ${conclusion(item, guess.answer)}. When you first use it, say plainly that ${vague ? "this is how you understood what your classmate told you" : "it's your own guess because your classmate didn't tell you this"}. Never weigh other rules, never mention what the right rule might be, and never change your mind at the end.`;
+
+// what the guess leads to, in words (option numbers stay out of Kai's steps)
+const conclusion = (item: PracticeItem, answer: number) => (item.kind === "choice" ? `"${item.options![answer]}" (option ${answer + 1})` : `about ${Math.round(answer)}${item.unit ? ` ${item.unit}` : ""}`);
+
+const STRICTER = `\n\nImportant: a previous try didn't follow these rules. Use only your notes and do exactly what is asked above.`;
+
+// signs that the model argued its way to the key and then turned around
+const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
+
+export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false): Promise<Solution> {
   const notes = notesOf(state);
   const g = gate(item, state);
-  // facts missing on a choice problem: Kai's answer is a random wrong guess, picked here; the model only explains it
-  const guess = !g.canBeRight && !g.misled.length && item.kind === "choice" ? wrongGuess(item, `${item.id}|${notes.join("|")}`) : null;
+  // a fact Kai was told nothing or only vaguely about: it reasons from a beginner's reading of it. (A misconception
+  // is what it was told: the model reasons from that, and the gate's safety net catches a right answer.)
+  const guess = g.absent.length || g.vague.length ? chooseGuess(item, g, `${item.id}|${notes.join("|")}`) : null;
+  const vagueGuess = !!guess && g.vague.some((n) => alts(n).includes(guess.replaces));
+  // options are numbered for the model: trucks and headlines are named by letters, and "B" must never be ambiguous
   const problem =
     item.kind === "choice"
-      ? `${item.prompt}\n\nOptions:\n${item.options!.map((o, i) => `${LETTERS[i]}) ${o}`).join("\n")}`
+      ? `${item.prompt}\n\nOptions:\n${item.options!.map((o, i) => `${i + 1}) ${o}`).join("\n")}`
       : `${item.prompt}\n\nAnswer with a number${item.unit ? ` (in ${item.unit})` : ""}.`;
-  const rules = SYSTEM + (guess ? guessing(guess, item.options![LETTERS.indexOf(guess)]!) : g.canBeRight ? "" : GUESSING);
   const r = await chatJson({
-    model: MODELS.writer,
+    model: MODELS.solver,
     name: "solution",
     schema: Reply,
     temperature: 0.3,
-    maxTokens: 900,
+    maxTokens: 1600, // room to finish; a reply that hits it is retried, never cut
     // the learner is waiting: a slow model gives way to the offline attempt (and the route's 60 s limit holds)
-    timeoutMs: 12_000,
+    timeoutMs: 18_000,
     retries: 1,
     messages: [
-      { role: "system", content: rules },
+      { role: "system", content: SYSTEM + (guess ? fromGuess(guess, item, vagueGuess) : g.canBeRight ? "" : UNSURE) + (stricter ? STRICTER : "") },
       { role: "user", content: `YOUR NOTES:\n${notes.length ? notes.map((n, i) => `[${i + 1}] "${n}"`).join("\n") : "(empty: you were told nothing)"}\n\nPROBLEM:\n${problem}` },
     ],
   });
-  onCall?.({ role: "solver", model: MODELS.writer, ms: r.ms, usage: r.usage });
-  // note numbers belong in `notes`; the learner sees the sources when clicking a step
-  const steps = r.data.steps.slice(0, 5).map((s) => ({ text: s.text.replace(/\s*\((?:notes?\s*)?\d+(?:\s*(?:,|and)\s*\d+)*\)|\s*\[\d+(?:\s*,\s*\d+)*\]/gi, "").trim().slice(0, 500), notes: [...new Set(s.notes)].filter((n) => n >= 1 && n <= notes.length) }));
-  if (!steps.length) throw new Error("the solver returned no steps");
-  const answer = guess ?? r.data.answer.trim().slice(0, 40);
-  if (item.kind === "choice" && LETTERS.indexOf(answer.charAt(0).toUpperCase()) < 0) throw new Error(`the solver's answer is not an option (${answer.slice(0, 40)})`);
-  return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g };
+  onCall?.({ role: "solver", model: MODELS.solver, ms: r.ms, usage: r.usage });
+  // note numbers belong in `notes`; the text is kept whole (the model decides where a step ends)
+  const steps = r.data.steps
+    .map((s) => ({ text: s.text.replace(/\s*\((?:notes?\s*)?\d+(?:\s*(?:,|and)\s*\d+)*\)|\s*\[\d+(?:\s*,\s*\d+)*\]/gi, "").trim(), notes: [...new Set(s.notes)].filter((n) => n >= 1 && n <= notes.length) }))
+    // the model sees the options numbered; the learner sees letters
+    .map((s) => ({ ...s, text: item.kind === "choice" ? s.text.replace(/\boption (\d)\b/gi, (m, d: string) => (LETTERS[Number(d) - 1] ? `option ${LETTERS[Number(d) - 1]}` : m)) : s.text }))
+    .filter((s) => s.text);
+  if (steps.length < 2) throw new Error(`the solver returned ${steps.length} step(s)`);
+  if (steps.length > 7) throw new Error(`the solver returned ${steps.length} steps`);
+  let answer = r.data.answer.trim().slice(0, 40);
+  if (item.kind === "choice") {
+    const k = Number(/\d+/.exec(answer)?.[0]) - 1;
+    if (!(k >= 0 && k < item.options!.length)) throw new Error(`the solver's answer is not an option (${answer})`);
+    answer = LETTERS[k]!;
+  }
+  if (guess) {
+    // the conclusion must be the guess's own, reached without a turnaround
+    const lands = item.kind === "choice" ? LETTERS.indexOf(answer) === guess.answer : sameNumber(answer, guess.answer);
+    if (!lands) throw new Error(`the solver didn't follow its guess (answered ${answer}, the guess leads to ${answerText(item, guess.answer)})`);
+    if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
+  }
+  return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess };
+}
+
+/** The first number in Kai's answer, within 2% of the expected one. */
+function sameNumber(answer: string, expected: number): boolean {
+  const n = /-?\d[\d,.]*%?/.exec(answer)?.[0];
+  const v = n ? parseNumber(n) : null;
+  return v !== null && Math.abs(v - expected) <= Math.max(1, Math.abs(expected) * 0.02);
 }
 
 /** Is Kai's answer the key? A letter for choice problems, a number otherwise. */
@@ -129,40 +195,36 @@ function leaks(bundle: Bundle, item: PracticeItem, state: State, steps: Step[]):
   return forbiddenTerms(bundle, seen, steps.map((s) => s.text).join(" "));
 }
 
-/** A small deterministic hash, so a guess is random-looking but the same for the same notebook. */
-function pick(seed: string, n: number): number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
-  return (h >>> 0) % n;
-}
-
-/** A wrong answer, chosen at random among the wrong ones: a guess never lands on the key. */
-function wrongGuess(item: PracticeItem, seed: string): string {
+/** A wrong answer at random, for a problem without beliefs. */
+function wrongAnswer(item: PracticeItem, seed: string): number {
   if (item.kind === "choice") {
     const wrong = item.options!.map((_, i) => i).filter((i) => i !== item.answer);
-    return LETTERS[wrong[pick(seed, wrong.length)]!]!;
+    return wrong[pick(seed, wrong.length)]!;
   }
   const tol = item.tolerance ?? 0;
   const factors = [0.6, 0.8, 0.92, 1.1, 1.25].filter((f) => Math.abs(item.answer * f - item.answer) > tol * 2);
-  return String(Math.round(item.answer * factors[pick(seed, factors.length)]!));
+  return Math.round(item.answer * factors[pick(seed, factors.length)]!);
 }
 
 /**
- * Offline solver (demo mode, or when the model fails or answers right without
- * the facts): Kai follows the worked solution while the notebook holds what each
- * step needs, and goes wrong at the first step whose needed fact is missing or
- * contradicted by a misconception, quoting what it was told; its answer is then
- * a guess among the wrong ones.
+ * Offline solver (demo mode, or when the model fails or doesn't follow the
+ * rules): Kai follows the worked solution while the notebook holds what each
+ * step needs, and at the first step whose needed fact is missing or
+ * contradicted it goes with what it was told (a misconception) or with its own
+ * guess, which decides its answer.
  */
 export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): Solution {
   const notes = notesOf(state);
   const facts = latest(state);
   const g = gate(item, state);
   const misledIdeas = new Set(activeMisconceptions(state).map((m) => m.node));
+  const seed = `${item.id}|${notes.join("|")}`;
+  const guess = g.canBeRight ? null : chooseGuess(item, g, seed);
   const steps: Step[] = [];
   let broken = false;
   for (const s of item.steps) {
-    const gap = s.facts.find((f) => g.needs.includes(f) && (g.missing.includes(f) || misledIdeas.has(f.split(".")[0]!)));
+    const inNeed = (list: string[], f: string) => list.some((n) => alts(n).includes(f));
+    const gap = s.facts.find((f) => inNeed(g.needs, f) && (inNeed(g.missing, f) || misledIdeas.has(ideaOf(f))));
     if (!gap || g.canBeRight) {
       const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
       steps.push({ text: s.text, notes: [...new Set(cite)] });
@@ -170,23 +232,22 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
     }
     const told = facts.get(gap);
     const belief = activeMisconceptions(state).filter((m) => m.node === gap.split(".")[0]).at(-1);
-    // a stated misconception about this idea wins over a vague or wrong statement of the fact
-    const words = belief?.words ?? (told && told.verdict !== "correct" ? told.words : undefined);
-    steps.push(
-      words
-        ? { text: `You told me: "${words}". So I go with that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) }
-        : { text: "You didn't tell me how this part works, so I'll have to guess.", notes: [] },
-    );
+    // what Kai was told wins (a misconception, or a wrong statement of the fact); otherwise its own guess
+    const words = belief?.words ?? (told && told.verdict === "wrong" ? told.words : undefined);
+    if (words) steps.push({ text: `You told me: "${words}". So I go with that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
+    else if (told && guess) steps.push({ text: `You only told me vaguely: "${told.words}". I understood it like this: ${guess.belief}`, notes: [notes.indexOf(told.words) + 1].filter((n) => n > 0) });
+    else steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
     broken = true;
     break;
   }
   if (!g.canBeRight && !broken) {
-    steps.push({ text: "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
+    steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
     broken = true;
   }
-  const answer = g.canBeRight ? (item.kind === "choice" ? LETTERS[item.answer]! : String(Math.round(item.answer * 100) / 100)) : wrongGuess(item, `${item.id}|${notes.join("|")}`);
-  if (broken) steps.push({ text: `So my answer is ${item.kind === "choice" ? answer : answer + (item.unit ? ` ${item.unit}` : "")}.`, notes: [] });
-  return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g };
+  const value = g.canBeRight ? item.answer : (guess?.answer ?? wrongAnswer(item, seed));
+  const answer = item.kind === "choice" ? LETTERS[value]! : String(Math.round(value * 100) / 100);
+  if (broken) steps.push({ text: `So my answer is ${answerText(item, value)}.`, notes: [] });
+  return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess };
 }
 
 /**
@@ -197,15 +258,26 @@ export async function solve(
   bundle: Bundle,
   item: PracticeItem,
   state: State,
-  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; model?: typeof llmSolve },
+  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean) => Promise<Solution> },
 ): Promise<Solution> {
   if (opts.demo) return offlineSolve(bundle, item, state);
-  try {
-    const s = await (opts.model ?? llmSolve)(bundle, item, state, opts.onCall);
-    if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
-    return s;
-  } catch (e) {
-    opts.onError?.(e);
-    return offlineSolve(bundle, item, state);
+  const model = opts.model ?? llmSolve;
+  const t0 = Date.now();
+  let lastError: unknown = null;
+  // a try that breaks the rules gets one more, with a reminder, while there's time (the learner is waiting)
+  for (let tryNo = 0; tryNo < 2; tryNo++) {
+    if (tryNo === 1 && Date.now() - t0 > 15_000) break;
+    try {
+      const s = await model(bundle, item, state, opts.onCall, tryNo === 1);
+      if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
+      return s;
+    } catch (e) {
+      lastError = e;
+      opts.onError?.(e);
+      // a timeout or a refused request won't get better by asking again
+      if (e instanceof Error && (e.name === "TimeoutError" || /OpenRouter \d/.test(e.message))) break;
+    }
   }
+  void lastError;
+  return offlineSolve(bundle, item, state);
 }

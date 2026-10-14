@@ -66,6 +66,7 @@ export type Saved = {
   };
   answers: (number | null)[];
   result: GradeResult | null;
+  feedbackSent?: boolean;
 };
 
 const KEY = "docendo:session:v1";

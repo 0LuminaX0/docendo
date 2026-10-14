@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import { Bricolage_Grotesque, Figtree, Kalam } from "next/font/google";
 import "./globals.css";
 import Telemetry from "@/components/Telemetry";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
 const body = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-body", display: "swap" });
+// Kai's handwriting in its notebook (practice, recursive feedback)
+const hand = Kalam({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-hand", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Docendo",
@@ -18,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // Browser extensions (Grammarly, password managers…) add attributes to <html>/<body> before React
     // hydrates; suppressHydrationWarning ignores attribute differences on these two elements only.
-    <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${display.variable} ${body.variable} ${hand.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
         {children}
         <Telemetry />

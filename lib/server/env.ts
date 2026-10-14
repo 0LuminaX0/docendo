@@ -9,6 +9,7 @@ const Env = z.object({
   SESSION_SECRET: z.string().min(32).optional(),
   ACCESS_CODE: z.string().min(4).max(64).optional(), // one shared code: team and demo sessions
   CODE_SECRET: z.string().min(16).optional(), // participant codes (lib/codes.ts): each code carries its condition
+  ADMIN_PASSWORD: z.string().min(10).optional(), // the admin panel (/admin): off without it
   PRACTICE_MINUTES: z.coerce.number().positive().max(60).optional(), // overrides practice.json
   PRACTICE_TRIES: z.coerce.number().int().min(1).max(10).default(2), // checks per practice problem (a first try and one retry)
   UPSTASH_REDIS_REST_URL: z.url().optional(),
@@ -44,6 +45,7 @@ export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
   accessCode: env.ACCESS_CODE,
   codeSecret: env.CODE_SECRET,
+  adminPassword: env.ADMIN_PASSWORD,
   practiceMinutes: env.PRACTICE_MINUTES,
   practiceTries: env.PRACTICE_TRIES,
   upstash:

@@ -43,3 +43,17 @@ describe("participant codes", () => {
     expect(recursive).toBeLessThan(1100);
   });
 });
+
+import { balancedDraws, conditionFor } from "../lib/codes";
+
+describe("codes made in the admin panel", () => {
+  it("draw random conditions in balanced blocks of 4", () => {
+    const d = balancedDraws(40);
+    for (let b = 0; b < 40; b += 4) expect(d.slice(b, b + 4).filter((x) => x === "direct")).toHaveLength(2);
+  });
+  it("use the drawn condition first, then alternate; fixed codes never change", () => {
+    const r = { id: "cABC", condition: "random" as const, draw: "recursive" as const };
+    expect([1, 2, 3, 4].map((u) => conditionFor(r, u))).toEqual(["recursive", "direct", "recursive", "direct"]);
+    expect([1, 2, 3].map((u) => conditionFor({ id: "x", condition: "direct" }, u))).toEqual(["direct", "direct", "direct"]);
+  });
+});

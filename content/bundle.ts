@@ -54,9 +54,13 @@ export async function runBundle(topic: Topic) {
     return x && x.loc.kind === "time" ? { video: x.sourceId, start: x.loc.start, end: x.loc.end } : null;
   };
 
+  // every idea of the graph: the lesson's, and around them the ones this lesson doesn't teach, so Kai's mind shows the
+  // topic's whole tree and a learner who explains one anyway gets it noted (bonus). Kai never asks about those and
+  // they never count: no goals, nothing required or teachable, no help.
   const nodes = graph.nodes
-    .filter((n) => inScope(n.id))
     .map((n) => {
+      if (!inScope(n.id))
+        return { ...n, inLesson: false, goals: [], facts: n.facts.map((f) => ({ ...f, required: false, teachable: false })), help: [] };
       const where = [...new Set(n.facts.flatMap((f) => coverage.facts[f.id]?.where ?? []))];
       const help = where
         .map(timeOf)
@@ -65,7 +69,7 @@ export async function runBundle(topic: Topic) {
         .sort((a, b) => videos.findIndex((v) => v.id === a.video) - videos.findIndex((v) => v.id === b.video) || a.start - b.start);
       return {
         ...n,
-        needs: n.needs.filter(inScope),
+        inLesson: true,
         goals: lesson ? [lesson.goal.id] : n.goals,
         facts: n.facts.map((f) => {
           const d = coverage.facts[f.id];
@@ -75,7 +79,8 @@ export async function runBundle(topic: Topic) {
         help,
       };
     });
-  const outOfScopeTerms = lesson ? [...new Set(graph.nodes.filter((n) => !inScope(n.id)).flatMap((n) => n.lexicon))] : [];
+  // the other ideas' terms are now in the bundle's own nodes (forbiddenTerms covers them); kept for older bundles
+  const outOfScopeTerms: string[] = [];
 
   const bundle: Bundle = Bundle.parse({
     topic: topic.slug,
@@ -92,6 +97,7 @@ export async function runBundle(topic: Topic) {
   const out = join(p.dir, "bundle.json");
   await writeJson(out, bundle);
   const teachable = nodes.flatMap((n) => n.facts.filter((f) => f.teachable && f.required));
+  const lessonNodes = nodes.filter((n) => n.inLesson).length;
   const watchSec = lesson ? lesson.segments.reduce((a, x) => a + x.end - x.start, 0) : videos.reduce((a, v) => a + (v.durationSec ?? 0), 0);
-  console.log(`bundle  ${out}:  ${nodes.length} nodes, ${teachable.length} teachable required facts, ${Math.floor(watchSec / 60)}:${String(Math.round(watchSec % 60)).padStart(2, "0")} of video`);
+  console.log(`bundle  ${out}:  ${lessonNodes} lesson ideas (${nodes.length} with the ones around them), ${teachable.length} teachable required facts, ${Math.floor(watchSec / 60)}:${String(Math.round(watchSec % 60)).padStart(2, "0")} of video`);
 }

@@ -7,13 +7,15 @@ import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
 import { sections } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
+import { flush, track } from "@/lib/client/log";
+import { useState } from "react";
 
 type Item = { id: string; section: string; prompt: string; options: string[] };
 const KEYS = "ABCDEF";
 
 export default function Results({ items }: { items: Item[] }) {
   const router = useRouter();
-  const [saved] = useSaved();
+  const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
   if (!allowed || !saved || !saved.result) return <div className="center">Loading…</div>;
 
@@ -136,6 +138,8 @@ export default function Results({ items }: { items: Item[] }) {
           </section>
         )}
 
+        <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
+
         <div className="row">
           <button
             className="btn"
@@ -149,5 +153,41 @@ export default function Results({ items }: { items: Item[] }) {
         </div>
       </main>
     </div>
+  );
+}
+
+/** An optional word at the end, for the study team (shown in the admin panel). */
+function Feedback({ sent, onSent }: { sent: boolean; onSent: () => void }) {
+  const [rating, setRating] = useState<number | null>(null);
+  const [text, setText] = useState("");
+  if (sent) return <p className="note fb-thanks">Thanks for your feedback.</p>;
+  return (
+    <section className="fb" aria-labelledby="fb-h">
+      <h2 id="fb-h">How was it?</h2>
+      <div className="fb-rate" role="radiogroup" aria-label="Your rating, from 1 to 5">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={rating === n} className={rating === n ? "on" : ""} onClick={() => setRating(n)}>
+            {n}
+          </button>
+        ))}
+        <span className="note">1 not good, 5 great</span>
+      </div>
+      <label className="sr-only" htmlFor="fb-t">Anything you'd like to tell us</label>
+      <textarea id="fb-t" className="work" rows={3} maxLength={1500} placeholder="Anything you'd like to tell us? What was confusing, what Kai did well or badly… (optional)" value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="row">
+        <button
+          type="button"
+          className="btn small"
+          disabled={rating === null && !text.trim()}
+          onClick={() => {
+            track("feedback", { rating, text: text.trim().slice(0, 1500) });
+            flush();
+            onSent();
+          }}
+        >
+          Send feedback
+        </button>
+      </div>
+    </section>
   );
 }

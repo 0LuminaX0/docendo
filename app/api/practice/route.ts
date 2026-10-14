@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     let judged: unknown = null;
     if (body.data.action === "reteach") {
       const msg = body.data.message;
-      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, body.data.step, onCall, { timeoutMs: 15_000, retries: 1 }).catch(() => mockJudge(bundle, msg)); // worst case with the solver stays under 60 s
+      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, body.data.step, onCall, { timeoutMs: 15_000, retries: 0 }).catch(() => mockJudge(bundle, msg)); // one try, so with the solver's two (18 s each) a reteach stays under 60 s
       state = applyJudgement(state, j);
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [] };
     }

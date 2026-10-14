@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Calculator as CalcIcon, Check, X } from "lucide-react";
+import Calculator from "./Calculator";
 import { Header } from "./ui";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type GradeResult } from "@/lib/client/store";
@@ -17,6 +18,9 @@ export default function Exercises({ items }: { items: Item[] }) {
   const allowed = useGuard(saved, "exercises");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // the same calculator as in practice, for both conditions: the test is about the rules, not the arithmetic
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [tape, setTape] = useState<string[]>([]);
   if (!allowed || !saved) return <div className="center">Loading…</div>;
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
@@ -85,6 +89,24 @@ export default function Exercises({ items }: { items: Item[] }) {
           ))}
         </div>
         <div className="submitbar">
+          {calcOpen && (
+            <div className="calc-pop" role="dialog" aria-label="Calculator">
+              <div className="calc-pop-head">
+                <b>Calculator</b>
+                <button type="button" className="iconbtn" onClick={() => (setCalcOpen(false), track("calc_close", { where: "test" }))} aria-label="Close the calculator">
+                  <X size={16} />
+                </button>
+              </div>
+              {tape.length > 0 && (
+                <ol className="calc-tape">
+                  {tape.map((l, i) => (
+                    <li key={i}>{l}</li>
+                  ))}
+                </ol>
+              )}
+              <Calculator where="test" onResult={(line) => setTape((t) => [...t.slice(-7), line])} />
+            </div>
+          )}
           <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < items.length}>
             {busy ? "Checking…" : <><Check size={17} strokeWidth={2.6} /> Check my answers</>}
           </button>
@@ -92,6 +114,10 @@ export default function Exercises({ items }: { items: Item[] }) {
             <span className="track" aria-hidden="true"><span className="fill" style={{ width: `${(answered / items.length) * 100}%` }} /></span>
             {answered} of {items.length} answered
           </span>
+          <span className="grow" />
+          <button type="button" className={`btn ghost small${calcOpen ? " on" : ""}`} aria-pressed={calcOpen} onClick={() => (setCalcOpen(!calcOpen), track(calcOpen ? "calc_close" : "calc_open", { where: "test" }))}>
+            <CalcIcon size={15} /> Calculator
+          </button>
           {error && <p className="error" role="alert">{error}</p>}
         </div>
       </main>

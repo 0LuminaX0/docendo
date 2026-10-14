@@ -182,15 +182,21 @@ describe("the gate: Kai can't be right without the facts", () => {
   const ucb = { ...base, notebook: [{ fact: "n11.f2", verdict: "correct" as const, words: "UCB adds a bonus to each average and picks the highest total", turn: 1 }] };
 
   it("opens only with every needed fact explained correctly and no misconception left about them", () => {
-    expect(gate(p3, base)).toMatchObject({ needs: ["n11.f2"], missing: ["n11.f2"], canBeRight: false });
+    expect(gate(p3, base)).toMatchObject({ needs: ["n11.f1|n11.f2"], missing: ["n11.f1|n11.f2"], canBeRight: false });
+    // either fact carries the rule: "adds a bonus to each average and picks the highest total" is credited as n11.f1
+    expect(gate(p3, { ...base, notebook: [{ fact: "n11.f1", verdict: "correct" as const, words: "adds a bonus and picks the highest", turn: 1 }] }).canBeRight).toBe(true);
     expect(gate(p3, ucb).canBeRight).toBe(true);
     expect(gate(p3, { ...ucb, notebook: [{ ...ucb.notebook[0]!, verdict: "partial" as const }] }).canBeRight).toBe(false); // vague isn't enough
     expect(gate(p3, { ...ucb, misconceptions: [{ node: "n11", words: "UCB picks at random", turn: 2 }] }).canBeRight).toBe(false);
-    for (const p of practice.items) for (const f of p.needs ?? []) expect(p.steps.some((s) => s.facts.includes(f)), `${p.id} needs ${f}`).toBe(true);
+    for (const p of practice.items)
+      for (const n of p.needs ?? []) {
+        for (const f of n.split("|")) expect(factIds.has(f), `${p.id} needs ${f}`).toBe(true);
+        expect(p.steps.some((s) => n.split("|").some((f) => s.facts.includes(f))), `${p.id}: a step uses ${n}`).toBe(true);
+      }
   });
 
   it("replaces a model's right answer without the facts by a wrong guess", async () => {
-    const lucky = async (): Promise<Solution> => ({ steps: [{ text: "I add the bonus.", notes: [] }], answer: "B", correct: true, notes: [], leaked: [], by: "model", gate: gate(p3, base) });
+    const lucky = async (): Promise<Solution> => ({ steps: [{ text: "I add the bonus.", notes: [] }], answer: "B", correct: true, notes: [], leaked: [], by: "model", gate: gate(p3, base), guess: null });
     let why = "";
     const s = await solve(bundle, p3, base, { demo: false, model: lucky, onError: (e) => (why = String(e)) });
     expect(s.correct).toBe(false);
@@ -211,5 +217,91 @@ describe("the gate: Kai can't be right without the facts", () => {
       }
       expect(guesses.size, `${p.id} guesses vary`).toBeGreaterThan(1);
     }
+  });
+});
+
+describe("Kai's guesses (beliefs) when a needed fact is missing", () => {
+  const base = initialState(bundle);
+
+  it("are wrong, stand in for a needed fact, and cover every needed fact of every problem", () => {
+    for (const p of practice.items) {
+      const bs = p.beliefs ?? [];
+      expect(bs.length, p.id).toBeGreaterThan(0);
+      for (const b of bs) {
+        expect((p.needs ?? []).some((n) => n.split("|").includes(b.replaces)), `${p.id}: ${b.belief}`).toBe(true);
+        expect(checkPractice(p, p.kind === "choice" ? b.answer : String(b.answer)), `${p.id}: ${b.belief}`).toBe(false);
+      }
+      for (const n of p.needs ?? []) expect(bs.some((b) => n.split("|").includes(b.replaces)), `${p.id} has a guess for ${n}`).toBe(true);
+    }
+  });
+
+  it("make the offline attempt reason from the guess to the guess's answer", () => {
+    for (const p of practice.items) {
+      const s = offlineSolve(bundle, p, base);
+      expect(s.guess, p.id).not.toBeNull();
+      expect(s.steps.some((x) => x.text.includes(s.guess!.belief)), p.id).toBe(true);
+      expect(s.answer, p.id).toBe(p.kind === "choice" ? "ABCDEF"[s.guess!.answer] : String(s.guess!.answer));
+      expect(s.correct, p.id).toBe(false);
+    }
+  });
+
+  it("pick a guess for the fact that is actually missing", async () => {
+    const { chooseGuess } = await import("../engine/tutor/solve");
+    const p1 = item("p1");
+    const knowsF1 = { ...base, notebook: [{ fact: "n05.f1", verdict: "correct" as const, words: "greedy picks the best average", turn: 1 }] };
+    for (let i = 0; i < 10; i++) expect(chooseGuess(p1, gate(p1, knowsF1), `seed${i}`)!.replaces).toBe("n05.f2");
+  });
+});
+
+import { summarize, tables, type Ev } from "../lib/analytics";
+
+describe("the admin dashboard's numbers", () => {
+  const at = (min: number) => new Date(Date.UTC(2026, 9, 14, 10, min)).toISOString();
+  const ev = (sid: string, t: string, min: number, extra: Record<string, unknown> = {}): Ev => ({ t, sid, at: at(min), ...extra });
+  const events: Ev[] = [
+    // a direct participant who finished
+    ev("a", "session_start", 0, { entry: "participant", condition: "direct", pid: "P1" }),
+    ev("a", "client_page_view", 1, { path: "/pretest" }),
+    ev("a", "client_page_view", 3, { path: "/watch" }),
+    ev("a", "client_page_view", 12, { path: "/teach" }),
+    ev("a", "client_page_view", 22, { path: "/practice" }),
+    ev("a", "practice_check", 23, { id: "p1", round: 1, attempt: 1, correct: false }),
+    ev("a", "practice_check", 24, { id: "p1", round: 1, attempt: 2, correct: true }),
+    ev("a", "client_page_view", 32, { path: "/exercises" }),
+    ev("a", "grade", 40, { score: 6, of: 10, items: [{ id: "q01", chosen: 1, answer: 1, correct: true }] }),
+    // a recursive participant who stopped in practice
+    ev("b", "session_start", 0, { entry: "participant", condition: "recursive", pid: "P2" }),
+    ev("b", "client_page_view", 1, { path: "/pretest" }),
+    ev("b", "client_page_view", 3, { path: "/watch" }),
+    ev("b", "client_page_view", 12, { path: "/teach" }),
+    ev("b", "client_page_view", 22, { path: "/practice" }),
+    ev("b", "practice_kai_solve", 23, { id: "p1", round: 1, attempt: 1, correct: false }),
+    ev("b", "practice_kai_reteach", 24, { id: "p1", round: 1, attempt: 2, correct: true, message: "random among all" }),
+    // a team test session: left out unless all is asked for
+    ev("c", "session_start", 0, { entry: "team", condition: "direct" }),
+  ];
+  const t = tables(events);
+
+  it("count participants only, by condition, and how far they got", () => {
+    const s = summarize(t);
+    expect(s.sessions).toBe(2);
+    expect(s.byCondition).toEqual({ direct: 1, recursive: 1 });
+    expect(s.finished).toBe(1);
+    expect(s.funnel.find((f) => f.step === "practice")!.n).toBe(2);
+    expect(s.funnel.find((f) => f.step === "results")!.n).toBe(1);
+    expect(summarize(t, { all: true }).sessions).toBe(3);
+  });
+
+  it("measure practice difficulty per condition", () => {
+    const p1 = summarize(t).practice.find((p) => p.id === "p1")!;
+    expect(p1.direct).toMatchObject({ tried: 1, firstTry: 0, solved: 100 });
+    expect(p1.recursive).toMatchObject({ tried: 1, kaiFirst: 0, kaiAfter: 100, reteaches: 1 });
+  });
+
+  it("give time per chapter and the test by condition", () => {
+    const s = summarize(t);
+    expect(s.minutes.find((m) => m.chapter === "Teach")!.direct).toBe(10);
+    expect(s.test.find((q) => q.id === "q01")).toMatchObject({ n: 1, all: 100, direct: 100 });
+    expect(s.testMean.direct).toBe(6);
   });
 });

@@ -315,3 +315,23 @@ describe("when Kai feels ready", () => {
     expect(readyReason(bundle, { ...taught(0), turn: CONFIG.maxTurns }, 0)).toBe("maxTurns");
   });
 });
+
+describe("ideas around the lesson", () => {
+  it("are in Kai's mind, but Kai never asks about them and they never count", async () => {
+    const outside = bundle.nodes.filter((n) => n.inLesson === false);
+    expect(outside.length).toBeGreaterThan(5);
+    expect(bundle.nodes.filter((n) => n.inLesson !== false)).toHaveLength(9);
+    // nothing outside is required or teachable, so readiness and the score ignore it
+    for (const n of outside) for (const f of n.facts) expect(f.required || f.teachable, f.id).toBe(false);
+    // Kai's questions only ever open lesson ideas, even after an explanation of an outside one
+    const regret = outside.find((n) => n.id === "n09")!;
+    let s = initialState(bundle);
+    const j: Judgement = { intent: "explain", facts: [{ fact: regret.facts[0]!.id, verdict: "correct", quote: "regret is what you lose" }], termsUsed: ["regret"] };
+    s = applyJudgement(s, j);
+    const move = nextMove(bundle, s, j);
+    expect(bundle.nodes.find((n) => n.id === move.node)?.inLesson).not.toBe(false);
+    // and Kai's mind shows the outside idea as bonus knowledge
+    expect(mindView(bundle, s).nodes.find((n) => n.id === "n09")!.status).toBe("bonus");
+    expect(factScore(bundle, s).correct).toBe(0);
+  });
+});

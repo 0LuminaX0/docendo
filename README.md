@@ -43,21 +43,23 @@ The lesson is about 8 minutes, three parts of two videos that play one after ano
 
 1. **Watch** the 8-minute lesson (after five quick questions on what you already know).
 2. **Teach Kai.** Explain the ideas in your own words. Kai reacts to every answer and asks follow-up questions. If you're stuck on what Kai asks, a help button replays the exact moment in the video, but only after you've had a go. The session ends when Kai feels ready (80% of what it needs, or 50% after 8 minutes of teaching), after 30 messages, or when you decide you've taught all you can.
-3. **Practice.** Two rounds of three problems, one at a time, in 10 minutes. In one condition you solve them: a first try and one retry, with a light that says right or wrong. In the other, Kai solves them from what you taught it: you see its steps and the light, click the step where it went wrong to see which of your statements it used, correct Kai once, and it tries again. Nothing is graded.
+3. **Practice.** Two rounds of three problems, one at a time, in 10 minutes. In one condition you solve them: a first try and one retry, with a light that says right or wrong. In the other, Kai solves them from what you taught it: you see its reasoning next to its notebook (your words, in its hand) and the light; if it's wrong you correct it once, the notebook is crossed out and rewritten, and Kai tries again. A calculator takes care of the arithmetic in both. Nothing is graded.
 4. **Final test.** Ten multiple-choice questions on new examples, graded on the server. Afterwards: explanations, and the worked solutions of the practice problems.
 
 The app is the instrument for a small study. It replicates Okita and Schwartz's (2013) comparison of *recursive* feedback (the pupil you taught solves the problems, and you see its answers marked) with *direct* feedback (you solve them yourself). Both conditions are built. With the shared access code, a switch on the practice page shows either one.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/watch.png" alt="The watch page with the two lesson videos"></td>
-    <td width="50%"><img src="docs/mind.png" alt="Kai's mind: the lesson graph with each idea's state"></td>
+    <td width="50%"><img src="docs/watch.png" alt="The watch page: one lesson in three parts"></td>
+    <td width="50%"><img src="docs/mind.png" alt="Kai's mind: the lesson's ideas inside the topic's whole tree, each with its state"></td>
   </tr>
   <tr>
     <td align="center"><sub>Watch the lesson</sub></td>
     <td align="center"><sub>Kai's mind, live during the chat</sub></td>
   </tr>
 </table>
+
+![Recursive feedback: Kai's reasoning next to its notebook; after the learner's correction the notebook is struck through and rewritten, and Kai gets it right](docs/practice-kai.png)
 
 ## How Kai works
 
@@ -113,6 +115,10 @@ pnpm events export         # the research log as JSONL and CSV tables in data/
 ### Research data
 
 Docendo logs every step of a session for the study: each chat message with Kai's reply and the reasoning behind it (judge verdicts, Kai's move and mood), timings and typing, video playback, practice tries and time per problem, Kai's notebook at the end of teaching, and the test answers. Sessions are identified by a random id and the participant's code id, which joins them with our questionnaires (the link `/?code=…` fills in the code). Events are stored in Upstash Redis (set it up before running the study, or the data is lost) and exported with `pnpm events export`. The export holds what participants wrote, so keep it out of git and share it carefully.
+
+### Admin panel
+
+`/admin` (after setting `ADMIN_PASSWORD`) shows the study as it runs: how far people get, time per chapter, how hard each practice and test item is in each condition, Kai's statistics, every session in detail (the chat, Kai's attempts, the answers), and the feedback from the end of a session. It is also where access codes are made: in bulk, each with a condition (direct, recursive, or random in balanced blocks) and a number of uses. Tables download as CSV.
 
 ### Deploying
 

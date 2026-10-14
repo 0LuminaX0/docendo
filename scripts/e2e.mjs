@@ -11,13 +11,16 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 let server = null;
+const TEAM_CODE = process.env.E2E_TEAM_CODE ?? "e2e-team-code";
+const ADMIN_PW = process.env.E2E_ADMIN_PASSWORD ?? "e2e-admin-password";
 let BASE = process.argv[2];
 if (!BASE) {
   if (!existsSync(join(process.cwd(), ".next", "BUILD_ID"))) {
     console.error("No build found: run pnpm build first (or pass the URL of a running server).");
     process.exit(1);
   }
-  const safe = { OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: "", CODE_SECRET: "", SESSION_TURNS_PER_MIN: "200" };
+  // a team code and an admin password, so the start page asks for a code and the admin panel can be checked
+  const safe = { OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
   if (await fetch("http://localhost:3199").then(() => true, () => false)) {
     console.error("Port 3199 is already in use (a leftover test server?). Stop it first: kill $(lsof -ti tcp:3199)");
     process.exit(1);
@@ -73,6 +76,7 @@ async function start(page, welcomeShot = null) {
   await page.goto(BASE + "/", { waitUntil: "load" });
   await page.waitForSelector("button[type=submit]");
   if (welcomeShot) await shot(page, welcomeShot);
+  if (await page.$("#code")) await page.type("#code", TEAM_CODE); // the start page asks for a code
   await page.click("button[type=submit]");
   // the pretest: five questions, the last option of each ("I don't know" on the knowledge items)
   await page.waitForFunction(() => location.pathname === "/pretest");
@@ -171,7 +175,7 @@ await page.click(".ready .btn.primary");
 await page.waitForFunction(() => location.pathname === "/practice");
 await page.waitForSelector(".pq");
 const nextProblem = async (n) => {
-  await page.click(".submitbar .btn");
+  await page.$eval(".submitbar .btn", (e) => e.click());
   await page.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, n);
 };
 // click Check only once React has re-rendered with the answer (the button is disabled until then)
@@ -180,6 +184,11 @@ const checkWhenReady = async () => {
   await page.$eval(".pq .pact .btn.small", (el) => el.click());
 };
 const pick = (k) => page.$eval(`.pq .opt:nth-child(${k + 1}) input`, (el) => el.click());
+// the calculator writes its sums into the working
+await page.type(".pq .calc-in", "0.8 * 1000 + 200 / 3");
+await page.keyboard.press("Enter");
+await page.waitForFunction(() => /= 866\.666667/.test(document.querySelector(".pq textarea.work")?.value ?? ""));
+check(true, "the practice calculator adds its result to the working");
 try {
   await pick(practiceItems[0].answer); // p1: the right option
   await checkWhenReady();
@@ -195,7 +204,7 @@ const p2 = practiceItems[1];
 await pick((p2.answer + 1) % p2.options.length);
 await checkWhenReady();
 await page.waitForFunction(() => /One more try/.test(document.querySelector(".pq .bulb.off")?.textContent ?? ""));
-await page.click(".pq .pact .btn.ghost");
+await page.$eval(".pq .pact .btn.ghost", (e) => e.click());
 await page.waitForSelector(".modal iframe");
 await shot(page, "07c-practice-rewatch");
 await page.click(".modal header .iconbtn");
@@ -214,12 +223,18 @@ await peek.waitForFunction(() => location.pathname === "/practice", { timeout: 8
 check((await peek.evaluate(() => location.pathname)) === "/practice", "Kai's mind is closed during practice");
 await peek.close();
 for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
-await page.click(".submitbar .btn");
+await page.$eval(".submitbar .btn", (e) => e.click());
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
 const choose = answers.map((a, i) => (i === 3 || i === 7 ? (a + 1) % 4 : a));
 const cards = await page.$$(".q");
 for (let i = 0; i < choose.length; i++) await cards[i].$eval(`.opt:nth-child(${choose[i] + 1}) input`, (el) => el.click());
+await page.$eval(".submitbar .btn.ghost", (e) => e.click());
+await page.waitForSelector(".calc-pop .calc-in");
+await page.type(".calc-pop .calc-in", "0.9 + 0.1/5");
+await page.keyboard.press("Enter");
+await page.waitForSelector(".calc-tape li");
+check((await page.$eval(".calc-tape li", (e) => e.textContent)).endsWith("= 0.92"), "the final test has the same calculator");
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
@@ -251,19 +266,17 @@ check(stayed, "stopping from the first message waits for a click, then reaches p
 // clicks the faulty step, sees where Kai got it from, corrects Kai once, and Kai tries again
 await skip.waitForSelector(".pq");
 await skip.click(".seg button:nth-child(2)");
-await skip.waitForSelector(".kai-solve .btn.primary");
-await skip.click(".kai-solve .btn.primary");
-await skip.waitForSelector(".kattempt .bulb", { timeout: 30000 });
-const kaiWrong = await skip.$eval(".kattempt .bulb", (e) => e.classList.contains("off"));
-await skip.click(".ksteps li:first-child button");
-await skip.waitForSelector(".knote");
-const knote = await skip.$eval(".knote", (e) => e.textContent);
-await skip.type(".reteach textarea", bundle.nodes.find((n) => n.id === "n05").facts.map((f) => f.text).join(" "));
+// Kai starts solving on its own; its notebook sits next to its steps
+await skip.waitForSelector(".kattempt .light", { timeout: 30000 });
+const kaiWrong = await skip.$eval(".kattempt .light", (e) => e.classList.contains("off"));
+const hasNotebook = !!(await skip.$(".nb-paper"));
+const knote = await skip.$eval(".kattempt .ksteps", (e) => e.textContent);
+await skip.type(".ks-fix textarea", bundle.nodes.find((n) => n.id === "n05").facts.map((f) => f.text).join(" "));
 await shot(skip, "07d-kai-solves");
-await skip.click(".reteach .btn.primary");
+await skip.$eval(".ks-fix .btn.primary", (e) => e.click());
 await skip.waitForFunction(() => document.querySelectorAll(".kattempt").length === 2, { timeout: 30000 });
 const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
-check(kaiWrong && /didn't tell me|You said/.test(knote) && secondNotes > 0, `Kai solves from its notebook, shows where a step came from, takes one correction and tries again (${secondNotes} notes after the correction)`);
+check(kaiWrong && hasNotebook && /didn't tell me|guessing|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
 await shot(skip, "07e-kai-second-try", true);
 // on to the test and the results: they report Kai's outcome on the problems Kai worked on
 for (let n = 1; n < practiceItems.length; n++) {
@@ -323,10 +336,52 @@ for (const path of ["/teach", "/mind", "/practice", "/results"]) {
   }
   await shot(phone, `10-phone${path.replace("/", "-")}`);
 }
+// the recursive practice view on a phone: Kai's notebook stacks under its steps
+await phone.evaluate((v) => {
+  const s = JSON.parse(v);
+  localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, practice: { ...s.practice, view: "recursive", current: 1 } }));
+}, JSON.stringify(finalSession));
+await phone.goto(BASE + "/practice", { waitUntil: "load" });
+await phone.waitForSelector(".kattempt .light, .nb-paper", { timeout: 20000 });
+await wait(800);
+const rfOver = await phone.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+const wide = rfOver > 0 ? await phone.evaluate(() => [...document.querySelectorAll("body *")].filter((e) => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map((e) => `${e.tagName.toLowerCase()}.${String(e.className).split(" ").join(".")}`).join(", ")) : "";
+check(rfOver <= 0, `no sideways scroll at 390px in the recursive practice view${wide ? ` (too wide: ${wide})` : ""}`);
+await shot(phone, "10-phone-practice-kai", true);
 const phoneHome = await newPage(390, 844, await browser.createBrowserContext());
 await phoneHome.goto(BASE + "/", { waitUntil: "load" });
 await phoneHome.waitForSelector("button[type=submit]");
 await shot(phoneHome, "10-phone-welcome", true);
+
+// the admin panel: the login gate, the dashboard, a code made and used, an export
+{
+  // a plain page: the deliberate 401 (a one-use code used twice) must not count as a page error
+  const adm = await (await browser.createBrowserContext()).newPage();
+  await adm.setViewport({ width: 1366, height: 900 });
+  adm.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+  await adm.goto(BASE + "/admin", { waitUntil: "load" });
+  const gated = adm.url().endsWith("/admin/login");
+  await adm.type("#pw", ADMIN_PW);
+  await adm.$eval("form button", (e) => e.click());
+  await adm.waitForSelector(".adm-kpis", { timeout: 15000 });
+  await adm.goto(BASE + "/admin?all=1", { waitUntil: "load" });
+  const sessions = Number(await adm.$eval(".adm-kpis > div b", (e) => e.textContent));
+  await shot(adm, "11-admin-dashboard", true);
+  const post = (path, body) => adm.evaluate(async (path, body) => { const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { status: r.status, json: await r.json().catch(() => ({})) }; }, path, body);
+  const made = await post("/api/admin/codes", { action: "create", count: 2, prefix: "E2E", label: "walkthrough", condition: "recursive", team: false, maxUses: 1 });
+  const code = made.json.codes?.[0]?.code;
+  const used = await post("/api/session", { accessCode: code });
+  const twice = await post("/api/session", { accessCode: code });
+  const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
+  await adm.goto(BASE + "/admin/codes", { waitUntil: "load" });
+  await shot(adm, "11-admin-codes", true);
+  for (const c of made.json.codes ?? []) await post("/api/admin/codes", { action: "delete", code: c.code });
+  check(
+    gated && sessions > 0 && used.json.condition === "recursive" && used.json.team === false && twice.status === 401 && csv.startsWith("sid,"),
+    `admin panel: login gate, dashboard (${sessions} sessions), a one-use recursive code works once, CSV export`,
+  );
+  await adm.close();
+}
 
 // the research log (local server without Upstash: .data/events.jsonl, written right after each response)
 await wait(1500);

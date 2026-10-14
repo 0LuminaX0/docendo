@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Lightbulb, Play, Timer } from "lucide-react";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
 import KaiSolve from "./KaiSolve";
+import Calculator from "./Calculator";
 import { track } from "@/lib/client/log";
 import { useGuard } from "./useGuard";
 import { blankEntry, post, save, useSaved, type Condition, type KaiAttempt, type KaiEntry, type PracticeEntry, type PracticeState, type Saved } from "@/lib/client/store";
-import type { State } from "@/engine/tutor/state";
+import { notesOf, type State } from "@/engine/tutor/state";
 
 type Item = { id: string; round: number; title: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
 type Moment = { video: string; videoId: string; start: number; end: number; part: string };
@@ -29,6 +30,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
   const allowed = useGuard(saved, "practice");
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
+  const [kaiFailed, setKaiFailed] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [watching, setWatching] = useState<{ id: string; moments: Moment[]; k: number } | null>(null);
   const shownAt = useRef<{ id: string; at: number } | null>(null);
@@ -105,6 +107,17 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
   );
 
   // time's up: straight on to the test
+  // recursive feedback: Kai starts solving as soon as the problem is shown (the learner reads it meanwhile)
+  const solveRef = useRef<() => void>(() => {});
+  const started = useRef<string | null>(null);
+  const kaiTried = saved?.practice?.kai?.[q.id]?.attempts.length ?? 0;
+  useEffect(() => {
+    if (!allowed || !saved?.chat.state || mode !== "recursive" || over || kaiTried || started.current === q.id) return;
+    started.current = q.id;
+    solveRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed, mode, over, q.id, kaiTried]);
+
   const moved = useRef(false);
   useEffect(() => {
     if (over && allowed && !moved.current) {
@@ -163,28 +176,28 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
   async function solveKai() {
     if (busy || over || !saved?.chat.state) return;
     setBusy(true);
+    setKaiFailed(null);
+    const id = q.id;
     const ms = shownAt.current ? Date.now() - shownAt.current.at : undefined;
-    track("practice_kai_solve_click", { id: q.id, msOnProblem: ms ?? null });
-    const d = await call<{ solution: KaiAttempt }>({ action: "solve", id: q.id, state: saved.chat.state, msOnProblem: ms });
+    track("practice_kai_solve_start", { id, msOnProblem: ms ?? null });
+    const d = await call<{ solution: KaiAttempt }>({ action: "solve", id, state: saved.chat.state, msOnProblem: ms });
     setBusy(false);
-    if (d) setKai(q.id, (k) => ({ ...k, attempts: [d.solution] }));
+    if (d) setKai(id, (k) => ({ ...k, attempts: [d.solution] }));
+    else setKaiFailed(id);
   }
-
-  function clickStep(i: number) {
-    track("practice_kai_step_click", { id: q.id, step: i, nClicks: ke.clicks.length + 1 });
-    setKai(q.id, (k) => ({ ...k, clicks: [...k.clicks, i] }));
-  }
+  solveRef.current = () => void solveKai();
 
   async function reteach(message: string) {
     if (busy || over || !saved?.chat.state) return;
     const first = ke.attempts[0];
-    const clicked = ke.clicks.at(-1);
-    if (!first || clicked === undefined) return;
+    if (!first) return;
     setBusy(true);
     const ms = shownAt.current ? Date.now() - shownAt.current.at : undefined;
-    track("practice_kai_reteach_send", { id: q.id, chars: message.length, step: clicked });
+    track("practice_kai_reteach_send", { id: q.id, chars: message.length });
     setKai(q.id, (k) => ({ ...k, correction: message }));
-    const d = await call<{ solution: KaiAttempt; state: State }>({ action: "reteach", id: q.id, state: saved.chat.state, message, step: first.steps[clicked]?.text ?? "", clicks: ke.clicks, msOnProblem: ms });
+    // the judge reads the correction in the light of Kai's whole first try
+    const tried = `${first.steps.map((s) => s.text).join(" ")} My answer: ${first.answer}.`;
+    const d = await call<{ solution: KaiAttempt; state: State }>({ action: "reteach", id: q.id, state: saved.chat.state, message, step: tried.slice(-600), clicks: [], msOnProblem: ms });
     setBusy(false);
     if (!d) return setKai(q.id, (k) => ({ ...k, correction: null }));
     // Kai's notebook now holds the correction too, for the problems that follow
@@ -265,7 +278,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Practice problems</h1>
           {mode === "recursive" ? (
             <p className="lede" style={{ fontSize: 16 }}>
-              Now Kai tries two rounds of three problems, using only what you taught it, and a light shows whether its answer is right. If Kai gets one wrong, find the step where it went wrong and correct Kai once; then it tries again. {minutes} minutes in all. The worked solutions come after the final test.
+              Now Kai tries two rounds of three problems, using only what you taught it: you see its reasoning, its notebook and a light that says whether its answer is right. If Kai gets one wrong, you can correct it once, and it tries again. {minutes} minutes in all. The worked solutions come after the final test.
             </p>
           ) : (
             <p className="lede" style={{ fontSize: 16 }}>
@@ -307,15 +320,16 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
               key={q.id}
               q={q}
               entry={ke}
+              notebook={saved.chat.state ? notesOf(saved.chat.state) : []}
               busy={busy}
+              failed={kaiFailed === q.id}
+              onRetry={() => void solveKai()}
               disabled={over || !saved.chat.state}
               head={
                 <span className="ptitle">
                   Round {q.round}, problem {inRound.indexOf(q) + 1} of {inRound.length}: {q.title}
                 </span>
               }
-              onSolve={() => void solveKai()}
-              onClick={clickStep}
               onReteach={(m) => void reteach(m)}
             />
             <div className="pact">
@@ -340,12 +354,25 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
                 className="work"
                 rows={2}
                 maxLength={4000}
-                placeholder="Your working (optional)"
+                placeholder="Your working: what the rule says here, and your sums"
                 value={e.work}
                 disabled={over}
                 onChange={(ev) => set(q.id, (x) => ({ ...x, work: ev.target.value }))}
                 onBlur={(ev) => ev.target.value && track("practice_work", { id: q.id, chars: ev.target.value.length, text: ev.target.value.slice(0, 2000) })}
               />
+              {!over && !finished && (
+                <Calculator
+                  where={`practice:${q.id}`}
+                  onResult={(line, value) =>
+                    set(q.id, (x) => ({
+                      ...x,
+                      work: x.work.trim() ? `${x.work.trimEnd()}\n${line}` : line,
+                      // a number problem: the result also goes into the answer box if it's still empty
+                      answer: q.kind === "number" && !x.answer.trim() ? String(Math.round(value * 100) / 100) : x.answer,
+                    }))
+                  }
+                />
+              )}
               {q.kind === "choice" && q.options ? (
                 <fieldset className="opts" aria-labelledby={`${q.id}-q`} disabled={over || finished}>
                   {q.options.map((o, k) => (

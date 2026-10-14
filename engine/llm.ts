@@ -17,11 +17,20 @@ export type OnCall = (c: LlmCall) => void;
 export const MODELS = {
   draft: process.env.DOCENDO_MODEL_DRAFT ?? "google/gemini-2.5-flash",
   verify: process.env.DOCENDO_MODEL_VERIFY ?? "google/gemini-2.5-flash",
-  judge: process.env.DOCENDO_MODEL_JUDGE ?? "google/gemini-2.5-flash",
-  writer: process.env.DOCENDO_MODEL_WRITER ?? "google/gemini-2.5-flash",
+  // Chosen with `pnpm eval:judge` and `pnpm eval:chat` (2026-10-14): gemini-3.5-flash-lite found every labelled
+  // fact with no false credit, caught every misconception and question to Kai, in about 1 s; gemini-2.5-flash was as
+  // accurate but took 13 to 25 s per call that day; Claude Haiku 5.5 marked clear explanations as only partial.
+  judge: process.env.DOCENDO_MODEL_JUDGE ?? "google/gemini-3.5-flash-lite",
+  writer: process.env.DOCENDO_MODEL_WRITER ?? "google/gemini-3.5-flash-lite",
+  // Kai solving practice problems (recursive feedback). Chosen with `pnpm eval:solver` (2026-10-14): Claude Haiku 5.5
+  // followed the notebook and its guesses most reliably, never turned around, and was fastest (median 4.2 s).
+  solver: process.env.DOCENDO_MODEL_SOLVER ?? "anthropic/claude-haiku-5.5",
 } as const;
 
 const TIMEOUT_MS = Number(process.env.DOCENDO_LLM_TIMEOUT_MS ?? 25_000);
+// Which provider OpenRouter picks first. Its default balances on price, and measured 2026-10-14 that routed
+// gemini-2.5-flash to an endpoint taking about 13 s per judge call; "latency" took about 1 s.
+const PROVIDER_SORT = process.env.DOCENDO_PROVIDER_SORT ?? "latency";
 
 function apiKey(): string {
   if (!process.env.OPENROUTER_API_KEY) {
@@ -62,7 +71,7 @@ export async function chatJson<T extends z.ZodType>(opts: {
   timeoutMs?: number; // per attempt; a timeout uses up an attempt like an invalid reply
 }): Promise<{ data: z.infer<T>; usage: Usage; ms: number }> {
   const { model, messages, schema, name, temperature = 0, maxTokens = 4000, retries = 2, timeoutMs = TIMEOUT_MS } = opts;
-  const body = {
+  const body: Record<string, unknown> = {
     model,
     messages,
     temperature,
@@ -71,7 +80,7 @@ export async function chatJson<T extends z.ZodType>(opts: {
       type: "json_schema",
       json_schema: { name, strict: true, schema: z.toJSONSchema(schema, { target: "draft-7" }) },
     },
-    provider: { require_parameters: true, data_collection: "deny" },
+    provider: { require_parameters: true, data_collection: "deny", sort: PROVIDER_SORT },
     usage: { include: true },
   };
 
@@ -100,6 +109,12 @@ export async function chatJson<T extends z.ZodType>(opts: {
     }
     if (!res.ok) {
       lastError = `${res.status} ${await res.text()}`;
+      // reasoning models take no temperature, and with require_parameters no provider is left: ask again without it
+      if (res.status === 404 && "temperature" in body && /requested parameters/i.test(lastError)) {
+        delete body.temperature;
+        attempt--;
+        continue;
+      }
       if (res.status === 429 || res.status >= 500) {
         await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
         continue;
@@ -107,10 +122,15 @@ export async function chatJson<T extends z.ZodType>(opts: {
       throw new Error(`OpenRouter ${lastError}`);
     }
     const json = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; cost?: number };
     };
     const text = json.choices?.[0]?.message?.content ?? "";
+    // a reply cut off by the token limit is never used half-written: try again
+    if (json.choices?.[0]?.finish_reason === "length") {
+      lastError = `reply hit the ${maxTokens}-token limit`;
+      continue;
+    }
     try {
       const parsed = schema.safeParse(JSON.parse(text));
       if (parsed.success) {
@@ -141,6 +161,7 @@ export async function chatText(opts: {
 }): Promise<{ text: string; usage: Usage; ms: number }> {
   const { model, messages, temperature = 0.6, maxTokens = 300 } = opts;
   const t0 = Date.now();
+  let why = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(URL, {
       method: "POST",
@@ -150,21 +171,28 @@ export async function chatText(opts: {
         messages,
         temperature,
         max_tokens: maxTokens,
-        provider: { data_collection: "deny" },
+        provider: { data_collection: "deny", sort: PROVIDER_SORT },
         usage: { include: true },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (res.status === 429 || res.status >= 500) {
+      why = `${res.status} ${(await res.text()).slice(0, 160)}`;
       await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       continue;
     }
     if (!res.ok) throw new Error(`OpenRouter ${res.status} ${await res.text()}`);
     const json = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: { message?: { content?: string }; finish_reason?: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; cost?: number };
     };
     const text = json.choices?.[0]?.message?.content ?? "";
+    // never show Kai cut off mid-sentence: a reply that hit the token limit is asked for again
+    if (json.choices?.[0]?.finish_reason === "length") {
+      why = `reply hit the ${maxTokens}-token limit`;
+      continue;
+    }
+    if (!text.trim()) why = `empty reply (finish: ${json.choices?.[0]?.finish_reason ?? "none"})`;
     if (text.trim())
       return {
         text,
@@ -172,5 +200,5 @@ export async function chatText(opts: {
         usage: { promptTokens: json.usage?.prompt_tokens ?? 0, completionTokens: json.usage?.completion_tokens ?? 0, costUsd: json.usage?.cost },
       };
   }
-  throw new Error("OpenRouter: no reply after 2 attempts");
+  throw new Error(`OpenRouter: no complete reply after 2 attempts (${why || "unknown"})`);
 }

@@ -2,7 +2,7 @@
   "topic": "bandits",
   "title": "Multi-armed bandits",
   "hash": "df4d9249c018e70c",
-  "builtAt": "2026-10-08T12:36:25.821Z",
+  "builtAt": "2026-10-14T11:12:10.119Z",
   "goals": [
     {
       "id": "G",
@@ -49,6 +49,7 @@
   ],
   "nodes": [
     {
+      "inLesson": true,
       "id": "n01",
       "label": "Bandit setup",
       "kind": "core",
@@ -121,6 +122,45 @@
       ]
     },
     {
+      "inLesson": false,
+      "id": "n02",
+      "label": "Bandit feedback",
+      "kind": "core",
+      "needs": [
+        "n01"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n02.f1",
+          "text": "After each choice you only see the reward of the arm you picked, not what the other arms would have given.",
+          "required": false,
+          "teachable": false,
+          "ask": "When I pick one option, do I also find out what the others would have given me?"
+        },
+        {
+          "id": "n02.f2",
+          "text": "So the only way to learn how good an arm is, is to try it, which is why learning about the arms costs rounds.",
+          "required": false,
+          "teachable": false,
+          "ask": "So how can I find out how good an option really is?"
+        }
+      ],
+      "lexicon": [
+        "bandit feedback",
+        "partial feedback"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "When I eat at one restaurant, do I find out anything about the other ones that night?",
+        "why": "Why can't I learn about all the arms at the same time?",
+        "whatIf": "What if I could see what every arm would have paid each round, would I still need to try the worse ones?",
+        "compute": "With 3 arms and 30 rounds, if I try them equally often, how many rewards do I see from each arm?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": true,
       "id": "n03",
       "label": "Sample mean Q",
       "kind": "core",
@@ -184,6 +224,45 @@
       ]
     },
     {
+      "inLesson": false,
+      "id": "n04",
+      "label": "Update rule",
+      "kind": "core",
+      "needs": [
+        "n03"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n04.f1",
+          "text": "The average can be updated from the old one: new estimate = old estimate + (reward − old estimate) / n, where n is how many times that arm has been tried.",
+          "required": false,
+          "teachable": false,
+          "ask": "If I get one new reward, how do I update that number without redoing everything?"
+        },
+        {
+          "id": "n04.f2",
+          "text": "So you only need to store the current average and the count for each arm, not every past reward.",
+          "required": false,
+          "teachable": false
+        }
+      ],
+      "lexicon": [
+        "incremental",
+        "incremental update",
+        "update rule"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "Do I have to write down every single reward to keep my averages up to date?",
+        "why": "Why does one new reward move the estimate less the more times I've tried the arm?",
+        "whatIf": "What if the new reward is exactly equal to my current estimate, does the estimate change?",
+        "compute": "My estimate is 0.5 after 4 pulls and the fifth pull pays 1. What is the new estimate?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": true,
       "id": "n05",
       "label": "Greedy",
       "kind": "core",
@@ -242,6 +321,7 @@
       ]
     },
     {
+      "inLesson": true,
       "id": "n06",
       "label": "Lock-in",
       "kind": "core",
@@ -307,6 +387,7 @@
       ]
     },
     {
+      "inLesson": true,
       "id": "n07",
       "label": "ε-greedy",
       "kind": "core",
@@ -380,6 +461,7 @@
       ]
     },
     {
+      "inLesson": true,
       "id": "n08",
       "label": "Trade-off",
       "kind": "core",
@@ -464,6 +546,95 @@
       ]
     },
     {
+      "inLesson": false,
+      "id": "n09",
+      "label": "Regret",
+      "kind": "core",
+      "needs": [
+        "n01"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n09.f1",
+          "text": "Regret is the reward you would expect from always picking the best arm minus the reward your strategy is expected to get.",
+          "required": false,
+          "teachable": false,
+          "ask": "How do I measure how much a way of choosing costs me compared with the ideal?"
+        },
+        {
+          "id": "n09.f2",
+          "text": "Example: always eating at restaurant 1 gives 10 × 300 = 3000; picking a random restaurant every night gives 2300 on average, so its regret is 700.",
+          "required": false,
+          "teachable": false,
+          "ask": "Can you work that out with numbers, like for picking a random restaurant every night?"
+        },
+        {
+          "id": "n09.f3",
+          "text": "Regret measures the cost of the decisions in expectation, not bad luck on individual rewards.",
+          "required": false,
+          "teachable": false
+        }
+      ],
+      "lexicon": [
+        "regret"
+      ],
+      "misconception": {
+        "id": "m_regret_luck",
+        "says": "So that's just a measure of how unlucky I was with my meals?",
+        "truth": "Regret compares expected rewards of the choices made with always choosing the best arm; noise in individual rewards doesn't count."
+      },
+      "probes": {
+        "open": "How would I even measure how good or bad a way of choosing is?",
+        "why": "Why compare against always picking the best arm, and not against my own average?",
+        "whatIf": "What if I knew all the averages from day one, what would my regret be?",
+        "compute": "The best arm has mean 0.8. Over 100 rounds I pull it 60 times and an arm with mean 0.5 40 times. What's my regret?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": false,
+      "id": "n10",
+      "label": "Linear regret",
+      "kind": "core",
+      "needs": [
+        "n07",
+        "n09"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n10.f1",
+          "text": "With a constant ε, ε-greedy keeps making random picks at the same rate forever, so it keeps paying for pulls of worse arms.",
+          "required": false,
+          "teachable": false,
+          "ask": "Does that rule with the random picks ever stop paying for them?"
+        },
+        {
+          "id": "n10.f2",
+          "text": "So its regret keeps growing in proportion to the number of rounds, roughly ε times the average gap to the best arm on every round.",
+          "required": false,
+          "teachable": false,
+          "ask": "So how does that cost add up as the days go on?"
+        }
+      ],
+      "lexicon": [
+        "linear regret",
+        "grows linearly",
+        "linearly",
+        "linear"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "If I keep using the rule with the random picks for years, do those random picks ever stop costing me?",
+        "why": "Why doesn't ε-greedy stop picking randomly once it's pretty sure?",
+        "whatIf": "What if ε got smaller every day?",
+        "compute": "Three arms with means 10, 8 and 5, and ε = 0.1. Roughly how much regret do the random picks alone add per day?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": true,
       "id": "n11",
       "label": "UCB1 index",
       "kind": "core",
@@ -531,6 +702,7 @@
       ]
     },
     {
+      "inLesson": true,
       "id": "n12",
       "label": "Bonus shrinks",
       "kind": "core",
@@ -581,6 +753,147 @@
       ]
     },
     {
+      "inLesson": false,
+      "id": "n13",
+      "label": "Log regret",
+      "kind": "core",
+      "needs": [
+        "n10",
+        "n12",
+        "n15"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n13.f1",
+          "text": "Because UCB1's exploration fades as its estimates become reliable, its regret grows only logarithmically with the number of rounds.",
+          "required": false,
+          "teachable": false,
+          "ask": "How does the regret of the bonus rule grow over a very long time?"
+        },
+        {
+          "id": "n13.f2",
+          "text": "So over many rounds UCB1 ends up with lower regret than ε-greedy with a constant ε, whose regret grows linearly; UCB1 is a zero-regret strategy.",
+          "required": false,
+          "teachable": false,
+          "ask": "Over many rounds, which ends up with less regret: ε-greedy or UCB?"
+        }
+      ],
+      "lexicon": [
+        "logarithmic",
+        "logarithmically",
+        "log regret"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "So which of the two rules ends up costing me less if I live in this town for years?",
+        "why": "Why does UCB's extra cost stop piling up the way ε-greedy's does?",
+        "whatIf": "What if I only had 20 days, would UCB still come out ahead?",
+        "compute": "If regret grows like 10 × ln T, how much regret is there at T = 100 and at T = 10,000? (ln 100 ≈ 4.6, ln 10,000 ≈ 9.2)"
+      },
+      "help": []
+    },
+    {
+      "inLesson": false,
+      "id": "n14",
+      "label": "Assumptions",
+      "kind": "core",
+      "needs": [
+        "n02"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n14.f1",
+          "text": "The model assumes each arm's reward distribution stays the same over time.",
+          "required": false,
+          "teachable": false,
+          "ask": "Does any of this break if a restaurant gets better or worse over the year?"
+        },
+        {
+          "id": "n14.f2",
+          "text": "It also assumes your choices don't change the situation: there is no state, only the information you gather carries over.",
+          "required": false,
+          "teachable": false,
+          "ask": "Does picking an option change how good it will be next time?"
+        },
+        {
+          "id": "n14.f3",
+          "text": "The usual analysis assumes the number of rounds is very large compared with the number of arms.",
+          "required": false,
+          "teachable": false
+        }
+      ],
+      "lexicon": [
+        "stationary",
+        "non-stationary",
+        "nonstationary",
+        "assumption",
+        "assumptions",
+        "assumes"
+      ],
+      "misconception": {
+        "id": "m_avg_always_right",
+        "says": "So the plain average of everything I've seen is always the right estimate?",
+        "truth": "Only if the rewards don't drift. If they change over time, recent rewards should count more."
+      },
+      "probes": {
+        "open": "Are there situations where this whole way of thinking wouldn't work?",
+        "why": "Why does it matter whether a restaurant's food changes over the year?",
+        "whatIf": "What if eating at a restaurant changed how good it is the next time?",
+        "compute": "Restaurant 1 averaged 10 for 200 days, then a new chef makes it 4. If I ate there every day for 300 days, what does my plain average say?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": false,
+      "id": "n15",
+      "label": "Zero regret",
+      "kind": "core",
+      "needs": [
+        "n09"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n15.f1",
+          "text": "A zero-regret strategy is one where the regret divided by the number of rounds goes to zero as the rounds go on.",
+          "required": false,
+          "teachable": false,
+          "ask": "If I stayed for years, what should happen to the regret per day of a good strategy?"
+        },
+        {
+          "id": "n15.f2",
+          "text": "It may lose a lot at first, but eventually it figures out the best arm, so its regret stops growing much.",
+          "required": false,
+          "teachable": false,
+          "ask": "Is it okay for a strategy to lose a lot at the very start?"
+        },
+        {
+          "id": "n15.f3",
+          "text": "Exploring only can't be zero-regret, because it never uses what it has learned.",
+          "required": false,
+          "teachable": false
+        }
+      ],
+      "lexicon": [
+        "zero regret",
+        "zero-regret",
+        "no-regret",
+        "regret per round",
+        "average regret"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "If I moved to the town for good, how would I judge a way of choosing over many years?",
+        "why": "Why divide the regret by the number of days?",
+        "whatIf": "What if a strategy's regret kept going up by 1 every single day forever?",
+        "compute": "A strategy has regret 100 after 1,000 days and 120 after 100,000 days. What is its regret per day at each point?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": true,
       "id": "n16",
       "label": "Few samples",
       "kind": "core",
@@ -630,45 +943,137 @@
           "end": 159
         }
       ]
+    },
+    {
+      "inLesson": false,
+      "id": "n17",
+      "label": "When each wins",
+      "kind": "core",
+      "needs": [
+        "n13",
+        "n14"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "n17.f1",
+          "text": "Which strategy is best depends on the situation: how noisy the arms are, how many arms there are, and how many rounds you have.",
+          "required": false,
+          "teachable": false,
+          "ask": "Is one strategy always the best, or does it depend on the situation?"
+        },
+        {
+          "id": "n17.f2",
+          "text": "With narrow, well-separated distributions, trying each arm once and then sticking with the best can beat UCB1, because one sample already tells you enough.",
+          "required": false,
+          "teachable": false,
+          "ask": "When could trying each option once and then sticking with the best actually work well?"
+        },
+        {
+          "id": "n17.f3",
+          "text": "With many arms and few rounds (100 restaurants, 300 days), UCB1 has no time left to profit from exploring; it does best when rounds are many compared with arms.",
+          "required": false,
+          "teachable": false,
+          "ask": "What if there are lots of options but only a few rounds?"
+        }
+      ],
+      "lexicon": [
+        "horizon"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "Is UCB always the right choice, or does it depend on the situation?",
+        "why": "Why would trying each place just once ever be enough?",
+        "whatIf": "What if the town had 100 restaurants and I stayed only 300 days?",
+        "compute": "100 restaurants and 300 days: if UCB1 first tries each restaurant once, how many days are left, and how many more visits does each restaurant get on average?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": false,
+      "id": "b1",
+      "label": "Thompson sampling",
+      "kind": "branch",
+      "needs": [
+        "n11"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "b1.f1",
+          "text": "Thompson sampling keeps a probability distribution over each arm's mean and picks the arm whose random draw from that distribution is highest.",
+          "required": false,
+          "teachable": false,
+          "ask": "Is there another way to decide when to try the less certain options, besides adding a bonus?"
+        },
+        {
+          "id": "b1.f2",
+          "text": "It explores through randomness that shrinks as the distributions narrow, while UCB1 adds a deterministic bonus.",
+          "required": false,
+          "teachable": false,
+          "ask": "How is that different from the bonus approach?"
+        }
+      ],
+      "lexicon": [
+        "thompson",
+        "thompson sampling",
+        "posterior",
+        "beta distribution"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "Is adding a bonus the only clever way to decide which place to try?",
+        "why": "Why would picking by a random draw still favour the best arm most of the time?",
+        "whatIf": "What if I've tried an arm thousands of times, how random is its draw then?",
+        "compute": "Two arms: one I'm very sure has mean 0.6, one I've barely tried with a guess around 0.5 but wide. Which could still be picked sometimes, and why?"
+      },
+      "help": []
+    },
+    {
+      "inLesson": false,
+      "id": "b2",
+      "label": "Drifting rewards",
+      "kind": "branch",
+      "needs": [
+        "n04",
+        "n14"
+      ],
+      "goals": [],
+      "facts": [
+        {
+          "id": "b2.f1",
+          "text": "If rewards drift over time, a plain average reacts too slowly, because old rewards count as much as new ones.",
+          "required": false,
+          "teachable": false,
+          "ask": "What if an option slowly gets better or worse over time, can my averages keep up?"
+        },
+        {
+          "id": "b2.f2",
+          "text": "A constant step size, new = old + α (reward − old), weights recent rewards more and lets the estimate follow the change.",
+          "required": false,
+          "teachable": false,
+          "ask": "How could I make my numbers follow those changes?"
+        }
+      ],
+      "lexicon": [
+        "step size",
+        "step-size",
+        "constant step",
+        "drift",
+        "drifting",
+        "recency"
+      ],
+      "misconception": null,
+      "probes": {
+        "open": "What if a restaurant slowly gets better or worse over the year, can my averages keep up?",
+        "why": "Why would giving recent meals more weight help?",
+        "whatIf": "What if α were 1, what would the estimate be?",
+        "compute": "My estimate is 8, α = 0.5, and tonight's meal is 4. What is the new estimate?"
+      },
+      "help": []
     }
   ],
-  "outOfScopeTerms": [
-    "bandit feedback",
-    "partial feedback",
-    "incremental",
-    "incremental update",
-    "update rule",
-    "regret",
-    "linear regret",
-    "grows linearly",
-    "linearly",
-    "linear",
-    "logarithmic",
-    "logarithmically",
-    "log regret",
-    "stationary",
-    "non-stationary",
-    "nonstationary",
-    "assumption",
-    "assumptions",
-    "assumes",
-    "zero regret",
-    "zero-regret",
-    "no-regret",
-    "regret per round",
-    "average regret",
-    "horizon",
-    "thompson",
-    "thompson sampling",
-    "posterior",
-    "beta distribution",
-    "step size",
-    "step-size",
-    "constant step",
-    "drift",
-    "drifting",
-    "recency"
-  ],
+  "outOfScopeTerms": [],
   "questions": {
     "contradictions": [
       {

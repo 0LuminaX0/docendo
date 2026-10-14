@@ -213,6 +213,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional() });
 export const BundleNode = z.object({
+  inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),
   label: z.string(),
   kind: z.enum(["core", "branch"]),

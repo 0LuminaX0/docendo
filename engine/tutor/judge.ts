@@ -16,17 +16,19 @@ export type Judgement = {
   dropped?: { fact: string; quote: string }[]; // verdicts thrown out by the quote check (for logs)
 };
 
-type Reply = { intent: z.infer<typeof Intent>; facts: Judgement["facts"]; misconceptions?: { node: string; quote: string; belief: string }[] };
+type Reply = { claims?: string[]; intent: z.infer<typeof Intent>; facts: Judgement["facts"]; misconceptions?: { node: string; quote: string; belief: string }[] };
 
 // the fact and node fields may only hold real ids, so the model can't return "n01.f1: <text>"
 const replyCache = new WeakMap<Bundle, z.ZodType<Reply>>();
 function replySchema(bundle: Bundle) {
   const hit = replyCache.get(bundle);
   if (hit) return hit;
-  const core = bundle.nodes.filter((n) => n.kind === "core");
+  const core = bundle.nodes;
   const ids = core.flatMap((n) => n.facts.map((f) => f.id));
   const nodes = core.map((n) => n.id);
   const schema = z.object({
+    // first, the message split into its separate claims: makes the model weigh each one (log only)
+    claims: z.array(z.string()),
     intent: Intent,
     facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string() })),
     misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), quote: z.string(), belief: z.string() })).optional(),
@@ -37,7 +39,7 @@ function replySchema(bundle: Bundle) {
 
 /** Keep misconceptions about real ideas whose quote is in the message, in the learner's words. */
 export function screenMisconceptions(bundle: Bundle, message: string, list: NonNullable<Judgement["misconceptions"]>) {
-  const nodes = new Set(bundle.nodes.filter((n) => n.kind === "core").map((n) => n.id));
+  const nodes = new Set(bundle.nodes.map((n) => n.id));
   const kept: NonNullable<Judgement["misconceptions"]> = [];
   const dropped: { fact: string; quote: string }[] = [];
   for (const m of list.slice(0, 6)) {
@@ -59,7 +61,7 @@ export function checkQuotes(bundle: Bundle, message: string, facts: Judgement["f
 }
 
 export function screenQuotes(bundle: Bundle, message: string, facts: Judgement["facts"]) {
-  const ids = new Set(bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => f.id)));
+  const ids = new Set(bundle.nodes.flatMap((n) => n.facts.map((f) => f.id)));
   const seen = new Set<string>();
   const kept: Judgement["facts"] = [];
   const dropped: { fact: string; quote: string }[] = [];
@@ -120,11 +122,15 @@ export function termsUsed(bundle: Bundle, message: string): string[] {
 
 const SYSTEM = `You check what a student teacher has just explained to a classmate. You get a numbered list of facts from the lesson, what the classmate last said, and the teacher's latest message.
 
+First, claims: split the teacher's message into its separate claims (each a short phrase in their words). Then judge each claim: a right one is a fact below, a wrong one a misconception, anything else nothing.
+
 For every fact the message explains, return:
 - fact: its id only, e.g. "n03.f2".
 - verdict: "correct" if the message gets the idea across. Be generous: informal wording, an analogy, a worked example or a short answer to the classmate's question all count, as long as the core idea is right. "partial" only if a key part of the fact is missing or it is too vague to tell. "wrong" if it says something that contradicts the fact.
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
 Only include facts the message actually addresses. Most messages address 0–3 facts.
+Credit every fact the message explains, whether or not it answers what the classmate just asked: teachers often move on to another idea, and that still counts.
+A message often mixes a right part and a wrong part, e.g. "UCB adds a bonus to each average and picks the highest total, and the bonus grows every time you pick it": credit the right part as "correct" for its fact (quoting just that part) and record the wrong part under misconceptions. A wrong part never cancels a right one.
 
 misconceptions: every belief in the message that is wrong about the topic, whether or not it contradicts one of the listed facts. Misconceptions are not limited to a list; record whatever the teacher gets wrong. For each:
 - node: the id of the idea it is about, e.g. "n07" (the part before the dot in the fact ids).
@@ -132,10 +138,16 @@ misconceptions: every belief in the message that is wrong about the topic, wheth
 - belief: one short sentence saying what the teacher believes, e.g. "exploring never picks the current favourite". Don't state the correct version.
 Leave the list empty when nothing is wrong. Vague or incomplete is not wrong.
 
-intent: "explain" (teaching), "answer" (replying to the classmate's question), "ask_kai" (asking the classmate a question), "unsure" (saying they don't know), "move_on" (asking to move on or saying they're done with this part, e.g. "what's next?", "that's it", "next one"), "off_topic" (anything else, including chit-chat and messages that make no sense).`;
+intent, the main thing the message does:
+- "explain": teaching something on their own initiative.
+- "answer": replying to what the classmate just asked (even a short "no, only the one you picked"); prefer this over "explain" when the message answers Kai's question.
+- "ask_kai": asking the classmate a question, e.g. "Is this like the slot machines in a casino?", "What do you think greedy does?". Any message that is mainly a question to Kai is "ask_kai", even if it's about something new.
+- "unsure": saying they don't know or aren't sure ("idk", "no idea").
+- "move_on": asking to move on or saying they're done with this part ("what's next?", "that's it", "next one").
+- "off_topic": chit-chat, or messages that make no sense. Never use it for a question to Kai.`;
 
 export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number } = {}): Promise<Judgement> {
-  const facts = bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => `[${f.id}] ${f.text}`));
+  const facts = bundle.nodes.flatMap((n) => n.facts.map((f) => `[${f.id}] ${f.text}`));
   const r = await chatJson({
     model: MODELS.judge,
     name: "judgement",
@@ -178,7 +190,7 @@ export function mockJudge(bundle: Bundle, message: string): Judgement {
           : "explain";
   const got = new Set(tokens(message));
   const facts: Judgement["facts"] = [];
-  for (const n of bundle.nodes.filter((x) => x.kind === "core"))
+  for (const n of bundle.nodes)
     for (const f of n.facts) {
       const ref = new Set(tokens(f.text + " " + n.lexicon.join(" ")));
       let have = 0;
@@ -199,7 +211,7 @@ const idfCache = new WeakMap<Bundle, Map<string, number>>();
 function idfFor(bundle: Bundle): Map<string, number> {
   const hit = idfCache.get(bundle);
   if (hit) return hit;
-  const docs = bundle.nodes.filter((n) => n.kind === "core").flatMap((n) => n.facts.map((f) => new Set(tokens(f.text + " " + n.lexicon.join(" ")))));
+  const docs = bundle.nodes.flatMap((n) => n.facts.map((f) => new Set(tokens(f.text + " " + n.lexicon.join(" ")))));
   const df = new Map<string, number>();
   for (const d of docs) for (const t of d) df.set(t, (df.get(t) ?? 0) + 1);
   const idf = new Map([...df].map(([t, n]) => [t, Math.log(1 + docs.length / n)]));

@@ -97,6 +97,19 @@ export function activeMisconceptions(state: State): Belief[] {
   return (state.misconceptions ?? []).filter((m) => !corrected(m));
 }
 
+/**
+ * Kai's notes as it reads them when solving: the latest word on each fact, then
+ * the misconceptions it still believes, numbered from 1. The solver cites these
+ * numbers, and the practice page's notebook shows the same list.
+ */
+export function notesOf(state: State): string[] {
+  const out: string[] = [];
+  // one message can explain several facts with the same words: each note once
+  for (const e of latest(state).values()) if (!out.includes(e.words)) out.push(e.words);
+  for (const m of activeMisconceptions(state)) if (!out.includes(m.words)) out.push(m.words);
+  return out.slice(-40);
+}
+
 /** Required facts the learner-facing videos cover: what Kai waits for. */
 export const teachableRequired = (n: Node) => n.facts.filter((f) => f.required && f.teachable);
 

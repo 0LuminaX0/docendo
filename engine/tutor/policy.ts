@@ -83,7 +83,7 @@ export function nextMove(bundle: Bundle, state: State, j: Judgement, elapsedMs =
     if (v.verdict !== "wrong") continue;
     const n = bundle.nodes.find((x) => x.id === v.fact.split(".")[0]);
     const m = n?.misconception;
-    if (!n || !m || state.contradicted.includes(m.id)) continue;
+    if (!n || !m || n.inLesson === false || state.contradicted.includes(m.id)) continue; // only about what this lesson teaches
     const q = bundle.questions.contradictions.find((c) => c.misconception === m.id);
     if (q) return { type: "contradict", node: n.id, seed: q.question };
   }
@@ -110,7 +110,8 @@ function carryOn(bundle: Bundle, state: State, j: Judgement): Move {
   if (nodeStatus(f, state) === "explained") {
     // the idea was completed by this very message: say so before anything else
     const closure = state.last?.node === f.id && ["open", "followUp", "nudge"].includes(state.last.type) ? "explained" : null;
-    if (f.misconception && !m.voiced) return { type: "misconception", node: f.id, seed: f.misconception.says, closure };
+    // not for the root idea (the setup): a misconception there ("is this full reinforcement learning?") only derails a learner who has just started
+    if (f.misconception && !m.voiced && f.needs.length) return { type: "misconception", node: f.id, seed: f.misconception.says, closure };
     if (!m.probed) return { type: "deepen", node: f.id, seed: f.probes[PROBES[Math.max(0, bundle.nodes.indexOf(f)) % PROBES.length]!], closure };
     return moveOn(bundle, state, j, closure);
   }
