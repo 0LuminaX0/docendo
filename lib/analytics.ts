@@ -84,6 +84,8 @@ export function tables(events: Ev[]) {
       meanComposeSec: mean(chat.filter((c) => c.composeMs != null).map((c) => Number(c.composeMs) / 1000)),
       pastes: of("client_paste").length,
       pastedChars: sum(chat.map((c) => Number(c.pastedChars ?? 0))),
+      dictatedChars: sum(chat.map((c) => Number(c.dictatedChars ?? 0))),
+      voiceSec: Math.round(sum(of("voice").map((e) => Number(e.sec ?? 0)))),
       kaiConfused: count(moods, (m) => m === "confused"),
       kaiOkay: count(moods, (m) => m === "okay"),
       kaiGreat: count(moods, (m) => m === "great"),
@@ -169,6 +171,7 @@ export function tables(events: Ev[]) {
         chars: c.chars,
         words: c.words,
         pastedChars: c.pastedChars,
+        dictatedChars: c.dictatedChars ?? 0,
         intent: c.intent,
         judged: ((c.judged as { fact: string; verdict: string }[]) ?? []).map((v) => `${v.fact}:${v.verdict}`).join(" "),
         newCorrect: ((c.newCorrect as string[]) ?? []).join(" "),
@@ -207,7 +210,11 @@ export function tables(events: Ev[]) {
         kaiFirstTry: first("practice_kai_solve", (e) => e.id === id)?.correct ?? null,
         kaiRetry: first("practice_kai_reteach", (e) => e.id === id)?.correct ?? null,
         reteach: first("practice_kai_reteach", (e) => e.id === id)?.message ?? null,
-        stepClicks: of("client_practice_kai_step_click").filter((e) => e.id === id).map((e) => e.step).join(" "),
+        // the learner's call on Kai's attempts before the light ("right"/"wrong"), and whether it matched
+        kaiCallFirst: first("client_practice_kai_call", (e) => e.id === id && e.attempt === 1)?.call ?? null,
+        kaiCallRetry: first("client_practice_kai_call", (e) => e.id === id && e.attempt === 2)?.call ?? null,
+        kaiCallsRight: of("client_practice_kai_call").filter((e) => e.id === id && e.agreed === true).length,
+        kaiCalls: of("client_practice_kai_call").filter((e) => e.id === id).length,
         firstTryCorrect: checks.length ? !!checks[0]!.correct : null,
         retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
         skipped: of("client_practice_skip").some((e) => e.id === id),
@@ -291,6 +298,8 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
           kaiFirst: pct(r.filter((p) => p.kaiFirstTry === true).length, r.length),
           kaiAfter: pct(r.filter((p) => p.kaiFirstTry === true || p.kaiRetry === true).length, r.length),
           reteaches: r.filter((p) => p.reteach).length,
+          // how often learners judged Kai's answer correctly before the light
+          callsRight: pct(sum(r.map((p) => Number(p.kaiCallsRight ?? 0))), sum(r.map((p) => Number(p.kaiCalls ?? 0)))),
           sec: median(r.map((p) => num(p.sec))),
         },
       };

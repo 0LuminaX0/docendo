@@ -41,9 +41,14 @@ export function parseNumber(raw: string): number | null {
 
 export function checkPractice(item: PracticeItem, answer: string | number): boolean {
   if (item.kind === "choice") return Number(answer) === item.answer;
+  return checkNumber(answer, item.answer, item.tolerance);
+}
+
+/** A typed number against its key (practice and the final test). */
+export function checkNumber(answer: string | number, key: number, tolerance?: number): boolean {
   const v = typeof answer === "number" ? answer : parseNumber(answer);
   if (v === null) return false;
-  const tol = item.tolerance ?? 1e-9;
+  const tol = tolerance ?? 1e-9;
   // a probability may be typed as a percentage without the % sign ("85")
-  return Math.abs(v - item.answer) <= tol || (item.answer > 0 && item.answer <= 1 && Math.abs(v / 100 - item.answer) <= tol);
+  return Math.abs(v - key) <= tol + 1e-9 || (key > 0 && key <= 1 && Math.abs(v / 100 - key) <= tol + 1e-9);
 }

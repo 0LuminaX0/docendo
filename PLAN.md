@@ -16,7 +16,7 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | 2 Teach Kai | Judge (facts, open-ended misconceptions, quote check), notebook, policy, writer with term filter, readiness 80% or 50% after 8 min; Kai's mind shows the lesson's 9 ideas inside the topic's 19-idea tree (the others dimmed, credited as bonus if explained) |
 | 3 Practice, direct | 2 rounds × 3 problems, two tries, working with a calculator, Rewatch, 10 min |
 | 3 Practice, recursive | Kai solves (Claude Haiku 5.5) from its notebook: 3 to 5 steps beside a live notebook, light, one correction (judged like teaching; the notebook strikes through and rewrites), second try. Gate: right only with every needed fact taught correctly; otherwise Kai reasons from a beginner's wrong rule, so the mistake follows from its steps |
-| 4 Final test | 10 MCQs checked against the item rules, with the same calculator; results with explanations, practice solutions and a feedback box |
+| 4 Final test | 10 items (6 choice, 4 typed numbers) made to need the rules, not common sense; a working field under each; results with explanations, practice solutions and a feedback box |
 | Admin | `/admin`: dashboard, sessions with detail, access codes, feedback, CSV/JSONL export |
 | Research log | Every turn, try, click, video and calculator event; notebook snapshots; `pnpm events export` |
 | Checks | 91 unit tests, `pnpm e2e` (27 browser checks, incl. the admin panel and phone layouts), live evals: `pnpm eval:judge` (45/45), `pnpm eval:solver` (30/30), `pnpm eval:chat` |

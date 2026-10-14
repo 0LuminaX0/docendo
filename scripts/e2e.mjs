@@ -48,7 +48,8 @@ const OUT = join(process.cwd(), ".e2e");
 mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
-const answers = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.answer);
+const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
+const answers = testItems.map((q) => q.answer);
 const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
 const CHROME =
   process.env.CHROME_PATH ??
@@ -226,15 +227,24 @@ for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
 await page.$eval(".submitbar .btn", (e) => e.click());
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
-const choose = answers.map((a, i) => (i === 3 || i === 7 ? (a + 1) % 4 : a));
+// one choice item and one number item wrong on purpose
+const wrongChoice = testItems.findIndex((q) => q.kind !== "number" && q.id !== "q01");
+const wrongNumber = testItems.findLastIndex((q) => q.kind === "number");
 const cards = await page.$$(".q");
-for (let i = 0; i < choose.length; i++) await cards[i].$eval(`.opt:nth-child(${choose[i] + 1}) input`, (el) => el.click());
-await page.$eval(".submitbar .btn.ghost", (e) => e.click());
-await page.waitForSelector(".calc-pop textarea");
-await page.focus(".calc-pop textarea");
-await page.keyboard.type("0.9 + 0.1/5 =");
-await page.waitForFunction(() => /= 0\.92$/.test(document.querySelector(".calc-pop textarea")?.value ?? ""));
-check(true, "the final test has the same working field");
+for (let i = 0; i < testItems.length; i++) {
+  const t = testItems[i];
+  if (t.kind === "number") await cards[i].$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(i === wrongNumber ? t.answer + 1 : t.answer));
+  else await cards[i].$eval(`.opt:nth-child(${(i === wrongChoice ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
+}
+// the working field under each question calculates, and "Use … as the answer" fills a number item
+await cards[0].$eval(".qwork textarea", (el) => el.focus());
+await page.keyboard.type("(4 * 12 + 22) / 5 =");
+await page.waitForFunction(() => /= 14$/.test(document.querySelector(".q .qwork textarea")?.value ?? ""));
+await (await cards[0].$(".qans input")).click({ count: 3 });
+await page.keyboard.press("Backspace");
+await cards[0].$eval(".scratch-bar .linkish", (el) => el.click());
+const used = await cards[0].$eval(".qans input", (el) => el.value);
+check(used === "14", `the final test has a working field under each question that calculates and fills the answer (${used})`);
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
@@ -267,7 +277,15 @@ check(stayed, "stopping from the first message waits for a click, then reaches p
 await skip.waitForSelector(".pq");
 await skip.click(".seg button:nth-child(2)");
 // Kai starts solving on its own; its notebook sits next to its steps
-await skip.waitForSelector(".kattempt .light", { timeout: 30000 });
+// Kai writes its steps out at reading speed; then the learner calls it before the light
+await skip.waitForSelector(".kattempt .ksteps li", { timeout: 30000 });
+const lightEarly = !!(await skip.$(".kattempt .light"));
+await skip.waitForSelector(".kcall button", { timeout: 60000 });
+await shot(skip, "07c2-kai-call");
+const paced = !lightEarly && !(await skip.$(".kattempt .light"));
+await skip.$eval(".kcall button:last-of-type", (e) => e.click());
+await skip.waitForSelector(".kattempt .light");
+check(paced, "Kai's steps are written out first and the light waits for the learner's call");
 const kaiWrong = await skip.$eval(".kattempt .light", (e) => e.classList.contains("off"));
 const hasNotebook = !!(await skip.$(".nb-paper"));
 const knote = await skip.$eval(".kattempt .ksteps", (e) => e.textContent);
@@ -275,6 +293,8 @@ await skip.type(".ks-fix textarea", bundle.nodes.find((n) => n.id === "n05").fac
 await shot(skip, "07d-kai-solves");
 await skip.$eval(".ks-fix .btn.primary", (e) => e.click());
 await skip.waitForFunction(() => document.querySelectorAll(".kattempt").length === 2, { timeout: 30000 });
+await skip.waitForSelector(".kcall button", { timeout: 60000 });
+await skip.$eval(".kcall button:first-of-type", (e) => e.click());
 const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
 check(kaiWrong && hasNotebook && /didn't tell me|guessing|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
 await wait(2500); // the steps and the new notes finish appearing
@@ -353,6 +373,26 @@ const phoneHome = await newPage(390, 844, await browser.createBrowserContext());
 await phoneHome.goto(BASE + "/", { waitUntil: "load" });
 await phoneHome.waitForSelector("button[type=submit]");
 await shot(phoneHome, "10-phone-welcome", true);
+
+// voice input: the mic shows beside Send when a model is set up (hidden in demo mode; here the flag is flipped
+// in the browser only, so the button renders; the server stays in demo mode and refuses to transcribe)
+{
+  const v = await (await browser.createBrowserContext()).newPage(); // a plain page: the refused request logs a 503 on purpose
+  await v.setViewport({ width: 1366, height: 900 });
+  await start(v);
+  await leaveWatch(v);
+  const noMicInDemo = !(await v.$(".voice-btn"));
+  await v.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+    localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, demo: false }));
+  });
+  await v.reload({ waitUntil: "load" });
+  await v.waitForSelector(".voice-btn", { timeout: 10000 });
+  const refused = await v.evaluate(async (token) => (await fetch("/api/transcribe", { method: "POST", headers: { "content-type": "audio/wav", "x-docendo-token": token, "x-docendo-where": "teach" }, body: new Uint8Array(8000) })).status, JSON.parse(await v.evaluate(() => localStorage.getItem("docendo:session:v1"))).token);
+  await shot(v, "03b-teach-voice");
+  check(noMicInDemo && refused === 503, `voice input: no mic in demo mode, a mic beside Send otherwise; the demo server refuses to transcribe (${refused})`);
+  await v.close();
+}
 
 // the admin panel: the login gate, the dashboard, a code made and used, an export
 {

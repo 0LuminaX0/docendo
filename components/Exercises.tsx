@@ -2,44 +2,51 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Calculator as CalcIcon, Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import Scratchpad from "./Scratchpad";
 import { Header } from "./ui";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type GradeResult } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
 
-type Item = { id: string; section: string; prompt: string; options: string[] };
+export type TestItem = { id: string; section: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
 const KEYS = "ABCDEF";
 
-export default function Exercises({ items }: { items: Item[] }) {
+/**
+ * The final test, laid out like a practice problem: the question, a working
+ * field under it (the same one as in practice, with the calculator built in),
+ * then the options or a box for a number. Graded on the server.
+ */
+export default function Exercises({ items }: { items: TestItem[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // the same calculator as in practice, for both conditions: the test is about the rules, not the arithmetic
-  const [calcOpen, setCalcOpen] = useState(false);
-  const [work, setWork] = useState("");
   if (!allowed || !saved) return <div className="center">Loading…</div>;
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
-  const answered = answers.filter((a) => a !== null).length;
+  const isAnswered = (a: number | string | null) => a !== null && !(typeof a === "string" && !a.trim());
+  const answered = answers.filter(isAnswered).length;
+  const setAnswer = (i: number, a: number | string) =>
+    update((s) => {
+      const next = items.map((_, j) => s.answers[j] ?? null);
+      next[i] = a;
+      return { ...s, answers: next };
+    });
   const choose = (i: number, k: number) => {
     track("test_option", { q: items[i]!.id, k, changed: saved.answers[i] != null && saved.answers[i] !== k });
-    update((s) => {
-      const a = items.map((_, j) => s.answers[j] ?? null);
-      a[i] = k;
-      return { ...s, answers: a };
-    });
+    setAnswer(i, k);
   };
+  const setWork = (id: string, v: string) => update((s) => ({ ...s, testWork: { ...s.testWork, [id]: v } }));
 
   async function submit() {
     if (!saved) return;
     setBusy(true);
     setError(null);
     track("test_submit", { answered });
-    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers });
+    const work = Object.fromEntries(Object.entries(saved.testWork ?? {}).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.slice(0, 2000)]));
+    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: answers.map((a) => (typeof a === "string" ? a.trim().slice(0, 40) || null : a)), work });
     setBusy(false);
     if (!r.ok) {
       if (r.expired) {
@@ -58,9 +65,10 @@ export default function Exercises({ items }: { items: Item[] }) {
       <Header phase={4} demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 4 of 4</span>
-          <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>Ten questions on what you learned</h1>
-          <p className="lede" style={{ fontSize: 16 }}>No calculator needed. Pick one answer per question; you&apos;ll see the explanations afterwards.</p>
+          <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>Final test</h1>
+          <p className="lede" style={{ fontSize: 15.5 }}>
+            Ten questions: pick an option, or type a number. Work things out under each question if it helps; to calculate, end a calculation with =. You&apos;ll see the explanations afterwards.
+          </p>
         </div>
         <div className="quiz">
           {sections(items).map(({ title, start, list }) => (
@@ -69,18 +77,47 @@ export default function Exercises({ items }: { items: Item[] }) {
               <ol start={start + 1}>
                 {list.map((q, j) => {
                   const i = start + j;
+                  const a = answers[i];
                   return (
                     <li className="q" key={q.id}>
                       <p className="qt" id={`${q.id}-q`}>{q.prompt}</p>
-                      <fieldset className="opts" aria-labelledby={`${q.id}-q`}>
-                        {q.options.map((o, k) => (
-                          <label className="opt" key={k}>
-                            <input type="radio" name={q.id} checked={answers[i] === k} onChange={() => choose(i, k)} />
-                            <span className="key" aria-hidden="true">{KEYS[k]}</span>
-                            <span>{o}</span>
-                          </label>
-                        ))}
-                      </fieldset>
+                      <div className="qwork">
+                        <Scratchpad
+                          id={`${q.id}-work`}
+                          where={`test:${q.id}`}
+                          label={`Your working for question ${i + 1}`}
+                          value={saved.testWork?.[q.id] ?? ""}
+                          onChange={(v) => setWork(q.id, v)}
+                          rows={2}
+                          placeholder="Work it out here if it helps"
+                          onUse={q.kind === "number" ? (v) => setAnswer(i, String(Math.round(v * 1000) / 1000)) : undefined}
+                        />
+                      </div>
+                      {q.kind === "choice" && q.options ? (
+                        <fieldset className="opts" aria-labelledby={`${q.id}-q`}>
+                          {q.options.map((o, k) => (
+                            <label className="opt" key={k}>
+                              <input type="radio" name={q.id} checked={a === k} onChange={() => choose(i, k)} />
+                              <span className="key" aria-hidden="true">{KEYS[k]}</span>
+                              <span>{o}</span>
+                            </label>
+                          ))}
+                        </fieldset>
+                      ) : (
+                        <label className="pans qans">
+                          <span>Answer</span>
+                          <input
+                            className="input"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            maxLength={40}
+                            value={typeof a === "string" ? a : ""}
+                            onChange={(e) => setAnswer(i, e.target.value)}
+                            onBlur={(e) => e.target.value && track("test_number", { q: q.id, answer: e.target.value.slice(0, 40) })}
+                          />
+                          {q.unit && <span className="unit">{q.unit}</span>}
+                        </label>
+                      )}
                     </li>
                   );
                 })}
@@ -89,17 +126,6 @@ export default function Exercises({ items }: { items: Item[] }) {
           ))}
         </div>
         <div className="submitbar">
-          {calcOpen && (
-            <div className="calc-pop" role="dialog" aria-label="Working and sums">
-              <div className="calc-pop-head">
-                <b>Working</b>
-                <button type="button" className="iconbtn" onClick={() => (setCalcOpen(false), track("calc_close", { where: "test" }))} aria-label="Close the calculator">
-                  <X size={16} />
-                </button>
-              </div>
-              <Scratchpad id="test-work" where="test" label="Working for the test" value={work} onChange={setWork} rows={5} placeholder="Sums and notes, for example 0.9 + 0.1 ÷ 5 =" />
-            </div>
-          )}
           <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < items.length}>
             {busy ? "Checking…" : <><Check size={17} strokeWidth={2.6} /> Check my answers</>}
           </button>
@@ -107,10 +133,6 @@ export default function Exercises({ items }: { items: Item[] }) {
             <span className="track" aria-hidden="true"><span className="fill" style={{ width: `${(answered / items.length) * 100}%` }} /></span>
             {answered} of {items.length} answered
           </span>
-          <span className="grow" />
-          <button type="button" className={`btn ghost small${calcOpen ? " on" : ""}`} aria-pressed={calcOpen} onClick={() => (setCalcOpen(!calcOpen), track(calcOpen ? "calc_close" : "calc_open", { where: "test" }))}>
-            <CalcIcon size={15} /> Calculator
-          </button>
           {error && <p className="error" role="alert">{error}</p>}
         </div>
       </main>

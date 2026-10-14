@@ -17,6 +17,11 @@ const KEYS = "ABCDEF";
  * learner writes one correction (without being told which step is wrong); it
  * goes into Kai's notebook and Kai tries once more.
  *
+ * Kai's steps are written out at reading speed, and before the light the
+ * learner says whether they think Kai is right: the counterpart of the direct
+ * condition, where the learner commits to an answer and then sees the light.
+ * Both conditions get the same feedback (the light); only who answers differs.
+ *
  * Two columns: the task (the problem, then Kai's tries) and Kai's notebook,
  * tall and sticky beside it. The correction box sits under the notebook: the
  * learner tells Kai, and Kai writes down what it takes from it (the notebook is
@@ -32,6 +37,7 @@ export default function KaiSolve({
   tools,
   onReteach,
   onRetry,
+  onCall,
   failed,
 }: {
   q: Item;
@@ -43,14 +49,19 @@ export default function KaiSolve({
   tools: React.ReactNode; // under Kai's work: Rewatch
   onReteach: (message: string) => void;
   onRetry: () => void;
+  onCall: (attempt: number, right: boolean) => void; // the learner's call before the light
   failed: boolean;
 }) {
   const [text, setText] = useState("");
   const [lit, setLit] = useState<string[]>([]);
   const attempts = entry.attempts;
   const last = attempts.at(-1);
-  const canReteach = attempts.length === 1 && !!last && !last.correct && !entry.correction;
-  const done = !!last && (last.correct || attempts.length >= 2);
+  // attempts already there when the problem opened (a reload) are shown at once; new ones are written out
+  const [seen] = useState(attempts.length);
+  // nothing tells the outcome before the learner's call: no light, no end note, no correction box
+  const known = !!last && last.call !== undefined;
+  const canReteach = attempts.length === 1 && known && !last!.correct && !entry.correction;
+  const done = known && (last!.correct || attempts.length >= 2);
   // when the correction box appears, bring it into view (only as far as needed: the notebook column is sticky)
   const fixBox = useRef<HTMLDivElement>(null);
   const asking = canReteach && !busy;
@@ -84,7 +95,7 @@ export default function KaiSolve({
                 <p>{entry.correction}</p>
               </div>
             )}
-            <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} />
+            <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} fresh={n >= seen} onCall={(right) => onCall(n, right)} />
           </Fragment>
         ))}
 
@@ -129,6 +140,7 @@ export default function KaiSolve({
               maxLength={1500}
               disabled={disabled}
               placeholder="For example: when ε-greedy explores, it picks…"
+              voice="fix"
             />
             <div className="pact">
               <span className="grow" />
@@ -143,53 +155,122 @@ export default function KaiSolve({
   );
 }
 
-function Attempt({ a, n, q, lit, onLight, numbered }: { a: KaiAttempt; n: number; q: Item; lit: string[]; onLight: (notes: string[]) => void; numbered: boolean }) {
+// Kai writes a step at about reading speed (characters a second), each step taking 1.2 to 4 s, with a short pause between
+const CPS = 35;
+const stepMs = (t: string) => Math.min(4000, Math.max(1200, (t.length / CPS) * 1000));
+const PAUSE = 350;
+
+/** Milliseconds since Kai began writing this attempt (Infinity when it's shown at once). */
+function useWriting(totalMs: number, on: boolean) {
+  const [elapsed, setElapsed] = useState(on ? 0 : Infinity);
+  useEffect(() => {
+    if (!on) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const e = now - t0;
+      setElapsed(e >= totalMs ? Infinity : e);
+      if (e < totalMs) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [on, totalMs]);
+  return elapsed;
+}
+
+function Attempt({
+  a,
+  n,
+  q,
+  lit,
+  onLight,
+  numbered,
+  fresh,
+  onCall,
+}: {
+  a: KaiAttempt;
+  n: number;
+  q: Item;
+  lit: string[];
+  onLight: (notes: string[]) => void;
+  numbered: boolean;
+  fresh: boolean;
+  onCall: (right: boolean) => void;
+}) {
   const used = (s: { notes: number[] }) => s.notes.map((x) => a.notes[x - 1]).filter((t): t is string => !!t);
   const k = KEYS.indexOf(a.answer.trim().charAt(0).toUpperCase());
   const option = q.options && k >= 0 ? q.options[k] : undefined;
+  const starts: number[] = [];
+  let total = 0;
+  for (const s of a.steps) (starts.push(total), (total += stepMs(s.text) + PAUSE));
+  const elapsed = useWriting(total, fresh && a.call === undefined);
+  const writing = elapsed !== Infinity;
+  const smooth = typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const called = a.call !== undefined;
+  const tone = called ? (a.correct ? " on" : " off") : "";
+
   return (
     <div className="kattempt">
       <div className="who-row">
-        <KaiFace mood={a.correct ? "great" : "confused"} size={30} />
+        <KaiFace mood={!called ? (writing ? "thinking" : "neutral") : a.correct ? "great" : "confused"} size={30} />
         <b>{n === 0 ? "Kai's solution" : "Kai's second try"}</b>
-        <span className={`light ${a.correct ? "on" : "off"}`} role="status">
-          <i aria-hidden="true" />
-          {a.correct ? "Right" : "Wrong"}
-        </span>
-      </div>
-      <ol className="ksteps">
-        {a.steps.map((s, i) => (
-          <li
-            key={i}
-            style={{ animationDelay: `${i * 260}ms` }}
-            className={used(s).some((t) => lit.includes(t)) ? "lit" : ""}
-            onMouseEnter={() => onLight(used(s))}
-            onMouseLeave={() => onLight([])}
-            tabIndex={s.notes.length ? 0 : -1}
-            onFocus={() => onLight(used(s))}
-            onBlur={() => onLight([])}
-          >
-            <span>{s.text}</span>
-            {s.notes.length > 0 && (
-              <span className="kcite" aria-label={numbered ? `from notebook line${s.notes.length > 1 ? "s" : ""} ${s.notes.join(", ")}` : "from Kai's notebook"}>
-                {numbered ? s.notes.map((x) => <i key={x}>{x}</i>) : <i><BookOpen size={10} strokeWidth={2.6} /></i>}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-      <p className={`kanswer ${a.correct ? "on" : "off"}`} style={{ animationDelay: `${a.steps.length * 260}ms` }}>
-        <span className="lbl">Kai&apos;s answer</span>
-        {option ? (
-          <>
-            <span className="key" aria-hidden="true">{KEYS[k]}</span>
-            <span className="sr-only">{KEYS[k]}: </span>
-            <span>{option}</span>
-          </>
-        ) : (
-          <span>{`${a.answer}${q.unit && !a.answer.includes(q.unit) ? ` ${q.unit}` : ""}`}</span>
+        {called && (
+          <span className={`light${tone}`} role="status">
+            <i aria-hidden="true" />
+            {a.correct ? "Right" : "Wrong"}
+          </span>
         )}
-      </p>
+      </div>
+      <ol className="ksteps" aria-busy={writing}>
+        {a.steps.map((s, i) => {
+          if (elapsed < starts[i]!) return null;
+          const shown = !writing || !smooth ? s.text : s.text.slice(0, Math.ceil((s.text.length * (elapsed - starts[i]!)) / stepMs(s.text)));
+          return (
+            <li
+              key={i}
+              className={used(s).some((t) => lit.includes(t)) ? "lit" : ""}
+              onMouseEnter={() => onLight(used(s))}
+              onMouseLeave={() => onLight([])}
+              tabIndex={s.notes.length ? 0 : -1}
+              onFocus={() => onLight(used(s))}
+              onBlur={() => onLight([])}
+            >
+              <span>{shown}</span>
+              {shown.length === s.text.length && s.notes.length > 0 && (
+                <span className="kcite" aria-label={numbered ? `from notebook line${s.notes.length > 1 ? "s" : ""} ${s.notes.join(", ")}` : "from Kai's notebook"}>
+                  {numbered ? s.notes.map((x) => <i key={x}>{x}</i>) : <i><BookOpen size={10} strokeWidth={2.6} /></i>}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      {!writing && (
+        <p className={`kanswer${tone}`}>
+          <span className="lbl">Kai&apos;s answer</span>
+          {option ? (
+            <>
+              <span className="key" aria-hidden="true">{KEYS[k]}</span>
+              <span className="sr-only">{KEYS[k]}: </span>
+              <span>{option}</span>
+            </>
+          ) : (
+            <span>{`${a.answer}${q.unit && !a.answer.includes(q.unit) ? ` ${q.unit}` : ""}`}</span>
+          )}
+        </p>
+      )}
+      {!writing && !called && (
+        <div className="kcall" role="group" aria-label="Is Kai right?">
+          <b>Is Kai right?</b>
+          <button type="button" className="btn small" onClick={() => onCall(true)}>
+            I think it&apos;s right
+          </button>
+          <button type="button" className="btn small" onClick={() => onCall(false)}>
+            I think it&apos;s wrong
+          </button>
+        </div>
+      )}
+      {called && <p className="kcall-said">You said {a.call ? "right" : "wrong"}{a.call === a.correct ? ": you called it." : "."}</p>}
     </div>
   );
 }

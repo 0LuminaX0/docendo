@@ -14,7 +14,8 @@ export type Help = { video: string; start: number; end: number };
 export type GradeResult = {
   score: number;
   of: number;
-  items: { id: string; chosen: number | null; answer: number; correct: boolean; explain: string }[];
+  // choice items: chosen is the option's index; number items: the typed answer, and key the value with its unit
+  items: { id: string; kind?: "choice" | "number"; chosen: number | string | null; answer: number; key?: string; correct: boolean; explain: string }[];
   // the practice problems' worked solutions, shown only after the test (absent in older sessions)
   practice?: { id: string; round: number; title: string; prompt: string; options: string[] | null; answer: string; answerIndex: number | null; steps: string[] }[];
 };
@@ -32,7 +33,7 @@ export type Condition = "direct" | "recursive";
 
 /** Recursive feedback: Kai's attempts at one problem (two at most), and the learner's one correction. */
 export type KaiStep = { text: string; notes: number[] };
-export type KaiAttempt = { steps: KaiStep[]; answer: string; correct: boolean; notes: string[] };
+export type KaiAttempt = { steps: KaiStep[]; answer: string; correct: boolean; notes: string[]; call?: boolean }; // call: the learner's guess before the light (true = right)
 export type KaiEntry = { attempts: KaiAttempt[]; clicks: number[]; correction: string | null; ms?: number };
 
 // one problem at a time, in order; `current` is its index. `view` is the condition a team session looks at.
@@ -64,7 +65,8 @@ export type Saved = {
     help: Help | null;
     helpAvailable: boolean;
   };
-  answers: (number | null)[];
+  answers: (number | string | null)[]; // final test: an option's index, or a typed number
+  testWork?: Record<string, string>; // final test: the working under each question
   result: GradeResult | null;
   feedbackSent?: boolean;
 };

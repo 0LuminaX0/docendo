@@ -1,156 +1,148 @@
 {
   "title": "Multi-armed bandits: final test",
-  "note": "Goal G only (how greedy, ε-greedy and UCB choose). Every item is parallel to a practice principle but uses a setting the practice doesn't (banner ads, office coffee machines, a study app, podcasts), so the test measures transfer, not recall of practice items. type: base = recognise the idea; apply = pick and justify in a given state; transfer = a new situation.",
+  "note": "Goal G only (how greedy, ε-greedy and UCB choose). Every item uses a setting the practice doesn't (banner ads, office coffee machines, a study app, podcasts), so the test measures transfer, not recall. Most items make you run a rule on numbers: common sense alone leads to a wrong option. Choice items pair a pick with a reason, all options in the same shape and about the same length, every wrong one a real confusion (some with the right pick for the wrong reason). Number items are typed in (kind number, with a tolerance). type: base = recognise the idea; apply = run the rule on a given state; transfer = a new situation.",
   "items": [
     {
       "id": "q01",
       "goal": "G",
-      "type": "base",
+      "type": "apply",
       "section": "The problem",
-      "prompt": "An online shop shows each visitor one of five banner ads and wants as many clicks as possible. Seen as a multi-armed bandit, what are the options you choose between (the “arms”)?",
-      "options": [
-        "The visitors",
-        "The five banners",
-        "The clicks",
-        "The days the shop is open"
-      ],
-      "answer": 1,
-      "explain": "The arms are what you choose between in every round. Each visitor is a round, and a click is the reward."
+      "kind": "number",
+      "unit": "minutes",
+      "prompt": "A study app estimates how good each lesson format is from how long students stay with it. Format B has been used by 4 students so far, with an estimate of 12 minutes. The fifth student stays 22 minutes. What is the app's estimate for format B now?",
+      "answer": 14,
+      "tolerance": 0.05,
+      "explain": "The estimate is the average of all rewards so far. Four students averaging 12 minutes stayed 48 minutes in all; with the fifth, 48 + 22 = 70 minutes over 5 students, so 14 minutes."
     },
     {
       "id": "q02",
       "goal": "G",
-      "type": "transfer",
-      "section": "The problem",
-      "prompt": "Why can't the shop simply pick the best banner on its first day?",
+      "type": "apply",
+      "section": "Greedy",
+      "kind": "choice",
+      "prompt": "You choose between three office coffee machines with greedy, scoring every cup out of 10. On days 1 to 3 you try each machine once: A scores 4, B 7 and C 6. Day 4's cup scores 3 and day 5's cup scores 5. Which machine do you use on day 6, and why?",
       "options": [
-        "Because a banner's click rate only settles to a fixed value after it has been shown many times",
-        "Because all banners have the same click rate at first",
-        "Because each banner's true click rate is unknown, and single visitors click more or less at random, so the shop has to learn the rates by showing the banners",
-        "Because the best banner changes every day"
+        "B: it has given the best single cup so far, the 7",
+        "B: greedy stays with the machine that won the trial days",
+        "C: its average, 5.5, is now the highest of the three",
+        "A: it has had the fewest cups, so it is tried again"
       ],
       "answer": 2,
-      "explain": "The averages are hidden and each reward is random, so the only way to learn how good a banner is, is to show it and average the results. The true click rate doesn't change; only the shop's estimate of it gets better with more showings."
+      "explain": "Day 4 goes to B (best average, 7); its 3 brings B's average to 5. Day 5 goes to C (now the best, 6); its 5 brings C's average to 5.5. On day 6 the averages are A 4, B 5, C 5.5, so greedy uses C. Greedy follows the best average as it changes, not the best single cup or the first winner, and never tries a machine just because it has had few cups."
     },
     {
       "id": "q03",
       "goal": "G",
-      "type": "apply",
+      "type": "transfer",
       "section": "Greedy",
-      "prompt": "Your office has three coffee machines. So far you rated the coffee from machine A 7 and 5, from B 8, and from C 6, 6 and 7. Following greedy, which machine do you use next, and why?",
-      "options": [
-        "B, because its average so far (8) is the highest",
-        "A, because its best cup (7) is as good as C's",
-        "C, because it has the most ratings and is the most reliable",
-        "Any of them, chosen at random"
-      ],
+      "kind": "number",
+      "prompt": "A podcast app picks between two shows with greedy. Show A is truly the better one: its ratings average 4.5 stars. Show B always gets 3 or 4 stars. To start, each show was recommended once: A happened to get 2 stars and B got 4. Of the next 200 recommendations, how many go to show A?",
       "answer": 0,
-      "explain": "The averages are A = 6, B = 8, C ≈ 6.3. Greedy always picks the best average so far, even if it rests on a single cup."
+      "tolerance": 0,
+      "explain": "After the first round A's average is 2 and B's is 4. B's ratings are always 3 or 4, so B's average never drops below 3 and always beats A's 2. Greedy never tries A again to find out, so A gets none of the 200: one unlucky first rating hides the better show for good."
     },
     {
       "id": "q04",
       "goal": "G",
-      "type": "transfer",
+      "type": "apply",
       "section": "Greedy",
-      "prompt": "A study app uses greedy to choose between two lesson formats. Format A is truly better (70% of students pass, against 55% for B). The first student who got A happened to fail; the first who got B passed. What does the app do from then on?",
+      "kind": "choice",
+      "prompt": "The office coffee machines run on greedy. Machine A averages 7.9 over 40 cups, machine B 8.0 over a single cup, and machine C 6.0 over 15 cups. Which machine does greedy pick next, and why?",
       "options": [
-        "It soon switches to A, because A is better on average",
-        "It alternates between A and B to be fair",
-        "It picks A or B at random for every student",
-        "It keeps using B: after one try A's pass rate looks like 0%, and greedy never tries A again to find out"
+        "A: greedy trusts the average that rests on the most cups",
+        "C: greedy returns to a machine it hasn't used for a while",
+        "A or B at random: greedy can't split averages this close",
+        "B: greedy compares only the averages, however few cups"
       ],
       "answer": 3,
-      "explain": "Greedy only uses the option with the best average so far. One unlucky first result can hide the better option for good, because greedy never tries it again."
+      "explain": "Greedy picks the highest average, here B's 8.0, and ignores how many cups each average rests on, although one cup says much less than forty. Weighing the number of tries is what UCB adds."
     },
     {
       "id": "q05",
       "goal": "G",
       "type": "apply",
       "section": "ε-greedy",
-      "prompt": "The shop switches to ε-greedy with ε = 0.1 for its five banners. One banner has the best average so far. What share of visitors see that banner?",
-      "options": [
-        "90%",
-        "92%",
-        "98%",
-        "10%"
-      ],
-      "answer": 1,
-      "explain": "90% of visitors get the favourite on exploit visits. Explore visits pick one of all five banners at random, the favourite included, so 1 in 5 of the remaining 10% get it too: 0.9 + 0.1/5 = 0.92."
+      "kind": "number",
+      "unit": "visitors",
+      "prompt": "An online shop shows each visitor one of four banner ads, chosen with ε-greedy and ε = 0.2. Banner D has by far the lowest click rate, and the shop has shown it often enough to be sure of that. Of the next 1,000 visitors, about how many are expected to see banner D?",
+      "answer": 50,
+      "tolerance": 1,
+      "explain": "D is never the favourite, so it is only shown on explore visits: 20% of visitors, 200 of 1,000. An explore visit picks one of the four banners at random, ignoring what the shop knows, so D gets a quarter of them: 1,000 × 0.2 ÷ 4 = 50."
     },
     {
       "id": "q06",
       "goal": "G",
-      "type": "base",
+      "type": "transfer",
       "section": "ε-greedy",
-      "prompt": "Which statement describes how ε-greedy explores?",
+      "kind": "choice",
+      "prompt": "Two shops run the same five banner ads for a year with ε-greedy, one with ε = 0.02 and the other with ε = 0.5. What does each risk?",
       "options": [
-        "It always explores the option it has tried least",
-        "It explores less and less as its averages become reliable",
-        "On a fixed share of rounds it picks any option at random, even ones it already knows are bad",
-        "It explores only until it has found the best option, then stops"
+        "ε = 0.02 shows known-worse banners to many visitors; ε = 0.5 risks staying on a worse banner",
+        "ε = 0.02 risks staying on a worse banner; ε = 0.5 shows known-worse banners to many visitors",
+        "Neither risks anything: both find the best banner, ε only sets how fast the averages settle",
+        "Only ε = 0.02 risks anything: exploring more always brings in more clicks over a whole year"
       ],
-      "answer": 2,
-      "explain": "With probability ε it picks at random, ignoring what it knows. That share stays the same however long it runs, so known-bad options keep getting picked."
+      "answer": 1,
+      "explain": "With ε = 0.02 the shop hardly explores, so an unlucky start can keep it on a worse banner for a long time (too little exploration). With ε = 0.5 half the visitors get a random banner, including ones the shop already knows are worse (too much exploration)."
     },
     {
       "id": "q07",
       "goal": "G",
-      "type": "transfer",
+      "type": "apply",
       "section": "ε-greedy",
-      "prompt": "A new colleague tries one of the office coffee machines on their first day, likes the coffee, and uses only that machine from then on. What does this strategy risk?",
+      "kind": "choice",
+      "prompt": "A podcast app recommends shows with ε-greedy, ε = 0.1. Show A averages 4.6 stars over 300 plays, show B 2.1 over 300 plays, and show C 3.9 over only 3 plays. On the explore rounds, which show is picked most often?",
       "options": [
-        "Missing a better machine, because the others never get another try",
-        "Wasting many coffees on machines already known to be worse",
-        "Nothing: a good first cup shows that this machine is the best",
-        "Switching machines too often to settle on a good one"
+        "None of them: an explore pick is random, so each show is equally likely",
+        "C: explore rounds go to the show with the fewest plays, to learn about it",
+        "A: explore rounds still lean towards the show with the best average",
+        "B or C: exploring means leaving the favourite for one of the others"
       ],
       "answer": 0,
-      "explain": "Only exploiting means never exploring: a machine that wasn't tried (or was unlucky once) never gets another chance, so a better one can stay hidden. One cup says little about a machine's average. Too much exploring would be the opposite risk."
+      "explain": "On an explore round ε-greedy picks any show at random: it looks neither at the averages nor at how often each show was played. So A, B and C each get a third of the explore rounds, even B, which is known to be poor. Going to the least-played show is closer to what UCB does."
     },
     {
       "id": "q08",
       "goal": "G",
-      "type": "transfer",
+      "type": "apply",
       "section": "UCB",
-      "prompt": "A podcast app recommends shows with UCB. Show A has an average rating of 4.1 from 500 listeners; show B has 3.9 from 4 listeners. Why might UCB recommend B next?",
-      "options": [
-        "Because UCB picks at random on some rounds",
-        "Because B has the higher average",
-        "Because UCB always recommends the newest show",
-        "Because B's average comes from very few listeners, so B gets a large bonus, and its average plus bonus can beat A's"
-      ],
-      "answer": 3,
-      "explain": "An average from 4 listeners is much less reliable than one from 500. UCB adds a bonus that is bigger for options tried less, giving B the benefit of the doubt."
+      "kind": "number",
+      "prompt": "A study app picks quiz formats with UCB1. It is round t = 50 (ln 50 ≈ 3.91). Format B has been used n = 8 times, and its average score so far is 0.60. What is format B's UCB score?",
+      "answer": 1.589,
+      "tolerance": 0.02,
+      "explain": "Score = average + √(2 ln t / n) = 0.60 + √(2 × 3.91 / 8) = 0.60 + √0.98 ≈ 0.60 + 0.99 = 1.59."
     },
     {
       "id": "q09",
       "goal": "G",
       "type": "apply",
       "section": "UCB",
-      "prompt": "A study app chooses between three quiz formats with UCB. Right now format A has average 6.0 and bonus 0.3, B has average 5.2 and bonus 1.2, and C has average 5.8 and bonus 0.4. Which format does UCB pick, and why?",
+      "kind": "choice",
+      "prompt": "The office coffee machines now run on UCB1. It is day t = 20 (ln 20 ≈ 3.0). Machine A averages 7.0 over 10 cups, B 6.0 over 2 cups, and C 6.6 over 8 cups. Which machine does UCB pick, and why?",
       "options": [
-        "A, because it has the best average",
-        "B, because its average plus its bonus is the highest",
-        "C, because both its average and its bonus are in the middle",
-        "One of them at random, because UCB explores on some rounds"
+        "B: with only 2 cups it gets by far the biggest bonus, and that decides",
+        "A: once every machine has been tried, UCB goes with the best average",
+        "Any of them: UCB picks a machine at random on a share of the days",
+        "A: its average plus its bonus, about 7.77, is the highest of the three"
       ],
-      "answer": 1,
-      "explain": "Scores: A = 6.3, B = 6.4, C = 6.2. UCB picks the highest average plus bonus: B, although A has the best average. Nothing is random in UCB."
+      "answer": 3,
+      "explain": "Scores = average + √(2 ln t / n): A = 7.0 + √(6/10) ≈ 7.77, B = 6.0 + √(6/2) ≈ 7.73, C = 6.6 + √(6/8) ≈ 7.47. B has the biggest bonus, but A's higher average wins by a little. UCB always adds the bonus, it never picks at random, and it doesn't drop the bonus once everything has been tried."
     },
     {
       "id": "q10",
       "goal": "G",
-      "type": "base",
+      "type": "transfer",
       "section": "UCB",
-      "prompt": "UCB keeps picking option B, which turns out to be only average. What happens?",
+      "kind": "choice",
+      "prompt": "A podcast app recommends shows with UCB1; take ln t ≈ 4.6 on the next two rounds. Show A averages 4.0 stars over 50 plays, show C 3.0 over 4 plays. C is recommended next and gets 3 stars. Which show is recommended on the round after that, and why?",
       "options": [
-        "B's bonus grows with every pick, so UCB sticks with B",
-        "B's bonus stays the same, so UCB picks B forever",
-        "B's bonus shrinks with every pick; once its average plus bonus falls below another option's score, UCB moves on",
-        "UCB switches to a random option after a fixed number of picks"
+        "C: it keeps its large bonus until its plays catch up with A's",
+        "A: one more play shrinks C's bonus, and C's score drops below A's",
+        "A: C's rating of 3 stars pulled C's average down below A's score",
+        "C: a show that was just recommended is recommended again until it falls"
       ],
-      "answer": 2,
-      "explain": "Each pick makes B's average more reliable, so its bonus shrinks. If B isn't really the best, its score drops below another option's and UCB moves on, without any random picks."
+      "answer": 1,
+      "explain": "Before: A = 4.0 + √(9.2/50) ≈ 4.43, C = 3.0 + √(9.2/4) ≈ 4.52, so C is picked. Its new 3 stars leave C's average at 3.0, but n goes from 4 to 5, so its bonus shrinks to √(9.2/5) ≈ 1.36 and its score to 4.36, below A's 4.43. Every play shrinks a show's bonus; UCB moves on as soon as another score is higher."
     }
   ]
 }

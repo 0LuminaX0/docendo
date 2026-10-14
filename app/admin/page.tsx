@@ -83,10 +83,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
 
       <section className="adm-card">
         <h2>Practice problems</h2>
-        <p className="note">Direct: the learner&apos;s first try, and solved in two tries. Recursive: Kai&apos;s first try, and right after the learner&apos;s correction.</p>
+        <p className="note">Direct: the learner&apos;s first try, and solved in two tries. Recursive: Kai&apos;s first try, right after the learner&apos;s correction, and how often the learner called Kai&apos;s answer right before the light.</p>
         <table className="adm-table">
           <thead>
-            <tr><th>Problem</th><th>Direct (n)</th><th>First try</th><th>Solved</th><th>Time</th><th>Recursive (n)</th><th>Kai first try</th><th>After correction</th><th>Time</th></tr>
+            <tr><th>Problem</th><th>Direct (n)</th><th>First try</th><th>Solved</th><th>Time</th><th>Recursive (n)</th><th>Kai first try</th><th>After correction</th><th>Calls right</th><th>Time</th></tr>
           </thead>
           <tbody>
             {s.practice.map((p) => (
@@ -99,6 +99,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
                 <td>{p.recursive.tried}</td>
                 <td><Bar value={p.recursive.kaiFirst} tone="green" /> {pctText(p.recursive.kaiFirst)}</td>
                 <td>{pctText(p.recursive.kaiAfter)}</td>
+                <td>{pctText(p.recursive.callsRight)}</td>
                 <td>{p.recursive.sec === null ? "–" : `${p.recursive.sec} s`}</td>
               </tr>
             ))}

@@ -5,7 +5,7 @@ import exercisesJson from "../../topics/bandits/exercises.json";
 import practiceJson from "../../topics/bandits/practice.json";
 import pretestJson from "../../topics/bandits/pretest.json";
 import { Bundle } from "../../content/schema";
-import { PracticeFile, checkPractice } from "../../content/practice";
+import { PracticeFile, checkNumber, checkPractice } from "../../content/practice";
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 import { config } from "./env";
 
@@ -14,20 +14,33 @@ import { config } from "./env";
 
 export const bundle: Bundle = Bundle.parse(bundleJson);
 
-const Exercise = z.object({
-  id: z.string(),
-  goal: z.string(),
-  type: z.string(),
-  section: z.string(),
-  prompt: z.string(),
-  options: z.array(z.string()).min(2).max(6),
-  answer: z.number().int().min(0),
-  explain: z.string(),
-});
+const Exercise = z
+  .object({
+    id: z.string(),
+    goal: z.string(),
+    type: z.string(),
+    section: z.string(),
+    kind: z.enum(["choice", "number"]).default("choice"), // pick an option, or type a number
+    prompt: z.string(),
+    options: z.array(z.string()).min(2).max(6).optional(),
+    unit: z.string().optional(),
+    answer: z.number(), // choice: the option's index; number: the value
+    tolerance: z.number().min(0).optional(),
+    explain: z.string(),
+  })
+  .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
 export const exercises = z.object({ title: z.string(), items: z.array(Exercise).min(1) }).parse(exercisesJson).items;
 
+/** Grade one answer: an option's index, or a typed number. */
+export function checkExercise(q: (typeof exercises)[number], a: number | string | null): boolean {
+  if (a === null) return false;
+  return q.kind === "choice" ? a === q.answer : checkNumber(String(a), q.answer, q.tolerance);
+}
+/** The key as the results page shows it. */
+export const keyText = (q: (typeof exercises)[number]) => (q.kind === "choice" ? q.options![q.answer]! : `${q.answer}${q.unit ? ` ${q.unit}` : ""}`);
+
 /** What the browser may see before grading: no answers, no explanations. */
-export const publicExercises = exercises.map(({ id, section, prompt, options }) => ({ id, section, prompt, options }));
+export const publicExercises = exercises.map(({ id, section, kind, prompt, options, unit }) => ({ id, section, kind, prompt, options: options ?? null, unit: unit ?? null }));
 export type PublicExercise = (typeof publicExercises)[number];
 
 // ---------- pretest (before the video) ----------

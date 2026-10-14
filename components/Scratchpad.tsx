@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Calculator as CalcIcon } from "lucide-react";
 import { format, sumAtEnd } from "@/lib/calc";
 import { track } from "@/lib/client/log";
+import VoiceButton from "./VoiceButton";
 
 /**
  * One field for working and sums, the same everywhere (practice, the correction
@@ -38,6 +39,7 @@ export default function Scratchpad({
   disabled,
   onUse,
   label,
+  voice,
 }: {
   id: string;
   where: string; // for the log
@@ -49,6 +51,7 @@ export default function Scratchpad({
   disabled?: boolean;
   onUse?: (value: number) => void; // number problems: put the last result in the answer box
   label: string;
+  voice?: "fix"; // a mic for speaking instead of typing (the correction to Kai)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const [caret, setCaret] = useState(0);
@@ -136,6 +139,21 @@ export default function Scratchpad({
           )}
         </span>
         <span className="grow" />
+        {voice && (
+          <VoiceButton
+            where={voice}
+            disabled={disabled}
+            onText={(t) => {
+              const el = ref.current;
+              const at = el ? el.selectionEnd : value.length;
+              const before = value.slice(0, at);
+              const add = (before && !/\s$/.test(before) ? " " : "") + t;
+              track("practice_fix_dictated", { where, chars: t.length });
+              edit(before + add + value.slice(at), at + add.length);
+              el?.focus();
+            }}
+          />
+        )}
         {onUse && lastResult && !disabled && (
           <button type="button" className="linkish" onClick={() => (onUse(Number(lastResult)), track("calc_use", { where, value: lastResult }))}>
             Use {lastResult} as the answer

@@ -132,7 +132,8 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
   const e = entry(q.id);
   const kaiOf = (id: string): KaiEntry => state.kai?.[id] ?? { attempts: [], clicks: [], correction: null };
   const ke = kaiOf(q.id);
-  const kaiDone = (k: KaiEntry) => k.attempts.some((a) => a.correct) || k.attempts.length >= 2;
+  // an attempt counts once the learner has made their call on it (until then nothing shows the outcome)
+  const kaiDone = (k: KaiEntry) => k.attempts.some((a) => a.correct && a.call !== undefined) || k.attempts[1]?.call !== undefined;
   const finished = mode === "recursive" ? kaiDone(ke) : e.correct === true || e.checks >= tries;
   const last = index === items.length - 1;
   const inRound = items.filter((x) => x.round === q.round);
@@ -203,6 +204,15 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
     // Kai's notebook now holds the correction too, for the problems that follow
     update((s: Saved) => ({ ...s, chat: { ...s.chat, state: d.state } }));
     setKai(q.id, (k) => ({ ...k, attempts: [...k.attempts, d.solution] }));
+  }
+
+  /** The learner's call on Kai's attempt, before the light. */
+  function callKai(n: number, right: boolean) {
+    const a = ke.attempts[n];
+    if (!a || a.call !== undefined) return;
+    const ms = shownAt.current ? Date.now() - shownAt.current.at : null;
+    track("practice_kai_call", { id: q.id, attempt: n + 1, call: right ? "right" : "wrong", correct: a.correct, agreed: right === a.correct, msOnProblem: ms });
+    setKai(q.id, (k) => ({ ...k, attempts: k.attempts.map((x, j) => (j === n ? { ...x, call: right } : x)) }));
   }
 
   function switchView(to: Condition) {
@@ -298,7 +308,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
                   const xk = kaiOf(x.id);
                   const st =
                     mode === "recursive"
-                      ? xk.attempts.some((a) => a.correct) ? "ok" : xk.attempts.length >= 2 ? "no" : i < index ? "skip" : ""
+                      ? xk.attempts.some((a) => a.correct && a.call !== undefined) ? "ok" : xk.attempts[1]?.call !== undefined ? "no" : i < index ? "skip" : ""
                       : xe.correct === true ? "ok" : xe.checks >= tries ? "no" : i < index ? "skip" : "";
                   return (
                     <li key={x.id} className={`${st}${i === index ? " now" : ""}`} aria-current={i === index ? "step" : undefined}>
@@ -325,6 +335,7 @@ export default function Practice({ items, minutes, tries }: { items: Item[]; min
               busy={busy}
               failed={kaiFailed === q.id}
               onRetry={() => void solveKai()}
+              onCall={callKai}
               disabled={over || !saved.chat.state}
               head={
                 <span className="ptitle">

@@ -209,10 +209,16 @@ button { font: inherit; color: inherit; }
 .q .qt { grid-column: 2; font-weight: 600; font-size: 16.5px; line-height: 1.55; padding-top: 3px; margin: 0; }
 .q .opts { grid-column: 2; border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .q .after { grid-column: 2; display: flex; flex-direction: column; gap: 10px; }
+.q .qwork, .q .qans, .q .qnum { grid-column: 2; min-width: 0; }
+.qnum { margin: 0; display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 10px; font-size: 15px; }
+.qnum span { color: var(--muted); }
+.qnum b { font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 8px; background: var(--sunk); }
+.qnum b.ok { background: var(--green-soft); color: #1f7a4a; }
+.qnum b.no { background: var(--red-soft); color: #b42318; }
 @media (max-width: 640px) {
   .q { grid-template-columns: minmax(0, 1fr); padding: 20px 0 24px; row-gap: 14px; }
   .q::before { width: 26px; height: 26px; }
-  .q .qt, .q .opts, .q .after { grid-column: 1; }
+  .q .qt, .q .opts, .q .after, .q .qwork, .q .qans, .q .qnum { grid-column: 1; }
   .q .qt { padding-top: 0; }
 }
 .opt { position: relative; display: flex; gap: 14px; align-items: center; padding: 12px 16px 12px 12px; border-radius: 14px; border: 1px solid var(--rule); cursor: pointer; font-size: 15px; line-height: 1.45; transition: border-color 0.15s, background 0.15s; }
@@ -308,7 +314,7 @@ button { font: inherit; color: inherit; }
 .light.on { color: #1f7a4a; background: var(--green-soft); } .light.on i { background: var(--green); }
 .light.off { color: #b42318; background: var(--red-soft); } .light.off i { background: var(--red); }
 .ksteps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 4px; font-size: 15px; line-height: 1.55; }
-.ksteps li { padding: 4px 8px; border-radius: 8px; animation: kstep 0.45s ease both; outline: none; }
+.ksteps li { padding: 4px 8px; border-radius: 8px; outline: none; }
 .ksteps li.lit, .ksteps li:focus-visible { background: #fff6cf; }
 .kcite { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: 2px; }
 .kcite i { font: 700 10.5px var(--font-body), sans-serif; font-style: normal; color: #3e5a99; background: #e8eefb; border-radius: 4px; padding: 0 4px; line-height: 16px; display: inline-flex; align-items: center; min-height: 16px; }
@@ -319,6 +325,12 @@ button { font: inherit; color: inherit; }
 .kanswer.off .key { background: var(--red-soft); color: #b42318; }
 @keyframes kstep { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 .ks-think { align-items: center; }
+/* the learner's call before the light */
+.kcall { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 12px; background: var(--sunk); }
+.kcall b { font: 700 15px var(--font-display), sans-serif; margin-right: 4px; }
+.kcall .btn { background: #fff; border: 1px solid #d5dbe3; }
+.kcall .btn:hover { border-color: var(--ink-2); }
+.kcall-said { margin: 0; font-size: 13.5px; color: var(--muted); }
 .ks-end { margin: 0; }
 .ks-fix-shown { border-left: 3px solid var(--blue); padding: 2px 0 2px 12px; display: flex; flex-direction: column; gap: 2px; }
 .ks-fix-shown p { margin: 0; white-space: pre-wrap; }
@@ -368,7 +380,7 @@ button { font: inherit; color: inherit; }
 /* a remark in pencil, on the rules like the notes */
 .nb-pencil { margin: 0; font: 400 16px/var(--lh) var(--font-hand), cursive; color: #8b93a0; }
 .nb-empty { margin: 0; font: 400 16px/var(--lh) var(--font-hand), cursive; color: #9aa2ae; }
-@media (prefers-reduced-motion: reduce) { .ksteps li, .kanswer, .nb-line.fresh .nb-t, .nb-line.crossed s { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .kanswer, .nb-line.fresh .nb-t, .nb-line.crossed s { animation: none; } }
 @media (max-width: 900px) {
   .nb { min-height: 0; }
   .nb-body { overflow: visible; min-height: calc(var(--lh) * 6); }
@@ -571,9 +583,6 @@ button { font: inherit; color: inherit; }
 
 /* the final test's calculator: a small panel above the bottom bar */
 .submitbar .grow { flex: 1; }
-.calc-pop { position: absolute; right: 24px; bottom: calc(100% + 10px); width: min(380px, calc(100vw - 32px)); background: #fff; border: 1px solid var(--rule); border-radius: 14px; padding: 12px; box-shadow: 0 16px 40px -18px rgba(27, 31, 39, 0.35); display: flex; flex-direction: column; gap: 8px; }
-.calc-pop-head { display: flex; align-items: center; justify-content: space-between; font: 700 14px var(--font-display), sans-serif; }
-@media (max-width: 640px) { .calc-pop { right: 16px; } }
 
 /* ---------- end-of-session feedback ---------- */
 .fb { display: flex; flex-direction: column; gap: 10px; padding-top: 22px; border-top: 1px solid var(--rule); }
@@ -649,3 +658,13 @@ button { font: inherit; color: inherit; }
 .adm-login-box h1 { margin: 0; font: 700 24px var(--font-display), sans-serif; }
 .adm-login-box .note { margin: -6px 0 0; }
 @media (max-width: 720px) { .adm-top { padding: 10px 16px; gap: 10px; flex-wrap: wrap; } .adm-main { padding: 18px 16px 48px; } .adm-cols { grid-template-columns: minmax(0, 1fr); } .adm-store { display: none; } }
+
+/* voice input: a mic beside the send button (teaching) or in the correction box's bar */
+.voice { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.voice-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; min-width: 36px; padding: 0 9px; justify-content: center; border-radius: 99px; border: 1px solid var(--rule); background: #fff; color: var(--ink-2); font: 600 13px var(--font-body), sans-serif; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.voice-btn:hover:not(:disabled) { border-color: #c9d0da; background: #fafbfc; }
+.voice-btn:disabled { opacity: 0.55; cursor: default; }
+.voice-btn.rec { border-color: #f3c3bf; background: var(--red-soft); color: #b42318; padding: 0 12px; font-variant-numeric: tabular-nums; }
+.voice-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+.voice-msg { font-size: 12.5px; color: #b42318; max-width: 280px; line-height: 1.3; }
+.scratch-bar .voice-btn { height: 28px; min-width: 28px; padding: 0 7px; }

@@ -5,15 +5,14 @@ import { Brain, Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
-import { sections } from "./Exercises";
+import { sections, type TestItem } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
 import { useState } from "react";
 
-type Item = { id: string; section: string; prompt: string; options: string[] };
 const KEYS = "ABCDEF";
 
-export default function Results({ items }: { items: Item[] }) {
+export default function Results({ items }: { items: TestItem[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
@@ -65,6 +64,7 @@ export default function Results({ items }: { items: Item[] }) {
                   return (
                     <li className="q" key={q.id}>
                       <p className="qt">{q.prompt}</p>
+                      {q.options ? (
                       <div className="opts">
                         {q.options.map((o, k) => (
                           <div key={k} className={`opt${k === g.answer ? " right" : k === g.chosen ? " wrong" : ""}`} style={{ cursor: "default" }}>
@@ -77,6 +77,16 @@ export default function Results({ items }: { items: Item[] }) {
                           </div>
                         ))}
                       </div>
+                      ) : (
+                        <p className="qnum">
+                          <span>Your answer</span> <b className={g.correct ? "ok" : "no"}>{g.chosen === null ? "none" : `${g.chosen}${q.unit && !String(g.chosen).includes(q.unit) ? ` ${q.unit}` : ""}`}</b>
+                          {!g.correct && (
+                            <>
+                              <span>The answer</span> <b>{g.key ?? g.answer}</b>
+                            </>
+                          )}
+                        </p>
+                      )}
                       <div className="after">
                         <span className={`tag ${g.correct ? "ok" : "no"}`} style={{ alignSelf: "flex-start" }}>
                           {g.correct ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}

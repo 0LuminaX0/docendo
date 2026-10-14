@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, Brain, FastForward, Lock, MessageCircle, Play } from "lucide-react";
+import VoiceButton from "./VoiceButton";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
@@ -37,7 +38,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
   // for the research log: how each message was written
-  const compose = useRef<{ start: number | null; pasted: number; keys: number; deletes: number }>({ start: null, pasted: 0, keys: 0, deletes: 0 });
+  const compose = useRef<{ start: number | null; pasted: number; dictated: number; keys: number; deletes: number }>({ start: null, pasted: 0, dictated: 0, keys: 0, deletes: 0 });
 
   // first visit: Kai opens the conversation
   useEffect(() => {
@@ -89,10 +90,10 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     const c = compose.current;
     const composeMs = c.start ? Date.now() - c.start : 0;
     const elapsedMs = Math.max(0, Date.now() - (chat.startedAt ?? saved.startedAt));
-    track("message_send", { turn: chat.state.turn + 1, chars: message.length, composeMs, pastedChars: c.pasted, keys: c.keys, deletes: c.deletes, retry: !!again, elapsedMs });
-    compose.current = { start: null, pasted: 0, keys: 0, deletes: 0 };
+    track("message_send", { turn: chat.state.turn + 1, chars: message.length, composeMs, pastedChars: c.pasted, dictatedChars: c.dictated, keys: c.keys, deletes: c.deletes, retry: !!again, elapsedMs });
+    compose.current = { start: null, pasted: 0, dictated: 0, keys: 0, deletes: 0 };
     const t0 = Date.now();
-    const r = await post<TurnReply>("/api/chat", { token: saved.token, message, history, state: chat.state, elapsedMs, composeMs, pastedChars: c.pasted });
+    const r = await post<TurnReply>("/api/chat", { token: saved.token, message, history, state: chat.state, elapsedMs, composeMs, pastedChars: c.pasted, dictatedChars: c.dictated });
     track("reply_received", { ok: r.ok, waitMs: Date.now() - t0, status: r.ok ? 200 : r.status });
     setBusy(false);
     if (!r.ok) {
@@ -312,6 +313,16 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   )}
                   <span className="grow" />
                   {text.length > MAX - 150 && <span className="hint">{MAX - text.length} left</span>}
+                  <VoiceButton
+                    where="teach"
+                    disabled={busy}
+                    onText={(t) => {
+                      if (!compose.current.start) compose.current.start = Date.now();
+                      compose.current.dictated += t.length;
+                      setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t).slice(0, MAX));
+                      taRef.current?.focus();
+                    }}
+                  />
                   <button className="send" type="submit" disabled={busy || !text.trim()} aria-label="Send" title="Send (Enter)">
                     <ArrowUp size={20} strokeWidth={2.4} />
                   </button>

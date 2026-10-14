@@ -25,6 +25,9 @@ export const MODELS = {
   // Kai solving practice problems (recursive feedback). Chosen with `pnpm eval:solver` (2026-10-14): Claude Haiku 5.5
   // followed the notebook and its guesses most reliably, never turned around, and was fastest (median 4.2 s).
   solver: process.env.DOCENDO_MODEL_SOLVER ?? "anthropic/claude-haiku-5.5",
+  // voice input: speech to text. gemini-3.5-flash-lite takes audio at $0.30 per million tokens (32 a second), so a minute
+  // of speech costs about $0.001
+  transcribe: process.env.DOCENDO_MODEL_TRANSCRIBE ?? "google/gemini-3.5-flash-lite",
 } as const;
 
 const TIMEOUT_MS = Number(process.env.DOCENDO_LLM_TIMEOUT_MS ?? 25_000);
@@ -201,4 +204,40 @@ export async function chatText(opts: {
       };
   }
   throw new Error(`OpenRouter: no complete reply after 2 attempts (${why || "unknown"})`);
+}
+
+/** Speech to text: a 16 kHz mono WAV recording in, the words out. Same provider rules (no data collection). */
+export async function transcribeAudio(opts: { model: string; wav: Buffer; instructions: string; timeoutMs?: number }): Promise<{ text: string; usage: Usage; ms: number }> {
+  const t0 = Date.now();
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey()}`, "Content-Type": "application/json", "X-Title": "Docendo" },
+    body: JSON.stringify({
+      model: opts.model,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: opts.instructions },
+            { type: "input_audio", input_audio: { data: opts.wav.toString("base64"), format: "wav" } },
+          ],
+        },
+      ],
+      temperature: 0,
+      max_tokens: 1500,
+      provider: { data_collection: "deny", sort: PROVIDER_SORT },
+      usage: { include: true },
+    }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 25_000),
+  });
+  if (!res.ok) throw new Error(`OpenRouter ${res.status} ${(await res.text()).slice(0, 300)}`);
+  const json = (await res.json()) as {
+    choices?: { message?: { content?: string } }[];
+    usage?: { prompt_tokens: number; completion_tokens: number; cost?: number };
+  };
+  return {
+    text: json.choices?.[0]?.message?.content ?? "",
+    ms: Date.now() - t0,
+    usage: { promptTokens: json.usage?.prompt_tokens ?? 0, completionTokens: json.usage?.completion_tokens ?? 0, costUsd: json.usage?.cost },
+  };
 }

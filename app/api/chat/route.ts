@@ -25,6 +25,7 @@ const Body = z.object({
   elapsedMs: z.number().int().min(0).max(24 * 3600_000).optional(), // time since the teach page opened (client clock)
   composeMs: z.number().int().min(0).max(24 * 3600_000).optional(), // first keystroke to send, for the log
   pastedChars: z.number().int().min(0).max(100_000).optional(),
+  dictatedChars: z.number().int().min(0).max(100_000).optional(), // spoken (voice input), then perhaps edited
 });
 
 /** The model account is out of credits (or its in-flight budget): resending won't help. */
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
       elapsedMs: elapsedMs ?? null,
       composeMs: body.data.composeMs ?? null,
       pastedChars: body.data.pastedChars ?? 0,
+      dictatedChars: body.data.dictatedChars ?? 0,
       message,
       chars: message.length,
       words: message.split(/\s+/).filter(Boolean).length,

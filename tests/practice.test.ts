@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
 import exercisesJson from "../topics/bandits/exercises.json";
+import { checkNumber } from "../content/practice";
 import { Bundle } from "../content/schema";
 import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
 
@@ -68,29 +69,71 @@ describe("practice problems", () => {
 });
 
 describe("final test items", () => {
-  const test = exercisesJson.items;
+  type T = { id: string; kind?: string; prompt: string; options?: string[]; answer: number; tolerance?: number };
+  const test = exercisesJson.items as T[];
   const q = (id: string) => test.find((x) => x.id === id)!;
-  const key = (id: string) => q(id).options[q(id).answer]!;
+  const key = (id: string) => q(id).options![q(id).answer]!;
+  const ucb = (avg: number, lnT: number, n: number) => avg + Math.sqrt((2 * lnT) / n);
 
   it("have keys that match their own numbers", () => {
-    // q03: greedy picks the best average (A 7 and 5, B 8, C 6, 6 and 7)
-    expect(argmax([(7 + 5) / 2, 8, (6 + 6 + 7) / 3])).toBe(1);
-    expect(key("q03")).toMatch(/^B/);
-    // q05: ε = 0.1, five banners: 0.9 + 0.1 / 5
-    expect(Number(key("q05").replace("%", "")) / 100).toBeCloseTo(0.9 + 0.1 / 5);
-    // q09: A 6.0 + 0.3, B 5.2 + 1.2, C 5.8 + 0.4
-    expect(argmax([6.3, 6.4, 6.2])).toBe(1);
-    expect(key("q09")).toMatch(/^B/);
+    // q01: four students averaging 12 minutes, then 22
+    expect(q("q01").answer).toBeCloseTo((4 * 12 + 22) / 5);
+    // q02: days 1-3 A 4, B 7, C 6; day 4 greedy takes B (7) and gets 3; day 5 takes C (6) and gets 5
+    const avg = { A: 4, B: (7 + 3) / 2, C: (6 + 5) / 2 };
+    expect(argmax([avg.A, avg.B, avg.C])).toBe(2);
+    expect(key("q02")).toMatch(/^C: its average, 5\.5/);
+    // q03: B's average stays between 3 and 4, always above A's single 2: A gets none
+    expect(q("q03").answer).toBe(0);
+    // q04: greedy takes the highest average, B's 8.0
+    expect(argmax([7.9, 8.0, 6.0])).toBe(1);
+    expect(key("q04")).toMatch(/^B/);
+    // q05: 1,000 visitors × ε 0.2 ÷ 4 banners
+    expect(q("q05").answer).toBeCloseTo((1000 * 0.2) / 4);
+    // q08: 0.60 + √(2 × 3.91 / 8)
+    expect(Math.abs(q("q08").answer - ucb(0.6, 3.91, 8))).toBeLessThanOrEqual(q("q08").tolerance!);
+    expect(Math.abs(q("q08").answer - ucb(0.6, Math.log(50), 8))).toBeLessThanOrEqual(q("q08").tolerance!);
+    // q09: ln 20 ≈ 3.0; A 7.0 over 10, B 6.0 over 2, C 6.6 over 8: A wins by a little, with the rounded or the exact ln
+    for (const lnT of [3.0, Math.log(20)]) expect(argmax([ucb(7, lnT, 10), ucb(6, lnT, 2), ucb(6.6, lnT, 8)])).toBe(0);
+    expect(key("q09")).toMatch(/^A: its average plus its bonus, about 7\.77/);
+    // q10: ln t ≈ 4.6; A 4.0 over 50, C 3.0 over 4 → C; C gets 3 (average unchanged) over 5 → A
+    expect(ucb(3, 4.6, 4)).toBeGreaterThan(ucb(4, 4.6, 50));
+    expect(ucb(3, 4.6, 5)).toBeLessThan(ucb(4, 4.6, 50));
+    expect(key("q10")).toMatch(/^A: one more play shrinks/);
+  });
+
+  it("grade typed numbers with their tolerance", () => {
+    expect(checkNumber("14", 14, 0.05)).toBe(true);
+    expect(checkNumber("14.0 ", 14, 0.05)).toBe(true);
+    expect(checkNumber("13", 14, 0.05)).toBe(false);
+    expect(checkNumber("0", 0, 0)).toBe(true);
+    expect(checkNumber("1,59", 1.589, 0.02)).toBe(true);
+    expect(checkNumber("1.55", 1.589, 0.02)).toBe(false);
+    expect(checkNumber("about 50", 50, 1)).toBe(false); // words aren't a number
+  });
+
+  it("mix choice and number items, and number items have no options", () => {
+    const numbers = test.filter((x) => x.kind === "number");
+    expect(numbers.length).toBeGreaterThanOrEqual(3);
+    for (const x of numbers) expect(x.options, x.id).toBeUndefined();
   });
 
   it("use settings of their own, never the lesson's or practice's", () => {
     for (const x of test) expect(x.prompt, x.id).not.toMatch(/restaurant|food truck|slot machine|headline/i);
   });
 
+  it("don't give the key away by its length", () => {
+    // test-wise learners pick the longest, most careful option: the key must not stand out
+    for (const x of test.filter((t) => t.options)) {
+      const others = x.options!.filter((_, k) => k !== x.answer).map((o) => o.length);
+      expect(x.options![x.answer]!.length, x.id).toBeLessThanOrEqual(Math.max(...others) * 1.1);
+    }
+  });
+
   it("spread their keys over the positions", () => {
     const counts = [0, 0, 0, 0];
-    for (const x of test) counts[x.answer]!++;
-    expect(Math.max(...counts)).toBeLessThanOrEqual(4);
+    for (const x of test.filter((t) => t.options)) counts[x.answer]!++;
+    expect(Math.max(...counts)).toBeLessThanOrEqual(2);
+    expect(counts.filter((c) => c > 0).length).toBe(4);
   });
 });
 
