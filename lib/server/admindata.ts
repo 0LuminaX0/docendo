@@ -85,13 +85,36 @@ async function writeFileData(d: FileData) {
   await writeFile(join(DATA, "codes.json"), JSON.stringify(d, null, 2));
 }
 
+/**
+ * A hash as Upstash returns it: with automatic deserialization off (as here), HGETALL gives the raw reply, a flat
+ * [field, value, field, value, …] array, not an object. Read either shape into an object of strings.
+ */
+export function hashOf(raw: unknown): Record<string, string> {
+  if (Array.isArray(raw)) {
+    const out: Record<string, string> = {};
+    for (let i = 0; i + 1 < raw.length; i += 2) out[String(raw[i])] = typeof raw[i + 1] === "string" ? (raw[i + 1] as string) : JSON.stringify(raw[i + 1]);
+    return out;
+  }
+  if (raw && typeof raw === "object") return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, typeof v === "string" ? v : JSON.stringify(v)]));
+  return {};
+}
+
+/** One stored code; null for a value that doesn't read as one (it is skipped, not allowed to break the page). */
+function codeOf(v: string): StoredCode | null {
+  try {
+    const c = JSON.parse(v) as StoredCode;
+    return c && typeof c.code === "string" && typeof c.id === "string" ? { ...c, createdAt: typeof c.createdAt === "string" ? c.createdAt : "" } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function listCodes(): Promise<(StoredCode & { uses: number })[]> {
   let codes: StoredCode[];
   let uses: Record<string, number>;
   if (redis) {
-    const all = ((await redis.hgetall(CODES)) ?? {}) as Record<string, string>;
-    codes = Object.values(all).map((v) => (typeof v === "string" ? (JSON.parse(v) as StoredCode) : (v as StoredCode)));
-    uses = Object.fromEntries(Object.entries(((await redis.hgetall(USES)) ?? {}) as Record<string, string>).map(([k, v]) => [k, Number(v)]));
+    codes = Object.values(hashOf(await redis.hgetall(CODES))).map(codeOf).filter((c): c is StoredCode => c !== null);
+    uses = Object.fromEntries(Object.entries(hashOf(await redis.hgetall(USES))).map(([k, v]) => [k, Number(v) || 0]));
   } else {
     const d = await readFileData();
     codes = Object.values(d.codes);

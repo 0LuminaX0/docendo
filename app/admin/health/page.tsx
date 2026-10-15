@@ -110,97 +110,97 @@ export default async function Page() {
         </div>
       </section>
 
-      <div className="adm-cols">
-        <section className="adm-card">
-          <h2>Per role</h2>
-          <p className="note">Speed is the model call alone (median and the slowest tenth). A chat turn is a judge call and a writer call.</p>
-          <table className="adm-table">
-            <thead>
-              <tr>
-                <th>Role</th>
-                <th>Calls</th>
-                <th>Median</th>
-                <th>90%</th>
-                <th>Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {byRole.map((r) => (
-                <tr key={r.role}>
-                  <td>
-                    {ROLE_NAME[r.role] ?? r.role}
-                    <span className="note cnt-model">{r.models}</span>
-                  </td>
-                  <td>{r.n}</td>
-                  <td>{sec(r.p50)}</td>
-                  <td className={r.p90 !== null && r.p90 > 10_000 ? "warn-text" : ""}>{sec(r.p90)}</td>
-                  <td>{usd(r.cost)}</td>
-                </tr>
-              ))}
-              {!byRole.length && (
+      <div className="adm-two">
+        <div className="adm-stack">
+          <section className="adm-card">
+            <h2>Per role</h2>
+            <p className="note">Speed is the model call alone (median and the slowest tenth). A chat turn is a judge call and a writer call.</p>
+            <table className="adm-table">
+              <thead>
                 <tr>
-                  <td colSpan={5} className="note">
-                    No model calls in this period.
-                  </td>
+                  <th>Role</th>
+                  <th>Calls</th>
+                  <th>Median</th>
+                  <th>90%</th>
+                  <th>Cost</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </section>
-
-        <section className="adm-card">
-          <h2>Per day</h2>
-          <p className="note">Model cost per day; sessions started beside it.</p>
-          <ol className="ch-funnel">
-            {perDay.map((p) => (
-              <li key={p.d}>
-                <span>
-                  {p.d.slice(8)}.{p.d.slice(5, 7)}
-                </span>
-                <span className="ch-pair">
-                  <i className="ch-d" style={{ width: `${(p.cost / maxCost) * 100}%` }} />
-                </span>
-                <b>
-                  {p.cost ? usd(p.cost) : "–"} <span className="note">{p.sessions || ""}</span>
-                </b>
-              </li>
-            ))}
-          </ol>
-        </section>
-      </div>
-
-      <div className="adm-cols">
-        <section className="adm-card">
-          <h2>What went wrong</h2>
-          <ul className="adm-flags">
-            {problems.map(([label, n]) => (
-              <li key={label} className={n ? "on" : ""}>
-                <b>{n}</b>
-                <span>{label}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section className="adm-card">
-          <h2>Latest errors</h2>
-          {errors.length ? (
-            <ul className="adm-errors">
-              {errors.map((e, i) => (
-                <li key={i}>
-                  <span className="note">
-                    {e.at.slice(5, 16).replace("T", " ")} UTC, {e.t.replace(/_/g, " ")}
-                  </span>
-                  <code>{String(e.error ?? "").slice(0, 200)}</code>
-                  <Link className="note" href={`/admin/sessions/${e.sid}`}>
-                    session
-                  </Link>
+              </thead>
+              <tbody>
+                {byRole.map((r) => (
+                  <tr key={r.role}>
+                    <td>
+                      {ROLE_NAME[r.role] ?? r.role}
+                      <span className="note cnt-model">{r.models}</span>
+                    </td>
+                    <td>{r.n}</td>
+                    <td>{sec(r.p50)}</td>
+                    <td className={r.p90 !== null && r.p90 > 10_000 ? "warn-text" : ""}>{sec(r.p90)}</td>
+                    <td>{usd(r.cost)}</td>
+                  </tr>
+                ))}
+                {!byRole.length && (
+                  <tr>
+                    <td colSpan={5} className="note">
+                      No model calls in this period.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+          <section className="adm-card">
+            <h2>What went wrong</h2>
+            <ul className="adm-flags">
+              {problems.map(([label, n]) => (
+                <li key={label} className={n ? "on" : ""}>
+                  <b>{n}</b>
+                  <span>{label}</span>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="note">None in the last {DAYS} days.</p>
-          )}
-        </section>
+          </section>
+        </div>
+        <div className="adm-stack">
+          <section className="adm-card">
+            <h2>Per day</h2>
+            <p className="note">Model cost per day; sessions started beside it.</p>
+            <ol className="ch-funnel">
+              {perDay.map((p) => (
+                <li key={p.d}>
+                  <span>
+                    {p.d.slice(8)}.{p.d.slice(5, 7)}
+                  </span>
+                  <span className="ch-pair">
+                    <i className="ch-d" style={{ width: `${(p.cost / maxCost) * 100}%` }} />
+                  </span>
+                  <b>
+                    {p.cost ? usd(p.cost) : "–"} <span className="note">{p.sessions || ""}</span>
+                  </b>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="adm-card">
+            <h2>Latest errors</h2>
+            {errors.length ? (
+              <ul className="adm-errors">
+                {errors.map((e, i) => (
+                  <li key={i}>
+                    <span className="note">
+                      {e.at.slice(5, 16).replace("T", " ")} UTC, {e.t.replace(/_/g, " ")}
+                    </span>
+                    <code>{String(e.error ?? "").slice(0, 200)}</code>
+                    <Link className="note" href={`/admin/sessions/${e.sid}`}>
+                      session
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="note">None in the last {DAYS} days.</p>
+            )}
+          </section>
+        </div>
       </div>
     </AdminShell>
   );

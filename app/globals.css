@@ -727,9 +727,10 @@ button { font: inherit; color: inherit; }
 .adm-funnel li { display: grid; grid-template-columns: 96px minmax(0, 1fr) 36px; align-items: center; gap: 10px; font-size: 14px; }
 .adm-funnel .adm-bar { width: 100%; height: 12px; margin: 0; }
 .adm-funnel b { text-align: right; font-variant-numeric: tabular-nums; }
-.adm-dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; margin: 0; font-size: 14px; }
+/* labels keep their room; a long value wraps instead of squeezing them */
+.adm-dl { display: grid; grid-template-columns: minmax(170px, 1fr) minmax(0, max-content); gap: 8px 16px; margin: 0; font-size: 14px; }
 .adm-dl dt { color: var(--ink-2); }
-.adm-dl dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.adm-dl dd { margin: 0; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .adm-quotes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14.5px; line-height: 1.5; }
 .adm-quotes li { padding-left: 12px; border-left: 3px solid var(--rule); }
 .adm-pill { display: inline-block; font: 700 11.5px var(--font-body), sans-serif; border-radius: 99px; padding: 2px 8px; margin-left: 6px; background: var(--sunk); color: var(--ink-2); }
@@ -1072,3 +1073,8 @@ textarea.dictating::placeholder { color: transparent; }
 .cnt-videos li { display: flex; gap: 12px; align-items: center; }
 .cnt-videos img { border-radius: 8px; flex: none; }
 .cnt-videos div { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+
+/* admin: two columns stacking their own cards (no gaps beside a taller card); one column on narrow screens */
+.adm-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.adm-stack { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (max-width: 1000px) { .adm-two { grid-template-columns: minmax(0, 1fr); } }

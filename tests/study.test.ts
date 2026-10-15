@@ -106,3 +106,15 @@ describe("topic packs", () => {
     expect(sum.total - without.total).toBe(d.practice.minutes);
   });
 });
+
+describe("Upstash replies", () => {
+  it("reads a hash from the raw HGETALL reply (a flat array) or an object", async () => {
+    const { hashOf } = await import("../lib/server/admindata");
+    const code = JSON.stringify({ id: "cABC", code: "X-ABC", createdAt: "2026-10-15" });
+    expect(hashOf(["XABC", code, "XDEF", code])).toEqual({ XABC: code, XDEF: code });
+    expect(hashOf(["cABC", "3"])).toEqual({ cABC: "3" });
+    expect(hashOf({ cABC: 3 })).toEqual({ cABC: "3" });
+    expect(hashOf(null)).toEqual({});
+    expect(hashOf([])).toEqual({});
+  });
+});
