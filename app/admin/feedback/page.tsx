@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/server/admin";
-import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
+import { viewOf, viewTables } from "@/lib/server/adminview";
 import AdminShell from "@/components/admin/AdminShell";
+import ViewBar from "@/components/admin/ViewBar";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: feedback", robots: { index: false, follow: false } };
 
-export default async function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
-  const t = await loadTables();
+  const view = viewOf(await searchParams);
+  const t = await viewTables(view);
   const rows = [...t.feedback].reverse();
   const rated = rows.filter((r) => typeof r.rating === "number");
   const avg = rated.length ? Math.round((rated.reduce((a, r) => a + Number(r.rating), 0) / rated.length) * 10) / 10 : null;
@@ -22,6 +24,7 @@ export default async function Page() {
         </div>
         <div className="adm-actions"><a className="btn ghost small" href="/api/admin/export?table=feedback">feedback.csv</a></div>
       </div>
+      <ViewBar path="/admin/feedback" view={view} />
       <section className="adm-card">
         <ul className="adm-quotes">
           {rows.map((f, i) => (

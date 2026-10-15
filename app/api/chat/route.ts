@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { config } from "@/lib/server/env";
-import { bundle } from "@/lib/server/content";
+import { packFor } from "@/lib/server/content";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
@@ -12,7 +12,6 @@ import { factScore, latest } from "@/engine/tutor/state";
 import type { LlmCall } from "@/engine/llm";
 import { record } from "@/lib/server/events";
 import { getSettings } from "@/lib/server/settings";
-import { helpInLesson } from "@/lib/server/moments";
 import { llmWrite, mockWrite } from "@/engine/tutor/writer";
 
 export const runtime = "nodejs";
@@ -73,6 +72,8 @@ export async function POST(req: NextRequest) {
 
   const ip = clientIp(req);
   const { settings } = await getSettings();
+  const pack = packFor(session.topic); // the topic the session started with
+  const { bundle } = pack;
   const r = await limitAll([
     // bursts: per server instance is enough; the shared checks below are what protect the model budget
     [`chat:sidmin:${session.sid}`, config.sessionTurnsPerMin, 60, "local"], // one learner's burst
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     const degraded: string[] = [];
     const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls, degraded));
     // Kai's help card only if its moment lies in the lesson as currently set up (Settings: lesson parts)
-    const help = helpInLesson(result.help, settings.lesson);
+    const help = settings.watch.on ? pack.helpInLesson(result.help, settings.watch.parts) : null;
     const tr = result.trace;
     const old = latest(before);
     const score = factScore(bundle, result.state);

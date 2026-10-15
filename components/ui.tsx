@@ -4,11 +4,19 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { FlaskConical, Play, X } from "lucide-react";
 import type { Mood } from "@/lib/client/store";
+import { barsOf, blockOf, type StepKey } from "@/lib/flow";
+import { useStudySettings } from "./SettingsContext";
 
-const PHASES = ["Watch", "Teach Kai", "Practice", "Test"] as const;
-
-/** One header row: brand, optional page tools (left), the step indicator (centre), status and demo badge (right). */
-export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 | 3 | 4; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
+/**
+ * One header row: brand, optional page tools (left), the step indicator (centre), status and demo badge (right).
+ * The step bars are the main steps the study runs (lib/flow.ts), lit up to `step`; none on the welcome page.
+ */
+export function Header({ step, right, demo, label, left }: { step?: StepKey; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
+  const { flow } = useStudySettings();
+  const bars = barsOf(flow);
+  // the results light every bar; a step without a bar (the pretest) none
+  const phase = step === "results" ? bars.length : step ? bars.indexOf(step) + 1 : 0;
+  const name = step && step !== "results" && phase > 0 ? blockOf(step).name : "";
   return (
     <div className="topwrap">
     <header className={`top${left ? " has-tools" : ""}`}>
@@ -17,14 +25,14 @@ export function Header({ phase, right, demo, label, left }: { phase: 0 | 1 | 2 |
         {left}
       </div>
       {phase > 0 && (
-        <div className="phase" aria-label={`Step ${phase} of ${PHASES.length}: ${PHASES[phase - 1]}`}>
+        <div className="phase" aria-label={`Step ${phase} of ${bars.length}: ${label ?? name}`}>
           <div className="arms" aria-hidden="true">
-            {PHASES.map((_, i) => (
-              <i key={i} className={i < phase ? `on${i + 1}` : ""} />
+            {bars.map((k, i) => (
+              <i key={k} className={i < phase ? `on-${k}` : ""} />
             ))}
           </div>
           <span className="phase-name">
-            {label ?? PHASES[phase - 1]}{!label && <span className="of">Step {phase} of {PHASES.length}</span>}
+            {label ?? name}{!label && <span className="of">Step {phase} of {bars.length}</span>}
           </span>
         </div>
       )}

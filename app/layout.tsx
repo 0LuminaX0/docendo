@@ -4,7 +4,7 @@ import "./globals.css";
 import Telemetry from "@/components/Telemetry";
 import { SettingsProvider } from "@/components/SettingsContext";
 import SessionGuard from "@/components/SessionGuard";
-import { getSettings } from "@/lib/server/settings";
+import { currentStudy } from "@/lib/server/study";
 import { publicOf } from "@/lib/settings";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
@@ -13,24 +13,23 @@ const body = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"],
 // still belongs with Bricolage and Figtree (a script face looked pasted in)
 const hand = Shantell_Sans({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-hand", display: "swap" });
 
-export const metadata: Metadata = {
-  title: "Docendo",
-  description: "Learn multi-armed bandits by teaching them to Kai, a classmate who missed the lecture.",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { pack } = await currentStudy();
+  return { title: "Docendo", description: pack.copy.description, robots: { index: false, follow: false } };
+}
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };
 
 export const dynamic = "force-dynamic"; // the study settings can change at any time (admin panel)
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { settings } = await getSettings();
+  const { settings, pack } = await currentStudy();
   return (
     // Browser extensions (Grammarly, password managers…) add attributes to <html>/<body> before React
     // hydrates; suppressHydrationWarning ignores attribute differences on these two elements only.
     <html lang="en" className={`${display.variable} ${body.variable} ${hand.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        <SettingsProvider value={publicOf(settings)}>{children}</SettingsProvider>
+        <SettingsProvider value={publicOf(settings, pack)}>{children}</SettingsProvider>
         <Telemetry />
         <SessionGuard />
       </body>

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/server/admin";
-import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
-import { charts, summarize } from "@/lib/analytics";
+import { charts, inScope, summarize } from "@/lib/analytics";
 import { DailyBars, FunnelPairs, Legend, MinutesBars, Scatter, ScoreHist } from "@/components/admin/Charts";
-import { testVersion } from "@/lib/server/content";
-import { getSettings } from "@/lib/server/settings";
+import { packFor } from "@/lib/server/content";
+import { currentStudy, topicList } from "@/lib/server/study";
+import { viewOf, viewTables } from "@/lib/server/adminview";
+import { BLOCKS, flowOf } from "@/lib/flow";
 import AdminShell from "@/components/admin/AdminShell";
+import ViewBar from "@/components/admin/ViewBar";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: admin", robots: { index: false, follow: false } };
@@ -22,17 +24,24 @@ function Bar({ value, max = 100, tone = "blue" }: { value: number | null; max?: 
   );
 }
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ all?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
-  const all = (await searchParams).all === "1";
-  const t = await loadTables();
-  const versions = { A: testVersion("A"), B: testVersion("B") };
-  const s = summarize(t, { all, testVersions: Object.values(versions) });
-  const c = charts(t, { all });
-  const { settings } = await getSettings();
+  const view = viewOf(await searchParams);
+  const t = await viewTables(view);
+  const { settings, version, pack: current } = await currentStudy({ fresh: true });
+  // per-item numbers count only the current version of each form (of the topic in view, else the study's)
+  const pack = view.topic ? packFor(view.topic) : current;
+  const versions = Object.fromEntries(pack.forms.map((f) => [f, pack.testVersion(f)]));
+  const s = summarize(t, { all: true, testVersions: Object.values(versions) });
+  const c = charts(t, { all: true });
   const flagged = new Set(c.flags.flatMap((f) => f.sids)).size;
   const cmp = c.comparison;
-  const feedback = t.feedback.filter((f) => all || f.entry === "participant").slice(-3).reverse();
+  const feedback = t.feedback.slice(-3).reverse();
+  const counts = { participants: t.allSessions.filter((x) => inScope(x, "participants")).length, team: t.allSessions.filter((x) => inScope(x, "team")).length, all: t.allSessions.length };
+  const live = t.allSessions.filter((x) => x.lastAt && Date.now() - Date.parse(String(x.lastAt)) < 15 * 60_000 && x.reachedStep !== "results").length;
+  const underVersion = t.sessions.filter((x) => x.settingsVersion === version).length;
+  const showSurvey = settings.survey.on || c.survey.some((q) => q.direct !== null || q.recursive !== null);
+  const showPractice = settings.practice.on || s.practice.length > 0;
 
   return (
     <AdminShell store={eventStore}>
@@ -40,12 +49,34 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         <div>
           <h1>Dashboard</h1>
           <p className="note">
-            {all ? "Every session, tests included." : "Participants' sessions only (their own code, not demo)."}{" "}
-            <Link href={all ? "/admin" : "/admin?all=1"}>{all ? "Participants only" : "Include team and test sessions"}</Link>
+            {view.scope === "participants" ? "Participants' sessions (their own code, not demo)." : view.scope === "team" ? "Team, shared-code and demo sessions: tests of the app, kept out of the study's numbers." : "Every session, tests included."}
           </p>
         </div>
         <Legend />
       </div>
+      <ViewBar path="/admin" view={view} topics={topicList()} counts={counts} />
+
+      <section className="adm-study">
+        <div>
+          <span className="adm-side-h">Study in force</span>
+          <b>{current.title}</b>
+          <span className="note">
+            version <code>{version}</code>, {underVersion} {underVersion === 1 ? "session" : "sessions"} in view under it
+          </span>
+        </div>
+        <ol className="adm-flow">
+          {BLOCKS.map((b) => (
+            <li key={b.key} className={flowOf(settings).includes(b.key) ? "" : "off"} title={flowOf(settings).includes(b.key) ? undefined : "Switched off"}>
+              {b.name}
+            </li>
+          ))}
+          {settings.survey.on && <li>Questions after the test</li>}
+          {settings.test.followUpDays > 0 && <li>Follow-up after {settings.test.followUpDays} days</li>}
+        </ol>
+        <Link className="btn ghost small" href="/admin/live">
+          <i className={`adm-dot${live ? " on" : ""}`} /> {live} active now
+        </Link>
+      </section>
 
       <section className="adm-kpis">
         <div><b>{s.sessions}</b><span>sessions: {s.byCondition.direct} direct, {s.byCondition.recursive} recursive</span></div>
@@ -112,7 +143,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           <p className="note">One dot per finished session (pretest 0 to 3 across, final test 0 to 10 up).</p>
           <Scatter points={c.points} preMax={s.pretest.of} />
         </section>
-        <section className="adm-card">
+        {showSurvey && <section className="adm-card">
           <h2>After the test</h2>
           <p className="note">The questions before the score, means from 1 to 7 (direct / recursive), and the manipulation check.</p>
           <ol className="ch-funnel">
@@ -139,7 +170,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             </tbody>
           </table>
           <p className="note" style={{ marginTop: 8 }}>Expected: direct answers &quot;my understanding&quot;, recursive &quot;Kai&apos;s&quot;. If not, the manipulation didn&apos;t land.</p>
-        </section>
+        </section>}
         <section className="adm-card">
           <h2>Minutes per chapter</h2>
           <p className="note">Medians (direct / recursive). Practice is timed at the same length in both.</p>
@@ -147,7 +178,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         </section>
       </div>
 
-      <section className="adm-card">
+      {showPractice && <section className="adm-card">
         <h2>Practice problems</h2>
         <p className="note">Direct: the learner&apos;s first try, and solved in two tries. Recursive: Kai&apos;s first try, right after the learner&apos;s correction, and how often the learner called Kai&apos;s answer right before the light.</p>
         <table className="adm-table">
@@ -157,7 +188,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           <tbody>
             {s.practice.map((p) => (
               <tr key={p.id}>
-                <td><b>{p.id}</b> <span className="note">round {String(p.round ?? "?")}</span></td>
+                <td><Link href={`/admin/content#${p.id}`}><b>{p.id}</b></Link> <span className="note">round {String(p.round ?? "?")}</span></td>
                 <td>{p.direct.tried}</td>
                 <td><Bar value={p.direct.firstTry} tone="green" /> {pctText(p.direct.firstTry)}</td>
                 <td>{pctText(p.direct.solved)}</td>
@@ -169,16 +200,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
                 <td>{p.recursive.sec === null ? "–" : `${p.recursive.sec} s`}</td>
               </tr>
             ))}
-            {!s.practice.length && <tr><td colSpan={9} className="note">No practice data yet.</td></tr>}
+            {!s.practice.length && <tr><td colSpan={10} className="note">No practice data yet.</td></tr>}
           </tbody>
         </table>
-      </section>
+      </section>}
 
       <div className="adm-cols">
         <section className="adm-card">
           <h2>Final test items</h2>
           <p className="note">
-            Share correct. Aim for about half in the pilot. Final test only, current versions of forms A ({versions.A}) and B ({versions.B})
+            Share correct. Aim for about half in the pilot. Final test only, current versions of {Object.entries(versions).map(([f, v]) => `form ${f} (${v})`).join(" and ")}
             {s.testOtherVersions ? `; ${s.testOtherVersions} answers to earlier versions are left out here (they are in the export)` : ""}.
           </p>
           <table className="adm-table">
@@ -188,7 +219,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <tbody>
               {s.test.map((q) => (
                 <tr key={q.id}>
-                  <td><b>{q.id}</b></td>
+                  <td><Link href={`/admin/content#${q.id}`}><b>{q.id}</b></Link></td>
                   <td>{q.n}</td>
                   <td><Bar value={q.all} tone={q.all !== null && (q.all > 85 || q.all < 20) ? "red" : "blue"} /> {pctText(q.all)}</td>
                   <td>{pctText(q.direct)}</td>
@@ -207,15 +238,15 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <dt>Misconceptions stated (mean)</dt><dd>{s.teaching.misconceptions ?? "–"}</dd>
             <dt>How teaching ended</dt>
             <dd>{Object.entries(s.teaching.readyReasons).map(([k, n]) => `${k} ${n}`).join(", ") || "–"}</dd>
-            <dt>Pretest (mean score)</dt><dd>{s.pretest.mean ?? "–"} of {s.pretest.of}; {s.excluded} excluded (took an RL course)</dd>
+            <dt>Pretest (mean score)</dt><dd>{s.pretest.mean ?? "–"} of {s.pretest.of}; {s.excluded} excluded by a background answer</dd>
             <dt>Replies with a blocked lesson word</dt><dd>{s.teaching.leaks}</dd>
             <dt>Turns answered offline (no credits)</dt><dd>{s.teaching.degraded}</dd>
           </dl>
-          {(settings.delayedTestDays > 0 || s.delayed.n > 0) && (
+          {(settings.test.followUpDays > 0 || s.delayed.n > 0) && (
             <>
               <h2 style={{ marginTop: 18 }}>Follow-up test</h2>
               <p className="note">
-                {settings.delayedTestDays ? `Opens ${settings.delayedTestDays} days after the final test, with the other form.` : "Switched off (Settings: follow-up test days is 0)."}
+                {settings.test.followUpDays ? `Opens ${settings.test.followUpDays} days after the final test, with the other form.` : "Switched off (Study setup: the final test's follow-up days are 0)."}
               </p>
               <dl className="adm-dl">
                 <dt>Came back / finished</dt><dd>{s.delayed.n} / {s.delayed.finished}</dd>

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { checkExercise, formItems, keyText, practiceReview, pretest, publicExercises, testVersion } from "@/lib/server/content";
+import { checkExercise, keyText, packFor } from "@/lib/server/content";
+import { getSettings } from "@/lib/server/settings";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
@@ -10,19 +11,19 @@ import { markTest } from "@/lib/server/participants";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ITEMS = 10; // each form's length (checked against the content in tests/practice.test.ts)
+const ITEMS = 30; // at most, per form (the form's own length is checked below)
 // the delayed test asks first whether the learner has looked at the topic since: a confound for a delayed measure
 const SINCE = ["no", "a little", "a lot"] as const;
 
 const Body = z.union([
-  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.array(z.number().int().min(0).max(9)).length(pretest.length) }),
+  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.array(z.number().int().min(0).max(9)).max(ITEMS) }),
   // the session's test questions (its own form only, without answers)
   z.object({ token: z.string().max(400), kind: z.literal("items") }),
   z.object({
     token: z.string().max(400),
     kind: z.literal("test").optional(),
     // an option's index, or a typed number (as typed), in the form's file order
-    answers: z.array(z.union([z.number().int().min(0).max(9), z.string().max(40)]).nullable()).length(ITEMS),
+    answers: z.array(z.union([z.number().int().min(0).max(9), z.string().max(40)]).nullable()).max(ITEMS),
     work: z.record(z.string().max(10), z.string().max(2_000)).optional(), // the learner's working per question, for the log
     order: z.array(z.string().max(10)).max(ITEMS).optional(), // the order the learner saw the items in
     since: z.enum(SINCE).optional(), // delayed test: studied the topic since the session?
@@ -39,11 +40,12 @@ export async function POST(req: NextRequest) {
   if (!body.success) return fail(400, "Bad request.");
   const session = verifyToken(body.data.token);
   if (!session) return fail(401, "Your session has expired. Start again from the first page.", { expired: true });
+  const pack = packFor(session.topic); // the topic the session started with
 
   if (body.data.kind === "items") {
     const r = await limitAll([[`items:sid:${session.sid}`, 30, 3600, "local"]]);
     if (!r.ok) return fail(429, "Too many requests. Try again later.");
-    return ok({ items: publicExercises(session.form), form: session.form, phase: session.phase });
+    return ok({ items: pack.publicExercises(session.form), form: session.form, phase: session.phase });
   }
 
   const r = await limitAll([
@@ -53,7 +55,8 @@ export async function POST(req: NextRequest) {
   if (!r.ok) return fail(429, "Too many attempts. Try again later.", { retryAfter: r.retryAfter });
 
   if (body.data.kind === "pretest") {
-    if (session.phase === "delayed") return fail(400, "Bad request.");
+    const { pretest } = pack;
+    if (session.phase === "delayed" || body.data.answers.length !== pretest.length) return fail(400, "Bad request.");
     const a = body.data.answers;
     const knowledge = pretest.map((q, i) => ({ q, a: a[i]! })).filter((x) => x.q.kind === "knowledge");
     const score = knowledge.filter((x) => x.a === x.q.answer).length;
@@ -65,7 +68,8 @@ export async function POST(req: NextRequest) {
   }
 
   const answers = "answers" in body.data ? body.data.answers : [];
-  const form = formItems(session.form);
+  const form = pack.formItems(session.form);
+  if (answers.length !== form.length) return fail(400, "Bad request.");
   const items = form.map((q, i) => {
     const a = answers[i] ?? null;
     // a choice item takes an index, a number item a typed string: anything else counts as unanswered
@@ -84,7 +88,8 @@ export async function POST(req: NextRequest) {
     pid: session.pid,
     phase: session.phase, // main: the final test; delayed: the follow-up test
     form: session.form,
-    version: testVersion(session.form),
+    topic: pack.slug,
+    version: pack.testVersion(session.form),
     ...(session.phase === "delayed" ? { since } : {}),
     score,
     of: items.length,
@@ -92,7 +97,9 @@ export async function POST(req: NextRequest) {
     order: order ?? null,
     items: items.map((x) => ({ id: x.id, kind: x.kind, pos: pos(x.id), chosen: x.chosen, answer: x.answer, correct: x.correct, work: work?.[x.id] ?? null })),
   });
-  if (session.pid && session.entry === "participant") await markTest(session.pid, session.phase).catch(() => {});
-  // the final test is done: now the practice problems' worked solutions can be shown too (not after the delayed test)
-  return ok({ score, of: items.length, items, ...(session.phase === "main" ? { practice: practiceReview } : {}) });
+  if (session.pid && (session.entry === "participant" || session.entry === "trial")) await markTest(session.pid, session.phase).catch(() => {});
+  // the final test is done: now the practice problems' worked solutions can be shown too (not after the delayed test,
+  // and not when the study has no practice step)
+  const { settings } = await getSettings();
+  return ok({ score, of: items.length, items, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
 }

@@ -25,6 +25,7 @@ const Env = z.object({
   IP_SESSIONS_PER_HOUR: z.coerce.number().int().positive().default(60),
   SESSION_DAYS: z.coerce.number().positive().max(30).default(10), // how long a session (and its progress on the device) lasts
   DELAYED_TEST_DAYS: z.coerce.number().positive().max(60).optional(), // the delayed test opens this many days after the final test; unset: none
+  DOCENDO_TOPIC: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), // the topic pack a fresh install runs (lib/server/topics.ts); the Settings page can switch it
 });
 
 const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
@@ -63,4 +64,5 @@ export const config = {
   ipSessionsPerHour: env.IP_SESSIONS_PER_HOUR,
   sessionHours: env.SESSION_DAYS * 24,
   delayedTestDays: env.DELAYED_TEST_DAYS,
+  topic: env.DOCENDO_TOPIC,
 };

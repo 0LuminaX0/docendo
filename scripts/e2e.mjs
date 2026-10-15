@@ -496,15 +496,36 @@ await shot(phoneHome, "10-phone-welcome", true);
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
   // settings: a change reaches the participant pages, is versioned, and goes back to the defaults
   const base = await post("/api/admin/settings", { action: "reset" });
-  const saved = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, practiceMinutes: 13 } });
+  const saved = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, practice: { ...base.json.settings.practice, minutes: 13 } } });
   // each route keeps its own 10 s cache of the settings: the change shows within seconds
   let shown = false;
   for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
-  const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, lesson: [{ ...base.json.settings.lesson[0], videoId: "nope" }] } });
+  const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, watch: { on: true, parts: [{ ...base.json.settings.watch.parts[0], videoId: "nope" }] } } });
+  // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
+  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, practice: { ...base.json.settings.practice, on: false } } });
+  let skipped = false;
+  for (let k = 0; k < 16 && !skipped; k++) (skipped = await adm.evaluate(async () => { const h = await (await fetch("/")).text(); return !/<h3>Practice<\/h3>/.test(h) && /<h3>Teach Kai<\/h3>/.test(h); })), skipped || (await wait(1000));
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
+  const blocks = await adm.$$eval(".study-block", (els) => els.length);
   await shot(adm, "11-admin-settings", true);
-  check(saved.status === 200 && saved.json.version !== base.json.version && shown && badSave.status === 400 && back.json.version === base.json.version, `settings: a change reaches the pages within seconds (${saved.json.version}), a bad one is refused, and the defaults come back`);
+  check(saved.status === 200 && saved.json.version !== base.json.version && shown && badSave.status === 400 && noPractice.status === 200 && skipped && back.json.version === base.json.version && blocks === 7, `study setup: a change reaches the pages within seconds (${saved.json.version}), a step switched off drops out, a bad one is refused, the defaults come back, ${blocks} blocks listed`);
+  // a trial code: a participant's experience (no shortcuts), counted with the tests
+  const trialCode = (await post("/api/admin/codes", { action: "create", count: 1, prefix: "TRY", label: "e2e trial", condition: "direct", trial: true, maxUses: null })).json.codes?.[0]?.code;
+  const trial = await post("/api/session", { accessCode: trialCode, consent: true });
+  await post("/api/admin/codes", { action: "delete", code: trialCode });
+  check(trial.status === 200 && trial.json.team === false, "a trial code gives a participant's session (no shortcuts)");
+  // the other admin pages render
+  const pages = [];
+  for (const [path, sel] of [["/admin/live", ".adm-live"], ["/admin/content", ".cnt-ideas"], ["/admin/health", ".adm-kpis"], ["/admin/sessions?scope=team", ".adm-sessions"], ["/admin/feedback", ".adm-view"]]) {
+    await adm.goto(BASE + path, { waitUntil: "load" });
+    if (!(await adm.$(sel))) pages.push(path);
+  }
+  await adm.goto(BASE + "/admin/content", { waitUntil: "load" });
+  await shot(adm, "11-admin-content", true);
+  await adm.goto(BASE + "/admin/live", { waitUntil: "load" });
+  await shot(adm, "11-admin-live", true);
+  check(!pages.length, `admin pages render: live, topic content, health, sessions, feedback${pages.length ? ` (failed: ${pages.join(", ")})` : ""}`);
   await adm.goto(BASE + "/admin/codes", { waitUntil: "load" });
   await shot(adm, "11-admin-codes", true);
   for (const c of made.json.codes ?? []) await post("/api/admin/codes", { action: "delete", code: c.code });

@@ -3,14 +3,15 @@ import { z } from "zod";
 import { ConfigError, config } from "@/lib/server/env";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limit } from "@/lib/server/limit";
-import { codeMatches, issueToken, verifyToken } from "@/lib/server/token";
+import { codeMatches, issueToken, verifyToken, type Entry } from "@/lib/server/token";
 import { deviceOf, record } from "@/lib/server/events";
 import { readCode, type Condition } from "@/lib/codes";
 import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
-import { otherForm } from "@/lib/server/content";
+import { DEFAULT_TOPIC, otherForm, packFor } from "@/lib/server/content";
 import { getParticipant, nextForm, putParticipant, type Participant } from "@/lib/server/participants";
 import { getSettings } from "@/lib/server/settings";
 import type { Settings } from "@/lib/settings";
+import { flowOf } from "@/lib/flow";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,14 +32,15 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: 
  * test, with the other form, once it is open. null: no delayed test applies, so the code works as before.
  */
 async function delayedTest(p: Participant, req: NextRequest, st: { settings: Settings; version: string }): Promise<Response | null> {
-  const days = st.settings.delayedTestDays;
-  if (!days || !p.testAt) return null;
+  const days = st.settings.test.followUpDays;
+  const pack = packFor(p.topic ?? DEFAULT_TOPIC);
+  if (!days || !p.testAt || pack.forms.length < 2) return null;
   if (p.delayedAt) return fail(409, "You've done both tests. Thank you for taking part!");
   const opens = Date.parse(p.testAt) + days * 86_400_000;
   if (Date.now() < opens) return fail(409, `Your follow-up test opens on ${day(opens)}. Come back then with the same code.`, { opensAt: opens });
-  const who = { cond: p.cond, entry: "participant" as const, pid: p.pid, form: otherForm(p.form), phase: "delayed" as const };
+  const who = { cond: p.cond, entry: p.trial ? ("trial" as const) : ("participant" as const), pid: p.pid, form: otherForm(p.form), phase: "delayed" as const, topic: pack.slug };
   const { token, sid, expiresAt } = issueToken(who, st.settings.sessionDays);
-  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: "participant", phase: "delayed", form: who.form, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
+  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: who.entry, phase: "delayed", form: who.form, topic: pack.slug, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
   return ok({ token, expiresAt, demo: config.demo, team: false, condition: p.cond, phase: "delayed" });
 }
 
@@ -58,7 +60,7 @@ export async function POST(req: NextRequest) {
   if (body.data.followUp) {
     const prev = verifyToken(body.data.followUp);
     if (!prev) return fail(401, "This session has expired. Enter your access code instead.");
-    if (prev.entry !== "participant" || !prev.pid || prev.phase !== "main") return fail(400, "There is no follow-up test for this session.");
+    if ((prev.entry !== "participant" && prev.entry !== "trial") || !prev.pid || prev.phase !== "main") return fail(400, "There is no follow-up test for this session.");
     const p = await getParticipant(prev.pid);
     return (p && (await delayedTest(p, req, st))) ?? fail(409, "There is no follow-up test for this session.");
   }
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
   const given = body.data.accessCode ?? "";
   const stored = given ? await findCode(given).catch(() => null) : null;
   const participant = !stored && config.codeSecret && given ? readCode(config.codeSecret, given) : null;
-  let who: { cond: Condition; entry: "participant" | "team" | "open"; pid: string | null };
+  let who: { cond: Condition; entry: Entry; pid: string | null };
   if (stored && !stored.active) return fail(401, "That access code is no longer active.");
   let code: { id: string; label: string; use: number } | null = null;
   // a code that names one person (a one-use code, or a participant code) keeps a record, for the delayed test
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
     const use = await useCode(stored);
     if (stored.maxUses && use > stored.maxUses) return fail(401, "That access code has already been used.");
     code = { id: stored.id, label: stored.label, use };
-    who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : "participant", pid: stored.id };
+    who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: stored.id };
   } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
   else if (config.accessCode && codeMatches(given, config.accessCode)) who = { cond: "direct", entry: "team", pid: body.data.pid ?? null };
   else if (!config.accessCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
@@ -93,10 +95,13 @@ export async function POST(req: NextRequest) {
     return fail(401, "That access code isn't right.");
   }
   try {
+    // the topic: a person who started before keeps theirs, else the study's current one
+    const pack = packFor(known?.topic ?? st.settings.topic);
     // the final test's form: kept from an earlier start of the same person, else balanced within the condition
-    const form = known?.form ?? (await nextForm(who.entry === "participant" ? who.cond : "team"));
-    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main" }, st.settings.sessionDays);
+    // (a pack with one form: always that one)
+    const form = pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? (await nextForm(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team")));
+    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), startedAt: new Date().toISOString() });
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -104,16 +109,18 @@ export async function POST(req: NextRequest) {
       condition: who.cond,
       phase: "main",
       form, // the final test's form (A or B); the delayed test takes the other
+      topic: pack.slug, // the topic pack (Settings); the session keeps it
       consent: CONSENT_VERSION,
       settings: st.version, // the study settings this session started under (admin panel, Settings)
-      entry: who.entry, // participant (own code), team (shared code) or open
+      entry: who.entry, // participant (own code), trial (a dry run's code), team (shared or team code) or open
       code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
       demo: config.demo,
       device: deviceOf(req.headers.get("user-agent")),
-      config: { practiceTries: st.settings.practiceTries, practiceMinutes: st.settings.practiceMinutes },
+      config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings) },
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
-    return ok({ token, expiresAt, demo: config.demo, team: who.entry !== "participant", condition: who.cond });
+    // trial codes get a participant's experience: no shortcuts, no condition switch
+    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond });
   } catch (e) {
     if (e instanceof ConfigError) return fail(500, "The server isn't fully configured yet.");
     throw e;

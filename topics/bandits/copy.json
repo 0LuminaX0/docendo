@@ -1,0 +1,8 @@
+{
+  "subject": "multi-armed bandits",
+  "headline": "Learn multi-armed bandits by teaching them",
+  "kaiHello": "Hi! I missed the lecture on bandits. Could you teach me once you've watched it? I'll ask a lot of questions.",
+  "watchFocus": "Watch how greedy, ε-greedy and UCB each decide what to try next, and why greedy can get stuck.",
+  "correctionExample": "For example: when ε-greedy explores, it picks…",
+  "description": "Learn multi-armed bandits by teaching them to Kai, a classmate who missed the lecture."
+}

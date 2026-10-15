@@ -26,6 +26,15 @@ const count = <T,>(xs: T[], f: (x: T) => boolean) => xs.filter(f).length;
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 export const mean = (xs: number[]) => (xs.length ? Math.round((sum(xs) / xs.length) * 10) / 10 : null);
 
+/** Whose sessions a view counts: participants (their own code, not demo), the team's and test sessions, or all. */
+export type Scope = "participants" | "team" | "all";
+export const SCOPES: Scope[] = ["participants", "team", "all"];
+export const scopeOf = (v: string | undefined): Scope => (v === "team" || v === "all" ? v : "participants");
+export const inScope = (s: Record<string, unknown>, scope: Scope) => {
+  const participant = s.entry === "participant" && !s.demo;
+  return scope === "all" || (scope === "participants" ? participant : !participant);
+};
+
 export function tables(events: Ev[]) {
   events.sort((a, b) => a.at.localeCompare(b.at) || Number(a.seq ?? 0) - Number(b.seq ?? 0));
   const bySid = new Map<string, Ev[]>();
@@ -60,6 +69,10 @@ export function tables(events: Ev[]) {
       entry: start?.entry ?? null, // participant (own code), team (shared code) or open
       phase: start?.phase ?? "main", // main: the whole session; delayed: the follow-up test on its own, days later
       form: start?.form ?? "A", // the test form this session took (the delayed test takes the other)
+      topic: start?.topic ?? "bandits", // the topic pack (sessions before topics were selectable: bandits)
+      settingsVersion: start?.settings ?? null, // the study settings it started under (admin panel, Settings)
+      lastAt: evs[evs.length - 1]?.at ?? null, // the last thing logged (for the Live page)
+      lastPath: [...of("client_page_view")].pop()?.path ?? null,
       consent: start?.consent ?? null,
       daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
       since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)

@@ -6,6 +6,7 @@ import { KaiFace } from "./ui";
 import KaiNotebook from "./KaiNotebook";
 import Scratchpad from "./Scratchpad";
 import type { KaiAttempt, KaiEntry } from "@/lib/client/store";
+import { useStudySettings } from "./SettingsContext";
 
 type Item = { id: string; round: number; title: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
 const KEYS = "ABCDEF";
@@ -52,6 +53,7 @@ export default function KaiSolve({
   onCall: (attempt: number, right: boolean) => void; // the learner's call before the light
   failed: boolean;
 }) {
+  const { copy } = useStudySettings();
   const [text, setText] = useState("");
   const [lit, setLit] = useState<string[]>([]);
   const attempts = entry.attempts;
@@ -139,7 +141,7 @@ export default function KaiSolve({
               rows={3}
               maxLength={1500}
               disabled={disabled}
-              placeholder="For example: when ε-greedy explores, it picks…"
+              placeholder={copy.correctionExample}
               voice="fix"
             />
             <div className="pact">

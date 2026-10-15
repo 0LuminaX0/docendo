@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleCheck, Eye, History, MessagesSquare, Play } from "lucide-react";
 import { Header, VideoFrame, mmss } from "./ui";
-import { useGuard } from "./useGuard";
+import { useGuard, useNext } from "./useGuard";
+import { useStudySettings } from "./SettingsContext";
 import { useSaved } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
 
@@ -56,6 +57,8 @@ export default function Watch({ segments }: { segments: Segment[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "watch");
+  const nextOf = useNext();
+  const { copy } = useStudySettings();
   const [i, setI] = useState(0);
   const [mode, setMode] = useState<"loading" | "api" | "fallback">("loading");
   const [confirm, setConfirm] = useState(false);
@@ -187,14 +190,15 @@ export default function Watch({ segments }: { segments: Segment[] }) {
   function next() {
     track("watch_continue", { watchedSec: watched.map(Math.round), watchedTotal: Math.round(watchedTotal), totalSec: total, allWatched: allDone, mode });
     persist(watched);
-    update((s) => ({ ...s, watched: segments.map((_, k) => `s${k}`).filter((_, k) => done(k)), step: s.step === "watch" ? "teach" : s.step }));
-    router.push("/teach");
+    const n = nextOf("watch");
+    update((s) => ({ ...s, watched: segments.map((_, k) => `s${k}`).filter((_, k) => done(k)), step: s.step === "watch" ? n.step : s.step }));
+    router.push(n.path);
   }
 
   const s = segments[i]!;
   return (
     <div className="shell">
-      <Header phase={1} demo={saved.demo} />
+      <Header step="watch" demo={saved.demo} />
       <main className="page">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>{s.title}</h1>
@@ -268,7 +272,7 @@ export default function Watch({ segments }: { segments: Segment[] }) {
                 <MessagesSquare size={17} aria-hidden="true" /> Afterwards you&apos;ll explain this to Kai, a classmate who missed it. Kai only knows what you tell it.
               </li>
               <li>
-                <Eye size={17} aria-hidden="true" /> Watch how greedy, ε-greedy and UCB each decide what to try next, and why greedy can get stuck.
+                <Eye size={17} aria-hidden="true" /> {copy.watchFocus}
               </li>
               <li>
                 <History size={17} aria-hidden="true" /> While you teach, Kai&apos;s help button can show the right moment again once you&apos;ve had a go.

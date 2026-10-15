@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { bundle, checkPractice, practice } from "@/lib/server/content";
+import { checkPractice, packFor } from "@/lib/server/content";
 import { State } from "@/engine/tutor/state";
 import { applyJudgement } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
@@ -12,7 +12,6 @@ import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
 import { record } from "@/lib/server/events";
 import { getSettings } from "@/lib/server/settings";
-import { momentsFor } from "@/lib/server/moments";
 import { config } from "@/lib/server/env";
 
 export const runtime = "nodejs";
@@ -69,13 +68,15 @@ export async function POST(req: NextRequest) {
     return fail(429, "Too many tries in a short time. Wait a moment.", { retryAfter: r.retryAfter });
   }
 
-  const item = practice.find((p) => p.id === body.data.id);
+  const pack = packFor(session.topic);
+  const { bundle } = pack;
+  const item = pack.practice.find((p) => p.id === body.data.id);
   const { settings } = await getSettings();
   if (!item) return fail(404, "Unknown problem.");
 
   if (body.data.action === "solve" || body.data.action === "reteach") {
     // a participant only gets their own condition; team sessions may look at both
-    if (session.entry === "participant" && session.cond !== "recursive") return fail(403, "Not available in this session.");
+    if ((session.entry === "participant" || session.entry === "trial") && session.cond !== "recursive") return fail(403, "Not available in this session.");
     const budget = await limitAll([
       [`practice:kai:${session.sid}:${item.id}`, 2, 6 * 3600, "local"], // two attempts per problem
       ...(config.demo ? [] : ([["chat:global", settings.dailyTurnLimit, 86_400]] as [string, number, number][])), // the site's daily model budget
@@ -131,8 +132,8 @@ export async function POST(req: NextRequest) {
     if (item.kind === "number" && typeof body.data.answer === "string" && parseNumber(body.data.answer) === null)
       return fail(400, "Type a number, for example 120 or 0.85.");
     // the browser counts the tries; this per-instance count backs it up
-    const tries = await limitAll([[`practice:try:${session.sid}:${item.id}`, settings.practiceTries, 6 * 3600, "local"]]);
-    if (!tries.ok || body.data.attempt > settings.practiceTries) {
+    const tries = await limitAll([[`practice:try:${session.sid}:${item.id}`, settings.practice.tries, 6 * 3600, "local"]]);
+    if (!tries.ok || body.data.attempt > settings.practice.tries) {
       record({ t: "practice_no_tries", sid: session.sid, id: item.id, attempt: body.data.attempt });
       return fail(409, "No tries left for this problem. Go on to the next one.");
     }
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
     return ok({ correct });
   }
   // the help: the lesson moments that explain the facts this problem needs, no answer
-  const moments = momentsFor([...new Set(item.steps.flatMap((s) => s.facts))], settings.lesson);
+  const moments = settings.watch.on ? pack.momentsFor([...new Set(item.steps.flatMap((s) => s.facts))], settings.watch.parts) : [];
   record({ t: "practice_hint", sid: session.sid, id: item.id, moments: moments.map((m) => `${m.video}@${Math.round(m.start)}`) });
   return ok({ moments });
 }

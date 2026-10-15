@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Header } from "./ui";
-import { useGuard } from "./useGuard";
+import { useGuard, useNext } from "./useGuard";
 import { post, save, useSaved } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
 
@@ -19,6 +19,7 @@ export default function Pretest({ items }: { items: Item[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "pretest");
+  const next = useNext();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (!allowed || !saved) return <div className="center">Loading…</div>;
@@ -49,13 +50,14 @@ export default function Pretest({ items }: { items: Item[] }) {
       }
       return setError(r.error);
     }
-    update((s) => ({ ...s, step: s.step === "pretest" ? "watch" : s.step }));
-    router.push("/watch");
+    const n = next("pretest");
+    update((s) => ({ ...s, step: s.step === "pretest" ? n.step : s.step }));
+    router.push(n.path);
   }
 
   return (
     <div className="shell">
-      <Header phase={0} label="Before you start" demo={saved.demo} />
+      <Header step="pretest" label="Before you start" demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <span className="eyebrow">Before you start</span>

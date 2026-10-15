@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
 import Survey from "./Survey";
+import { useStudySettings } from "./SettingsContext";
 import { parts, useTestItems } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
@@ -17,6 +18,7 @@ export default function Results() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
+  const { survey } = useStudySettings();
   // the review starts with the questions the learner missed (their explanations matter most); "All" shows every one
   const [show, setShow] = useState<"missed" | "all" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,13 +32,13 @@ export default function Results() {
   const minutes = Math.max(1, Math.round((Date.now() - saved.startedAt) / 60000));
   const taught = saved.chat.turns.filter((t) => t.role === "learner" && !t.help).length;
   const line =
-    r.score >= 8 ? "That stuck really well." : r.score >= 5 ? "A solid base, with a few gaps to revisit." : "Some ideas didn't stick yet. The explanations below should help.";
+    r.score >= 0.8 * r.of ? "That stuck really well." : r.score >= 0.5 * r.of ? "A solid base, with a few gaps to revisit." : "Some ideas didn't stick yet. The explanations below should help.";
 
   // after the final test (not the follow-up): a few questions before the score, so the score can't colour them
-  if (!delayed && !saved.surveyDone)
+  if (!delayed && !saved.surveyDone && survey)
     return (
       <div className="shell">
-        <Header phase={4} label="Results" demo={saved.demo} />
+        <Header step="results" label="Results" demo={saved.demo} />
         <main className="page narrow">
           <Survey onDone={() => update((x) => ({ ...x, surveyDone: true }))} />
         </main>
@@ -45,7 +47,7 @@ export default function Results() {
 
   return (
     <div className="shell">
-      <Header phase={4} label={delayed ? "Follow-up results" : "Results"} demo={saved.demo} />
+      <Header step="results" label={delayed ? "Follow-up results" : "Results"} demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <span className="eyebrow">Results</span>

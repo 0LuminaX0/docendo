@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   if (Number(req.headers.get("content-length") ?? "0") > MAX_BYTES) return fail(413, `Recordings can be up to ${MAX_SEC / 60} minutes.`);
   if (config.demo) return fail(503, "Voice input needs the live model. Type instead.");
   const { settings } = await getSettings();
-  if (!settings.voice) return fail(403, "Voice input is switched off. Type instead.");
+  if (!settings.tools.voice) return fail(403, "Voice input is switched off. Type instead.");
 
   // live pieces come every couple of seconds while someone speaks: counted on this instance only (each shared check
   // costs Redis commands); the final pass counts against the session's and the site's budget like a chat turn

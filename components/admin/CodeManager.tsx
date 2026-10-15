@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
 
-type Code = { id: string; code: string; label: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive"; team: boolean; maxUses: number | null; active: boolean; createdAt: string; uses: number };
+type Kind = "participant" | "trial" | "team";
+const KIND_NAME: Record<Kind, string> = { participant: "Participant (the study)", trial: "Trial run (as a participant, not counted)", team: "Team (shortcuts and switch)" };
+const kindOf = (c: { team: boolean; trial?: boolean }): Kind => (c.team ? "team" : c.trial ? "trial" : "participant");
+
+type Code = { id: string; code: string; label: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive"; team: boolean; trial?: boolean; maxUses: number | null; active: boolean; createdAt: string; uses: number };
 
 async function api(body: unknown) {
   const res = await fetch("/api/admin/codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -16,7 +20,7 @@ async function api(body: unknown) {
 /** Make codes in bulk, and switch, relabel or delete them. */
 export default function CodeManager({ initial }: { initial: Code[] }) {
   const router = useRouter();
-  const [form, setForm] = useState({ count: 10, prefix: "", label: "", condition: "random" as Code["condition"], team: false, maxUses: "1" });
+  const [form, setForm] = useState({ count: 10, prefix: "", label: "", condition: "random" as Code["condition"], kind: "participant" as Kind, maxUses: "1" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -46,7 +50,7 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
           className="adm-form"
           onSubmit={(e) => {
             e.preventDefault();
-            void run({ action: "create", count: form.count, prefix: form.prefix, label: form.label, condition: form.condition, team: form.team, maxUses: form.maxUses === "" ? null : Number(form.maxUses) });
+            void run({ action: "create", count: form.count, prefix: form.prefix, label: form.label, condition: form.condition, team: form.kind === "team", trial: form.kind === "trial", maxUses: form.maxUses === "" ? null : Number(form.maxUses) });
           }}
         >
           <label>How many<input className="input" type="number" min={1} max={200} value={form.count} onChange={(e) => setForm({ ...form, count: Number(e.target.value) })} /></label>
@@ -61,7 +65,14 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
             </select>
           </label>
           <label>Uses per code<input className="input" type="number" min={1} placeholder="no limit" value={form.maxUses} onChange={(e) => setForm({ ...form, maxUses: e.target.value })} /></label>
-          <label className="adm-check"><input type="checkbox" checked={form.team} onChange={(e) => setForm({ ...form, team: e.target.checked })} /> Team code (test shortcuts)</label>
+          <label>
+            Counts as
+            <select className="input" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as Kind })}>
+              {(Object.keys(KIND_NAME) as Kind[]).map((k) => (
+                <option key={k} value={k}>{KIND_NAME[k]}</option>
+              ))}
+            </select>
+          </label>
           <button className="btn primary small" disabled={busy || form.count < 1}>
             <Plus size={14} /> Make {form.count} {form.count === 1 ? "code" : "codes"}
           </button>
@@ -76,13 +87,20 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
         </div>
         <table className="adm-table">
           <thead>
-            <tr><th>Code</th><th>Label</th><th>Condition</th><th>Used</th><th>Status</th><th></th></tr>
+            <tr><th>Code</th><th>Label</th><th>Counts as</th><th>Condition</th><th>Used</th><th>Status</th><th></th></tr>
           </thead>
           <tbody>
             {shown.map((c) => (
               <tr key={c.id} className={c.active ? "" : "off"}>
-                <td><code>{c.code}</code>{c.team && <span className="adm-pill">team</span>}</td>
+                <td><code>{c.code}</code></td>
                 <td>{c.label || <span className="note">–</span>}</td>
+                <td>
+                  <select className="input adm-inline" value={kindOf(c)} disabled={busy} onChange={(e) => void run({ action: "update", code: c.code, team: e.target.value === "team", trial: e.target.value === "trial" })}>
+                    <option value="participant">participant</option>
+                    <option value="trial">trial run</option>
+                    <option value="team">team</option>
+                  </select>
+                </td>
                 <td>
                   <select className="input adm-inline" value={c.condition} disabled={busy} onChange={(e) => void run({ action: "update", code: c.code, condition: e.target.value })}>
                     <option value="random">random</option>
@@ -111,7 +129,7 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
                 </td>
               </tr>
             ))}
-            {!shown.length && <tr><td colSpan={6} className="note">No codes yet.</td></tr>}
+            {!shown.length && <tr><td colSpan={7} className="note">No codes yet.</td></tr>}
           </tbody>
         </table>
       </section>

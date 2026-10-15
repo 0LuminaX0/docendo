@@ -2,14 +2,24 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Database, Download, KeyRound, LayoutDashboard, LogOut, MessageSquareQuote, SlidersHorizontal, Users } from "lucide-react";
+import { BookOpenText, Database, Download, HeartPulse, KeyRound, LayoutDashboard, LogOut, MessageSquareQuote, Radio, Users, Workflow } from "lucide-react";
 
+// the sections in three groups: the data coming in, how the study is set up, how the system runs
 const NAV = [
-  ["/admin", "Dashboard", LayoutDashboard],
-  ["/admin/sessions", "Sessions", Users],
-  ["/admin/codes", "Access codes", KeyRound],
-  ["/admin/feedback", "Feedback", MessageSquareQuote],
-  ["/admin/settings", "Settings", SlidersHorizontal],
+  ["Research", [
+    ["/admin", "Dashboard", LayoutDashboard],
+    ["/admin/live", "Live", Radio],
+    ["/admin/sessions", "Sessions", Users],
+    ["/admin/feedback", "Feedback", MessageSquareQuote],
+  ]],
+  ["Study", [
+    ["/admin/settings", "Study setup", Workflow],
+    ["/admin/content", "Topic content", BookOpenText],
+    ["/admin/codes", "Access", KeyRound],
+  ]],
+  ["System", [
+    ["/admin/health", "Health and cost", HeartPulse],
+  ]],
 ] as const;
 
 /** The admin panel's frame: a sidebar with the sections, the exports and sign-out; the page on the right. */
@@ -23,11 +33,16 @@ export default function AdminShell({ children, store }: { children: React.ReactN
           docendo <span className="adm-tag">admin</span>
         </Link>
         <nav aria-label="Admin sections">
-          {NAV.map(([href, label, Icon]) => (
-            <Link key={href} href={href} aria-current={(href === "/admin" ? path === href : path.startsWith(href)) ? "page" : undefined}>
-              <Icon size={17} strokeWidth={2} aria-hidden="true" />
-              {label}
-            </Link>
+          {NAV.map(([group, items]) => (
+            <div key={group} className="adm-nav-group">
+              <span className="adm-side-h">{group}</span>
+              {items.map(([href, label, Icon]) => (
+                <Link key={href} href={href} aria-current={(href === "/admin" ? path === href : path.startsWith(href)) ? "page" : undefined}>
+                  <Icon size={17} strokeWidth={2} aria-hidden="true" />
+                  {label}
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="adm-side-group">

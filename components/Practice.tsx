@@ -8,7 +8,7 @@ import KaiSolve from "./KaiSolve";
 import { useStudySettings } from "./SettingsContext";
 import Scratchpad from "./Scratchpad";
 import { track } from "@/lib/client/log";
-import { useGuard } from "./useGuard";
+import { useGuard, useNext } from "./useGuard";
 import { blankEntry, post, save, useSaved, type Condition, type KaiAttempt, type KaiEntry, type PracticeEntry, type PracticeState, type Saved } from "@/lib/client/store";
 import { notesOf, type State } from "@/engine/tutor/state";
 
@@ -30,6 +30,7 @@ export default function Practice({ items }: { items: Item[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "practice");
+  const nextOf = useNext();
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [kaiFailed, setKaiFailed] = useState<string | null>(null);
@@ -102,8 +103,9 @@ export default function Practice({ items }: { items: Item[] }) {
         tried: es.filter((e) => e.checks > 0).length,
         reached: Math.min((p?.current ?? 0) + 1, items.length),
       });
-      update((s: Saved) => ({ ...s, step: s.step === "practice" ? "exercises" : s.step }));
-      router.push("/exercises");
+      const n = nextOf("practice");
+      update((s: Saved) => ({ ...s, step: s.step === "practice" ? n.step : s.step }));
+      router.push(n.path);
     },
     [items, left, leaveProblem, router, saved?.practice, update, mode],
   );
@@ -268,7 +270,7 @@ export default function Practice({ items }: { items: Item[] }) {
   return (
     <div className="shell">
       <Header
-        phase={3}
+        step="practice"
         demo={saved.demo}
         right={clock}
         left={

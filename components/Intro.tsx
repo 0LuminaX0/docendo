@@ -5,32 +5,36 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
+import { useStudySettings } from "./SettingsContext";
+import { barsOf, blockOf, currentStep, firstStep, pathOf } from "@/lib/flow";
+
+const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: ListChecks } as const;
+
+const NUMBER: Record<number, string> = { 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten" };
 
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
 
-const STEP_PATH = { pretest: "/pretest", watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" } as const;
-
 type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed" };
 
 export default function Intro({
-  topic,
   accessRequired,
   demo,
-  parts,
-  videoMinutes,
-  practiceMinutes,
+  cards,
+  totalMinutes,
+  pretestItems,
   followUpDays,
 }: {
-  topic: string;
   accessRequired: boolean;
   demo: boolean;
-  parts: number;
-  videoMinutes: number;
-  practiceMinutes: number;
+  cards: Record<"watch" | "teach" | "practice" | "exercises", string>; // what each step's card says (app/page.tsx)
+  totalMinutes: number;
+  pretestItems: number; // questions before the first step (0: none)
   followUpDays: number | null; // the delayed test opens this many days after the final test (null: no delayed test)
 }) {
   const router = useRouter();
+  const { flow, copy } = useStudySettings();
+  const bars = barsOf(flow);
   const [saved] = useSaved();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,8 +68,9 @@ export default function Intro({
       save({ ...s, phase: "delayed", step: "exercises" });
       router.push("/exercises");
     } else {
-      save(s);
-      router.push("/pretest");
+      const first = firstStep(flow);
+      save({ ...s, step: first });
+      router.push(pathOf(first));
     }
   }
 
@@ -75,13 +80,14 @@ export default function Intro({
 
   return (
     <div className="shell">
-      <Header phase={0} demo={demo} />
+      <Header demo={demo} />
       <main className="page intro">
         <div className="intro-head">
-          <span className="eyebrow">A learning-by-teaching study for CS-411 Digital Education, EPFL</span>
-          <h1 className="title">Learn {topic.toLowerCase()} by teaching them</h1>
+          {copy.studyLine && <span className="eyebrow">{copy.studyLine}</span>}
+          <h1 className="title">{copy.headline}</h1>
           <p className="lede">
-            You&apos;ll watch a short lesson, then explain it to Kai, a classmate who missed the lecture. Kai only knows what you tell it, so the better you explain, the more it understands. About 40 minutes in all, starting with five quick questions.
+            {flow.includes("watch") ? "You'll watch a short lesson, then explain it to Kai, a classmate who missed the lecture." : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
+            {pretestItems ? `, starting with ${NUMBER[pretestItems] ?? pretestItems} quick questions` : ""}.
           </p>
         </div>
 
@@ -90,53 +96,28 @@ export default function Intro({
             <KaiFace mood="great" size={48} />
             <div className="col" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               <span className="who">Kai</span>
-              <div className="bubble">Hi! I missed the lecture on bandits. Could you teach me once you&apos;ve watched it? I&apos;ll ask a lot of questions.</div>
+              <div className="bubble">{copy.kaiHello}</div>
             </div>
           </div>
         </div>
 
         <div className="intro-foot">
-        <ol className="steps">
-          <li>
-            <div className="step-top">
-              <span className="ico"><Play size={19} fill="currentColor" strokeWidth={0} /></span>
-              <div>
-                <span className="eyebrow">Step 1</span>
-                <h3>Watch</h3>
-              </div>
-            </div>
-            <p>A short video lesson on multi-armed bandits{parts > 1 ? `, in ${parts} parts that play one after another` : ""}. About {videoMinutes} minutes.</p>
-          </li>
-          <li>
-            <div className="step-top">
-              <span className="ico"><MessagesSquare size={19} strokeWidth={2.2} /></span>
-              <div>
-                <span className="eyebrow">Step 2</span>
-                <h3>Teach Kai</h3>
-              </div>
-            </div>
-            <p>Explain the ideas in your own words. Kai asks questions until it feels it understands. About 10 minutes.</p>
-          </li>
-          <li>
-            <div className="step-top">
-              <span className="ico"><PencilLine size={19} strokeWidth={2.2} /></span>
-              <div>
-                <span className="eyebrow">Step 3</span>
-                <h3>Practice</h3>
-              </div>
-            </div>
-            <p>Two short rounds of problems, with two tries each. {practiceMinutes} minutes.</p>
-          </li>
-          <li>
-            <div className="step-top">
-              <span className="ico"><ListChecks size={19} strokeWidth={2.2} /></span>
-              <div>
-                <span className="eyebrow">Step 4</span>
-                <h3>Final test</h3>
-              </div>
-            </div>
-            <p>Ten questions to see what stuck: some to choose, some to work out. About 10 minutes.</p>
-          </li>
+        <ol className="steps" style={{ ["--n" as string]: bars.length }}>
+          {bars.map((k, i) => {
+            const Icon = CARD_ICON[k as keyof typeof CARD_ICON] ?? ListChecks;
+            return (
+              <li key={k} className={`card-${k}`}>
+                <div className="step-top">
+                  <span className="ico">{k === "watch" ? <Play size={19} fill="currentColor" strokeWidth={0} /> : <Icon size={19} strokeWidth={2.2} />}</span>
+                  <div>
+                    <span className="eyebrow">Step {i + 1}</span>
+                    <h3>{blockOf(k).name}</h3>
+                  </div>
+                </div>
+                <p>{cards[k as keyof typeof cards]}</p>
+              </li>
+            );
+          })}
         </ol>
 
         <div className="intro-act">
@@ -158,7 +139,7 @@ export default function Intro({
                     {busy ? "Starting…" : <>Take the follow-up test <ArrowRight size={17} /></>}
                   </button>
                 )}
-                <button className={`btn${followUp ? "" : " primary"}`} onClick={() => router.push(saved.phase === "delayed" && saved.step !== "results" ? "/exercises" : STEP_PATH[saved.step])}>
+                <button className={`btn${followUp ? "" : " primary"}`} onClick={() => router.push(saved.phase === "delayed" && saved.step !== "results" ? "/exercises" : pathOf(currentStep(flow, saved.step)))}>
                   {saved.step === "results" ? "See your results" : "Continue where you left off"} {!followUp && <ArrowRight size={17} />}
                 </button>
                 <button className="btn ghost" onClick={() => save(null)}>

@@ -3,8 +3,9 @@ import { z } from "zod";
 import { adminFromRequest } from "@/lib/server/admin";
 import { fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limit } from "@/lib/server/limit";
-import { lessonCoverage } from "@/lib/server/moments";
-import { getSettings, resetSettings, saveSettings } from "@/lib/server/settings";
+import { hasTopic, packFor } from "@/lib/server/content";
+import { defaults, getSettings, resetSettings, saveSettings } from "@/lib/server/settings";
+import { packSummary } from "@/lib/server/study";
 import { Settings } from "@/lib/settings";
 
 export const runtime = "nodejs";
@@ -12,11 +13,22 @@ export const dynamic = "force-dynamic";
 
 const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("check"), settings: Settings }), // what an edit would do to the lesson's help, unsaved
+  z.object({ action: z.literal("topic"), topic: z.string().max(40) }), // another topic pack: its defaults and contents
   z.object({ action: z.literal("save"), settings: Settings }),
   z.object({ action: z.literal("reset") }),
 ]);
 
-/** The study settings (admin only): check an edit, save it, or go back to the defaults. */
+/** What the pack can't do with these settings (a follow-up test needs two test forms). */
+function problems(s: Settings): string | null {
+  if (!hasTopic(s.topic)) return `There is no topic pack "${s.topic}".`;
+  const pack = packFor(s.topic);
+  if (s.test.followUpDays > 0 && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Set its days to 0.`;
+  if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;
+  if (s.pretest.on && !pack.pretest.length) return `"${pack.title}" has no pretest: switch that step off.`;
+  return null;
+}
+
+/** The study settings (admin only): check an edit, look at another topic, save, or go back to the defaults. */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return fail(403, "Requests from other sites are not allowed.");
   if (!adminFromRequest(req)) return fail(401, "Sign in to the admin panel first.");
@@ -29,8 +41,17 @@ export async function POST(req: NextRequest) {
     return fail(400, issue ? `${issue.path.join(".") || "settings"}: ${issue.message}` : "Bad request.");
   }
   const b = body.data;
-  if (b.action === "check") return ok({ coverage: lessonCoverage(b.settings.lesson) });
+  if (b.action === "topic") {
+    if (!hasTopic(b.topic)) return fail(404, "No such topic pack.");
+    const d = defaults(b.topic);
+    return ok({ defaults: d, summary: packSummary(packFor(b.topic), d) });
+  }
+  if (b.action === "check") return ok({ summary: packSummary(packFor(b.settings.topic), b.settings), problem: problems(b.settings) });
+  if (b.action === "save") {
+    const p = problems(b.settings);
+    if (p) return fail(400, p);
+  }
   const version = b.action === "save" ? await saveSettings(b.settings) : await resetSettings();
   const now = await getSettings();
-  return ok({ version, settings: now.settings, coverage: lessonCoverage(now.settings.lesson) });
+  return ok({ version, settings: now.settings, summary: packSummary(packFor(now.settings.topic), now.settings) });
 }

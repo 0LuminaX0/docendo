@@ -7,7 +7,8 @@ import { useDictation } from "./Dictation";
 import { useStudySettings } from "./SettingsContext";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
-import { useGuard } from "./useGuard";
+import { useGuard, useNext } from "./useGuard";
+import { currentStep, pathOf } from "@/lib/flow";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
 import { logNotebook, track } from "@/lib/client/log";
 import { MESSAGE_MAX as MAX, type State } from "@/engine/tutor/state";
@@ -26,6 +27,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const [saved, update] = useSaved();
   const study = useStudySettings();
   const allowed = useGuard(saved, "teach");
+  const nextOf = useNext();
+  const { flow } = study;
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ msg: string; retry: string | null } | null>(null);
@@ -64,8 +67,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   // once practice has started, the chat (and Kai's mind) stay closed until the results
   const closed = saved?.step === "practice" || saved?.step === "exercises";
   useEffect(() => {
-    if (closed) router.replace(saved?.step === "practice" ? "/practice" : "/exercises");
-  }, [closed, saved?.step, router]);
+    if (closed && saved) router.replace(pathOf(currentStep(flow, saved.step)));
+  }, [closed, saved, router, flow]);
 
   const doneNow = !!saved?.chat.done;
   useEffect(() => {
@@ -170,8 +173,9 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   function goPractice() {
     track("teach_continue", { skipped: chat.skipped, done: chat.done, progress: chat.progress });
     logNotebook(chat.done ? "teach_end_ready" : chat.skipped ? "teach_end_stopped" : "teach_end", chat.state);
-    update((s: Saved) => ({ ...s, step: s.step === "teach" ? "practice" : s.step }));
-    router.push("/practice");
+    const n = nextOf("teach");
+    update((s: Saved) => ({ ...s, step: s.step === "teach" ? n.step : s.step }));
+    router.push(n.path);
   }
 
   // "I've taught all I can": end the chat here with a closing line from Kai; the learner moves on when ready
@@ -184,7 +188,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
         ...s.chat,
         skipped: true,
         mood: "okay",
-        turns: [...s.chat.turns, { role: "kai", text: "Okay, thanks for teaching me! I'll go with what you told me so far. Good luck with the practice problems!", mood: "okay" }],
+        turns: [...s.chat.turns, { role: "kai", text: `Okay, thanks for teaching me! I'll go with what you told me so far. Good luck with the ${flow.includes("practice") ? "practice problems" : "test"}!`, mood: "okay" }],
       },
     }));
   }
@@ -219,7 +223,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
 
   return (
     <div className="shell">
-      <Header phase={2} demo={saved.demo} left={tools} right={status} />
+      <Header step="teach" demo={saved.demo} left={tools} right={status} />
       {view === "mind" ? (
         <main className="teach-mind">
           <MindView graph={graph} mind={mind} popout />
@@ -285,7 +289,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                 </p>
                 <div className="row">
                   <button className="btn primary" onClick={goPractice}>
-                    Go to practice <ArrowRight size={17} />
+                    {flow.includes("practice") ? "Go to practice" : "Go to the test"} <ArrowRight size={17} />
                   </button>
                   <button className="btn ghost" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "ready" }))}>
                     <Brain size={17} /> See Kai&apos;s mind

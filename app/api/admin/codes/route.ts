@@ -16,6 +16,7 @@ const Body = z.discriminatedUnion("action", [
     label: z.string().max(60).default(""),
     condition: Condition,
     team: z.boolean().default(false),
+    trial: z.boolean().default(false),
     maxUses: z.number().int().min(1).max(10_000).nullable().default(1),
   }),
   z.object({
@@ -25,6 +26,7 @@ const Body = z.discriminatedUnion("action", [
     label: z.string().max(60).optional(),
     condition: Condition.optional(),
     team: z.boolean().optional(),
+    trial: z.boolean().optional(),
     maxUses: z.number().int().min(1).max(10_000).nullable().optional(),
   }),
   z.object({ action: z.literal("delete"), code: z.string().min(4).max(40) }),

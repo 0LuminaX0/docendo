@@ -36,7 +36,7 @@ export default function Exercises() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
-  const { calculator } = useStudySettings();
+  const { calculator, copy } = useStudySettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const items = useTestItems(allowed, setError);
@@ -89,7 +89,7 @@ export default function Exercises() {
 
   return (
     <div className="shell">
-      <Header phase={4} demo={saved.demo} label={delayed ? "Follow-up test" : undefined} />
+      <Header step="exercises" demo={saved.demo} label={delayed ? "Follow-up test" : undefined} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
@@ -102,7 +102,7 @@ export default function Exercises() {
         {delayed && (
           <fieldset className="opts since" aria-labelledby="since-q">
             <p className="qt" id="since-q">
-              First: since your session, have you looked at multi-armed bandits again (videos, notes, reading, a course)?
+              First: since your session, have you looked at {copy.subject} again (videos, notes, reading, a course)?
             </p>
             {SINCE.map(([v, text]) => (
               <label className="opt" key={v}>

@@ -1,24 +1,28 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/server/admin";
-import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
+import { viewHref, viewOf, viewTables } from "@/lib/server/adminview";
+import { inScope } from "@/lib/analytics";
+import { topicList } from "@/lib/server/study";
 import AdminShell from "@/components/admin/AdminShell";
+import ViewBar from "@/components/admin/ViewBar";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: sessions", robots: { index: false, follow: false } };
 
 const when = (iso: unknown) => (typeof iso === "string" ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "–");
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ all?: string; cond?: string }> }) {
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireAdmin();
   const q = await searchParams;
-  const all = q.all === "1";
-  const t = await loadTables();
+  const view = viewOf(q);
+  const t = await viewTables(view);
   const rows = t.sessions
-    .filter((s) => all || (s.entry === "participant" && !s.demo))
     .filter((s) => !q.cond || String(s.practiceView ?? s.condition) === q.cond)
     .sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
-  const link = (p: Record<string, string | undefined>) => "/admin/sessions?" + new URLSearchParams(Object.entries({ all: all ? "1" : undefined, cond: q.cond, ...p }).filter(([, v]) => v) as [string, string][]).toString();
+  const link = (p: Record<string, string | undefined>) => viewHref("/admin/sessions", view, {}, { cond: q.cond, ...p });
+  const counts = { participants: t.allSessions.filter((x) => inScope(x, "participants")).length, team: t.allSessions.filter((x) => inScope(x, "team")).length, all: t.allSessions.length };
+  const topics = topicList();
 
   return (
     <AdminShell store={eventStore}>
@@ -26,8 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         <div>
           <h1>Sessions</h1>
           <p className="note">
-            {rows.length} {rows.length === 1 ? "session" : "sessions"}.{" "}
-            <Link href={link({ all: all ? "" : "1" })}>{all ? "Participants only" : "Include team and test sessions"}</Link>
+            {rows.length} {rows.length === 1 ? "session" : "sessions"}. Team sessions (the shared code, team codes) and demo sessions are under &quot;Team and tests&quot;.
           </p>
           <p className="adm-filters">
             {["", "direct", "recursive"].map((c) => (
@@ -43,10 +46,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           ))}
         </div>
       </div>
+      <ViewBar path="/admin/sessions" view={view} topics={topics} counts={counts} />
       <section className="adm-card">
         <table className="adm-table adm-sessions">
           <thead>
-            <tr><th>Started</th><th>Code</th><th>Condition</th><th>Reached</th><th>Minutes</th><th>Messages</th><th>Facts</th><th>Practice</th><th>Test</th><th></th></tr>
+            <tr><th>Started</th><th>Code</th>{topics.length > 1 && <th>Topic</th>}<th>Condition</th><th>Reached</th><th>Minutes</th><th>Messages</th><th>Facts</th><th>Practice</th><th>Test</th><th></th></tr>
           </thead>
           <tbody>
             {rows.map((s) => {
@@ -54,7 +58,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
               return (
                 <tr key={String(s.sid)}>
                   <td>{when(s.startedAt)}</td>
-                  <td>{String(s.pid ?? "–")} <span className="note">{String(s.entry ?? "")}</span></td>
+                  <td>{String(s.pid ?? "–")} <span className="note">{String(s.entry ?? "")}{s.demo ? ", demo" : ""}{s.phase === "delayed" ? ", follow-up" : ""}</span></td>
+                  {topics.length > 1 && <td>{String(s.topic)}</td>}
                   <td><span className={`adm-pill ${rec ? "rec" : "dir"}`}>{rec ? "recursive" : "direct"}</span></td>
                   <td>{String(s.reachedStep)}</td>
                   <td>{s.minTotal === null ? "–" : String(s.minTotal)}</td>

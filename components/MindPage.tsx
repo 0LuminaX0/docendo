@@ -7,6 +7,8 @@ import { ArrowLeft } from "lucide-react";
 import { Header } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
+import { useStudySettings } from "./SettingsContext";
+import { currentStep, pathOf } from "@/lib/flow";
 import { useSaved } from "@/lib/client/store";
 import type { GraphView } from "@/lib/server/content";
 
@@ -19,10 +21,11 @@ export default function MindPage({ graph }: { graph: GraphView }) {
   const router = useRouter();
   const [saved] = useSaved();
   const allowed = useGuard(saved, "teach");
+  const { flow } = useStudySettings();
   const closed = !!saved && (saved.step === "practice" || saved.step === "exercises");
   useEffect(() => {
-    if (closed && saved) router.replace(saved.step === "practice" ? "/practice" : "/exercises");
-  }, [closed, saved, router]);
+    if (closed && saved) router.replace(pathOf(currentStep(flow, saved.step)));
+  }, [closed, saved, router, flow]);
   if (!allowed || !saved || closed) return <div className="center">Loading…</div>;
   const back = (
     <Link className="btn small" href={saved.step === "results" ? "/results" : "/teach"}>
@@ -31,7 +34,7 @@ export default function MindPage({ graph }: { graph: GraphView }) {
   );
   return (
     <div className="shell">
-      <Header phase={2} label="Kai's mind" demo={saved.demo} left={back} />
+      <Header step="teach" label="Kai's mind" demo={saved.demo} left={back} />
       <main className="mind-page">
         <MindView graph={graph} mind={saved.chat.mind} />
       </main>

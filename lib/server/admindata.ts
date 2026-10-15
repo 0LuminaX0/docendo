@@ -60,6 +60,7 @@ export type StoredCode = {
   condition: CodeCondition;
   draw?: "direct" | "recursive"; // random codes: the condition of the first use, drawn at creation in balanced blocks of 4
   team: boolean;
+  trial?: boolean; // a dry run: the participant's experience (no shortcuts, its own condition), counted with the tests
   maxUses: number | null;
   active: boolean;
   createdAt: string;
@@ -118,7 +119,7 @@ export async function useCode(c: StoredCode): Promise<number> {
   return d.uses[c.id]!;
 }
 
-export async function createCodes(opts: { count: number; prefix: string; label: string; condition: CodeCondition; team: boolean; maxUses: number | null }): Promise<StoredCode[]> {
+export async function createCodes(opts: { count: number; prefix: string; label: string; condition: CodeCondition; team: boolean; trial?: boolean; maxUses: number | null }): Promise<StoredCode[]> {
   const prefix = keyOf(opts.prefix).slice(0, 10);
   const existing = new Set((await listCodes()).map((c) => keyOf(c.code)));
   const made: StoredCode[] = [];
@@ -128,7 +129,7 @@ export async function createCodes(opts: { count: number; prefix: string; label: 
     const code = prefix ? `${prefix}-${tail}` : `${tail.slice(0, 3)}-${tail.slice(3)}`;
     if (existing.has(keyOf(code))) continue;
     existing.add(keyOf(code));
-    made.push({ id: `c${tail}`, code, label: opts.label.slice(0, 60), condition: opts.condition, ...(opts.condition === "random" ? { draw: draws[made.length] } : {}), team: opts.team, maxUses: opts.maxUses, active: true, createdAt: new Date().toISOString() });
+    made.push({ id: `c${tail}`, code, label: opts.label.slice(0, 60), condition: opts.condition, ...(opts.condition === "random" ? { draw: draws[made.length] } : {}), team: opts.team, ...(opts.trial && !opts.team ? { trial: true } : {}), maxUses: opts.maxUses, active: true, createdAt: new Date().toISOString() });
   }
   if (redis) await redis.hset(CODES, Object.fromEntries(made.map((c) => [keyOf(c.code), JSON.stringify(c)])));
   else {
@@ -139,7 +140,7 @@ export async function createCodes(opts: { count: number; prefix: string; label: 
   return made;
 }
 
-export async function updateCode(code: string, patch: Partial<Pick<StoredCode, "active" | "label" | "maxUses" | "condition" | "team">>): Promise<StoredCode | null> {
+export async function updateCode(code: string, patch: Partial<Pick<StoredCode, "active" | "label" | "maxUses" | "condition" | "team" | "trial">>): Promise<StoredCode | null> {
   const c = await findCode(code);
   if (!c) return null;
   const next = { ...c, ...patch };
