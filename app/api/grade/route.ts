@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { checkExercise, exercises, keyText, practiceReview, pretest } from "@/lib/server/content";
+import { checkExercise, exercises, keyText, practiceReview, pretest, testVersion } from "@/lib/server/content";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
@@ -17,6 +17,7 @@ const Body = z.union([
     // an option's index, or a typed number (as typed)
     answers: z.array(z.union([z.number().int().min(0).max(9), z.string().max(40)]).nullable()).length(exercises.length),
     work: z.record(z.string().max(10), z.string().max(2_000)).optional(), // the learner's working per question, for the log
+    order: z.array(z.string().max(10)).max(exercises.length).optional(), // the order the learner saw the items in
   }),
 ]);
 
@@ -55,7 +56,9 @@ export async function POST(req: NextRequest) {
   });
   const score = items.filter((x) => x.correct).length;
   const work = "work" in body.data ? body.data.work : undefined;
-  record({ t: "grade", sid: session.sid, condition: session.cond, pid: session.pid, score, of: items.length, answers: items.map((x) => x.chosen), items: items.map((x) => ({ id: x.id, kind: x.kind, chosen: x.chosen, answer: x.answer, correct: x.correct, work: work?.[x.id] ?? null })) });
+  const order = "order" in body.data ? body.data.order : undefined;
+  const pos = (id: string) => (order && order.length === exercises.length ? order.indexOf(id) + 1 || null : null);
+  record({ t: "grade", sid: session.sid, condition: session.cond, pid: session.pid, version: testVersion, score, of: items.length, answers: items.map((x) => x.chosen), order: order ?? null, items: items.map((x) => ({ id: x.id, kind: x.kind, pos: pos(x.id), chosen: x.chosen, answer: x.answer, correct: x.correct, work: work?.[x.id] ?? null })) });
   // the test is done: now the practice problems' worked solutions can be shown too
   return ok({ score, of: items.length, items, practice: practiceReview });
 }

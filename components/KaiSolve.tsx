@@ -204,13 +204,18 @@ function Attempt({
   let total = 0;
   for (const s of a.steps) (starts.push(total), (total += stepMs(s.text) + PAUSE));
   const elapsed = useWriting(total, fresh && a.call === undefined);
+  // the second try starts below the learner's correction, usually off screen: bring it up as Kai starts writing
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (fresh && n > 0) box.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [fresh, n]);
   const writing = elapsed !== Infinity;
   const smooth = typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const called = a.call !== undefined;
   const tone = called ? (a.correct ? " on" : " off") : "";
 
   return (
-    <div className="kattempt">
+    <div className="kattempt" ref={box}>
       <div className="who-row">
         <KaiFace mood={!called ? (writing ? "thinking" : "neutral") : a.correct ? "great" : "confused"} size={30} />
         <b>{n === 0 ? "Kai's solution" : "Kai's second try"}</b>

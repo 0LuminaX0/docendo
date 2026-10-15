@@ -64,9 +64,13 @@ export type Saved = {
     mood: Mood;
     help: Help | null;
     helpAvailable: boolean;
+    // what Kai's mind showed when the learner last left it, per idea: its status and facts explained (correct, partly),
+    // so the next look can mark what changed
+    mindSeen?: Record<string, [string, number, number]>;
   };
   answers: (number | string | null)[]; // final test: an option's index, or a typed number
   testWork?: Record<string, string>; // final test: the working under each question
+  testOrder?: string[]; // final test: the item ids in the order this learner sees them (lib/order.ts)
   result: GradeResult | null;
   feedbackSent?: boolean;
 };

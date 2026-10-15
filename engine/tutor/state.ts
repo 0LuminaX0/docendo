@@ -103,10 +103,18 @@ export function activeMisconceptions(state: State): Belief[] {
  * numbers, and the practice page's notebook shows the same list.
  */
 export function notesOf(state: State): string[] {
+  // one message can explain several facts, and the judge quotes a span of it per fact, so quotes overlap: a note whose
+  // words are already inside another is dropped, and the longer one keeps the place of the first
+  const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const out: string[] = [];
-  // one message can explain several facts with the same words: each note once
-  for (const e of latest(state).values()) if (!out.includes(e.words)) out.push(e.words);
-  for (const m of activeMisconceptions(state)) if (!out.includes(m.words)) out.push(m.words);
+  const keys: string[] = [];
+  for (const words of [...[...latest(state).values()].map((e) => e.words), ...activeMisconceptions(state).map((m) => m.words)]) {
+    const k = norm(words);
+    if (!k) continue;
+    const i = keys.findIndex((o) => o.includes(k) || k.includes(o));
+    if (i < 0) (out.push(words), keys.push(k));
+    else if (k.length > keys[i]!.length) ((out[i] = words), (keys[i] = k));
+  }
   return out.slice(-40);
 }
 

@@ -204,7 +204,7 @@ export function tables(events: Ev[]) {
         sid,
         condition: start?.condition ?? "direct",
         id,
-        round: checks[0]?.round ?? first("client_practice_problem_show", (e) => e.id === id)?.round ?? null,
+        round: checks[0]?.round ?? first("practice_kai_solve", (e) => e.id === id)?.round ?? first("client_practice_problem_show", (e) => e.id === id)?.round ?? null,
         // time on the problem, from when it was shown until the learner moved on
         sec: Math.round(sum(of("client_practice_problem_leave").filter((e) => e.id === id).map((e) => Number(e.ms ?? 0))) / 1000),
         kaiFirstTry: first("practice_kai_solve", (e) => e.id === id)?.correct ?? null,
@@ -229,8 +229,8 @@ export function tables(events: Ev[]) {
       });
     }
 
-    for (const it of (grade?.items as { id: string; chosen: number | null; answer: number; correct: boolean }[]) ?? [])
-      test.push({ sid, id: it.id, chosen: it.chosen, answer: it.answer, correct: it.correct });
+    for (const it of (grade?.items as { id: string; pos?: number | null; chosen: number | string | null; answer: number; correct: boolean; work?: string | null }[]) ?? [])
+      test.push({ sid, version: grade?.version ?? null, id: it.id, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, work: it.work ?? null });
 
     for (const e of of("client_feedback"))
       feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null });
@@ -260,7 +260,7 @@ const viewOf = (s: Record<string, unknown>) => String(s.practiceView ?? s.condit
  * The dashboard's numbers. By default only participants' sessions (their own code): team, open and demo
  * sessions are tests. `all` counts every session.
  */
-export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opts: { all?: boolean } = {}) {
+export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opts: { all?: boolean; testVersion?: string } = {}) {
   const sessions = t.sessions.filter((s) => opts.all || (s.entry === "participant" && !s.demo));
   const sids = new Set(sessions.map((s) => s.sid));
   const view = new Map(sessions.map((s) => [s.sid, viewOf(s)]));
@@ -270,7 +270,9 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
 
   const practice = t.practice.filter((p) => sids.has(p.sid));
   const ids = [...new Set(practice.map((p) => String(p.id)))].sort();
-  const test = t.test.filter((r) => sids.has(r.sid));
+  // per-item numbers only from answers to the current version of the test (an edited item keeps its id)
+  const testAll = t.test.filter((r) => sids.has(r.sid));
+  const test = opts.testVersion ? testAll.filter((r) => r.version === opts.testVersion) : testAll;
   const testIds = [...new Set(test.map((r) => String(r.id)))].sort();
 
   return {
@@ -291,7 +293,7 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
       const r = rows.filter((p) => p.kaiFirstTry !== null && p.kaiFirstTry !== undefined && p.kaiFirstTry !== "");
       return {
         id,
-        round: rows[0]?.round ?? null,
+        round: rows.find((p) => p.round !== null && p.round !== undefined)?.round ?? null,
         direct: { tried: d.length, firstTry: pct(d.filter((p) => p.firstTryCorrect === true).length, d.length), solved: pct(d.filter((p) => p.solved === true).length, d.length), sec: median(d.map((p) => num(p.sec))) },
         recursive: {
           tried: r.length,
@@ -309,6 +311,7 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
       const by = (c: string) => rows.filter((r) => view.get(String(r.sid)) === c);
       return { id, n: rows.length, all: pct(rows.filter((r) => r.correct === true).length, rows.length), direct: pct(by("direct").filter((r) => r.correct === true).length, by("direct").length), recursive: pct(by("recursive").filter((r) => r.correct === true).length, by("recursive").length) };
     }),
+    testOtherVersions: testAll.length - test.length,
     testMean: Object.fromEntries(conds.map((c) => [c, mean(inCond(c).map((s) => num(s.testScore)).filter((x): x is number => x !== null))])) as Record<(typeof conds)[number], number | null>,
     teaching: {
       readyReasons: sessions.reduce<Record<string, number>>((a, s) => {

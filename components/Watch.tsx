@@ -197,7 +197,6 @@ export default function Watch({ segments }: { segments: Segment[] }) {
       <Header phase={1} demo={saved.demo} />
       <main className="page">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <span className="eyebrow">Step 1 of 4</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>{s.title}</h1>
           <p className="note">
             Part {i + 1} of {segments.length}, by {s.channel}. The whole lesson is {mmss(total)}.

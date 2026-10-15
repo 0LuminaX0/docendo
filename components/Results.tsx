@@ -5,7 +5,7 @@ import { Brain, Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
-import { sections, type TestItem } from "./Exercises";
+import { parts, type TestItem } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
 import { useState } from "react";
@@ -16,9 +16,13 @@ export default function Results({ items }: { items: TestItem[] }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
+  // the review starts with the questions the learner missed (their explanations matter most); "All" shows every one
+  const [show, setShow] = useState<"missed" | "all" | null>(null);
   if (!allowed || !saved || !saved.result) return <div className="center">Loading…</div>;
 
   const r = saved.result;
+  const missed = r.items.filter((x) => !x.correct).length;
+  const view = show ?? (missed ? "missed" : "all");
   const minutes = Math.max(1, Math.round((Date.now() - saved.startedAt) / 60000));
   const taught = saved.chat.turns.filter((t) => t.role === "learner" && !t.help).length;
   const line =
@@ -54,15 +58,36 @@ export default function Results({ items }: { items: TestItem[] }) {
           </div>
         </div>
 
+        {/* asked while the session is fresh: at the bottom of a long review most people never reached it */}
+        <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
+
+        <div className="review-head">
+          <h2>Your answers</h2>
+          {missed > 0 && (
+            <div className="seg" role="group" aria-label="Which questions to show">
+              <button type="button" aria-pressed={view === "missed"} onClick={() => (setShow("missed"), track("results_filter", { to: "missed" }))}>
+                <span className="lbl">Missed ({missed})</span>
+              </button>
+              <button type="button" aria-pressed={view === "all"} onClick={() => (setShow("all"), track("results_filter", { to: "all" }))}>
+                <span className="lbl">All {r.items.length}</span>
+              </button>
+            </div>
+          )}
+          {missed === 0 && <span className="note">All right: the explanations are below.</span>}
+        </div>
+
         <div className="quiz">
-          {sections(items).map(({ title, start, list }) => (
+          {parts(items, saved.testOrder).map(({ title, start, list }) => {
+            const shown = list.map((x, j) => ({ ...x, n: start + j + 1 })).filter(({ i }) => view === "all" || !r.items[i]!.correct);
+            if (!shown.length) return null;
+            return (
             <section key={title} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <h2 className="quiz-section">{title}</h2>
-              <ol start={start + 1}>
-                {list.map((q, j) => {
-                  const g = r.items[start + j]!;
+              <ol>
+                {shown.map(({ q, i, n }) => {
+                  const g = r.items[i]!;
                   return (
-                    <li className="q" key={q.id}>
+                    <li className="q" key={q.id} style={{ counterSet: `q ${n}` }}>
                       <p className="qt">{q.prompt}</p>
                       {q.options ? (
                       <div className="opts">
@@ -99,7 +124,8 @@ export default function Results({ items }: { items: TestItem[] }) {
                 })}
               </ol>
             </section>
-          ))}
+            );
+          })}
         </div>
 
         {r.practice && r.practice.length > 0 && (
@@ -147,8 +173,6 @@ export default function Results({ items }: { items: TestItem[] }) {
             })}
           </section>
         )}
-
-        <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
 
         <div className="row">
           <button

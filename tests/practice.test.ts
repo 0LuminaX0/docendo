@@ -3,6 +3,7 @@ import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
 import exercisesJson from "../topics/bandits/exercises.json";
 import { checkNumber } from "../content/practice";
+import { seedOf, testOrder } from "../lib/order";
 import { Bundle } from "../content/schema";
 import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
 
@@ -137,6 +138,20 @@ describe("final test items", () => {
   });
 });
 
+describe("final test order", () => {
+  const items = exercisesJson.items as { id: string; kind?: string }[];
+  const withKind = items.map((q) => ({ id: q.id, kind: q.kind ?? "choice" }));
+  it("puts the choice items first, then the number items, each part shuffled per learner and stable", () => {
+    const a = testOrder(withKind, seedOf("token-a"));
+    expect([...a].sort()).toEqual(items.map((q) => q.id).sort());
+    const kinds = a.map((id) => withKind.find((q) => q.id === id)!.kind);
+    expect(kinds.lastIndexOf("choice")).toBeLessThan(kinds.indexOf("number"));
+    expect(testOrder(withKind, seedOf("token-a"))).toEqual(a); // a reload shows the same order
+    const orders = new Set(["a", "b", "c", "d", "e", "f"].map((t) => testOrder(withKind, seedOf(`token-${t}`)).join()));
+    expect(orders.size).toBeGreaterThan(3); // learners get different orders
+  });
+});
+
 const argmax = (xs: number[]) => xs.indexOf(Math.max(...xs));
 
 import pretestJson from "../topics/bandits/pretest.json";
@@ -193,6 +208,17 @@ describe("Kai solving practice problems (recursive feedback)", () => {
 
   it("numbers the notes without lesson text, and reads Kai's answer as a letter or a number", () => {
     expect(notesOf(taught)).toEqual(taught.notebook.map((e) => e.words));
+    // overlapping quotes from one message are one note, the longest, in the place of the first
+    const overlap = {
+      ...taught,
+      notebook: [
+        { fact: "n01.f1", verdict: "correct" as const, words: "You choose one of several options.", turn: 1 },
+        { fact: "n01.f2", verdict: "correct" as const, words: "You choose one of several options. Each gives a random reward.", turn: 1 },
+        { fact: "n03.f1", verdict: "correct" as const, words: "The estimate is the average", turn: 2 },
+        { fact: "n05.f1", verdict: "correct" as const, words: "the estimate is the average!", turn: 3 },
+      ],
+    };
+    expect(notesOf(overlap)).toEqual(["You choose one of several options. Each gives a random reward.", "The estimate is the average"]);
     expect(isRight(p1, "D")).toBe(true);
     expect(isRight(p1, "d) At B")).toBe(true);
     expect(isRight(p1, "A")).toBe(false);
@@ -345,6 +371,10 @@ describe("the admin dashboard's numbers", () => {
     const s = summarize(t);
     expect(s.minutes.find((m) => m.chapter === "Teach")!.direct).toBe(10);
     expect(s.test.find((q) => q.id === "q01")).toMatchObject({ n: 1, all: 100, direct: 100 });
+    // answers to another version of the test are left out of the per-item numbers, and counted
+    const other = summarize(t, { testVersion: "deadbeef" });
+    expect(other.test).toHaveLength(0);
+    expect(other.testOtherVersions).toBe(1);
     expect(s.testMean.direct).toBe(6);
   });
 });

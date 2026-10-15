@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/server/admin";
 import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
 import { summarize } from "@/lib/analytics";
+import { testVersion } from "@/lib/server/content";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   await requireAdmin();
   const all = (await searchParams).all === "1";
   const t = await loadTables();
-  const s = summarize(t, { all });
+  const s = summarize(t, { all, testVersion });
   const feedback = t.feedback.filter((f) => all || f.entry === "participant").slice(-3).reverse();
   const top = s.funnel[0]!.n;
 
@@ -111,7 +112,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <div className="adm-cols">
         <section className="adm-card">
           <h2>Final test items</h2>
-          <p className="note">Share correct. Aim for about half in the pilot.</p>
+          <p className="note">
+            Share correct. Aim for about half in the pilot. Only answers to the current version of the test ({testVersion})
+            {s.testOtherVersions ? `; ${s.testOtherVersions} answers to earlier versions are left out here (they are in the export)` : ""}.
+          </p>
           <table className="adm-table">
             <thead>
               <tr><th>Item</th><th>n</th><th>All</th><th>Direct</th><th>Recursive</th></tr>

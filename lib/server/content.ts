@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import bundleJson from "../../topics/bandits/bundle.json";
 import exercisesJson from "../../topics/bandits/exercises.json";
@@ -30,6 +31,9 @@ const Exercise = z
   })
   .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
 export const exercises = z.object({ title: z.string(), items: z.array(Exercise).min(1) }).parse(exercisesJson).items;
+
+/** A fingerprint of the test's content, logged with every graded test: answers to an edited item stay apart. */
+export const testVersion = createHash("sha1").update(JSON.stringify(exercises)).digest("hex").slice(0, 8);
 
 /** Grade one answer: an option's index, or a typed number. */
 export function checkExercise(q: (typeof exercises)[number], a: number | string | null): boolean {
@@ -75,7 +79,8 @@ export const practiceReview = practice.map((p) => ({
   title: p.title,
   prompt: p.prompt,
   options: p.options ?? null,
-  answer: p.kind === "choice" ? p.options![p.answer]! : `about ${Math.round(p.answer * 100) / 100}${p.unit ? ` ${p.unit}` : ""}`,
+  // large numbers (visitors, days) as whole numbers, small ones (shares, scores) to two decimals
+  answer: p.kind === "choice" ? p.options![p.answer]! : `about ${Math.abs(p.answer) >= 10 ? Math.round(p.answer) : Math.round(p.answer * 100) / 100}${p.unit ? ` ${p.unit}` : ""}`,
   answerIndex: p.kind === "choice" ? p.answer : null,
   steps: p.steps.map((s) => s.text),
 }));
@@ -88,7 +93,14 @@ export const videos = bundle.videos.map((v, i) => ({ ...v, part: i + 1 }));
  * prerequisites only. Fact text and Kai's questions stay on the server.
  */
 export const graphView = (() => {
-  const { pos, routes, width, height } = layout(bundle.nodes);
+  const l = layout(bundle.nodes);
+  // crop to what is drawn: the layout's grid can leave an empty row above and room below
+  const ys = [...Object.values(l.pos).flatMap((p) => [p.y, p.y + BOX_H]), ...Object.values(l.routes).flatMap((pts) => pts.map((p) => p.y))];
+  const top = Math.max(0, Math.min(...ys) - 16);
+  const height = Math.min(l.height, Math.max(...ys) + 16) - top;
+  const pos = Object.fromEntries(Object.entries(l.pos).map(([id, p]) => [id, { x: p.x, y: p.y - top }]));
+  const routes = Object.fromEntries(Object.entries(l.routes).map(([k, pts]) => [k, pts.map((p) => ({ x: p.x, y: p.y - top }))]));
+  const width = l.width;
   return {
     nodes: bundle.nodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, needs: n.needs, goals: n.goals, inLesson: n.inLesson })),
     // SVG path per prerequisite edge, keyed "from>to"

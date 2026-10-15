@@ -58,63 +58,81 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
         <div className="intro-foot">
         <ol className="steps">
           <li>
-            <span className="ico"><Play size={22} fill="currentColor" strokeWidth={0} /></span>
-            <span className="eyebrow">Step 1</span>
-            <h3>Watch</h3>
+            <div className="step-top">
+              <span className="ico"><Play size={19} fill="currentColor" strokeWidth={0} /></span>
+              <div>
+                <span className="eyebrow">Step 1</span>
+                <h3>Watch</h3>
+              </div>
+            </div>
             <p>A short video lesson on multi-armed bandits{parts > 1 ? `, in ${parts} parts that play one after another` : ""}. About {videoMinutes} minutes.</p>
           </li>
           <li>
-            <span className="ico"><MessagesSquare size={22} strokeWidth={2.2} /></span>
-            <span className="eyebrow">Step 2</span>
-            <h3>Teach Kai</h3>
+            <div className="step-top">
+              <span className="ico"><MessagesSquare size={19} strokeWidth={2.2} /></span>
+              <div>
+                <span className="eyebrow">Step 2</span>
+                <h3>Teach Kai</h3>
+              </div>
+            </div>
             <p>Explain the ideas in your own words. Kai asks questions until it feels it understands. About 10 minutes.</p>
           </li>
           <li>
-            <span className="ico"><PencilLine size={22} strokeWidth={2.2} /></span>
-            <span className="eyebrow">Step 3</span>
-            <h3>Practice</h3>
+            <div className="step-top">
+              <span className="ico"><PencilLine size={19} strokeWidth={2.2} /></span>
+              <div>
+                <span className="eyebrow">Step 3</span>
+                <h3>Practice</h3>
+              </div>
+            </div>
             <p>Two short rounds of problems, with two tries each. {practiceMinutes} minutes.</p>
           </li>
           <li>
-            <span className="ico"><ListChecks size={22} strokeWidth={2.2} /></span>
-            <span className="eyebrow">Step 4</span>
-            <h3>Final test</h3>
-            <p>Ten multiple-choice questions to see what stuck. About 10 minutes.</p>
+            <div className="step-top">
+              <span className="ico"><ListChecks size={19} strokeWidth={2.2} /></span>
+              <div>
+                <span className="eyebrow">Step 4</span>
+                <h3>Final test</h3>
+              </div>
+            </div>
+            <p>Ten questions to see what stuck: some to choose, some to work out. About 10 minutes.</p>
           </li>
         </ol>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {saved && (
-            <div className="row">
-              <button className="btn primary" onClick={() => router.push(STEP_PATH[saved.step])}>
-                Continue where you left off <ArrowRight size={17} />
-              </button>
-              <button className="btn ghost" onClick={() => save(null)}>
-                <RotateCcw size={15} /> Start over
-              </button>
-            </div>
-          )}
-          {saved === null && (
-            <form
-              className="row"
-              style={{ alignItems: "flex-end" }}
-              onSubmit={(e) => {
-                e.preventDefault();
-                void start();
-              }}
-            >
-              {accessRequired && (
-                <div className="field">
-                  <label htmlFor="code">Your access code</label>
-                  <input id="code" className="input" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" maxLength={64} required />
-                </div>
-              )}
-              <button className="btn primary" type="submit" disabled={busy || (accessRequired && !code.trim())}>
-                {busy ? "Starting…" : <>Start <ArrowRight size={17} /></>}
-              </button>
-            </form>
-          )}
-          {error && <p className="error" role="alert">{error}</p>}
+        <div className="intro-act">
+          {/* one height in every state (loading, a code to enter, a session to continue), so nothing jumps */}
+          <div className="intro-go">
+            {saved ? (
+              <div className="row">
+                <button className="btn primary" onClick={() => router.push(STEP_PATH[saved.step])}>
+                  Continue where you left off <ArrowRight size={17} />
+                </button>
+                <button className="btn ghost" onClick={() => save(null)}>
+                  <RotateCcw size={15} /> Start over
+                </button>
+              </div>
+            ) : saved === null ? (
+              <form
+                className="row"
+                style={{ alignItems: "flex-end" }}
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void start();
+                }}
+              >
+                {accessRequired && (
+                  <div className="field">
+                    <label htmlFor="code">Your access code</label>
+                    <input id="code" className="input" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" maxLength={64} required />
+                  </div>
+                )}
+                <button className="btn primary" type="submit" disabled={busy || (accessRequired && !code.trim())}>
+                  {busy ? "Starting…" : <>Start <ArrowRight size={17} /></>}
+                </button>
+              </form>
+            ) : null}
+            {error && <p className="error" role="alert">{error}</p>}
+          </div>
           <p className="note">
             This is a study: what you write, your answers and how you use the app (clicks, timings, video playback) are recorded under a random session id, without your name. What you write to Kai is also sent to an AI model to generate its replies, so please don&apos;t include personal details.
           </p>

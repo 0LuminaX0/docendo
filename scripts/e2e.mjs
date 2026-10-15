@@ -230,20 +230,26 @@ await page.waitForSelector(".q");
 // one choice item and one number item wrong on purpose
 const wrongChoice = testItems.findIndex((q) => q.kind !== "number" && q.id !== "q01");
 const wrongNumber = testItems.findLastIndex((q) => q.kind === "number");
-const cards = await page.$$(".q");
+// the learner's own order: the choice items first, then the number items
+const shown = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+const kindsShown = shown.map((id) => testItems.find((t) => t.id === id).kind ?? "choice");
+check(shown.length === testItems.length && kindsShown.lastIndexOf("choice") < kindsShown.indexOf("number"), `the final test shows the choice items first, then the number items (${shown.join(" ")})`);
+const card = (id) => page.$(`.q[data-q="${id}"]`);
 for (let i = 0; i < testItems.length; i++) {
   const t = testItems[i];
-  if (t.kind === "number") await cards[i].$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(i === wrongNumber ? t.answer + 1 : t.answer));
-  else await cards[i].$eval(`.opt:nth-child(${(i === wrongChoice ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
+  const c = await card(t.id);
+  if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(i === wrongNumber ? t.answer + 1 : t.answer));
+  else await c.$eval(`.opt:nth-child(${(i === wrongChoice ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
 }
 // the working field under each question calculates, and "Use … as the answer" fills a number item
-await cards[0].$eval(".qwork textarea", (el) => el.focus());
+const q01 = await card("q01");
+await q01.$eval(".qwork textarea", (el) => el.focus());
 await page.keyboard.type("(4 * 12 + 22) / 5 =");
-await page.waitForFunction(() => /= 14$/.test(document.querySelector(".q .qwork textarea")?.value ?? ""));
-await (await cards[0].$(".qans input")).click({ count: 3 });
+await page.waitForFunction(() => /= 14$/.test(document.querySelector('.q[data-q="q01"] .qwork textarea')?.value ?? ""));
+await (await q01.$(".qans input")).click({ count: 3 });
 await page.keyboard.press("Backspace");
-await cards[0].$eval(".scratch-bar .linkish", (el) => el.click());
-const used = await cards[0].$eval(".qans input", (el) => el.value);
+await q01.$eval(".scratch-bar .linkish", (el) => el.click());
+const used = await q01.$eval(".qans input", (el) => el.value);
 check(used === "14", `the final test has a working field under each question that calculates and fills the answer (${used})`);
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
