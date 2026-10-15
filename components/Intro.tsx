@@ -6,14 +6,37 @@ import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } f
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
 
+const CONSENT =
+  "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
+
 const STEP_PATH = { pretest: "/pretest", watch: "/watch", teach: "/teach", practice: "/practice", exercises: "/exercises", results: "/results" } as const;
 
-export default function Intro({ topic, accessRequired, demo, parts, videoMinutes, practiceMinutes }: { topic: string; accessRequired: boolean; demo: boolean; parts: number; videoMinutes: number; practiceMinutes: number }) {
+type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed" };
+
+export default function Intro({
+  topic,
+  accessRequired,
+  demo,
+  parts,
+  videoMinutes,
+  practiceMinutes,
+  followUpDays,
+}: {
+  topic: string;
+  accessRequired: boolean;
+  demo: boolean;
+  parts: number;
+  videoMinutes: number;
+  practiceMinutes: number;
+  followUpDays: number | null; // the delayed test opens this many days after the final test (null: no delayed test)
+}) {
   const router = useRouter();
   const [saved] = useSaved();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null); // not an error: e.g. "your follow-up test opens on …"
+  const [agree, setAgree] = useState(false);
 
   // a participant's link carries their own code (?code=…), so they only press Start
   useEffect(() => {
@@ -21,17 +44,34 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
     if (c) setCode(c.slice(0, 64));
   }, []);
 
-  async function start() {
+  /** A new session, or (with `followUp`, a finished session's token on this device) the delayed test. */
+  async function start(followUp?: string) {
     setBusy(true);
     setError(null);
+    setInfo(null);
     // team sessions: ?pid=… in the link joins the session with our other data (a participant's code does this itself)
     const pid = new URLSearchParams(window.location.search).get("pid")?.slice(0, 40) || undefined;
-    const r = await post<{ token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive" }>("/api/session", { ...(accessRequired ? { accessCode: code } : {}), ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}) });
+    const r = await post<Started>("/api/session", {
+      consent: true,
+      ...(followUp ? { followUp } : accessRequired ? { accessCode: code } : {}),
+      ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}),
+    });
     setBusy(false);
-    if (!r.ok) return setError(r.error);
-    save(newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition));
-    router.push("/pretest");
+    // 409: the code is known and its tests are done, or the follow-up isn't open yet: a message, not an error
+    if (!r.ok) return r.status === 409 ? setInfo(r.error) : setError(r.error);
+    const s = newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition);
+    if (r.data.phase === "delayed") {
+      save({ ...s, phase: "delayed", step: "exercises" });
+      router.push("/exercises");
+    } else {
+      save(s);
+      router.push("/pretest");
+    }
   }
+
+  // a finished session on this device: the follow-up test, once it is open (participants only)
+  const followUp = saved && followUpDays && saved.step === "results" && saved.phase !== "delayed" && !saved.team && saved.finishedAt ? saved.finishedAt + followUpDays * 86_400_000 : null;
+  const opensText = followUp ? new Date(followUp).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) : "";
 
   return (
     <div className="shell">
@@ -100,12 +140,26 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
         </ol>
 
         <div className="intro-act">
+          {/* consent first: Start stays off until it is ticked (the server checks it too) */}
+          {saved && !followUp ? (
+            <p className="note consent-note">{CONSENT}</p>
+          ) : (
+            <label className="consent">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
+              <span>{CONSENT}</span>
+            </label>
+          )}
           {/* one height in every state (loading, a code to enter, a session to continue), so nothing jumps */}
           <div className="intro-go">
             {saved ? (
               <div className="row">
-                <button className="btn primary" onClick={() => router.push(STEP_PATH[saved.step])}>
-                  Continue where you left off <ArrowRight size={17} />
+                {followUp && (
+                  <button className="btn primary" disabled={busy || !agree || Date.now() < followUp} onClick={() => void start(saved.token)} title={Date.now() < followUp ? `Opens on ${opensText}` : agree ? undefined : "Tick the box first"}>
+                    {busy ? "Starting…" : <>Take the follow-up test <ArrowRight size={17} /></>}
+                  </button>
+                )}
+                <button className={`btn${followUp ? "" : " primary"}`} onClick={() => router.push(saved.phase === "delayed" && saved.step !== "results" ? "/exercises" : STEP_PATH[saved.step])}>
+                  {saved.step === "results" ? "See your results" : "Continue where you left off"} {!followUp && <ArrowRight size={17} />}
                 </button>
                 <button className="btn ghost" onClick={() => save(null)}>
                   <RotateCcw size={15} /> Start over
@@ -126,16 +180,15 @@ export default function Intro({ topic, accessRequired, demo, parts, videoMinutes
                     <input id="code" className="input" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" maxLength={64} required />
                   </div>
                 )}
-                <button className="btn primary" type="submit" disabled={busy || (accessRequired && !code.trim())}>
+                <button className="btn primary" type="submit" disabled={busy || !agree || (accessRequired && !code.trim())} title={agree ? undefined : "Tick the box first"}>
                   {busy ? "Starting…" : <>Start <ArrowRight size={17} /></>}
                 </button>
               </form>
             ) : null}
+            {followUp && Date.now() < followUp && <p className="note">Your follow-up test opens on {opensText}.</p>}
+            {info && <p className="info" role="status">{info}</p>}
             {error && <p className="error" role="alert">{error}</p>}
           </div>
-          <p className="note">
-            This is a study: what you write, your answers and how you use the app (clicks, timings, video playback) are recorded under a random session id, without your name. What you write to Kai is also sent to an AI model to generate its replies, so please don&apos;t include personal details.
-          </p>
         </div>
         </div>
       </main>

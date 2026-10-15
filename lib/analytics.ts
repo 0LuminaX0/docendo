@@ -48,7 +48,7 @@ export function tables(events: Ev[]) {
     const lastTurn = chat[chat.length - 1];
     const watchDone = first("client_watch_continue");
     const tAt = { start: ms(start), watch: ms(view("/watch")), teach: ms(view("/teach")), practice: ms(view("/practice")), test: ms(view("/exercises")), results: ms(first("client_test_submit")) ?? ms(grade) };
-    const llm = [...chat, ...of("practice_kai_solve"), ...of("practice_kai_reteach")].flatMap((c) => (c.llm as { ms: number; usage: { promptTokens: number; completionTokens: number; costUsd?: number } }[]) ?? []);
+    const llm = [...chat, ...of("practice_kai_solve"), ...of("practice_kai_reteach"), ...of("voice"), ...of("voice_preview")].flatMap((c) => (c.llm as { ms: number; usage: { promptTokens: number; completionTokens: number; costUsd?: number } }[]) ?? []);
     const moods = chat.map((c) => String(c.mood));
     const moves = chat.map((c) => String((c.move as { type: string })?.type));
     const intents = chat.map((c) => String(c.intent));
@@ -58,6 +58,11 @@ export function tables(events: Ev[]) {
       pid: start?.pid ?? null,
       condition: start?.condition ?? "direct", // sessions before conditions existed were all direct
       entry: start?.entry ?? null, // participant (own code), team (shared code) or open
+      phase: start?.phase ?? "main", // main: the whole session; delayed: the follow-up test on its own, days later
+      form: start?.form ?? "A", // the test form this session took (the delayed test takes the other)
+      consent: start?.consent ?? null,
+      daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
+      since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)
       // the practice the learner actually did: their condition, or the view a team session switched to
       practiceView: of("practice_kai_solve").length ? "recursive" : of("practice_check").length ? "direct" : null,
       demo: start?.demo ?? null,
@@ -230,7 +235,7 @@ export function tables(events: Ev[]) {
     }
 
     for (const it of (grade?.items as { id: string; pos?: number | null; chosen: number | string | null; answer: number; correct: boolean; work?: string | null }[]) ?? [])
-      test.push({ sid, version: grade?.version ?? null, id: it.id, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, work: it.work ?? null });
+      test.push({ sid, phase: grade?.phase ?? "main", form: grade?.form ?? "A", version: grade?.version ?? null, id: it.id, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, work: it.work ?? null });
 
     for (const e of of("client_feedback"))
       feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null });
@@ -260,8 +265,11 @@ const viewOf = (s: Record<string, unknown>) => String(s.practiceView ?? s.condit
  * The dashboard's numbers. By default only participants' sessions (their own code): team, open and demo
  * sessions are tests. `all` counts every session.
  */
-export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opts: { all?: boolean; testVersion?: string } = {}) {
-  const sessions = t.sessions.filter((s) => opts.all || (s.entry === "participant" && !s.demo));
+export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opts: { all?: boolean; testVersions?: string[] } = {}) {
+  const counted = t.sessions.filter((s) => opts.all || (s.entry === "participant" && !s.demo));
+  // follow-up (delayed) tests are sessions of their own: summarised apart, never in the funnel or the main numbers
+  const sessions = counted.filter((s) => s.phase !== "delayed");
+  const followUps = counted.filter((s) => s.phase === "delayed");
   const sids = new Set(sessions.map((s) => s.sid));
   const view = new Map(sessions.map((s) => [s.sid, viewOf(s)]));
   const conds = ["direct", "recursive"] as const;
@@ -272,7 +280,7 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
   const ids = [...new Set(practice.map((p) => String(p.id)))].sort();
   // per-item numbers only from answers to the current version of the test (an edited item keeps its id)
   const testAll = t.test.filter((r) => sids.has(r.sid));
-  const test = opts.testVersion ? testAll.filter((r) => r.version === opts.testVersion) : testAll;
+  const test = (opts.testVersions ? testAll.filter((r) => opts.testVersions!.includes(String(r.version))) : testAll).filter((r) => r.phase !== "delayed");
   const testIds = [...new Set(test.map((r) => String(r.id)))].sort();
 
   return {
@@ -311,7 +319,14 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
       const by = (c: string) => rows.filter((r) => view.get(String(r.sid)) === c);
       return { id, n: rows.length, all: pct(rows.filter((r) => r.correct === true).length, rows.length), direct: pct(by("direct").filter((r) => r.correct === true).length, by("direct").length), recursive: pct(by("recursive").filter((r) => r.correct === true).length, by("recursive").length) };
     }),
-    testOtherVersions: testAll.length - test.length,
+    testOtherVersions: testAll.filter((r) => r.phase !== "delayed").length - test.length,
+    delayed: {
+      n: followUps.length,
+      finished: followUps.filter((s) => s.testScore !== null && s.testScore !== undefined).length,
+      mean: Object.fromEntries(conds.map((c) => [c, mean(followUps.filter((s) => s.condition === c).map((s) => num(s.testScore)).filter((x): x is number => x !== null))])) as Record<(typeof conds)[number], number | null>,
+      days: median(followUps.map((s) => num(s.daysSinceTest))),
+      studiedSince: followUps.filter((s) => s.since === "a little" || s.since === "a lot").length,
+    },
     testMean: Object.fromEntries(conds.map((c) => [c, mean(inCond(c).map((s) => num(s.testScore)).filter((x): x is number => x !== null))])) as Record<(typeof conds)[number], number | null>,
     teaching: {
       readyReasons: sessions.reduce<Record<string, number>>((a, s) => {

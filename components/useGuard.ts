@@ -13,9 +13,15 @@ export function useGuard(saved: Saved | null | undefined, here: Saved["step"]) {
   useEffect(() => {
     if (saved === undefined) return;
     if (saved === null) router.replace("/");
-    else if (ORDER.indexOf(here) > ORDER.indexOf(saved.step)) router.replace(PATH[saved.step]);
+    else if (!fits(saved, here)) router.replace(PATH[saved.step]);
   }, [saved, here, router]);
-  return !!saved && ORDER.indexOf(here) <= ORDER.indexOf(saved.step);
+  return !!saved && fits(saved, here);
+}
+
+/** A step is open once reached; a delayed-test session has only the test and its results. */
+function fits(saved: Saved, here: Saved["step"]) {
+  if (saved.phase === "delayed" && here !== "exercises" && here !== "results") return false;
+  return ORDER.indexOf(here) <= ORDER.indexOf(saved.step);
 }
 
 export { PATH as STEP_PATH, ORDER as STEP_ORDER };

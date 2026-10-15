@@ -49,6 +49,8 @@ export type Saved = {
   condition?: Condition; // from the participant's code (team sessions: direct, with a switch on the practice page)
   startedAt: number;
   step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
+  phase?: "main" | "delayed"; // delayed: the follow-up test only (a session of its own, days after the main one)
+  finishedAt?: number; // when the test was graded (the follow-up opens some days later)
   pretest?: (number | null)[]; // answers before the video (sessions started before the pretest have none)
   practice?: PracticeState; // absent in sessions started before the practice chapter existed
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
@@ -71,6 +73,8 @@ export type Saved = {
   answers: (number | string | null)[]; // final test: an option's index, or a typed number
   testWork?: Record<string, string>; // final test: the working under each question
   testOrder?: string[]; // final test: the item ids in the order this learner sees them (lib/order.ts)
+  testItems?: { id: string; section: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null }[]; // this session's form, from the server
+  since?: "no" | "a little" | "a lot"; // delayed test: has the learner looked at the topic since the session?
   result: GradeResult | null;
   feedbackSent?: boolean;
 };

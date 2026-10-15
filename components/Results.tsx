@@ -5,20 +5,23 @@ import { Brain, Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
-import { parts, type TestItem } from "./Exercises";
+import { parts, useTestItems } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
 import { useState } from "react";
 
 const KEYS = "ABCDEF";
 
-export default function Results({ items }: { items: TestItem[] }) {
+export default function Results() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
   // the review starts with the questions the learner missed (their explanations matter most); "All" shows every one
   const [show, setShow] = useState<"missed" | "all" | null>(null);
-  if (!allowed || !saved || !saved.result) return <div className="center">Loading…</div>;
+  const [error, setError] = useState<string | null>(null);
+  const items = useTestItems(allowed, setError);
+  if (!allowed || !saved || !saved.result || !items) return <div className="center">{error ?? "Loading…"}</div>;
+  const delayed = saved.phase === "delayed";
 
   const r = saved.result;
   const missed = r.items.filter((x) => !x.correct).length;
@@ -30,7 +33,7 @@ export default function Results({ items }: { items: TestItem[] }) {
 
   return (
     <div className="shell">
-      <Header phase={4} label="Results" demo={saved.demo} />
+      <Header phase={4} label={delayed ? "Follow-up results" : "Results"} demo={saved.demo} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <span className="eyebrow">Results</span>
@@ -46,6 +49,7 @@ export default function Results({ items }: { items: TestItem[] }) {
               </div>
             </div>
           </div>
+          {!delayed && (
           <div className="hero-kai" style={{ marginTop: 8 }}>
             <KaiFace mood={saved.chat.done ? "great" : "okay"} size={40} />
             <div className="bubble">
@@ -56,6 +60,7 @@ export default function Results({ items }: { items: TestItem[] }) {
               </Link>
             </div>
           </div>
+          )}
         </div>
 
         {/* asked while the session is fresh: at the bottom of a long review most people never reached it */}

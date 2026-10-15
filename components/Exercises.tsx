@@ -20,26 +20,39 @@ const KEYS = "ABCDEF";
  *
  * Two parts, the choice items first and then the number items, each in an
  * order of the learner's own (lib/order.ts), kept in the session and logged.
+ *
+ * The questions come from the server for this session's form (A or B): the
+ * final test takes one, the delayed test (a session of its own, days later)
+ * the other, which also asks first whether the learner has studied it since.
  */
-export default function Exercises({ items }: { items: TestItem[] }) {
+const SINCE = [
+  ["no", "No"],
+  ["a little", "A little (for example a quick look at my notes)"],
+  ["a lot", "Yes, quite a bit (videos, reading, a course)"],
+] as const;
+
+export default function Exercises() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const items = useTestItems(allowed, setError);
   // this learner's order, fixed the first time the test opens
-  const order = saved?.testOrder?.length === items.length ? saved.testOrder : null;
+  const order = items && saved?.testOrder?.length === items.length ? saved.testOrder : null;
   useEffect(() => {
-    if (!allowed || !saved || order) return;
+    if (!allowed || !saved || !items || order) return;
     const o = testOrder(items, seedOf(saved.token));
     update((s) => ({ ...s, testOrder: o }));
     track("test_order", { order: o });
   }, [allowed, saved, order, items, update]);
-  if (!allowed || !saved || !order) return <div className="center">Loading…</div>;
+  if (!allowed || !saved || !items || !order) return <div className="center">{error ?? "Loading…"}</div>;
+  const delayed = saved.phase === "delayed";
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
   const isAnswered = (a: number | string | null) => a !== null && !(typeof a === "string" && !a.trim());
-  const answered = answers.filter(isAnswered).length;
+  const answered = answers.filter(isAnswered).length + (delayed && saved.since ? 1 : 0);
+  const total = items.length + (delayed ? 1 : 0);
   const setAnswer = (i: number, a: number | string) =>
     update((s) => {
       const next = items.map((_, j) => s.answers[j] ?? null);
@@ -58,7 +71,7 @@ export default function Exercises({ items }: { items: TestItem[] }) {
     setError(null);
     track("test_submit", { answered });
     const work = Object.fromEntries(Object.entries(saved.testWork ?? {}).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.slice(0, 2000)]));
-    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: answers.map((a) => (typeof a === "string" ? a.trim().slice(0, 40) || null : a)), work, order });
+    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: answers.map((a) => (typeof a === "string" ? a.trim().slice(0, 40) || null : a)), work, order, ...(delayed ? { since: saved.since } : {}) });
     setBusy(false);
     if (!r.ok) {
       if (r.expired) {
@@ -68,20 +81,35 @@ export default function Exercises({ items }: { items: TestItem[] }) {
       }
       return setError(r.error);
     }
-    update((s) => ({ ...s, result: r.data, step: "results" }));
+    update((s) => ({ ...s, result: r.data, step: "results", finishedAt: Date.now() }));
     router.push("/results");
   }
 
   return (
     <div className="shell">
-      <Header phase={4} demo={saved.demo} />
+      <Header phase={4} demo={saved.demo} label={delayed ? "Follow-up test" : undefined} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>Final test</h1>
+          <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
           <p className="lede" style={{ fontSize: 15.5 }}>
-            Ten questions in two parts: first pick an option, then work out a number. Work things out under each question if it helps; to calculate, end a calculation with =. You&apos;ll see the explanations afterwards.
+            {delayed
+              ? "Welcome back. Ten new questions on the same ideas as last time, in the same two parts: first pick an option, then work out a number. To calculate, end a calculation with =. You'll see the explanations afterwards."
+              : "Ten questions in two parts: first pick an option, then work out a number. Work things out under each question if it helps; to calculate, end a calculation with =. You'll see the explanations afterwards."}
           </p>
         </div>
+        {delayed && (
+          <fieldset className="opts since" aria-labelledby="since-q">
+            <p className="qt" id="since-q">
+              First: since your session, have you looked at multi-armed bandits again (videos, notes, reading, a course)?
+            </p>
+            {SINCE.map(([v, text]) => (
+              <label className="opt" key={v}>
+                <input type="radio" name="since" checked={saved.since === v} onChange={() => (update((s) => ({ ...s, since: v })), track("test_since", { since: v }))} />
+                <span>{text}</span>
+              </label>
+            ))}
+          </fieldset>
+        )}
         <div className="quiz">
           {parts(items, order).map(({ title, start, list }) => (
             <section key={title} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -137,18 +165,33 @@ export default function Exercises({ items }: { items: TestItem[] }) {
           ))}
         </div>
         <div className="submitbar">
-          <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < items.length}>
+          <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < total}>
             {busy ? "Checking…" : <><Check size={17} strokeWidth={2.6} /> Check my answers</>}
           </button>
           <span className="answered">
-            <span className="track" aria-hidden="true"><span className="fill" style={{ width: `${(answered / items.length) * 100}%` }} /></span>
-            {answered} of {items.length} answered
+            <span className="track" aria-hidden="true"><span className="fill" style={{ width: `${(answered / total) * 100}%` }} /></span>
+            {answered} of {total} answered
           </span>
           {error && <p className="error" role="alert">{error}</p>}
         </div>
       </main>
     </div>
   );
+}
+
+/** This session's questions (its form), fetched once from the server and kept in the session. */
+export function useTestItems(allowed: boolean, onError: (e: string) => void): TestItem[] | null {
+  const router = useRouter();
+  const [saved, update] = useSaved();
+  useEffect(() => {
+    if (!allowed || !saved || saved.testItems) return;
+    void post<{ items: TestItem[] }>("/api/grade", { token: saved.token, kind: "items" }).then((r) => {
+      if (r.ok) update((s) => ({ ...s, testItems: r.data.items }));
+      else if (r.expired) (save(null), router.replace("/"));
+      else onError(r.error);
+    });
+  }, [allowed, saved, update, router, onError]);
+  return saved?.testItems ?? null;
 }
 
 /**

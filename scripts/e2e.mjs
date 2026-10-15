@@ -20,7 +20,7 @@ if (!BASE) {
     process.exit(1);
   }
   // a team code and an admin password, so the start page asks for a code and the admin panel can be checked
-  const safe = { OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
+  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
   if (await fetch("http://localhost:3199").then(() => true, () => false)) {
     console.error("Port 3199 is already in use (a leftover test server?). Stop it first: kill $(lsof -ti tcp:3199)");
     process.exit(1);
@@ -50,6 +50,17 @@ const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
 const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
 const answers = testItems.map((q) => q.answer);
+/** Answer the test shown on a page (either form), right except the ids in `wrong`; returns the ids in shown order. */
+async function answerTest(page, wrong = []) {
+  const shown = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+  for (const id of shown) {
+    const t = testItems.find((x) => x.id === id);
+    const c = await page.$(`.q[data-q="${id}"]`);
+    if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(wrong.includes(id) ? t.answer + 10 : t.answer));
+    else await c.$eval(`.opt:nth-child(${(wrong.includes(id) ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
+  }
+  return shown;
+}
 const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
 const CHROME =
   process.env.CHROME_PATH ??
@@ -78,6 +89,10 @@ async function start(page, welcomeShot = null) {
   await page.waitForSelector("button[type=submit]");
   if (welcomeShot) await shot(page, welcomeShot);
   if (await page.$("#code")) await page.type("#code", TEAM_CODE); // the start page asks for a code
+  // Start stays off until the study consent is ticked
+  const offBefore = await page.$eval("button[type=submit]", (b) => b.disabled);
+  await page.click(".consent input");
+  if (welcomeShot) check(offBefore && !(await page.$eval("button[type=submit]", (b) => b.disabled)), "Start waits for the study consent to be ticked");
   await page.click("button[type=submit]");
   // the pretest: five questions, the last option of each ("I don't know" on the knowledge items)
   await page.waitForFunction(() => location.pathname === "/pretest");
@@ -227,30 +242,26 @@ for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
 await page.$eval(".submitbar .btn", (e) => e.click());
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
-// one choice item and one number item wrong on purpose
-const wrongChoice = testItems.findIndex((q) => q.kind !== "number" && q.id !== "q01");
-const wrongNumber = testItems.findLastIndex((q) => q.kind === "number");
-// the learner's own order: the choice items first, then the number items
-const shown = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
-const kindsShown = shown.map((id) => testItems.find((t) => t.id === id).kind ?? "choice");
-check(shown.length === testItems.length && kindsShown.lastIndexOf("choice") < kindsShown.indexOf("number"), `the final test shows the choice items first, then the number items (${shown.join(" ")})`);
-const card = (id) => page.$(`.q[data-q="${id}"]`);
-for (let i = 0; i < testItems.length; i++) {
-  const t = testItems[i];
-  const c = await card(t.id);
-  if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(i === wrongNumber ? t.answer + 1 : t.answer));
-  else await c.$eval(`.opt:nth-child(${(i === wrongChoice ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
-}
-// the working field under each question calculates, and "Use … as the answer" fills a number item
-const q01 = await card("q01");
-await q01.$eval(".qwork textarea", (el) => el.focus());
-await page.keyboard.type("(4 * 12 + 22) / 5 =");
-await page.waitForFunction(() => /= 14$/.test(document.querySelector('.q[data-q="q01"] .qwork textarea')?.value ?? ""));
-await (await q01.$(".qans input")).click({ count: 3 });
+// the learner's own order: the choice items first, then the number items, all from one form
+const shownIds = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+const shownItems = shownIds.map((id) => testItems.find((t) => t.id === id));
+const kindsShown = shownItems.map((t) => t.kind ?? "choice");
+const mainForm = shownItems[0].form;
+check(shownIds.length === 10 && shownItems.every((t) => t.form === mainForm) && kindsShown.lastIndexOf("choice") < kindsShown.indexOf("number"), `the final test shows one form (${mainForm}): the choice items first, then the number items (${shownIds.join(" ")})`);
+// the working field below is checked on q01 (or its twin r01), which it fills with the right answer
+const avgId = mainForm === "B" ? "r01" : "q01";
+// one choice item and one other number item wrong on purpose
+await answerTest(page, [shownItems.find((t) => t.kind !== "number").id, shownItems.findLast((t) => t.kind === "number" && t.id !== avgId).id]);
+const avg = await page.$(`.q[data-q="${avgId}"]`);
+await avg.$eval(".qwork textarea", (el) => el.focus());
+await page.keyboard.type(mainForm === "B" ? "(5 * 18 + 30) / 6 =" : "(4 * 12 + 22) / 5 =");
+const want = mainForm === "B" ? "20" : "14";
+await page.waitForFunction((id, w) => new RegExp(`= ${w}$`).test(document.querySelector(`.q[data-q="${id}"] .qwork textarea`)?.value ?? ""), {}, avgId, want);
+await (await avg.$(".qans input")).click({ count: 3 });
 await page.keyboard.press("Backspace");
-await q01.$eval(".scratch-bar .linkish", (el) => el.click());
-const used = await q01.$eval(".qans input", (el) => el.value);
-check(used === "14", `the final test has a working field under each question that calculates and fills the answer (${used})`);
+await avg.$eval(".scratch-bar .linkish", (el) => el.click());
+const used = await avg.$eval(".qans input", (el) => el.value);
+check(used === want, `the final test has a working field under each question that calculates and fills the answer (${used})`);
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
@@ -266,7 +277,7 @@ await start(skip);
 await leaveWatch(skip);
 await skip.waitForSelector(".skip");
 await skip.click(".skip");
-await skip.waitForSelector(".composer-foot .btn.small");
+await skip.waitForSelector(".composer-foot .row .btn.small"); // the confirm row (the "taught all I can" button is a .btn.small too)
 await shot(skip, "09-skip-confirm");
 await skip.click(".composer-foot .row .btn.small");
 // stopping ends the chat in place; the learner moves on with a click
@@ -318,7 +329,7 @@ for (let i = 1; i <= nq; i++) await skip.$eval(`.q:nth-of-type(${i}) .opt input`
 await skip.evaluate((n) => {
   const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
   localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, answers: Array(n).fill(0) }));
-}, answers.length);
+}, 10);
 await skip.reload({ waitUntil: "load" });
 await skip.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
 await skip.$eval(".submitbar .btn.primary", (e) => e.click());
@@ -417,8 +428,44 @@ await shot(phoneHome, "10-phone-welcome", true);
   const post = (path, body) => adm.evaluate(async (path, body) => { const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { status: r.status, json: await r.json().catch(() => ({})) }; }, path, body);
   const made = await post("/api/admin/codes", { action: "create", count: 2, prefix: "E2E", label: "walkthrough", condition: "recursive", team: false, maxUses: 1 });
   const code = made.json.codes?.[0]?.code;
-  const used = await post("/api/session", { accessCode: code });
-  const twice = await post("/api/session", { accessCode: code });
+  const noConsent = await post("/api/session", { accessCode: code });
+  const used = await post("/api/session", { accessCode: code, consent: true });
+  const twice = await post("/api/session", { accessCode: code, consent: true });
+  check(noConsent.status === 400, "a session doesn't start without the study consent, whatever the browser sends");
+
+  // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
+  // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first
+  const firstForm = (await post("/api/grade", { token: used.json.token, kind: "items" })).json.form;
+  await post("/api/grade", { token: used.json.token, answers: Array(10).fill(null) });
+  const early = await post("/api/session", { accessCode: code, consent: true });
+  await wait(2500);
+  const fu = await (await browser.createBrowserContext()).newPage();
+  await fu.setViewport({ width: 1366, height: 900 });
+  fu.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+  await fu.goto(BASE + "/", { waitUntil: "load" });
+  await fu.waitForSelector("#code");
+  await fu.type("#code", code);
+  await fu.click(".consent input");
+  await fu.click("button[type=submit]");
+  await fu.waitForFunction(() => location.pathname === "/exercises", { timeout: 15000 });
+  await fu.waitForSelector(".since");
+  const fuIds = await fu.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+  const otherForm = fuIds.every((id) => testItems.find((t) => t.id === id).form !== firstForm) && fuIds.length === 10;
+  await fu.click(".since .opt input");
+  await answerTest(fu);
+  await shot(fu, "12-follow-up");
+  await fu.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
+  await fu.click(".submitbar .btn.primary");
+  await fu.waitForFunction(() => location.pathname === "/results");
+  await fu.waitForSelector(".big");
+  const fuScore = (await fu.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
+  await shot(fu, "12b-follow-up-results", true);
+  const again = await post("/api/session", { accessCode: code, consent: true });
+  check(
+    early.status === 409 && /opens on/.test(early.json.error) && otherForm && fuScore === "10/10" && again.status === 409 && /both tests/.test(again.json.error),
+    `delayed test: not before it opens; then the same code gives the other form (${firstForm} first), graded ${fuScore}; then "done both"`,
+  );
+  await fu.close();
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
   await adm.goto(BASE + "/admin/codes", { waitUntil: "load" });
   await shot(adm, "11-admin-codes", true);
@@ -454,10 +501,12 @@ if (existsSync(staticDir)) {
   const secrets = [
     ...practiceItems.flatMap((p) => p.steps.map((st) => st.text)),
     ...JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.explain),
+    // the test questions too: they come per session from the server (its own form), never with the page
+    ...JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.prompt),
     ...bundle.nodes.flatMap((n) => n.facts.map((f) => f.text)),
   ].map((t) => t.slice(0, 40));
   const leaked = secrets.filter((t) => shipped.includes(t));
-  check(!leaked.length, `the browser bundle holds no solution, explanation or lesson fact (${secrets.length} checked${leaked.length ? `; found: ${leaked.slice(0, 3).join(" | ")}` : ""})`);
+  check(!leaked.length, `the browser bundle holds no solution, explanation, test question or lesson fact (${secrets.length} checked${leaked.length ? `; found: ${leaked.slice(0, 3).join(" | ")}` : ""})`);
 }
 
 await browser.close();

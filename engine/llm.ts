@@ -25,9 +25,12 @@ export const MODELS = {
   // Kai solving practice problems (recursive feedback). Chosen with `pnpm eval:solver` (2026-10-14): Claude Haiku 5.5
   // followed the notebook and its guesses most reliably, never turned around, and was fastest (median 4.2 s).
   solver: process.env.DOCENDO_MODEL_SOLVER ?? "anthropic/claude-haiku-5.5",
-  // voice input: speech to text. gemini-3.5-flash-lite takes audio at $0.30 per million tokens (32 a second), so a minute
-  // of speech costs about $0.001
-  transcribe: process.env.DOCENDO_MODEL_TRANSCRIBE ?? "google/gemini-3.5-flash-lite",
+  // voice input: speech to text. Chosen 2026-10-15 on three voices, trimmed audio, a sentence followed by quiet and
+  // silence: gemini-3.1-flash-lite, no topic in the prompt, 0% word error on natural voices (24% on a fast synthetic
+  // one), about 1.5 s, about $0.0011 a minute of audio, a fifth of Voxtral (0 to 4%, $0.006, kept as the accurate
+  // fallback). Told the topic, every cheap model made up bandit sentences from silence or pulled mishearings towards
+  // the topic (a claim the judge could credit); without it, mishearings are plain gibberish. Silence is never sent.
+  transcribe: process.env.DOCENDO_MODEL_TRANSCRIBE ?? "google/gemini-3.1-flash-lite",
 } as const;
 
 const TIMEOUT_MS = Number(process.env.DOCENDO_LLM_TIMEOUT_MS ?? 25_000);
@@ -207,7 +210,7 @@ export async function chatText(opts: {
 }
 
 /** Speech to text: a 16 kHz mono WAV recording in, the words out. Same provider rules (no data collection). */
-export async function transcribeAudio(opts: { model: string; wav: Buffer; instructions: string; timeoutMs?: number }): Promise<{ text: string; usage: Usage; ms: number }> {
+export async function transcribeAudio(opts: { model: string; wav: Buffer; instructions: string; timeoutMs?: number; maxTokens?: number }): Promise<{ text: string; usage: Usage; ms: number }> {
   const t0 = Date.now();
   const res = await fetch(URL, {
     method: "POST",
@@ -224,7 +227,7 @@ export async function transcribeAudio(opts: { model: string; wav: Buffer; instru
         },
       ],
       temperature: 0,
-      max_tokens: 1500,
+      max_tokens: opts.maxTokens ?? 1500,
       provider: { data_collection: "deny", sort: PROVIDER_SORT },
       usage: { include: true },
     }),

@@ -21,6 +21,8 @@ const Exercise = z
     goal: z.string(),
     type: z.string(),
     section: z.string(),
+    form: z.enum(["A", "B"]).default("A"), // two parallel forms: one for the final test, the other for the delayed test
+    pair: z.string().optional(), // a form B item: its twin in form A
     kind: z.enum(["choice", "number"]).default("choice"), // pick an option, or type a number
     prompt: z.string(),
     options: z.array(z.string()).min(2).max(6).optional(),
@@ -31,9 +33,14 @@ const Exercise = z
   })
   .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
 export const exercises = z.object({ title: z.string(), items: z.array(Exercise).min(1) }).parse(exercisesJson).items;
+export type Form = "A" | "B";
+export const FORMS: Form[] = ["A", "B"];
+/** One form's items, in file order (the order the server grades in). */
+export const formItems = (form: Form) => exercises.filter((q) => q.form === form);
+export const otherForm = (form: Form): Form => (form === "A" ? "B" : "A");
 
-/** A fingerprint of the test's content, logged with every graded test: answers to an edited item stay apart. */
-export const testVersion = createHash("sha1").update(JSON.stringify(exercises)).digest("hex").slice(0, 8);
+/** A fingerprint of a form's content, logged with every graded test: answers to an edited item stay apart. */
+export const testVersion = (form: Form) => createHash("sha1").update(JSON.stringify(formItems(form))).digest("hex").slice(0, 8);
 
 /** Grade one answer: an option's index, or a typed number. */
 export function checkExercise(q: (typeof exercises)[number], a: number | string | null): boolean {
@@ -43,9 +50,10 @@ export function checkExercise(q: (typeof exercises)[number], a: number | string 
 /** The key as the results page shows it. */
 export const keyText = (q: (typeof exercises)[number]) => (q.kind === "choice" ? q.options![q.answer]! : `${q.answer}${q.unit ? ` ${q.unit}` : ""}`);
 
-/** What the browser may see before grading: no answers, no explanations. */
-export const publicExercises = exercises.map(({ id, section, kind, prompt, options, unit }) => ({ id, section, kind, prompt, options: options ?? null, unit: unit ?? null }));
-export type PublicExercise = (typeof publicExercises)[number];
+/** What the browser may see before grading: one form's questions, no answers, no explanations. Sent per session
+ * (the learner's form only), so the other form's questions aren't in the page before the delayed test. */
+export const publicExercises = (form: Form) => formItems(form).map(({ id, section, kind, prompt, options, unit }) => ({ id, section, kind, prompt, options: options ?? null, unit: unit ?? null }));
+export type PublicExercise = ReturnType<typeof publicExercises>[number];
 
 // ---------- pretest (before the video) ----------
 

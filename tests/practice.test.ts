@@ -70,8 +70,9 @@ describe("practice problems", () => {
 });
 
 describe("final test items", () => {
-  type T = { id: string; kind?: string; prompt: string; options?: string[]; answer: number; tolerance?: number };
+  type T = { id: string; form?: string; pair?: string; section: string; kind?: string; prompt: string; options?: string[]; answer: number; tolerance?: number };
   const test = exercisesJson.items as T[];
+  const forms = { A: test.filter((x) => (x.form ?? "A") === "A"), B: test.filter((x) => x.form === "B") };
   const q = (id: string) => test.find((x) => x.id === id)!;
   const key = (id: string) => q(id).options![q(id).answer]!;
   const ucb = (avg: number, lnT: number, n: number) => avg + Math.sqrt((2 * lnT) / n);
@@ -102,6 +103,41 @@ describe("final test items", () => {
     expect(key("q10")).toMatch(/^A: one more play shrinks/);
   });
 
+  it("form B's keys match their own numbers too", () => {
+    expect(q("r01").answer).toBeCloseTo((5 * 18 + 30) / 6);
+    // r02: vanilla 5, mango 8, pistachio 7; day 4 mango (8) gets 4; day 5 pistachio (7) gets 6
+    expect(argmax([5, (8 + 4) / 2, (7 + 6) / 2])).toBe(2);
+    expect(key("r02")).toMatch(/^Pistachio: its average, 6\.5/);
+    expect(q("r03").answer).toBe(0);
+    expect(argmax([8.4, 8.5, 7.0])).toBe(1);
+    expect(key("r04")).toMatch(/^B/);
+    expect(q("r05").answer).toBeCloseTo((2000 * 0.15) / 5);
+    expect(Math.abs(q("r08").answer - ucb(3.2, 3.4, 5))).toBeLessThanOrEqual(q("r08").tolerance!);
+    expect(Math.abs(q("r08").answer - ucb(3.2, Math.log(30), 5))).toBeLessThanOrEqual(q("r08").tolerance!);
+    for (const lnT of [3.2, Math.log(25)]) expect(argmax([ucb(8, lnT, 16), ucb(6.8, lnT, 2), ucb(7.6, lnT, 8)])).toBe(0);
+    expect(key("r09")).toMatch(/^Vanilla: its average plus its bonus, about 8\.63/);
+    expect(ucb(7, 5, 4)).toBeGreaterThan(ucb(8, 5, 40));
+    expect(ucb(7, 5, 5)).toBeLessThan(ucb(8, 5, 40));
+    expect(key("r10")).toMatch(/^A: one more reader shrinks/);
+  });
+
+  it("come in two parallel forms: each B item is the twin of an A item (same idea and kind), ten each", () => {
+    expect(forms.A).toHaveLength(10);
+    expect(forms.B).toHaveLength(10);
+    const twins = new Set<string>();
+    for (const b of forms.B) {
+      const a = forms.A.find((x) => x.id === b.pair);
+      expect(a, b.id).toBeDefined();
+      expect(b.kind ?? "choice", b.id).toBe(a!.kind ?? "choice");
+      expect(b.section, b.id).toBe(a!.section);
+      expect(b.options?.length ?? 0, b.id).toBe(a!.options?.length ?? 0);
+      twins.add(b.pair!);
+    }
+    expect(twins.size).toBe(10); // every A item has exactly one twin
+    // no prompt is shared between the forms, so nobody meets a question twice
+    for (const b of forms.B) expect(forms.A.some((a) => a.prompt === b.prompt), b.id).toBe(false);
+  });
+
   it("grade typed numbers with their tolerance", () => {
     expect(checkNumber("14", 14, 0.05)).toBe(true);
     expect(checkNumber("14.0 ", 14, 0.05)).toBe(true);
@@ -114,7 +150,7 @@ describe("final test items", () => {
 
   it("mix choice and number items, and number items have no options", () => {
     const numbers = test.filter((x) => x.kind === "number");
-    expect(numbers.length).toBeGreaterThanOrEqual(3);
+    for (const f of [forms.A, forms.B]) expect(f.filter((x) => x.kind === "number").length).toBeGreaterThanOrEqual(3);
     for (const x of numbers) expect(x.options, x.id).toBeUndefined();
   });
 
@@ -130,16 +166,18 @@ describe("final test items", () => {
     }
   });
 
-  it("spread their keys over the positions", () => {
-    const counts = [0, 0, 0, 0];
-    for (const x of test.filter((t) => t.options)) counts[x.answer]!++;
-    expect(Math.max(...counts)).toBeLessThanOrEqual(2);
-    expect(counts.filter((c) => c > 0).length).toBe(4);
+  it("spread their keys over the positions, in each form", () => {
+    for (const f of [forms.A, forms.B]) {
+      const counts = [0, 0, 0, 0];
+      for (const x of f.filter((t) => t.options)) counts[x.answer]!++;
+      expect(Math.max(...counts)).toBeLessThanOrEqual(2);
+      expect(counts.filter((c) => c > 0).length).toBe(4);
+    }
   });
 });
 
 describe("final test order", () => {
-  const items = exercisesJson.items as { id: string; kind?: string }[];
+  const items = (exercisesJson.items as { id: string; kind?: string; form?: string }[]).filter((q) => (q.form ?? "A") === "A");
   const withKind = items.map((q) => ({ id: q.id, kind: q.kind ?? "choice" }));
   it("puts the choice items first, then the number items, each part shuffled per learner and stable", () => {
     const a = testOrder(withKind, seedOf("token-a"));
@@ -372,7 +410,7 @@ describe("the admin dashboard's numbers", () => {
     expect(s.minutes.find((m) => m.chapter === "Teach")!.direct).toBe(10);
     expect(s.test.find((q) => q.id === "q01")).toMatchObject({ n: 1, all: 100, direct: 100 });
     // answers to another version of the test are left out of the per-item numbers, and counted
-    const other = summarize(t, { testVersion: "deadbeef" });
+    const other = summarize(t, { testVersions: ["deadbeef"] });
     expect(other.test).toHaveLength(0);
     expect(other.testOtherVersions).toBe(1);
     expect(s.testMean.direct).toBe(6);
@@ -398,5 +436,22 @@ describe("the offline attempt with a misconception", () => {
     const s = offlineSolve(bundle, item("p2"), st);
     expect(s.steps[0]!.text).toContain("visited the least");
     expect(s.answer).toBe("B"); // "Only at C, the truck you have tried least"
+  });
+});
+
+import { plausibleWords } from "../lib/voice";
+import { joinParts } from "../lib/client/dictation";
+
+describe("voice input", () => {
+  it("joins live readings of neighbouring stretches", () => {
+    expect(joinParts("The bonus is", "is bigger for options")).toBe("The bonus is bigger for options");
+    expect(joinParts("So we go out.", "every night")).toBe("So we go out every night");
+    expect(joinParts("I don't know.", "Greedy picks the best.")).toBe("I don't know. Greedy picks the best.");
+    expect(joinParts("", "Hello")).toBe("Hello");
+  });
+  it("drops transcripts longer than the audio could hold", () => {
+    expect(plausibleWords(3)).toBe(15);
+    expect(20 > plausibleWords(3)).toBe(true); // a made-up explanation
+    expect(12 > plausibleWords(3)).toBe(false); // fast real speech
   });
 });

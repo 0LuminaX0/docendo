@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowRight, ArrowUp, Brain, FastForward, Lock, MessageCircle, Play } from "lucide-react";
-import VoiceButton from "./VoiceButton";
+import { useDictation } from "./Dictation";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
@@ -39,6 +39,19 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const taRef = useRef<HTMLTextAreaElement>(null);
   // for the research log: how each message was written
   const compose = useRef<{ start: number | null; pasted: number; dictated: number; keys: number; deletes: number }>({ start: null, pasted: 0, dictated: 0, keys: 0, deletes: 0 });
+  // voice input: the live transcript shows in the box while the learner speaks; the final one is put in at the caret
+  const dict = useDictation({
+    where: "teach",
+    value: text,
+    field: taRef,
+    disabled: busy,
+    onCommit: (next, caret, n) => {
+      if (n && !compose.current.start) compose.current.start = Date.now();
+      compose.current.dictated += n;
+      setText(next.slice(0, MAX));
+      requestAnimationFrame(() => taRef.current?.setSelectionRange(caret, caret));
+    },
+  });
 
   // first visit: Kai opens the conversation
   useEffect(() => {
@@ -72,7 +85,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
-  }, [text, view]);
+  }, [text, view, dict.shown]);
 
   if (!allowed || !saved || !saved.chat.state || closed) return <div className="center">Loading…</div>;
   const chat = saved.chat;
@@ -279,11 +292,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                 <textarea
                   id="msg"
                   ref={taRef}
-                  value={text}
+                  value={dict.shown}
+                  readOnly={dict.active}
+                  className={dict.active ? "dictating" : undefined}
                   maxLength={MAX}
                   rows={2}
                   placeholder={learnerCount === 0 ? "Start explaining: what problem are we solving?" : "Explain it to Kai…"}
                   onChange={(e) => {
+                    if (dict.active) return;
                     if (!compose.current.start && e.target.value) compose.current.start = Date.now();
                     setText(e.target.value);
                   }}
@@ -295,13 +311,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" || e.key === "Delete") compose.current.deletes++;
                     else if (e.key.length === 1) compose.current.keys++;
-                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !dict.active) {
                       e.preventDefault();
                       void send();
                     }
                   }}
                   disabled={busy}
                 />
+                {dict.ghost}
                 <div className="actions">
                   {chat.help && (
                     <button
@@ -317,17 +334,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   )}
                   <span className="grow" />
                   {text.length > MAX - 150 && <span className="hint">{MAX - text.length} left</span>}
-                  <VoiceButton
-                    where="teach"
-                    disabled={busy}
-                    onText={(t) => {
-                      if (!compose.current.start) compose.current.start = Date.now();
-                      compose.current.dictated += t.length;
-                      setText((cur) => (cur.trim() ? `${cur.trimEnd()} ${t}` : t).slice(0, MAX));
-                      taRef.current?.focus();
-                    }}
-                  />
-                  <button className="send" type="submit" disabled={busy || !text.trim()} aria-label="Send" title="Send (Enter)">
+                  {dict.button}
+                  <button className="send" type="submit" disabled={busy || dict.active || !text.trim()} aria-label="Send" title="Send (Enter)">
                     <ArrowUp size={20} strokeWidth={2.4} />
                   </button>
                 </div>

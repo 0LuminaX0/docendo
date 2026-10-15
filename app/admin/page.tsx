@@ -4,6 +4,7 @@ import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
 import { summarize } from "@/lib/analytics";
 import { testVersion } from "@/lib/server/content";
+import { config } from "@/lib/server/env";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   await requireAdmin();
   const all = (await searchParams).all === "1";
   const t = await loadTables();
-  const s = summarize(t, { all, testVersion });
+  const versions = { A: testVersion("A"), B: testVersion("B") };
+  const s = summarize(t, { all, testVersions: Object.values(versions) });
   const feedback = t.feedback.filter((f) => all || f.entry === "participant").slice(-3).reverse();
   const top = s.funnel[0]!.n;
 
@@ -113,7 +115,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         <section className="adm-card">
           <h2>Final test items</h2>
           <p className="note">
-            Share correct. Aim for about half in the pilot. Only answers to the current version of the test ({testVersion})
+            Share correct. Aim for about half in the pilot. Final test only, current versions of forms A ({versions.A}) and B ({versions.B})
             {s.testOtherVersions ? `; ${s.testOtherVersions} answers to earlier versions are left out here (they are in the export)` : ""}.
           </p>
           <table className="adm-table">
@@ -146,6 +148,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <dt>Replies with a blocked lesson word</dt><dd>{s.teaching.leaks}</dd>
             <dt>Turns answered offline (no credits)</dt><dd>{s.teaching.degraded}</dd>
           </dl>
+          {(config.delayedTestDays || s.delayed.n > 0) && (
+            <>
+              <h2 style={{ marginTop: 18 }}>Follow-up test</h2>
+              <p className="note">
+                {config.delayedTestDays ? `Opens ${config.delayedTestDays} days after the final test, with the other form.` : "Switched off (DELAYED_TEST_DAYS is not set)."}
+              </p>
+              <dl className="adm-dl">
+                <dt>Came back / finished</dt><dd>{s.delayed.n} / {s.delayed.finished}</dd>
+                <dt>Mean score, direct / recursive</dt><dd>{s.delayed.mean.direct ?? "–"} / {s.delayed.mean.recursive ?? "–"}</dd>
+                <dt>Days after the final test (median)</dt><dd>{s.delayed.days ?? "–"}</dd>
+                <dt>Studied the topic since</dt><dd>{s.delayed.studiedSince} of {s.delayed.finished}</dd>
+              </dl>
+            </>
+          )}
           <h2 style={{ marginTop: 18 }}>Latest feedback</h2>
           {feedback.length ? (
             <ul className="adm-quotes">

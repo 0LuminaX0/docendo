@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Calculator as CalcIcon } from "lucide-react";
 import { format, sumAtEnd } from "@/lib/calc";
 import { track } from "@/lib/client/log";
-import VoiceButton from "./VoiceButton";
+import { useDictation } from "./Dictation";
 
 /**
  * One field for working and sums, the same everywhere (practice, the correction
@@ -54,6 +54,18 @@ export default function Scratchpad({
   voice?: "fix"; // a mic for speaking instead of typing (the correction to Kai)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  // voice input (the correction to Kai): the live transcript shows in the field while the learner speaks
+  const dict = useDictation({
+    where: voice ?? "fix",
+    value,
+    field: ref,
+    disabled,
+    onCommit: (next, caret, n) => {
+      if (n) track("practice_fix_dictated", { where, chars: n });
+      onChange(next.slice(0, maxLength));
+      requestAnimationFrame(() => (ref.current?.setSelectionRange(caret, caret), setCaret(caret)));
+    },
+  });
   const [caret, setCaret] = useState(0);
   const [keys, setKeys] = useState(false);
   useEffect(() => {
@@ -117,17 +129,19 @@ export default function Scratchpad({
       <textarea
         ref={ref}
         id={id}
-        className="work"
+        className={`work${dict.active ? " dictating" : ""}`}
         rows={rows}
         maxLength={maxLength}
         placeholder={placeholder}
-        value={value}
+        value={dict.shown}
+        readOnly={dict.active}
         disabled={disabled}
         spellCheck={false}
-        onChange={(e) => edit(e.target.value, e.target.selectionStart)}
+        onChange={(e) => !dict.active && edit(e.target.value, e.target.selectionStart)}
         onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
         onBlur={(e) => e.target.value && track("practice_work", { where, chars: e.target.value.length, text: e.target.value.slice(0, 2000) })}
       />
+      {dict.ghost}
       <div className="scratch-bar">
         <span className="scratch-hint" aria-live="polite">
           {sum ? (
@@ -139,21 +153,7 @@ export default function Scratchpad({
           )}
         </span>
         <span className="grow" />
-        {voice && (
-          <VoiceButton
-            where={voice}
-            disabled={disabled}
-            onText={(t) => {
-              const el = ref.current;
-              const at = el ? el.selectionEnd : value.length;
-              const before = value.slice(0, at);
-              const add = (before && !/\s$/.test(before) ? " " : "") + t;
-              track("practice_fix_dictated", { where, chars: t.length });
-              edit(before + add + value.slice(at), at + add.length);
-              el?.focus();
-            }}
-          />
-        )}
+        {voice && dict.button}
         {onUse && lastResult && !disabled && (
           <button type="button" className="linkish" onClick={() => (onUse(Number(lastResult)), track("calc_use", { where, value: lastResult }))}>
             Use {lastResult} as the answer

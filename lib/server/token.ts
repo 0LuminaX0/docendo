@@ -10,12 +10,13 @@ import { CONDITIONS, type Condition } from "../codes";
 
 /** participant: own code; team: the shared ACCESS_CODE; open: no code needed (local development). */
 export type Entry = "participant" | "team" | "open";
-type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null };
+// form: the test form this session takes (A or B); phase: the main session, or the delayed test on its own
+type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed" };
 
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
 const sign = (data: string) => createHmac("sha256", sessionSecret()).update(data).digest("base64url");
 
-export function issueToken(who: { cond: Condition; entry: Entry; pid: string | null }): { token: string; sid: string; expiresAt: number } {
+export function issueToken(who: { cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed" }): { token: string; sid: string; expiresAt: number } {
   const payload: Payload = { sid: randomUUID(), exp: Date.now() + config.sessionHours * 3600_000, ...who };
   const data = b64(JSON.stringify(payload));
   return { token: `${data}.${sign(data)}`, sid: payload.sid, expiresAt: payload.exp };
@@ -32,7 +33,8 @@ export function verifyToken(token: string | undefined): Payload | null {
     const p = JSON.parse(Buffer.from(data, "base64url").toString("utf8")) as Payload;
     if (typeof p.sid !== "string" || typeof p.exp !== "number" || p.exp < Date.now()) return null;
     // tokens issued before conditions existed are team sessions in the direct condition
-    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null };
+    // older tokens: form A, main session
+    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main" };
   } catch {
     return null;
   }

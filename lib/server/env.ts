@@ -23,6 +23,8 @@ const Env = z.object({
   SESSION_TURNS_PER_MIN: z.coerce.number().int().positive().default(10), // one learner's burst
   IP_TURNS_PER_MIN: z.coerce.number().int().positive().default(120), // a whole network (a lab room shares one IP)
   IP_SESSIONS_PER_HOUR: z.coerce.number().int().positive().default(60),
+  SESSION_DAYS: z.coerce.number().positive().max(30).default(10), // how long a session (and its progress on the device) lasts
+  DELAYED_TEST_DAYS: z.coerce.number().positive().max(60).optional(), // the delayed test opens this many days after the final test; unset: none
 });
 
 const blank = (v: string | undefined) => (v && v.trim() ? v.trim() : undefined);
@@ -59,5 +61,6 @@ export const config = {
   sessionTurnsPerMin: env.SESSION_TURNS_PER_MIN,
   ipTurnsPerMin: env.IP_TURNS_PER_MIN,
   ipSessionsPerHour: env.IP_SESSIONS_PER_HOUR,
-  sessionHours: 6,
+  sessionHours: env.SESSION_DAYS * 24,
+  delayedTestDays: env.DELAYED_TEST_DAYS,
 };

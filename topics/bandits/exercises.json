@@ -1,6 +1,6 @@
 {
   "title": "Multi-armed bandits: final test",
-  "note": "Goal G only (how greedy, ε-greedy and UCB choose). Every item uses a setting the practice doesn't (banner ads, office coffee machines, a study app, podcasts), so the test measures transfer, not recall. Most items make you run a rule on numbers: common sense alone leads to a wrong option. Choice items pair a pick with a reason, all options in the same shape and about the same length, every wrong one a real confusion (some with the right pick for the wrong reason). Number items are typed in (kind number, with a tolerance). type: base = recognise the idea; apply = run the rule on a given state; transfer = a new situation.",
+  "note": "Goal G only (how greedy, ε-greedy and UCB choose). Every item uses a setting the practice doesn't (banner ads, office coffee machines, a study app, podcasts), so the test measures transfer, not recall. Most items make you run a rule on numbers: common sense alone leads to a wrong option. Choice items pair a pick with a reason, all options in the same shape and about the same length, every wrong one a real confusion (some with the right pick for the wrong reason). Number items are typed in (kind number, with a tolerance). type: base = recognise the idea; apply = run the rule on a given state; transfer = a new situation. Two parallel forms, A (q01 to q10) and B (r01 to r10): each B item is the twin of an A item (pair), the same idea, kind, calculation and difficulty in another setting with other numbers (B: an ice cream kiosk, a music app, a fitness app's reminders, a library app). A learner takes one form in the final test and the other in the delayed test, balanced within each condition (lib/server/participants.ts).",
   "items": [
     {
       "id": "q01",
@@ -12,7 +12,8 @@
       "prompt": "A study app estimates how good each lesson format is from how long students stay with it. Format B has been used by 4 students so far, with an estimate of 12 minutes. The fifth student stays 22 minutes. What is the app's estimate for format B now?",
       "answer": 14,
       "tolerance": 0.05,
-      "explain": "The estimate is the average of all rewards so far. Four students averaging 12 minutes stayed 48 minutes in all; with the fifth, 48 + 22 = 70 minutes over 5 students, so 14 minutes."
+      "explain": "The estimate is the average of all rewards so far. Four students averaging 12 minutes stayed 48 minutes in all; with the fifth, 48 + 22 = 70 minutes over 5 students, so 14 minutes.",
+      "form": "A"
     },
     {
       "id": "q02",
@@ -28,7 +29,8 @@
         "A: it has had the fewest cups, so it is tried again"
       ],
       "answer": 2,
-      "explain": "Day 4 goes to B (best average, 7); its 3 brings B's average to 5. Day 5 goes to C (now the best, 6); its 5 brings C's average to 5.5. On day 6 the averages are A 4, B 5, C 5.5, so greedy uses C. Greedy follows the best average as it changes, not the best single cup or the first winner, and never tries a machine just because it has had few cups."
+      "explain": "Day 4 goes to B (best average, 7); its 3 brings B's average to 5. Day 5 goes to C (now the best, 6); its 5 brings C's average to 5.5. On day 6 the averages are A 4, B 5, C 5.5, so greedy uses C. Greedy follows the best average as it changes, not the best single cup or the first winner, and never tries a machine just because it has had few cups.",
+      "form": "A"
     },
     {
       "id": "q03",
@@ -39,7 +41,8 @@
       "prompt": "A podcast app picks between two shows with greedy. Show A is truly the better one: its ratings average 4.5 stars. Show B always gets 3 or 4 stars. To start, each show was recommended once: A happened to get 2 stars and B got 4. Of the next 200 recommendations, how many go to show A?",
       "answer": 0,
       "tolerance": 0,
-      "explain": "After the first round A's average is 2 and B's is 4. B's ratings are always 3 or 4, so B's average never drops below 3 and always beats A's 2. Greedy never tries A again to find out, so A gets none of the 200: one unlucky first rating hides the better show for good."
+      "explain": "After the first round A's average is 2 and B's is 4. B's ratings are always 3 or 4, so B's average never drops below 3 and always beats A's 2. Greedy never tries A again to find out, so A gets none of the 200: one unlucky first rating hides the better show for good.",
+      "form": "A"
     },
     {
       "id": "q04",
@@ -55,7 +58,8 @@
         "B: greedy compares only the averages, however few cups"
       ],
       "answer": 3,
-      "explain": "Greedy picks the highest average, here B's 8.0, and ignores how many cups each average rests on, although one cup says much less than forty. Weighing the number of tries is what UCB adds."
+      "explain": "Greedy picks the highest average, here B's 8.0, and ignores how many cups each average rests on, although one cup says much less than forty. Weighing the number of tries is what UCB adds.",
+      "form": "A"
     },
     {
       "id": "q05",
@@ -67,7 +71,8 @@
       "prompt": "An online shop shows each visitor one of four banner ads, chosen with ε-greedy and ε = 0.2. Banner D has by far the lowest click rate, and the shop has shown it often enough to be sure of that. Of the next 1,000 visitors, about how many are expected to see banner D?",
       "answer": 50,
       "tolerance": 1,
-      "explain": "D is never the favourite, so it is only shown on explore visits: 20% of visitors, 200 of 1,000. An explore visit picks one of the four banners at random, ignoring what the shop knows, so D gets a quarter of them: 1,000 × 0.2 ÷ 4 = 50."
+      "explain": "D is never the favourite, so it is only shown on explore visits: 20% of visitors, 200 of 1,000. An explore visit picks one of the four banners at random, ignoring what the shop knows, so D gets a quarter of them: 1,000 × 0.2 ÷ 4 = 50.",
+      "form": "A"
     },
     {
       "id": "q06",
@@ -83,7 +88,8 @@
         "Only ε = 0.02 risks anything: exploring more always brings in more clicks over a whole year"
       ],
       "answer": 1,
-      "explain": "With ε = 0.02 the shop hardly explores, so an unlucky start can keep it on a worse banner for a long time (too little exploration). With ε = 0.5 half the visitors get a random banner, including ones the shop already knows are worse (too much exploration)."
+      "explain": "With ε = 0.02 the shop hardly explores, so an unlucky start can keep it on a worse banner for a long time (too little exploration). With ε = 0.5 half the visitors get a random banner, including ones the shop already knows are worse (too much exploration).",
+      "form": "A"
     },
     {
       "id": "q07",
@@ -99,7 +105,8 @@
         "B or C: exploring means leaving the favourite for one of the others"
       ],
       "answer": 0,
-      "explain": "On an explore round ε-greedy picks any show at random: it looks neither at the averages nor at how often each show was played. So A, B and C each get a third of the explore rounds, even B, which is known to be poor. Going to the least-played show is closer to what UCB does."
+      "explain": "On an explore round ε-greedy picks any show at random: it looks neither at the averages nor at how often each show was played. So A, B and C each get a third of the explore rounds, even B, which is known to be poor. Going to the least-played show is closer to what UCB does.",
+      "form": "A"
     },
     {
       "id": "q08",
@@ -110,7 +117,8 @@
       "prompt": "A study app picks quiz formats with UCB1. It is round t = 50 (ln 50 ≈ 3.91). Format B has been used n = 8 times, and its average score so far is 0.60. What is format B's UCB score?",
       "answer": 1.589,
       "tolerance": 0.02,
-      "explain": "Score = average + √(2 ln t / n) = 0.60 + √(2 × 3.91 / 8) = 0.60 + √0.98 ≈ 0.60 + 0.99 = 1.59."
+      "explain": "Score = average + √(2 ln t / n) = 0.60 + √(2 × 3.91 / 8) = 0.60 + √0.98 ≈ 0.60 + 0.99 = 1.59.",
+      "form": "A"
     },
     {
       "id": "q09",
@@ -126,7 +134,8 @@
         "A: its average plus its bonus, about 7.77, is the highest of the three"
       ],
       "answer": 3,
-      "explain": "Scores = average + √(2 ln t / n): A = 7.0 + √(6/10) ≈ 7.77, B = 6.0 + √(6/2) ≈ 7.73, C = 6.6 + √(6/8) ≈ 7.47. B has the biggest bonus, but A's higher average wins by a little. UCB always adds the bonus, it never picks at random, and it doesn't drop the bonus once everything has been tried."
+      "explain": "Scores = average + √(2 ln t / n): A = 7.0 + √(6/10) ≈ 7.77, B = 6.0 + √(6/2) ≈ 7.73, C = 6.6 + √(6/8) ≈ 7.47. B has the biggest bonus, but A's higher average wins by a little. UCB always adds the bonus, it never picks at random, and it doesn't drop the bonus once everything has been tried.",
+      "form": "A"
     },
     {
       "id": "q10",
@@ -142,7 +151,170 @@
         "C: a show that was just recommended is recommended again until it falls"
       ],
       "answer": 1,
-      "explain": "Before: A = 4.0 + √(9.2/50) ≈ 4.43, C = 3.0 + √(9.2/4) ≈ 4.52, so C is picked. Its new 3 stars leave C's average at 3.0, but n goes from 4 to 5, so its bonus shrinks to √(9.2/5) ≈ 1.36 and its score to 4.36, below A's 4.43. Every play shrinks a show's bonus; UCB moves on as soon as another score is higher."
+      "explain": "Before: A = 4.0 + √(9.2/50) ≈ 4.43, C = 3.0 + √(9.2/4) ≈ 4.52, so C is picked. Its new 3 stars leave C's average at 3.0, but n goes from 4 to 5, so its bonus shrinks to √(9.2/5) ≈ 1.36 and its score to 4.36, below A's 4.43. Every play shrinks a show's bonus; UCB moves on as soon as another score is higher.",
+      "form": "A"
+    },
+    {
+      "id": "r01",
+      "pair": "q01",
+      "goal": "G",
+      "type": "apply",
+      "section": "The problem",
+      "kind": "number",
+      "unit": "minutes",
+      "prompt": "A fitness app estimates how good its 7 am reminder is from how many minutes people exercise after getting it. The 7 am reminder has gone to 5 people so far, with an estimate of 18 minutes. The sixth person exercises 30 minutes. What is the app's estimate for the 7 am reminder now?",
+      "answer": 20,
+      "tolerance": 0.05,
+      "explain": "The estimate is the average of all rewards so far. Five people averaging 18 minutes exercised 90 minutes in all; with the sixth, 90 + 30 = 120 minutes over 6 people, so 20 minutes.",
+      "form": "B"
+    },
+    {
+      "id": "r02",
+      "pair": "q02",
+      "goal": "G",
+      "type": "apply",
+      "section": "Greedy",
+      "kind": "choice",
+      "prompt": "An ice cream kiosk picks its flavour of the day with greedy, scoring each day's sales out of 10. On days 1 to 3 it tries each flavour once: vanilla scores 5, mango 8 and pistachio 7. Day 4's sales score 4 and day 5's score 6. Which flavour does the kiosk pick on day 6, and why?",
+      "options": [
+        "Pistachio: its average, 6.5, is now the highest of the three",
+        "Mango: it has had the best single day so far, the 8",
+        "Mango: greedy stays with the flavour that won the trial days",
+        "Vanilla: it has had the fewest days, so it is tried again"
+      ],
+      "answer": 0,
+      "explain": "Day 4 goes to mango (best average, 8); its 4 brings mango's average to 6. Day 5 goes to pistachio (now the best, 7); its 6 brings pistachio's average to 6.5. On day 6 the averages are vanilla 5, mango 6, pistachio 6.5, so greedy picks pistachio. Greedy follows the best average as it changes, not the best single day or the first winner, and never tries a flavour just because it has had few days.",
+      "form": "B"
+    },
+    {
+      "id": "r03",
+      "pair": "q03",
+      "goal": "G",
+      "type": "transfer",
+      "section": "Greedy",
+      "kind": "number",
+      "prompt": "A music app picks between two playlists with greedy. Playlist A is truly the better one: listeners rate it 4.4 stars on average. Playlist B always gets 3 or 4 stars. To start, each playlist was played once: A happened to get 1 star and B got 3. Of the next 300 plays, how many go to playlist A?",
+      "answer": 0,
+      "tolerance": 0,
+      "explain": "After the first round A's average is 1 and B's is 3. B's ratings are always 3 or 4, so B's average never drops below 3 and always beats A's 1. Greedy never plays A again to find out, so A gets none of the 300: one unlucky first rating hides the better playlist for good.",
+      "form": "B"
+    },
+    {
+      "id": "r04",
+      "pair": "q04",
+      "goal": "G",
+      "type": "apply",
+      "section": "Greedy",
+      "kind": "choice",
+      "prompt": "A library app recommends one of three books with greedy, using readers' ratings out of 10. Book A averages 8.4 over 60 readers, book B 8.5 over a single reader, and book C 7.0 over 20 readers. Which book does greedy recommend next, and why?",
+      "options": [
+        "A: greedy trusts the average that rests on the most readers",
+        "C: greedy returns to a book it hasn't recommended for a while",
+        "B: greedy compares only the averages, however few readers",
+        "A or B at random: greedy can't split averages this close"
+      ],
+      "answer": 2,
+      "explain": "Greedy picks the highest average, here B's 8.5, and ignores how many readers each average rests on, although one reader says much less than sixty. Weighing the number of tries is what UCB adds.",
+      "form": "B"
+    },
+    {
+      "id": "r05",
+      "pair": "q05",
+      "goal": "G",
+      "type": "apply",
+      "section": "ε-greedy",
+      "kind": "number",
+      "unit": "people",
+      "prompt": "A fitness app sends each person one of five reminder times, chosen with ε-greedy and ε = 0.15. The 11 pm reminder has by far the worst results, and the app has sent it often enough to be sure of that. Of the next 2,000 people, about how many are expected to get the 11 pm reminder?",
+      "answer": 60,
+      "tolerance": 1,
+      "explain": "11 pm is never the favourite, so it is only sent on explore rounds: 15% of people, 300 of 2,000. An explore round picks one of the five times at random, ignoring what the app knows, so 11 pm gets a fifth of them: 2,000 × 0.15 ÷ 5 = 60.",
+      "form": "B"
+    },
+    {
+      "id": "r06",
+      "pair": "q06",
+      "goal": "G",
+      "type": "transfer",
+      "section": "ε-greedy",
+      "kind": "choice",
+      "prompt": "Two music apps choose between the same four playlists for a year with ε-greedy, one with ε = 0.01 and the other with ε = 0.4. What does each risk?",
+      "options": [
+        "ε = 0.01 plays known-worse playlists to many listeners; ε = 0.4 risks staying on a worse playlist",
+        "Neither risks anything: both find the best playlist, ε only sets how fast the averages settle",
+        "Only ε = 0.01 risks anything: exploring more always brings in more listens over a whole year",
+        "ε = 0.01 risks staying on a worse playlist; ε = 0.4 plays known-worse playlists to many listeners"
+      ],
+      "answer": 3,
+      "explain": "With ε = 0.01 the app hardly explores, so an unlucky start can keep it on a worse playlist for a long time (too little exploration). With ε = 0.4 two in five listeners get a random playlist, including ones the app already knows are worse (too much exploration).",
+      "form": "B"
+    },
+    {
+      "id": "r07",
+      "pair": "q07",
+      "goal": "G",
+      "type": "apply",
+      "section": "ε-greedy",
+      "kind": "choice",
+      "prompt": "A library app recommends books with ε-greedy, ε = 0.1. Book A averages 9.0 over 400 readers, book B 3.5 over 400 readers, and book C 7.5 over only 2 readers. On the explore rounds, which book is recommended most often?",
+      "options": [
+        "C: explore rounds go to the book with the fewest readers, to learn about it",
+        "None of them: an explore pick is random, so each book is equally likely",
+        "A: explore rounds still lean towards the book with the best average",
+        "B or C: exploring means leaving the favourite for one of the others"
+      ],
+      "answer": 1,
+      "explain": "On an explore round ε-greedy picks any book at random: it looks neither at the averages nor at how many readers each book had. So A, B and C each get a third of the explore rounds, even B, which is known to be poor. Going to the book with the fewest readers is closer to what UCB does.",
+      "form": "B"
+    },
+    {
+      "id": "r08",
+      "pair": "q08",
+      "goal": "G",
+      "type": "apply",
+      "section": "UCB",
+      "kind": "number",
+      "prompt": "A music app picks playlists with UCB1. It is round t = 30 (ln 30 ≈ 3.40). Playlist B has been played n = 5 times, and its average rating so far is 3.2 stars. What is playlist B's UCB score?",
+      "answer": 4.366,
+      "tolerance": 0.02,
+      "explain": "Score = average + √(2 ln t / n) = 3.2 + √(2 × 3.40 / 5) = 3.2 + √1.36 ≈ 3.2 + 1.17 = 4.37.",
+      "form": "B"
+    },
+    {
+      "id": "r09",
+      "pair": "q09",
+      "goal": "G",
+      "type": "apply",
+      "section": "UCB",
+      "kind": "choice",
+      "prompt": "The ice cream kiosk now picks its flavour of the day with UCB1. It is day t = 25 (ln 25 ≈ 3.2). Vanilla averages 8.0 over 16 days, mango 6.8 over 2 days, and pistachio 7.6 over 8 days. Which flavour does UCB pick, and why?",
+      "options": [
+        "Mango: with only 2 days it gets by far the biggest bonus, and that decides",
+        "Vanilla: once every flavour has been tried, UCB goes with the best average",
+        "Vanilla: its average plus its bonus, about 8.63, is the highest of the three",
+        "Any of them: UCB picks a flavour at random on a share of the days"
+      ],
+      "answer": 2,
+      "explain": "Scores = average + √(2 ln t / n): vanilla = 8.0 + √(6.4/16) ≈ 8.63, mango = 6.8 + √(6.4/2) ≈ 8.59, pistachio = 7.6 + √(6.4/8) ≈ 8.49. Mango has the biggest bonus, but vanilla's higher average wins by a little. UCB always adds the bonus, it never picks at random, and it doesn't drop the bonus once everything has been tried.",
+      "form": "B"
+    },
+    {
+      "id": "r10",
+      "pair": "q10",
+      "goal": "G",
+      "type": "transfer",
+      "section": "UCB",
+      "kind": "choice",
+      "prompt": "A library app recommends books with UCB1; take ln t ≈ 5.0 on the next two rounds. Book A averages 8.0 over 40 readers, book C 7.0 over 4 readers. C is recommended next and its reader rates it 7. Which book is recommended on the round after that, and why?",
+      "options": [
+        "C: it keeps its large bonus until its readers catch up with A's",
+        "A: C's rating of 7 pulled C's average down below A's score",
+        "C: a book that was just recommended is recommended again until it falls",
+        "A: one more reader shrinks C's bonus, and C's score drops below A's"
+      ],
+      "answer": 3,
+      "explain": "Before: A = 8.0 + √(10/40) = 8.5, C = 7.0 + √(10/4) ≈ 8.58, so C is recommended. Its new 7 leaves C's average at 7.0, but n goes from 4 to 5, so its bonus shrinks to √(10/5) ≈ 1.41 and its score to 8.41, below A's 8.5. Every reader shrinks a book's bonus; UCB moves on as soon as another score is higher.",
+      "form": "B"
     }
   ]
 }

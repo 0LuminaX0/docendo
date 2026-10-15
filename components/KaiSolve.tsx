@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { BookOpen, Send } from "lucide-react";
+import { BookOpen, CircleCheck, CircleAlert, Send } from "lucide-react";
 import { KaiFace } from "./ui";
 import KaiNotebook from "./KaiNotebook";
 import Scratchpad from "./Scratchpad";
@@ -210,6 +210,12 @@ function Attempt({
     if (fresh && n > 0) box.current?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [fresh, n]);
   const writing = elapsed !== Infinity;
+  // the question "Is Kai right?" appears at the end of the steps, often under the bottom bar: bring it into view
+  const ask = useRef<HTMLDivElement>(null);
+  const asking = !writing && a.call === undefined;
+  useEffect(() => {
+    if (asking) ask.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [asking]);
   const smooth = typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const called = a.call !== undefined;
   const tone = called ? (a.correct ? " on" : " off") : "";
@@ -265,7 +271,7 @@ function Attempt({
         </p>
       )}
       {!writing && !called && (
-        <div className="kcall" role="group" aria-label="Is Kai right?">
+        <div className="kcall" role="group" aria-label="Is Kai right?" ref={ask}>
           <b>Is Kai right?</b>
           <button type="button" className="btn small" onClick={() => onCall(true)}>
             I think it&apos;s right
@@ -275,7 +281,14 @@ function Attempt({
           </button>
         </div>
       )}
-      {called && <p className="kcall-said">You said {a.call ? "right" : "wrong"}{a.call === a.correct ? ": you called it." : "."}</p>}
+      {called && (
+        <div className={`kcall done ${a.call === a.correct ? "hit" : "miss"}`} role="status">
+          {a.call === a.correct ? <CircleCheck size={19} strokeWidth={2.4} /> : <CircleAlert size={19} strokeWidth={2.4} />}
+          <span>
+            <b>{a.call === a.correct ? "You called it." : "Not this time."}</b> You said Kai was {a.call ? "right" : "wrong"}, and Kai {a.call === a.correct ? "was" : "was actually"} {a.correct ? "right" : "wrong"}.
+          </span>
+        </div>
+      )}
     </div>
   );
 }
