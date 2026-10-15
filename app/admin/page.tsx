@@ -2,15 +2,15 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/server/admin";
 import { loadTables } from "@/lib/server/admindata";
 import { eventStore } from "@/lib/server/events";
-import { summarize } from "@/lib/analytics";
+import { charts, summarize } from "@/lib/analytics";
+import { DailyBars, FunnelPairs, Legend, MinutesBars, Scatter, ScoreHist } from "@/components/admin/Charts";
 import { testVersion } from "@/lib/server/content";
-import { config } from "@/lib/server/env";
+import { getSettings } from "@/lib/server/settings";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: admin", robots: { index: false, follow: false } };
 
-const STEP_NAME: Record<string, string> = { start: "Started", pretest: "Pretest", watch: "Watched", teach: "Taught Kai", practice: "Practised", test: "Final test", results: "Finished" };
 const pctText = (v: number | null) => (v === null ? "–" : `${v}%`);
 const minText = (v: number | null) => (v === null ? "–" : `${v} min`);
 
@@ -28,8 +28,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   const t = await loadTables();
   const versions = { A: testVersion("A"), B: testVersion("B") };
   const s = summarize(t, { all, testVersions: Object.values(versions) });
+  const c = charts(t, { all });
+  const { settings } = await getSettings();
+  const flagged = new Set(c.flags.flatMap((f) => f.sids)).size;
+  const cmp = c.comparison;
   const feedback = t.feedback.filter((f) => all || f.entry === "participant").slice(-3).reverse();
-  const top = s.funnel[0]!.n;
 
   return (
     <AdminShell store={eventStore}>
@@ -41,46 +44,106 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <Link href={all ? "/admin" : "/admin?all=1"}>{all ? "Participants only" : "Include team and test sessions"}</Link>
           </p>
         </div>
-        <div className="adm-actions">
-          <a className="btn small" href="/api/admin/export?table=sessions">Sessions CSV</a>
-          <a className="btn ghost small" href="/api/admin/export?table=events">All events</a>
-        </div>
+        <Legend />
       </div>
 
       <section className="adm-kpis">
-        <div><b>{s.sessions}</b><span>sessions</span></div>
-        <div><b>{s.finished}</b><span>finished the test</span></div>
-        <div><b>{s.byCondition.direct} / {s.byCondition.recursive}</b><span>direct / recursive</span></div>
+        <div><b>{s.sessions}</b><span>sessions: {s.byCondition.direct} direct, {s.byCondition.recursive} recursive</span></div>
+        <div><b>{s.finished}</b><span>finished the test ({s.sessions ? Math.round((s.finished / s.sessions) * 100) : 0}%)</span></div>
         <div><b>{minText(s.minutes.find((m) => m.chapter === "Total")!.all)}</b><span>median session</span></div>
         <div><b>{s.testMean.direct ?? "–"} / {s.testMean.recursive ?? "–"}</b><span>mean test score, direct / recursive</span></div>
-        <div><b>${s.cost}</b><span>model cost</span></div>
+        <div className={flagged ? "warn" : ""}><b>{flagged}</b><span>sessions to look at (data quality)</span></div>
+        <div><b>${s.cost}</b><span>model cost{s.finished ? `, $${(s.cost / s.finished).toFixed(3)} a finished session` : ""}</span></div>
       </section>
 
       <div className="adm-cols">
         <section className="adm-card">
-          <h2>How far people get</h2>
-          <ol className="adm-funnel">
-            {s.funnel.map((f) => (
-              <li key={f.step}>
-                <span>{STEP_NAME[f.step]}</span>
-                <Bar value={f.n} max={top} />
-                <b>{f.n}</b>
-              </li>
-            ))}
-          </ol>
+          <h2>Sessions per day</h2>
+          <p className="note">The last three weeks, by the condition each session practised in.</p>
+          <DailyBars daily={c.daily} />
         </section>
         <section className="adm-card">
-          <h2>Time per chapter (median)</h2>
-          <table className="adm-table">
+          <h2>How far people get</h2>
+          <p className="note">Share of each condition&apos;s sessions that reached a step (counts: direct / recursive).</p>
+          <FunnelPairs funnel={c.funnel} />
+        </section>
+        <section className="adm-card">
+          <h2>Final test scores</h2>
+          <p className="note">Share of each condition at each score, 0 to 10; the lines mark the means.</p>
+          <ScoreHist hist={c.hist} />
+        </section>
+        <section className="adm-card">
+          <h2>Recursive against direct, so far</h2>
+          <p className="note">Finished, not excluded. Descriptive only: not the planned analysis (pretest-adjusted, at the planned sample size).</p>
+          {cmp ? (
+            <div className="adm-effect">
+              <div>
+                <b className={cmp.diff >= 0 ? "pos" : "neg"}>{cmp.diff >= 0 ? "+" : ""}{cmp.diff}</b>
+                <span>points, recursive minus direct (95% interval {cmp.lo} to {cmp.hi})</span>
+              </div>
+              <div className="adm-effect-bar" aria-hidden="true">
+                <span className="zero" />
+                <span className="ci" style={{ left: `${50 + Math.max(-50, Math.min(50, cmp.lo * 10))}%`, right: `${50 - Math.max(-50, Math.min(50, cmp.hi * 10))}%` }} />
+                <span className="pt" style={{ left: `${50 + Math.max(-50, Math.min(50, cmp.diff * 10))}%` }} />
+              </div>
+              <dl className="adm-dl">
+                <dt>Mean, recursive / direct</dt><dd>{cmp.m1} / {cmp.m2}</dd>
+                <dt>Sessions, recursive / direct</dt><dd>{cmp.n1} / {cmp.n2}</dd>
+                <dt>Cohen&apos;s d</dt><dd>{cmp.d ?? "–"}</dd>
+              </dl>
+            </div>
+          ) : (
+            <p className="note">Needs at least two finished sessions in each condition.</p>
+          )}
+          <h3 className="adm-sub">Balance: condition × test form</h3>
+          <table className="adm-table adm-balance">
             <thead>
-              <tr><th>Chapter</th><th>All</th><th>Direct</th><th>Recursive</th></tr>
+              <tr><th></th><th>Form A first</th><th>Form B first</th></tr>
             </thead>
             <tbody>
-              {s.minutes.map((m) => (
-                <tr key={m.chapter}><td>{m.chapter}</td><td>{minText(m.all)}</td><td>{minText(m.direct)}</td><td>{minText(m.recursive)}</td></tr>
+              {c.balance.map((b) => (
+                <tr key={b.cond}><td><span className={`adm-pill ${b.cond === "direct" ? "dir" : "rec"}`}>{b.cond}</span></td><td>{b.A}</td><td>{b.B}</td></tr>
               ))}
             </tbody>
           </table>
+        </section>
+        <section className="adm-card">
+          <h2>Pretest against final test</h2>
+          <p className="note">One dot per finished session (pretest 0 to 3 across, final test 0 to 10 up).</p>
+          <Scatter points={c.points} preMax={s.pretest.of} />
+        </section>
+        <section className="adm-card">
+          <h2>After the test</h2>
+          <p className="note">The questions before the score, means from 1 to 7 (direct / recursive), and the manipulation check.</p>
+          <ol className="ch-funnel">
+            {c.survey.map((q) => (
+              <li key={q.key}>
+                <span>{q.key}</span>
+                <span className="ch-pair">
+                  <i className="ch-d" style={{ width: `${((q.direct ?? 0) / 7) * 100}%` }} />
+                  <i className="ch-r" style={{ width: `${((q.recursive ?? 0) / 7) * 100}%` }} />
+                </span>
+                <b>{q.direct ?? "–"} / {q.recursive ?? "–"}</b>
+              </li>
+            ))}
+          </ol>
+          <h3 className="adm-sub">The practice&apos;s light was mostly about…</h3>
+          <table className="adm-table adm-balance">
+            <thead>
+              <tr><th></th><th>my understanding</th><th>Kai&apos;s</th><th>not sure</th></tr>
+            </thead>
+            <tbody>
+              {c.lights.map((l) => (
+                <tr key={l.cond}><td><span className={`adm-pill ${l.cond === "direct" ? "dir" : "rec"}`}>{l.cond}</span></td><td>{l.own}</td><td>{l.kai}</td><td>{l.unsure}</td></tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="note" style={{ marginTop: 8 }}>Expected: direct answers &quot;my understanding&quot;, recursive &quot;Kai&apos;s&quot;. If not, the manipulation didn&apos;t land.</p>
+        </section>
+        <section className="adm-card">
+          <h2>Minutes per chapter</h2>
+          <p className="note">Medians (direct / recursive). Practice is timed at the same length in both.</p>
+          <MinutesBars minutes={c.minutes} />
         </section>
       </div>
 
@@ -148,11 +211,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <dt>Replies with a blocked lesson word</dt><dd>{s.teaching.leaks}</dd>
             <dt>Turns answered offline (no credits)</dt><dd>{s.teaching.degraded}</dd>
           </dl>
-          {(config.delayedTestDays || s.delayed.n > 0) && (
+          {(settings.delayedTestDays > 0 || s.delayed.n > 0) && (
             <>
               <h2 style={{ marginTop: 18 }}>Follow-up test</h2>
               <p className="note">
-                {config.delayedTestDays ? `Opens ${config.delayedTestDays} days after the final test, with the other form.` : "Switched off (DELAYED_TEST_DAYS is not set)."}
+                {settings.delayedTestDays ? `Opens ${settings.delayedTestDays} days after the final test, with the other form.` : "Switched off (Settings: follow-up test days is 0)."}
               </p>
               <dl className="adm-dl">
                 <dt>Came back / finished</dt><dd>{s.delayed.n} / {s.delayed.finished}</dd>
@@ -162,6 +225,21 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
               </dl>
             </>
           )}
+          <h2 style={{ marginTop: 18 }}>Data quality</h2>
+          <p className="note">Sessions that may need a second look before the analysis.</p>
+          <ul className="adm-flags">
+            {c.flags.map((f) => (
+              <li key={f.key} className={f.sids.length ? "on" : ""}>
+                <b>{f.sids.length}</b>
+                <span>{f.label}</span>
+                {f.sids.length > 0 && (
+                  <Link className="note" href={`/admin/sessions/${f.sids[0]}`}>
+                    first one
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
           <h2 style={{ marginTop: 18 }}>Latest feedback</h2>
           {feedback.length ? (
             <ul className="adm-quotes">

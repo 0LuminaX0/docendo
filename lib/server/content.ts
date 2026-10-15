@@ -71,9 +71,8 @@ export const publicPretest = pretest.map(({ id, prompt, options }) => ({ id, pro
 
 // ---------- practice (chapter 3) ----------
 
-const practiceFile = PracticeFile.parse(practiceJson);
+export const practiceFile = PracticeFile.parse(practiceJson);
 export const practice = practiceFile.items;
-export const practiceMinutes = config.practiceMinutes ?? practiceFile.minutes;
 export { checkPractice };
 
 /** What the browser may see before checking: no answers, no solutions. */

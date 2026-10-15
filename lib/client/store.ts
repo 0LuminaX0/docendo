@@ -8,8 +8,11 @@ import type { Mind } from "@/engine/tutor/mind";
 // tab doesn't lose the session. Nothing here is secret: the token is useless
 // without the server's secret, and answers are graded on the server.
 
-export type Turn = { role: "kai" | "learner"; text: string; mood?: Mood; help?: { part: number; start: number } };
-export type Mood = "neutral" | "great" | "okay" | "confused" | "thinking";
+// learned: the ideas Kai finished with this reply (shown as a small milestone under it)
+export type Turn = { role: "kai" | "learner"; text: string; mood?: Mood; help?: { part: number; start: number }; learned?: string[] };
+// the judge's moods (great, okay, confused) plus faces drawn only in the browser: neutral, thinking, aha (an idea just
+// landed), proud (Kai feels ready)
+export type Mood = "neutral" | "great" | "okay" | "confused" | "thinking" | "aha" | "proud";
 export type Help = { video: string; start: number; end: number };
 export type GradeResult = {
   score: number;
@@ -77,6 +80,7 @@ export type Saved = {
   since?: "no" | "a little" | "a lot"; // delayed test: has the learner looked at the topic since the session?
   result: GradeResult | null;
   feedbackSent?: boolean;
+  surveyDone?: boolean; // the questions after the final test (answered or skipped), before the score
 };
 
 const KEY = "docendo:session:v1";

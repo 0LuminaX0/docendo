@@ -5,6 +5,7 @@ import { Calculator as CalcIcon } from "lucide-react";
 import { format, sumAtEnd } from "@/lib/calc";
 import { track } from "@/lib/client/log";
 import { useDictation } from "./Dictation";
+import { useStudySettings } from "./SettingsContext";
 
 /**
  * One field for working and sums, the same everywhere (practice, the correction
@@ -54,6 +55,7 @@ export default function Scratchpad({
   voice?: "fix"; // a mic for speaking instead of typing (the correction to Kai)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const { calculator } = useStudySettings(); // the calculator can be switched off (admin panel), in both conditions
   // voice input (the correction to Kai): the live transcript shows in the field while the learner speaks
   const dict = useDictation({
     where: voice ?? "fix",
@@ -81,12 +83,12 @@ export default function Scratchpad({
   const lineEnd = value.indexOf("\n", caret) === -1 ? value.length : value.indexOf("\n", caret);
   const line = value.slice(lineStart, lineEnd);
   const done = /=\s*-?[\d.]+\s*$/.test(line);
-  const sum = !done ? sumAtEnd(line) : null;
-  const lastResult = [...value.matchAll(/=\s*(-?\d+(?:\.\d+)?)\s*$/gm)].pop()?.[1];
+  const sum = calculator && !done ? sumAtEnd(line) : null;
+  const lastResult = calculator ? [...value.matchAll(/=\s*(-?\d+(?:\.\d+)?)\s*$/gm)].pop()?.[1] : undefined;
 
   /** "=" right after a sum: write its result after it. */
   function edit(next: string, at: number) {
-    if (next[at - 1] === "=" && next.length > value.length) {
+    if (calculator && next[at - 1] === "=" && next.length > value.length) {
       const start = next.lastIndexOf("\n", at - 1) + 1;
       const s = sumAtEnd(next.slice(start, at));
       if (s) {
@@ -143,15 +145,17 @@ export default function Scratchpad({
       />
       {dict.ghost}
       <div className="scratch-bar">
-        <span className="scratch-hint" aria-live="polite">
-          {sum ? (
-            <>
-              Result: <b>{format(sum.value)}</b>. Type = to add it.
-            </>
-          ) : (
-            "To calculate, type it and end with =, like 12 × 0.9 + 3 ="
-          )}
-        </span>
+        {calculator && (
+          <span className="scratch-hint" aria-live="polite">
+            {sum ? (
+              <>
+                Result: <b>{format(sum.value)}</b>. Type = to add it.
+              </>
+            ) : (
+              "To calculate, type it and end with =, like 12 × 0.9 + 3 ="
+            )}
+          </span>
+        )}
         <span className="grow" />
         {voice && dict.button}
         {onUse && lastResult && !disabled && (
@@ -159,11 +163,13 @@ export default function Scratchpad({
             Use {lastResult} as the answer
           </button>
         )}
-        <button type="button" className={`scratch-toggle${keys ? " on" : ""}`} aria-pressed={keys} onClick={toggleKeys} disabled={disabled} title="Buttons for the maths symbols that are hard to type">
-          <CalcIcon size={14} /> {keys ? "Hide" : "Show"} × ÷ √
-        </button>
+        {calculator && (
+          <button type="button" className={`scratch-toggle${keys ? " on" : ""}`} aria-pressed={keys} onClick={toggleKeys} disabled={disabled} title="Buttons for the maths symbols that are hard to type">
+            <CalcIcon size={14} /> {keys ? "Hide" : "Show"} × ÷ √
+          </button>
+        )}
       </div>
-      {keys && !disabled && (
+      {calculator && keys && !disabled && (
         <div className="calc-keys" role="group" aria-label="Maths symbols">
           {KEYS.map(([k, s]) => (
             <button key={k} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(s)} aria-label={`Insert ${k}`}>

@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Brain, FastForward, Lock, MessageCircle, Play } from "lucide-react";
+import { ArrowRight, ArrowUp, Brain, Check, FastForward, Lock, MessageCircle, Play } from "lucide-react";
 import { useDictation } from "./Dictation";
+import { useStudySettings } from "./SettingsContext";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
 import { useGuard } from "./useGuard";
@@ -16,13 +17,14 @@ import type { GraphView } from "@/lib/server/content";
 type Video = { id: string; videoId: string; title: string; part: number; durationSec?: number };
 const videoName = (t: string) => t.replace(/^[^:]{2,30}:\s+/, "");
 /** When a participant may end teaching early: after this many messages or this long. */
-const STOP_AFTER = { messages: 12, ms: 8 * 60_000 };
+// when a participant may end teaching early (after this many messages or this long) comes from the study settings
 
 type TurnReply = { reply: string; mood: Mood; state: State; progress: number; mind: Mind; done: boolean; help: Help | null; helpAvailable: boolean; demo: boolean };
 
 export default function Teach({ opening, initial, initialMind, videos, graph }: { opening: string; initial: State; initialMind: Mind; videos: Video[]; graph: GraphView }) {
   const router = useRouter();
   const [saved, update] = useSaved();
+  const study = useStudySettings();
   const allowed = useGuard(saved, "teach");
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -97,7 +99,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const mind = chat.mind ?? initialMind;
   const learnerCount = turns.filter((t) => t.role === "learner" && !t.help).length;
   // participants can stop teaching once they've given it a real go; team sessions (shared code) any time, for testing
-  const canStop = saved.team !== false || learnerCount >= STOP_AFTER.messages || now - (chat.startedAt ?? saved.startedAt) >= STOP_AFTER.ms;
+  const canStop = saved.team !== false || learnerCount >= study.stopAfterMessages || now - (chat.startedAt ?? saved.startedAt) >= study.stopAfterMinutes * 60_000;
   const finished = chat.done || chat.skipped;
   const left = mind.maxTurns - learnerCount;
 
@@ -131,12 +133,20 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
       return;
     }
     const d = r.data;
+    // ideas this reply finished (Kai has no more questions about them): shown as a small milestone under the reply,
+    // with an "aha" face; "proud" when Kai feels ready. The logged mood stays the judge's.
+    const doneBefore = new Set((chat.mind?.nodes ?? []).filter((n) => n.status === "explained" || n.status === "checked").map((n) => n.id));
+    const learned = d.mind.nodes
+      .filter((n) => (n.status === "explained" || n.status === "checked") && !doneBefore.has(n.id) && graph.nodes.find((g) => g.id === n.id)?.inLesson !== false)
+      .map((n) => graph.nodes.find((g) => g.id === n.id)?.label ?? n.id);
+    if (learned.length) track("idea_done", { ideas: learned });
+    const face: Mood = d.done ? "proud" : learned.length ? "aha" : d.mood;
     update((s) => ({
       ...s,
       demo: d.demo,
       chat: {
         ...s.chat,
-        turns: [...s.chat.turns, { role: "kai", text: d.reply, mood: d.mood }],
+        turns: [...s.chat.turns, { role: "kai", text: d.reply, mood: face, ...(learned.length ? { learned } : {}) }],
         state: d.state,
         progress: d.progress,
         mind: d.mind,
@@ -235,10 +245,20 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                 })()
               ) : t.role === "kai" ? (
                 <div className={`msg${k === turns.length - 1 ? " last" : ""}`} key={k}>
-                  <KaiFace mood={t.mood ?? "neutral"} size={36} />
+                  <KaiFace mood={t.mood ?? "neutral"} size={36} live={k === turns.length - 1 && !busy} pop={k === turns.length - 1 && k > 0} />
                   <div className="col">
                     <span className="who">Kai</span>
                     <div className="bubble">{t.text}</div>
+                    {t.learned && t.learned.length > 0 && (
+                      <div className="learned" role="status">
+                        {t.learned.map((l) => (
+                          <span key={l} className="learned-chip">
+                            <span className="spark" aria-hidden="true" />
+                            <Check size={13} strokeWidth={3} /> Kai understood: {l}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

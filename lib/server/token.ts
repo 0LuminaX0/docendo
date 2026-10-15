@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { config, sessionSecret } from "./env";
+import { sessionSecret } from "./env";
 import { CONDITIONS, type Condition } from "../codes";
 
 // A session token is `<payload>.<signature>`: base64url JSON signed with
@@ -16,8 +16,8 @@ type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: s
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
 const sign = (data: string) => createHmac("sha256", sessionSecret()).update(data).digest("base64url");
 
-export function issueToken(who: { cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed" }): { token: string; sid: string; expiresAt: number } {
-  const payload: Payload = { sid: randomUUID(), exp: Date.now() + config.sessionHours * 3600_000, ...who };
+export function issueToken(who: { cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed" }, days: number): { token: string; sid: string; expiresAt: number } {
+  const payload: Payload = { sid: randomUUID(), exp: Date.now() + days * 86_400_000, ...who };
   const data = b64(JSON.stringify(payload));
   return { token: `${data}.${sign(data)}`, sid: payload.sid, expiresAt: payload.exp };
 }

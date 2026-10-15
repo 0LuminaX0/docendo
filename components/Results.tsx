@@ -5,6 +5,7 @@ import { Brain, Check, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
+import Survey from "./Survey";
 import { parts, useTestItems } from "./Exercises";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
@@ -30,6 +31,17 @@ export default function Results() {
   const taught = saved.chat.turns.filter((t) => t.role === "learner" && !t.help).length;
   const line =
     r.score >= 8 ? "That stuck really well." : r.score >= 5 ? "A solid base, with a few gaps to revisit." : "Some ideas didn't stick yet. The explanations below should help.";
+
+  // after the final test (not the follow-up): a few questions before the score, so the score can't colour them
+  if (!delayed && !saved.surveyDone)
+    return (
+      <div className="shell">
+        <Header phase={4} label="Results" demo={saved.demo} />
+        <main className="page narrow">
+          <Survey onDone={() => update((x) => ({ ...x, surveyDone: true }))} />
+        </main>
+      </div>
+    );
 
   return (
     <div className="shell">

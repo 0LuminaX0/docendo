@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import Scratchpad from "./Scratchpad";
+import { useStudySettings } from "./SettingsContext";
 import { Header } from "./ui";
 import { useGuard } from "./useGuard";
 import { post, save, useSaved, type GradeResult } from "@/lib/client/store";
@@ -35,6 +36,7 @@ export default function Exercises() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
+  const { calculator } = useStudySettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const items = useTestItems(allowed, setError);
@@ -93,8 +95,8 @@ export default function Exercises() {
           <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
           <p className="lede" style={{ fontSize: 15.5 }}>
             {delayed
-              ? "Welcome back. Ten new questions on the same ideas as last time, in the same two parts: first pick an option, then work out a number. To calculate, end a calculation with =. You'll see the explanations afterwards."
-              : "Ten questions in two parts: first pick an option, then work out a number. Work things out under each question if it helps; to calculate, end a calculation with =. You'll see the explanations afterwards."}
+              ? `Welcome back. Ten new questions on the same ideas as last time, in the same two parts: first pick an option, then work out a number.${calculator ? " To calculate, end a calculation with =." : ""} You'll see the explanations afterwards.`
+              : `Ten questions in two parts: first pick an option, then work out a number. Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}. You'll see the explanations afterwards.`}
           </p>
         </div>
         {delayed && (

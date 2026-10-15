@@ -2,6 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Figtree, Shantell_Sans } from "next/font/google";
 import "./globals.css";
 import Telemetry from "@/components/Telemetry";
+import { SettingsProvider } from "@/components/SettingsContext";
+import SessionGuard from "@/components/SessionGuard";
+import { getSettings } from "@/lib/server/settings";
+import { publicOf } from "@/lib/settings";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
 const body = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-body", display: "swap" });
@@ -17,14 +21,18 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#ffffff" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic"; // the study settings can change at any time (admin panel)
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { settings } = await getSettings();
   return (
     // Browser extensions (Grammarly, password managers…) add attributes to <html>/<body> before React
     // hydrates; suppressHydrationWarning ignores attribute differences on these two elements only.
     <html lang="en" className={`${display.variable} ${body.variable} ${hand.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
-        {children}
+        <SettingsProvider value={publicOf(settings)}>{children}</SettingsProvider>
         <Telemetry />
+        <SessionGuard />
       </body>
     </html>
   );

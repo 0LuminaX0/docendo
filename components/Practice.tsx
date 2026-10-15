@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, Lightbulb, Play, Timer } from "lucide-react";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
 import KaiSolve from "./KaiSolve";
+import { useStudySettings } from "./SettingsContext";
 import Scratchpad from "./Scratchpad";
 import { track } from "@/lib/client/log";
 import { useGuard } from "./useGuard";
@@ -24,7 +25,8 @@ const KEYS = "ABCDEF";
  * tries again. Same problems, time and number of tries. Worked solutions come
  * after the final test in both. When the time runs out, the test starts.
  */
-export default function Practice({ items, minutes, tries }: { items: Item[]; minutes: number; tries: number }) {
+export default function Practice({ items }: { items: Item[] }) {
+  const { practiceMinutes: minutes, practiceTries: tries } = useStudySettings();
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "practice");

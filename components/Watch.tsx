@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, CircleCheck, Play } from "lucide-react";
+import { ArrowRight, CircleCheck, Eye, History, MessagesSquare, Play } from "lucide-react";
 import { Header, VideoFrame, mmss } from "./ui";
 import { useGuard } from "./useGuard";
 import { useSaved } from "@/lib/client/store";
@@ -232,22 +232,48 @@ export default function Watch({ segments }: { segments: Segment[] }) {
               <span className="eyebrow">
                 The lesson: {segments.length} parts, {mmss(total)}
               </span>
+              {/* chapters, as on YouTube: the part's own thumbnail, its length, how much of it is watched */}
               {segments.map((x, k) => (
                 <button key={k} className="pl-item chapter" aria-current={k === i} onClick={() => (track("video_select", { seg: k }), mode === "api" ? loadSegment(k, true) : setI(k))}>
-                  <span className="ch-n">{done(k) ? <CircleCheck size={18} strokeWidth={2.4} /> : k === i ? <Play size={14} fill="currentColor" strokeWidth={0} /> : k + 1}</span>
-                  <span style={{ minWidth: 0 }}>
-                    <span className="t">{x.title}</span>
-                    <span className="m">
-                      {mmss(len(k))}, {x.channel}
+                  <span className="ch-thumb">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`https://i.ytimg.com/vi/${x.videoId}/mqdefault.jpg`} alt="" width={104} height={58} loading="lazy" />
+                    <span className="ch-len">{mmss(len(k))}</span>
+                    {done(k) && (
+                      <span className="ch-done">
+                        <CircleCheck size={18} strokeWidth={2.4} />
+                      </span>
+                    )}
+                    <span className="ch-prog">
+                      <i style={{ width: `${Math.min(100, (watched[k]! / len(k)) * 100)}%` }} />
                     </span>
+                  </span>
+                  <span style={{ minWidth: 0 }}>
+                    {k === i && (
+                      <span className="ch-now">
+                        <Play size={10} fill="currentColor" strokeWidth={0} /> Playing
+                      </span>
+                    )}
+                    <span className="t">
+                      {k + 1}. {x.title}
+                    </span>
+                    <span className="m">{x.channel}</span>
                   </span>
                 </button>
               ))}
             </nav>
             <h2>While you watch</h2>
-            <p>Afterwards you&apos;ll explain this to Kai, a classmate who missed it. Kai only knows what you tell it.</p>
-            <p>Pay attention to how greedy, ε-greedy and UCB each decide which option to try next, and why greedy can get stuck.</p>
-            <p>The video won&apos;t be open while you teach, but Kai&apos;s help button can show you the right moment again once you&apos;ve had a go.</p>
+            <ul className="tips">
+              <li>
+                <MessagesSquare size={17} aria-hidden="true" /> Afterwards you&apos;ll explain this to Kai, a classmate who missed it. Kai only knows what you tell it.
+              </li>
+              <li>
+                <Eye size={17} aria-hidden="true" /> Watch how greedy, ε-greedy and UCB each decide what to try next, and why greedy can get stuck.
+              </li>
+              <li>
+                <History size={17} aria-hidden="true" /> While you teach, Kai&apos;s help button can show the right moment again once you&apos;ve had a go.
+              </li>
+            </ul>
             {confirm && !allDone ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <p className="note">You&apos;ve watched {mmss(watchedTotal)} of {mmss(total)}. Continue anyway?</p>

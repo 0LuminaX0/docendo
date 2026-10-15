@@ -63,6 +63,15 @@ export function tables(events: Ev[]) {
       consent: start?.consent ?? null,
       daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
       since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)
+      // after the final test, before the score (topics/bandits/survey.json): scales 1 to 7; lights = the manipulation
+      // check (0 my own understanding, 1 Kai's, 2 not sure)
+      surveySkipped: first("client_survey")?.skipped ?? null,
+      surveyEffort: first("client_survey")?.effort ?? null,
+      surveyResponsible: first("client_survey")?.responsible ?? null,
+      surveyUnderstand: first("client_survey")?.understand ?? null,
+      surveyPractice: first("client_survey")?.practice ?? null,
+      surveyEnjoy: first("client_survey")?.enjoy ?? null,
+      surveyLights: first("client_survey")?.lights ?? null,
       // the practice the learner actually did: their condition, or the view a team session switched to
       practiceView: of("practice_kai_solve").length ? "recursive" : of("practice_check").length ? "direct" : null,
       demo: start?.demo ?? null,
@@ -346,3 +355,100 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
   };
 }
 export type Summary = ReturnType<typeof summarize>;
+
+// ---------- the dashboard's charts ----------
+
+/** Welch's comparison of two groups: mean difference (a − b) with a 95% interval, and Cohen's d (pooled SD). */
+export function compare(a: number[], b: number[]) {
+  const n1 = a.length;
+  const n2 = b.length;
+  if (n1 < 2 || n2 < 2) return null;
+  const m = (x: number[]) => x.reduce((s, v) => s + v, 0) / x.length;
+  const v = (x: number[], mu: number) => x.reduce((s, y) => s + (y - mu) ** 2, 0) / (x.length - 1);
+  const m1 = m(a), m2 = m(b), v1 = v(a, m1), v2 = v(b, m2);
+  const se = Math.sqrt(v1 / n1 + v2 / n2);
+  const df = se > 0 ? (v1 / n1 + v2 / n2) ** 2 / ((v1 / n1) ** 2 / (n1 - 1) + (v2 / n2) ** 2 / (n2 - 1)) : n1 + n2 - 2;
+  // the t distribution's 97.5% point, from the normal one (Cornish-Fisher expansion; close for df ≥ 3)
+  const z = 1.959964;
+  const t = z + (z ** 3 + z) / (4 * df) + (5 * z ** 5 + 16 * z ** 3 + 3 * z) / (96 * df ** 2);
+  const pooled = Math.sqrt(((n1 - 1) * v1 + (n2 - 1) * v2) / (n1 + n2 - 2));
+  const r = (x: number, k = 2) => Math.round(x * 10 ** k) / 10 ** k;
+  return { n1, n2, m1: r(m1), m2: r(m2), diff: r(m1 - m2), lo: r(m1 - m2 - t * se), hi: r(m1 - m2 + t * se), d: pooled > 0 ? r((m1 - m2) / pooled) : null, df: r(df, 1) };
+}
+
+/**
+ * Everything the dashboard draws, from the same tables as the export: who is in which condition and form, how far
+ * they get, scores and their distribution, pretest against final test, minutes per chapter, a preliminary comparison
+ * of the conditions, and sessions whose data may need a second look.
+ */
+export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?: number } = {}) {
+  const counted = t.sessions.filter((s) => opts.all || (s.entry === "participant" && !s.demo));
+  const sessions = counted.filter((s) => s.phase !== "delayed");
+  const cond = (s: Record<string, unknown>) => (viewOf(s) === "recursive" ? "recursive" : "direct");
+  const conds = ["direct", "recursive"] as const;
+  const by = (c: string) => sessions.filter((s) => cond(s) === c);
+  const scores = (c: string) => by(c).map((s) => num(s.testScore)).filter((x): x is number => x !== null);
+
+  // sessions started per day (the last `days` days), by condition
+  const days = opts.days ?? 21;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const daily = Array.from({ length: days }, (_, i) => {
+    const d = new Date(today.getTime() - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10);
+    const on = sessions.filter((s) => String(s.startedAt ?? "").slice(0, 10) === d);
+    return { day: d, direct: on.filter((s) => cond(s) === "direct").length, recursive: on.filter((s) => cond(s) === "recursive").length };
+  });
+
+  const reached = (s: Record<string, unknown>) => STEPS.indexOf(String(s.reachedStep ?? "start") as (typeof STEPS)[number]);
+  const funnel = STEPS.map((step, i) => ({ step, direct: by("direct").filter((s) => reached(s) >= i).length, recursive: by("recursive").filter((s) => reached(s) >= i).length }));
+
+  const hist = (c: string) => {
+    const h = Array.from({ length: 11 }, () => 0);
+    for (const x of scores(c)) h[Math.max(0, Math.min(10, Math.round(x)))]!++;
+    return h;
+  };
+
+  const minutes = (["minWatch", "minTeach", "minPractice", "minTest"] as const).map((k) => ({
+    chapter: k.replace("min", ""),
+    direct: median(by("direct").map((s) => num(s[k]))),
+    recursive: median(by("recursive").map((s) => num(s[k]))),
+  }));
+
+  const points = sessions
+    .filter((s) => num(s.testScore) !== null && num(s.pretestScore) !== null)
+    .map((s) => ({ sid: String(s.sid), cond: cond(s), pre: num(s.pretestScore)!, test: num(s.testScore)! }));
+
+  // condition × test form (forms alternate within each condition)
+  const balance = conds.map((c) => ({ cond: c, A: by(c).filter((s) => (s.form ?? "A") === "A").length, B: by(c).filter((s) => s.form === "B").length }));
+
+  // data quality: sessions that may need a second look before the analysis
+  const flags = [
+    { key: "video", label: "Watched under half the lesson", sids: sessions.filter((s) => num(s.lessonSec) && num(s.watchedSec) !== null && num(s.watchedSec)! < num(s.lessonSec)! / 2 && reached(s) >= 3).map((s) => String(s.sid)) },
+    { key: "teach", label: "Taught Kai fewer than 3 messages", sids: sessions.filter((s) => reached(s) >= 4 && Number(s.turns ?? 0) < 3).map((s) => String(s.sid)) },
+    { key: "test", label: "Final test in under 2 minutes", sids: sessions.filter((s) => num(s.minTest) !== null && num(s.minTest)! < 2 && num(s.testScore) !== null).map((s) => String(s.sid)) },
+    { key: "away", label: "Away from the tab over 5 minutes", sids: sessions.filter((s) => Number(s.tabAwaySec ?? 0) > 300).map((s) => String(s.sid)) },
+    { key: "rl", label: "Took a reinforcement-learning course (excluded)", sids: sessions.filter((s) => s.excluded === true).map((s) => String(s.sid)) },
+  ];
+
+  const finished = sessions.filter((s) => num(s.testScore) !== null && s.excluded !== true);
+  const fin = (c: string) => finished.filter((s) => cond(s) === c).map((s) => num(s.testScore)!);
+  return {
+    daily,
+    funnel,
+    hist: { direct: hist("direct"), recursive: hist("recursive") },
+    minutes,
+    points,
+    balance,
+    flags,
+    // recursive − direct, finished and not excluded; descriptive only: not the study's planned analysis
+    comparison: compare(fin("recursive"), fin("direct")),
+    // the questions after the test: means per condition, and the manipulation check's answers
+    survey: (["Effort", "Responsible", "Understand", "Practice", "Enjoy"] as const).map((k) => ({
+      key: k,
+      direct: mean(by("direct").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),
+      recursive: mean(by("recursive").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),
+    })),
+    lights: conds.map((c) => ({ cond: c, own: by(c).filter((s) => s.surveyLights === 0).length, kai: by(c).filter((s) => s.surveyLights === 1).length, unsure: by(c).filter((s) => s.surveyLights === 2).length })),
+  };
+}
+export type Charts = ReturnType<typeof charts>;

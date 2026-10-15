@@ -9,6 +9,8 @@ import { readCode, type Condition } from "@/lib/codes";
 import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
 import { otherForm } from "@/lib/server/content";
 import { getParticipant, nextForm, putParticipant, type Participant } from "@/lib/server/participants";
+import { getSettings } from "@/lib/server/settings";
+import type { Settings } from "@/lib/settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -28,14 +30,15 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: 
  * A participant who already took the final test comes back (their code again, or the same device): the delayed
  * test, with the other form, once it is open. null: no delayed test applies, so the code works as before.
  */
-async function delayedTest(p: Participant, req: NextRequest): Promise<Response | null> {
-  if (!config.delayedTestDays || !p.testAt) return null;
+async function delayedTest(p: Participant, req: NextRequest, st: { settings: Settings; version: string }): Promise<Response | null> {
+  const days = st.settings.delayedTestDays;
+  if (!days || !p.testAt) return null;
   if (p.delayedAt) return fail(409, "You've done both tests. Thank you for taking part!");
-  const opens = Date.parse(p.testAt) + config.delayedTestDays * 86_400_000;
+  const opens = Date.parse(p.testAt) + days * 86_400_000;
   if (Date.now() < opens) return fail(409, `Your follow-up test opens on ${day(opens)}. Come back then with the same code.`, { opensAt: opens });
   const who = { cond: p.cond, entry: "participant" as const, pid: p.pid, form: otherForm(p.form), phase: "delayed" as const };
-  const { token, sid, expiresAt } = issueToken(who);
-  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: "participant", phase: "delayed", form: who.form, consent: CONSENT_VERSION, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
+  const { token, sid, expiresAt } = issueToken(who, st.settings.sessionDays);
+  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: "participant", phase: "delayed", form: who.form, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
   return ok({ token, expiresAt, demo: config.demo, team: false, condition: p.cond, phase: "delayed" });
 }
 
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest) {
   const body = Body.safeParse(await readBody(req, 2_000));
   if (!body.success) return fail(400, "Bad request.");
   if (body.data.consent !== true) return fail(400, "Tick the box to agree to the study first.");
+  const st = await getSettings();
 
   // the same device, days later: the finished session's token starts the delayed test
   if (body.data.followUp) {
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
     if (!prev) return fail(401, "This session has expired. Enter your access code instead.");
     if (prev.entry !== "participant" || !prev.pid || prev.phase !== "main") return fail(400, "There is no follow-up test for this session.");
     const p = await getParticipant(prev.pid);
-    return (p && (await delayedTest(p, req))) ?? fail(409, "There is no follow-up test for this session.");
+    return (p && (await delayedTest(p, req, st))) ?? fail(409, "There is no follow-up test for this session.");
   }
   // a code made in the admin panel, or a participant's own code, decides the condition; the shared code and open
   // access get the direct condition
@@ -70,7 +74,7 @@ export async function POST(req: NextRequest) {
   const person = stored ? (stored.maxUses === 1 && !stored.team ? stored.id : null) : (participant?.id ?? null);
   const known = person ? await getParticipant(person).catch(() => null) : null;
   if (known) {
-    const d = await delayedTest(known, req);
+    const d = await delayedTest(known, req, st);
     if (d) return d; // checked before counting a use: coming back for the delayed test doesn't use the code up
   }
   if (stored) {
@@ -92,7 +96,7 @@ export async function POST(req: NextRequest) {
     // the final test's form: kept from an earlier start of the same person, else balanced within the condition
     const form = known?.form ?? (await nextForm(who.entry === "participant" ? who.cond : "team"));
     if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main" });
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main" }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -101,11 +105,12 @@ export async function POST(req: NextRequest) {
       phase: "main",
       form, // the final test's form (A or B); the delayed test takes the other
       consent: CONSENT_VERSION,
+      settings: st.version, // the study settings this session started under (admin panel, Settings)
       entry: who.entry, // participant (own code), team (shared code) or open
       code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
       demo: config.demo,
       device: deviceOf(req.headers.get("user-agent")),
-      config: { practiceTries: config.practiceTries, practiceMinutes: config.practiceMinutes ?? null },
+      config: { practiceTries: st.settings.practiceTries, practiceMinutes: st.settings.practiceMinutes },
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
     return ok({ token, expiresAt, demo: config.demo, team: who.entry !== "participant", condition: who.cond });

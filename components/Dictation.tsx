@@ -5,6 +5,7 @@ import { Check, Mic, X } from "lucide-react";
 import { Dictation, joinText } from "@/lib/client/dictation";
 import { useSaved } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
+import { useStudySettings } from "./SettingsContext";
 
 /**
  * Voice input for a text box, in the manner of a live caption: press the mic and speak; the words appear in the box
@@ -31,6 +32,7 @@ export function useDictation({
   onCommit: (next: string, caret: number, dictatedChars: number) => void; // the text with the dictation in it
 }) {
   const [saved] = useSaved();
+  const { voice } = useStudySettings(); // voice input can be switched off on the admin panel
   const [phase, setPhase] = useState<Phase>("idle");
   const [parts, setParts] = useState({ before: "", after: "" });
   const [preview, setPreview] = useState("");
@@ -136,7 +138,7 @@ export function useDictation({
   const shown = active ? joinText(joinText(parts.before, preview), parts.after) : value;
 
   const button =
-    !can || !saved || saved.demo ? null : (
+    !can || !voice || !saved || saved.demo ? null : (
       <span className="voice">
         {msg && phase === "idle" && <span className="voice-msg" role="status">{msg}</span>}
         {phase === "idle" ? (

@@ -50,6 +50,19 @@ const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
 const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
 const answers = testItems.map((q) => q.answer);
+/** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
+async function passSurvey(page, answer = true) {
+  await page.waitForSelector(".survey");
+  const hidden = !(await page.$(".big"));
+  if (answer) {
+    for (const g of await page.$$(".survey-dots")) await g.$eval("button:nth-child(5)", (b) => b.click());
+    for (const g of await page.$$(".survey-choices")) await g.$eval("button:nth-child(2)", (b) => b.click());
+    await page.$eval(".survey .btn.primary", (b) => b.click());
+  } else await page.$eval(".survey-skip", (b) => b.click());
+  await page.waitForSelector(".big");
+  return hidden;
+}
+
 /** Answer the test shown on a page (either form), right except the ids in `wrong`; returns the ids in shown order. */
 async function answerTest(page, wrong = []) {
   const shown = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
@@ -174,7 +187,9 @@ while (turns < 32) {
 const s = await saved(page);
 check(s.chat.done, `Kai felt ready after ${turns} messages (limit 30)`);
 check(turns <= 30, "no more than 30 learner messages");
-check(["great", "okay", "confused"].every((m) => moods.has(m)), `Kai showed all three reactions (${[...moods].join(", ")})`);
+// the judge's three reactions; a "great" reply shows as aha (an idea finished) or proud (Kai ready) when it is one
+check(["okay", "confused"].every((m) => moods.has(m)) && ["great", "aha", "proud"].some((m) => moods.has(m)), `Kai showed all three reactions (${[...moods].join(", ")})`);
+check(moods.has("aha") && moods.has("proud"), "an idea Kai finishes shows as a milestone (aha), and Kai is proud when ready");
 await shot(page, "06-teach-done");
 
 // standalone Kai's mind
@@ -265,7 +280,8 @@ check(used === want, `the final test has a working field under each question tha
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
-await page.waitForSelector(".big");
+const scoreHidden = await passSurvey(page);
+check(scoreHidden, "six questions come after the test, before the score");
 const score = (await page.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
 check(score === "8/10", `graded on the server: ${score} (2 wrong on purpose)`);
 check((await page.$$(".review .pq")).length === practiceItems.length, "results show the practice solutions after the test");
@@ -292,6 +308,16 @@ check(stayed, "stopping from the first message waits for a click, then reaches p
 // recursive feedback (team sessions can switch the view): Kai solves from its (empty) notebook, the learner
 // clicks the faulty step, sees where Kai got it from, corrects Kai once, and Kai tries again
 await skip.waitForSelector(".pq");
+// the same session in a second tab: it asks which tab to keep using (two tabs would overwrite each other's progress)
+{
+  const twin = await skip.browserContext().newPage();
+  await twin.setViewport({ width: 1366, height: 900 });
+  await twin.goto(BASE + "/practice", { waitUntil: "load" });
+  const guarded = await twin.waitForSelector(".guard", { timeout: 8000 }).then(() => true, () => false);
+  await shot(twin, "09c-second-tab");
+  await twin.close();
+  check(guarded, "a second tab on the same session asks which tab to keep");
+}
 await skip.click(".seg button:nth-child(2)");
 // Kai starts solving on its own; its notebook sits next to its steps
 // Kai writes its steps out at reading speed; then the learner calls it before the light
@@ -334,6 +360,7 @@ await skip.reload({ waitUntil: "load" });
 await skip.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
 await skip.$eval(".submitbar .btn.primary", (e) => e.click());
 await skip.waitForFunction(() => location.pathname === "/results");
+await passSurvey(skip, false);
 await skip.waitForSelector(".review .pq");
 const kaiLine = await skip.$eval(".review .pq .tag", (e) => e.textContent);
 check(/Kai/.test(kaiLine), `results report Kai's practice outcome in the recursive view (“${kaiLine.trim()}”)`);
@@ -467,6 +494,17 @@ await shot(phoneHome, "10-phone-welcome", true);
   );
   await fu.close();
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
+  // settings: a change reaches the participant pages, is versioned, and goes back to the defaults
+  const base = await post("/api/admin/settings", { action: "reset" });
+  const saved = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, practiceMinutes: 13 } });
+  // each route keeps its own 10 s cache of the settings: the change shows within seconds
+  let shown = false;
+  for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
+  const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, lesson: [{ ...base.json.settings.lesson[0], videoId: "nope" }] } });
+  const back = await post("/api/admin/settings", { action: "reset" });
+  await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
+  await shot(adm, "11-admin-settings", true);
+  check(saved.status === 200 && saved.json.version !== base.json.version && shown && badSave.status === 400 && back.json.version === base.json.version, `settings: a change reaches the pages within seconds (${saved.json.version}), a bad one is refused, and the defaults come back`);
   await adm.goto(BASE + "/admin/codes", { waitUntil: "load" });
   await shot(adm, "11-admin-codes", true);
   for (const c of made.json.codes ?? []) await post("/api/admin/codes", { action: "delete", code: c.code });
@@ -484,7 +522,7 @@ if (existsSync(logFile)) {
   const since = runStarted.toISOString();
   const evs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.at >= since);
   const has = (t) => evs.some((e) => e.t === t);
-  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm"];
+  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
@@ -496,7 +534,10 @@ const staticDir = join(process.cwd(), ".next", "static");
 const pagesDir = join(process.cwd(), ".next", "server", "app");
 if (existsSync(staticDir)) {
   const read = (dir, re) => readdirSync(dir, { recursive: true }).filter((f) => re.test(String(f))).map((f) => readFileSync(join(dir, String(f)), "utf8"));
-  const shipped = [...read(staticDir, /\.(js|css|json)$/), ...read(pagesDir, /\.(html|rsc)$/)].join("\n");
+  // the built files, and every participant page as the server renders it (pages are rendered per request now)
+  const rendered = [];
+  for (const path of ["/", "/pretest", "/watch", "/teach", "/mind", "/practice", "/exercises", "/results"]) rendered.push(await fetch(BASE + path).then((r) => r.text(), () => ""));
+  const shipped = [...read(staticDir, /\.(js|css|json)$/), ...read(pagesDir, /\.(html|rsc)$/), ...rendered].join("\n");
   check(shipped.includes(practiceItems[0].prompt.slice(0, 40)), "the bundle scan sees what the browser gets (a public practice prompt is found)");
   const secrets = [
     ...practiceItems.flatMap((p) => p.steps.map((st) => st.text)),

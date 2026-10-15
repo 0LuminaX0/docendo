@@ -1,0 +1,11 @@
+{
+  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers), the same in both conditions; not after the delayed test. Scales run 1 to 7. 'lights' is the manipulation check: in the direct condition the practice's right/wrong light is about the learner's own answers, in the recursive one about Kai's.",
+  "items": [
+    { "id": "effort", "kind": "scale", "prompt": "How much effort did you put into teaching Kai?", "low": "Very little", "high": "A great deal" },
+    { "id": "responsible", "kind": "scale", "prompt": "How responsible did you feel for how well Kai learned?", "low": "Not at all", "high": "Very much" },
+    { "id": "understand", "kind": "scale", "prompt": "How well do you think you now understand how greedy, ε-greedy and UCB choose?", "low": "Not at all", "high": "Very well" },
+    { "id": "practice", "kind": "scale", "prompt": "How much did the practice problems help you learn?", "low": "Not at all", "high": "A lot" },
+    { "id": "enjoy", "kind": "scale", "prompt": "How much did you enjoy the session?", "low": "Not at all", "high": "Very much" },
+    { "id": "lights", "kind": "choice", "prompt": "In the practice problems, the right/wrong light told me mostly about…", "options": ["my own understanding", "Kai's understanding", "I'm not sure"] }
+  ]
+}

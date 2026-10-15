@@ -455,3 +455,21 @@ describe("voice input", () => {
     expect(12 > plausibleWords(3)).toBe(false); // fast real speech
   });
 });
+
+import { compare } from "../lib/analytics";
+
+describe("the dashboard's comparison of the conditions", () => {
+  it("gives the mean difference with a Welch interval and Cohen's d", () => {
+    const r = compare([6, 7, 8, 7, 9, 6, 8], [5, 6, 5, 7, 4, 6, 5])!;
+    expect(r.diff).toBeCloseTo(7.29 - 5.43, 1);
+    expect(r.lo).toBeLessThan(r.diff);
+    expect(r.hi).toBeGreaterThan(r.diff);
+    // reference (Welch): se ≈ 0.559, df ≈ 11.8, t(0.975, 11.8) ≈ 2.18 → interval ≈ 1.86 ± 1.22
+    expect(r.lo).toBeCloseTo(0.64, 1);
+    expect(r.hi).toBeCloseTo(3.08, 1);
+    expect(r.d).toBeGreaterThan(1.5);
+  });
+  it("needs at least two in each group", () => {
+    expect(compare([5], [4, 6])).toBeNull();
+  });
+});

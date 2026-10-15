@@ -1,15 +1,17 @@
 import { bundle } from "@/lib/server/content";
+import { getSettings } from "@/lib/server/settings";
 import Watch, { type Segment } from "@/components/Watch";
 
-// "Channel: Video title" in topic.yaml
-const channelOf = (title: string) => /^([^:]{2,30}):\s+/.exec(title)?.[1] ?? "";
-
-/** The lesson's parts; without a `lesson` in topic.yaml, each whole video is one part. */
-const segments: Segment[] = (bundle.segments.length ? bundle.segments : bundle.videos.map((v) => ({ video: v.id, videoId: v.videoId, start: 0, end: v.durationSec ?? 600, title: v.title.replace(/^[^:]{2,30}:\s+/, "") }))).map((s) => ({
-  ...s,
-  channel: channelOf(bundle.videos.find((v) => v.id === s.video)?.title ?? ""),
-}));
-
-export default function Page() {
+/** The lesson's parts, from the study settings (admin panel; by default topic.yaml's lesson). */
+export default async function Page() {
+  const { settings } = await getSettings();
+  const segments: Segment[] = settings.lesson.map((p) => ({
+    video: bundle.videos.find((v) => v.videoId === p.videoId)?.id ?? p.videoId,
+    videoId: p.videoId,
+    start: p.start,
+    end: p.end,
+    title: p.title,
+    channel: p.channel,
+  }));
   return <Watch segments={segments} />;
 }

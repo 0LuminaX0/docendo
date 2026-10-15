@@ -11,6 +11,8 @@ import { llmJudge, mockJudge } from "@/engine/tutor/judge";
 import { factScore, latest } from "@/engine/tutor/state";
 import type { LlmCall } from "@/engine/llm";
 import { record } from "@/lib/server/events";
+import { getSettings } from "@/lib/server/settings";
+import { helpInLesson } from "@/lib/server/moments";
 import { llmWrite, mockWrite } from "@/engine/tutor/writer";
 
 export const runtime = "nodejs";
@@ -70,12 +72,13 @@ export async function POST(req: NextRequest) {
   if (body.data.state.done) return fail(409, "Kai is already done. Continue to the exercises.");
 
   const ip = clientIp(req);
+  const { settings } = await getSettings();
   const r = await limitAll([
     // bursts: per server instance is enough; the shared checks below are what protect the model budget
     [`chat:sidmin:${session.sid}`, config.sessionTurnsPerMin, 60, "local"], // one learner's burst
     [`chat:ip:${ip}`, config.ipTurnsPerMin, 60, "local"], // one network (generous: a lab room shares an IP)
     [`chat:sid:${session.sid}`, config.sessionTurnLimit, config.sessionHours * 3600], // one learner, whole session (shared)
-    ...(config.demo ? [] : ([["chat:global", config.dailyTurnLimit, 86_400]] as [string, number, number][])), // the whole site
+    ...(config.demo ? [] : ([["chat:global", settings.dailyTurnLimit, 86_400]] as [string, number, number][])), // the whole site
   ]);
   if (!r.ok) {
     record({ t: "chat_limited", sid: session.sid, turn: body.data.state.turn, retryAfter: r.retryAfter });
@@ -88,6 +91,8 @@ export async function POST(req: NextRequest) {
   try {
     const degraded: string[] = [];
     const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls, degraded));
+    // Kai's help card only if its moment lies in the lesson as currently set up (Settings: lesson parts)
+    const help = helpInLesson(result.help, settings.lesson);
     const tr = result.trace;
     const old = latest(before);
     const score = factScore(bundle, result.state);
@@ -125,7 +130,7 @@ export async function POST(req: NextRequest) {
       nodes: Object.fromEntries(result.mind.nodes.map((n) => [n.id, n.status])),
       done: result.done,
       readyReason: tr.readyReason,
-      helpAvailable: result.helpAvailable,
+      helpAvailable: result.helpAvailable && !!help,
       llm: calls,
       degraded, // parts that fell back offline because the model account was out of credits
       latencyMs: Date.now() - t0,
@@ -133,7 +138,7 @@ export async function POST(req: NextRequest) {
     if (result.done)
       record({ t: "notebook_snapshot", sid: session.sid, source: "server", reason: "kai_ready", readyReason: tr.readyReason, turn: result.state.turn, notebook: result.state.notebook, misconceptions: result.state.misconceptions });
     const { trace: _trace, ...visible } = result;
-    return ok({ ...visible, demo: config.demo });
+    return ok({ ...visible, help, helpAvailable: visible.helpAvailable && !!help, demo: config.demo });
   } catch (e) {
     const error = e instanceof Error ? e.message.slice(0, 300) : String(e);
     record({ t: "chat_error", sid: session.sid, turn: before.turn, message, error, llm: calls, latencyMs: Date.now() - t0 });

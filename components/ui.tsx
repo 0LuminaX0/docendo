@@ -44,6 +44,8 @@ export const MOOD_LABEL: Record<Mood, string> = {
   okay: "Kai partly gets it",
   confused: "Kai is confused",
   thinking: "Kai is thinking",
+  aha: "Kai just got it",
+  proud: "Kai feels ready",
 };
 
 /**
@@ -51,11 +53,21 @@ export const MOOD_LABEL: Record<Mood, string> = {
  * partly explained or already-known fact; confused: no lesson fact, a wrong one or "not sure";
  * neutral: listening; thinking: waiting for a reply.
  */
-export function KaiFace({ mood = "neutral", size = 32 }: { mood?: Mood | string; size?: number }) {
+/**
+ * Kai's face, one flat style. `live`: the latest face in the chat blinks now and then (and the thinking face glances
+ * around); `pop`: a reply arrives with a small bounce. No motion for people who prefer reduced motion (CSS).
+ */
+export function KaiFace({ mood = "neutral", size = 32, live = false, pop = false }: { mood?: Mood | string; size?: number; live?: boolean; pop?: boolean }) {
   const m = (mood in MOOD_LABEL ? mood : "neutral") as Mood;
   const stroke = { stroke: INK, strokeWidth: 2.2, fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const dots = (y = 17, r = 2.4) => (
+    <g className="eyes">
+      <circle cx="14" cy={y} r={r} fill={INK} />
+      <circle cx="26" cy={y} r={r} fill={INK} />
+    </g>
+  );
   return (
-    <svg className={`face face-${m}`} width={size} height={size} viewBox="0 0 40 40" role="img" aria-label={MOOD_LABEL[m]}>
+    <svg className={`face face-${m}${live ? " live" : ""}${pop ? " pop" : ""}`} width={size} height={size} viewBox="0 0 40 40" role="img" aria-label={MOOD_LABEL[m]}>
       <title>{MOOD_LABEL[m]}</title>
       <circle cx="20" cy="20" r="20" fill="#F7B32B" />
       {m === "great" && (
@@ -67,17 +79,18 @@ export function KaiFace({ mood = "neutral", size = 32 }: { mood?: Mood | string;
       )}
       {m === "okay" && (
         <>
-          <circle cx="14" cy="17" r="2.4" fill={INK} />
-          <circle cx="26" cy="17" r="2.4" fill={INK} />
+          {dots()}
           <path d="M23 11.5 L29 12.5" {...stroke} strokeWidth={1.8} />
           <path d="M15 26 Q20.5 28.5 25.5 25" {...stroke} />
         </>
       )}
       {m === "confused" && (
         <>
-          <circle cx="14" cy="18" r="2.4" fill={INK} />
-          <circle cx="26" cy="17" r="3" fill="none" stroke={INK} strokeWidth="2" />
-          <circle cx="26" cy="17" r="1.1" fill={INK} />
+          <g className="eyes">
+            <circle cx="14" cy="18" r="2.4" fill={INK} />
+            <circle cx="26" cy="17" r="3" fill="none" stroke={INK} strokeWidth="2" />
+            <circle cx="26" cy="17" r="1.1" fill={INK} />
+          </g>
           <path d="M10.5 12.5 L17 13.5" {...stroke} strokeWidth={1.8} />
           <path d="M22.5 11.5 Q26 8.5 29.5 11" {...stroke} strokeWidth={1.8} />
           <path d="M13 28 Q15.5 25.5 18 28 T23 28 T27.5 27" {...stroke} strokeWidth={2} />
@@ -85,16 +98,42 @@ export function KaiFace({ mood = "neutral", size = 32 }: { mood?: Mood | string;
       )}
       {m === "thinking" && (
         <>
-          <circle cx="16" cy="15.5" r="2.4" fill={INK} />
-          <circle cx="28" cy="15.5" r="2.4" fill={INK} />
+          <g className="eyes glance">
+            <circle cx="16" cy="15.5" r="2.4" fill={INK} />
+            <circle cx="28" cy="15.5" r="2.4" fill={INK} />
+          </g>
           <circle cx="21" cy="27" r="2.2" fill="none" stroke={INK} strokeWidth="2" />
         </>
       )}
       {m === "neutral" && (
         <>
-          <circle cx="14" cy="17" r="2.4" fill={INK} />
-          <circle cx="26" cy="17" r="2.4" fill={INK} />
+          {dots()}
           <path d="M14 25.5 Q20 29.5 26 25.5" {...stroke} />
+        </>
+      )}
+      {m === "aha" && (
+        <>
+          {/* wide eyes, raised brows, an open smile: an idea just landed */}
+          <g className="eyes">
+            <circle cx="14" cy="17" r="3.1" fill={INK} />
+            <circle cx="26" cy="17" r="3.1" fill={INK} />
+            <circle cx="15" cy="16" r="0.9" fill="#fff" />
+            <circle cx="27" cy="16" r="0.9" fill="#fff" />
+          </g>
+          <path d="M10 10.5 Q14 8 17.5 10" {...stroke} strokeWidth={1.8} />
+          <path d="M22.5 10 Q26 8 30 10.5" {...stroke} strokeWidth={1.8} />
+          <path d="M14 24 Q20 24 26 24 Q24.5 31 20 31 Q15.5 31 14 24 Z" fill={INK} />
+          <path d="M16.5 28.3 Q20 30.5 23.5 28.3" fill="none" stroke="#E86A5E" strokeWidth={1.6} strokeLinecap="round" />
+        </>
+      )}
+      {m === "proud" && (
+        <>
+          {/* happy closed eyes, rosy cheeks, a big smile: Kai feels ready */}
+          <path d="M10.5 17 Q14 13 17.5 17" {...stroke} />
+          <path d="M22.5 17 Q26 13 29.5 17" {...stroke} />
+          <circle cx="10.5" cy="23" r="2.6" fill="#F28B5B" opacity="0.55" />
+          <circle cx="29.5" cy="23" r="2.6" fill="#F28B5B" opacity="0.55" />
+          <path d="M13 23.5 Q20 33 27 23.5" {...stroke} strokeWidth={2.4} />
         </>
       )}
     </svg>

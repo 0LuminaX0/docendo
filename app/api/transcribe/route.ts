@@ -6,6 +6,7 @@ import { clientIp, fail, ok, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
 import { record } from "@/lib/server/events";
+import { getSettings } from "@/lib/server/settings";
 import { plausibleWords } from "@/lib/voice";
 
 export const runtime = "nodejs";
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
   const preview = kind.data === "preview";
   if (Number(req.headers.get("content-length") ?? "0") > MAX_BYTES) return fail(413, `Recordings can be up to ${MAX_SEC / 60} minutes.`);
   if (config.demo) return fail(503, "Voice input needs the live model. Type instead.");
+  const { settings } = await getSettings();
+  if (!settings.voice) return fail(403, "Voice input is switched off. Type instead.");
 
   // live pieces come every couple of seconds while someone speaks: counted on this instance only (each shared check
   // costs Redis commands); the final pass counts against the session's and the site's budget like a chat turn
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
           [`voice:sidmin:${session.sid}`, 8, 60, "local"],
           [`voice:ip:${clientIp(req)}`, 1500, 60, "local"],
           [`voice:sid:${session.sid}`, 60, 6 * 3600], // costs model budget: shared across instances
-          ["chat:global", config.dailyTurnLimit, 86_400], // the site's daily model budget
+          ["chat:global", settings.dailyTurnLimit, 86_400], // the site's daily model budget
         ],
   );
   if (!r.ok) {
