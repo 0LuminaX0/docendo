@@ -76,7 +76,12 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   }, [turns.length, busy, view]);
   // Kai's mind opens at its top, not at the chat's scroll position
   useLayoutEffect(() => {
-    if (view === "mind") window.scrollTo({ top: 0, behavior: "instant" }); // instant: also stops a smooth scroll still running in the chat
+    if (view !== "mind") return;
+    // instant, and once more a moment later: a smooth scroll to Kai's latest reply may still be running in the chat
+    const top = () => window.scrollTo({ top: 0, behavior: "instant" });
+    top();
+    const t = window.setTimeout(top, 180);
+    return () => window.clearTimeout(t);
   }, [view]);
 
   // the input grows with its text, up to the CSS max height

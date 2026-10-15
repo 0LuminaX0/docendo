@@ -91,6 +91,7 @@ function useChanges(mind: Mind | null) {
 
 export default function MindView({ graph, mind, popout }: { graph: GraphView; mind: Mind | null; popout?: boolean }) {
   const [sel, setSel] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null); // the idea under the pointer: its links light up softly
   const changes = useChanges(mind);
   const changed = new Set(changes?.map((c) => c.id));
   const logged = useRef(false);
@@ -115,6 +116,7 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
   const H = graph.box.h;
 
   if (!mind) return <div className="center">Kai hasn&apos;t learned anything yet.</div>;
+  const rank = (e: { from: string; to: string }) => (e.from === selected || e.to === selected ? 2 : e.from === hover || e.to === hover ? 1 : 0);
   const pct = Math.round(mind.understanding * 100);
   const node = graph.nodes.find((n) => n.id === selected);
   const ns = selected ? byId.get(selected) : undefined;
@@ -189,27 +191,34 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
         {/* scales down to the column (the whole topic is wide), but never below 760 px: narrower screens scroll */}
         <svg viewBox={`0 0 ${graph.width} ${graph.height}`} width={graph.width} height={graph.height} style={{ width: "100%", height: "auto", maxWidth: graph.width, minWidth: Math.min(graph.width, 760) }} role="img" aria-label="Kai's knowledge graph">
           <defs>
-            <marker id="mh" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="7" markerHeight="7" markerUnits="userSpaceOnUse" orient="auto">
-              <path d="M0 0 L8 4 L0 8 z" fill="#C3C9D2" />
-            </marker>
-            <marker id="mhf" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto">
-              <path d="M0 0 L8 4 L0 8 z" fill="#2D7DD2" />
-            </marker>
-            <marker id="mho" viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="6" markerHeight="6" markerUnits="userSpaceOnUse" orient="auto">
-              <path d="M0 0 L8 4 L0 8 z" fill="#DADFE6" />
-            </marker>
+            {/* soft, rounded triangles (a filled triangle with a round-joined outline of the same colour), the tip at the
+                end of the line and turned along it (orient auto); one per line colour */}
+            {(
+              [
+                ["mh", "#AEB6C1", 11],
+                ["mho", "#D3D8DF", 10],
+                ["mhw", "#7FAEE3", 12],
+                ["mhwo", "#B3CFEE", 11],
+                ["mhf", "#2D7DD2", 12],
+              ] as const
+            ).map(([id, fill, size]) => (
+              <marker key={id} id={id} viewBox="0 0 12 12" refX="10.6" refY="6" markerWidth={size} markerHeight={size} markerUnits="userSpaceOnUse" orient="auto">
+                <path d="M2.2 2.4 L9.6 6 L2.2 9.6 Z" fill={fill} stroke={fill} strokeWidth={2.2} strokeLinejoin="round" />
+              </marker>
+            ))}
           </defs>
           {[...graph.edges]
             // highlighted edges last, so they are drawn on top
-            .sort((a, b) => Number(a.from === selected || a.to === selected) - Number(b.from === selected || b.to === selected))
+            .sort((a, b) => rank(a) - rank(b))
             .map((e) => {
               const hot = e.to === selected || e.from === selected;
+              const warm = !hot && hover !== null && (e.to === hover || e.from === hover);
               const to = graph.nodes.find((n) => n.id === e.to);
               const branch = to?.kind === "branch";
               // edges that reach beyond the lesson are drawn faintly
               const outside = to?.inLesson === false || graph.nodes.find((n) => n.id === e.from)?.inLesson === false;
               return (
-                <path key={`${e.from}-${e.to}`} className={`m-edge${hot ? " hot" : ""}${branch ? " br" : ""}${outside ? " out" : ""}`} markerEnd={`url(#${hot ? "mhf" : outside ? "mho" : "mh"})`} d={e.d} />
+                <path key={`${e.from}-${e.to}`} className={`m-edge${hot ? " hot" : warm ? " warm" : ""}${branch ? " br" : ""}${outside ? " out" : ""}`} markerEnd={`url(#${hot ? "mhf" : warm ? (outside ? "mhwo" : "mhw") : outside ? "mho" : "mh"})`} d={e.d} />
               );
             })}
           {graph.nodes.map((n) => {
@@ -225,6 +234,8 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
                 role="button"
                 aria-label={`${n.label}: ${STATUS_NAME[status]}`}
                 onClick={() => (setSel(n.id), track("mind_select", { node: n.id, status }))}
+                onMouseEnter={() => setHover(n.id)}
+                onMouseLeave={() => setHover(null)}
                 onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setSel(n.id), track("mind_select", { node: n.id, status }))}
               >
                 {/* one cue per meaning: the fill says how far Kai got, the dots its facts, "now" the idea Kai is on, "new" what changed */}

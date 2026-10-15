@@ -15,7 +15,8 @@ import type { Node } from "./schema";
 
 export const BOX_W = 144;
 export const BOX_H = 46;
-export const COL_W = 168;
+export const COL_W = 196; // box plus a 52 px gap: room for an edge to curve gently between columns
+const LEAD = 12; // px of straight line into a box, so the arrowhead sits on a stretch that points where it does
 export const ROW_H = 64;
 export const PAD = 20;
 
@@ -208,7 +209,11 @@ export function layout(nodes: Pick<Node, "id" | "needs">[]) {
   };
 }
 
-/** SVG path through route points: straight lanes, smooth S-curves between columns. */
+/**
+ * SVG path through route points: straight lanes, smooth S-curves between columns. The last curve ends a little
+ * before the target box and runs in straight, so the arrowhead (drawn along the path's end) lines up with the line
+ * as it is seen arriving, instead of with a curve's last pixel.
+ */
 export function routePath(pts: Point[]): string {
   let d = `M${pts[0]!.x} ${pts[0]!.y}`;
   for (let i = 1; i < pts.length; i++) {
@@ -216,8 +221,11 @@ export function routePath(pts: Point[]): string {
     const b = pts[i]!;
     if (a.y === b.y) d += ` L${b.x} ${b.y}`;
     else {
-      const dx = Math.max(12, (b.x - a.x) / 2);
-      d += ` C${a.x + dx} ${a.y} ${b.x - dx} ${b.y} ${b.x} ${b.y}`;
+      const last = i === pts.length - 1;
+      const end = last ? b.x - LEAD : b.x;
+      const dx = Math.max(12, (end - a.x) / 2);
+      d += ` C${a.x + dx} ${a.y} ${end - dx} ${b.y} ${end} ${b.y}`;
+      if (last) d += ` L${b.x} ${b.y}`;
     }
   }
   return d;
