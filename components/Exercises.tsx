@@ -7,6 +7,7 @@ import Scratchpad from "./Scratchpad";
 import { useStudySettings } from "./SettingsContext";
 import { Header } from "./ui";
 import { useGuard } from "./useGuard";
+import { Count } from "@/lib/words";
 import { post, save, useSaved, type GradeResult } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
 import { seedOf, testOrder } from "@/lib/order";
@@ -50,6 +51,9 @@ export default function Exercises() {
   }, [allowed, saved, order, items, update]);
   if (!allowed || !saved || !items || !order) return <div className="center">{error ?? "Loading…"}</div>;
   const delayed = saved.phase === "delayed";
+  // the test's shape, from its items: two parts when it has both kinds
+  const kinds = new Set(items.map((q) => q.kind));
+  const shape = kinds.size > 1 ? "two parts: first pick an option, then work out a number" : null;
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
   const isAnswered = (a: number | string | null) => a !== null && !(typeof a === "string" && !a.trim());
@@ -95,8 +99,8 @@ export default function Exercises() {
           <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
           <p className="lede" style={{ fontSize: 15.5 }}>
             {delayed
-              ? `Welcome back. Ten new questions on the same ideas as last time, in the same two parts: first pick an option, then work out a number.${calculator ? " To calculate, end a calculation with =." : ""} You'll see the explanations afterwards.`
-              : `Ten questions in two parts: first pick an option, then work out a number. Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}. You'll see the explanations afterwards.`}
+              ? `Welcome back. ${Count(items.length, "new question")} on the same ideas as last time${shape ? `, in the same ${shape}` : ""}.${calculator ? " To calculate, end a calculation with =." : ""} You'll see the explanations afterwards.`
+              : `${Count(items.length, "question")}${shape ? ` in ${shape}` : ""}. Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}. You'll see the explanations afterwards.`}
           </p>
         </div>
         {delayed && (

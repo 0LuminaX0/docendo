@@ -28,7 +28,6 @@ export const mean = (xs: number[]) => (xs.length ? Math.round((sum(xs) / xs.leng
 
 /** Whose sessions a view counts: participants (their own code, not demo), the team's and test sessions, or all. */
 export type Scope = "participants" | "team" | "all";
-export const SCOPES: Scope[] = ["participants", "team", "all"];
 export const scopeOf = (v: string | undefined): Scope => (v === "team" || v === "all" ? v : "participants");
 export const inScope = (s: Record<string, unknown>, scope: Scope) => {
   const participant = s.entry === "participant" && !s.demo;
@@ -66,11 +65,13 @@ export function tables(events: Ev[]) {
       sid,
       pid: start?.pid ?? null,
       condition: start?.condition ?? "direct", // sessions before conditions existed were all direct
-      entry: start?.entry ?? null, // participant (own code), team (shared code) or open
+      entry: start?.entry ?? null, // participant (own code), trial, team (shared or team code) or open
+      codeLabel: (start?.code as { label?: string } | null | undefined)?.label || null, // the label of a code made in the admin panel
       phase: start?.phase ?? "main", // main: the whole session; delayed: the follow-up test on its own, days later
       form: start?.form ?? "A", // the test form this session took (the delayed test takes the other)
       topic: start?.topic ?? "bandits", // the topic pack (sessions before topics were selectable: bandits)
       settingsVersion: start?.settings ?? null, // the study settings it started under (admin panel, Settings)
+      flow: ((start?.config as { flow?: string[] } | undefined)?.flow ?? []).join(" ") || null, // the steps it ran (lib/flow.ts)
       lastAt: evs[evs.length - 1]?.at ?? null, // the last thing logged (for the Live page)
       lastPath: [...of("client_page_view")].pop()?.path ?? null,
       consent: start?.consent ?? null,
@@ -170,6 +171,9 @@ export function tables(events: Ev[]) {
       pretestScore: first("pretest")?.score ?? null, // knowledge items right, of pretestOf
       pretestOf: first("pretest")?.of ?? null,
       pretestDontKnow: first("pretest")?.dontKnow ?? null,
+      // every pretest answer, by item id (any topic pack); the two after it are the bandits pack's background items,
+      // kept as named columns for the analysis scripts
+      pretestAnswers: first("pretest")?.answers ?? null,
       rlCourse: (first("pretest")?.answers as Record<string, number> | undefined)?.b1 === 0 ? true : first("pretest") ? false : null,
       heardOfBandits: (first("pretest")?.answers as Record<string, number> | undefined)?.b2 ?? null, // 0 no, 1 the name, 2 roughly how they work
       excluded: first("pretest")?.excluded ?? null, // took an RL course: keep the data, leave out of the main analysis
@@ -211,6 +215,9 @@ export function tables(events: Ev[]) {
         closure: mv?.closure,
         cue: mv?.cue,
         leaked: ((c.leaked as string[]) ?? []).join(" "),
+        // Kai's notes (notes.ts): how many verdicts got Kai's words around the learner's, and how many it refused
+        notesWithAdded: [...((c.judged as { note?: string | null }[]) ?? []), ...((c.misconceptions as { note?: string | null }[]) ?? [])].filter((v) => v.note).length,
+        notesRefused: ((c.notesDropped as unknown[]) ?? []).length,
         fallback: c.fallback,
         progress: c.progress,
         factsCorrect: (c.score as { correct: number })?.correct,
@@ -260,7 +267,7 @@ export function tables(events: Ev[]) {
       test.push({ sid, phase: grade?.phase ?? "main", form: grade?.form ?? "A", version: grade?.version ?? null, id: it.id, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, work: it.work ?? null });
 
     for (const e of of("client_feedback"))
-      feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null });
+      feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null, testOf: grade?.of ?? null });
 
     for (const e of evs.filter((x) => x.t.startsWith("client_video_")))
       video.push({ sid, at: new Date(ms(e)!).toISOString(), event: e.t.replace("client_video_", ""), seg: e.seg ?? null, pos: e.pos ?? null, from: e.from ?? null, to: e.to ?? null, rate: e.rate ?? null, code: e.code ?? null });
@@ -367,7 +374,6 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
     cost: Math.round(sessions.reduce((a, s) => a + Number(s.costUsd ?? 0), 0) * 100) / 100,
   };
 }
-export type Summary = ReturnType<typeof summarize>;
 
 // ---------- the dashboard's charts ----------
 
@@ -415,9 +421,11 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
   const reached = (s: Record<string, unknown>) => STEPS.indexOf(String(s.reachedStep ?? "start") as (typeof STEPS)[number]);
   const funnel = STEPS.map((step, i) => ({ step, direct: by("direct").filter((s) => reached(s) >= i).length, recursive: by("recursive").filter((s) => reached(s) >= i).length }));
 
+  // the test's length, from the graded tests in view (a pack's forms decide it; 10 when nothing is graded yet)
+  const testMax = Math.max(0, ...sessions.map((s) => num(s.testOf) ?? 0)) || 10;
   const hist = (c: string) => {
-    const h = Array.from({ length: 11 }, () => 0);
-    for (const x of scores(c)) h[Math.max(0, Math.min(10, Math.round(x)))]!++;
+    const h = Array.from({ length: testMax + 1 }, () => 0);
+    for (const x of scores(c)) h[Math.max(0, Math.min(testMax, Math.round(x)))]!++;
     return h;
   };
 
@@ -440,7 +448,7 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     { key: "teach", label: "Taught Kai fewer than 3 messages", sids: sessions.filter((s) => reached(s) >= 4 && Number(s.turns ?? 0) < 3).map((s) => String(s.sid)) },
     { key: "test", label: "Final test in under 2 minutes", sids: sessions.filter((s) => num(s.minTest) !== null && num(s.minTest)! < 2 && num(s.testScore) !== null).map((s) => String(s.sid)) },
     { key: "away", label: "Away from the tab over 5 minutes", sids: sessions.filter((s) => Number(s.tabAwaySec ?? 0) > 300).map((s) => String(s.sid)) },
-    { key: "rl", label: "Took a reinforcement-learning course (excluded)", sids: sessions.filter((s) => s.excluded === true).map((s) => String(s.sid)) },
+    { key: "rl", label: "Excluded by a background answer (left out of the analysis)", sids: sessions.filter((s) => s.excluded === true).map((s) => String(s.sid)) },
   ];
 
   const finished = sessions.filter((s) => num(s.testScore) !== null && s.excluded !== true);
@@ -449,6 +457,7 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     daily,
     funnel,
     hist: { direct: hist("direct"), recursive: hist("recursive") },
+    testMax,
     minutes,
     points,
     balance,

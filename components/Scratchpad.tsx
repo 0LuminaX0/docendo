@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Calculator as CalcIcon } from "lucide-react";
 import { format, sumAtEnd } from "@/lib/calc";
 import { track } from "@/lib/client/log";
@@ -68,6 +68,15 @@ export default function Scratchpad({
       requestAnimationFrame(() => (ref.current?.setSelectionRange(caret, caret), setCaret(caret)));
     },
   });
+  // the field grows with what is written (from its rows up to about twelve lines), so a long correction or working
+  // isn't read through a slot; past that it scrolls
+  const shown = dict.shown;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight + 2, 340)}px`;
+  }, [shown]);
   const [caret, setCaret] = useState(0);
   const [keys, setKeys] = useState(false);
   useEffect(() => {

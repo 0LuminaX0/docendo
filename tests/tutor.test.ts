@@ -152,7 +152,7 @@ describe("tutor engine", () => {
       termsUsed: [],
     });
     const r = await takeTurn(bundle, { message: msg, history: [], state: initialState(bundle) }, { ...mock, judge });
-    expect(r.state.misconceptions).toEqual([{ node: "n07", words: "you pick one of the other restaurants, never the favourite one", turn: 1 }]);
+    expect(r.state.misconceptions).toEqual([{ node: "n07", words: "you pick one of the other restaurants, never the favourite one", note: null, turn: 1 }]);
     expect(r.trace.misconceptions).toHaveLength(1);
     expect(notebookLines(bundle, r.state)).toContain("never the favourite one");
     // an older saved state without the field still parses

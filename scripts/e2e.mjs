@@ -380,7 +380,7 @@ check(!(await part.$(".skip")), "participants don't see “I've taught all I can
 await part.close();
 
 // ---------- 3. phone width ----------
-const phone = await newPage(390, 844);
+const phone = await newPage(390, 844, await browser.createBrowserContext()); // its own storage: the main page would count as a second tab
 await phone.goto(BASE + "/", { waitUntil: "load" });
 const finalSession = await saved(page); // after the test: every page is unlocked
 await phone.evaluate((v) => localStorage.setItem("docendo:session:v1", v), JSON.stringify(finalSession));
@@ -448,7 +448,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const gated = adm.url().endsWith("/admin/login");
   await adm.type("#pw", ADMIN_PW);
   await adm.$eval("form button", (e) => e.click());
-  await adm.waitForSelector(".adm-kpis", { timeout: 15000 });
+  await adm.waitForSelector(".adm-main", { timeout: 15000 }); // the participants' view may be empty (no tiles then)
   await adm.goto(BASE + "/admin?all=1", { waitUntil: "load" });
   const sessions = Number(await adm.$eval(".adm-kpis > div b", (e) => e.textContent));
   await shot(adm, "11-admin-dashboard", true);
@@ -502,9 +502,32 @@ await shot(phoneHome, "10-phone-welcome", true);
   for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
   const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, watch: { on: true, parts: [{ ...base.json.settings.watch.parts[0], videoId: "nope" }] } } });
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
-  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, practice: { ...base.json.settings.practice, on: false } } });
+  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false } } });
   let skipped = false;
   for (let k = 0; k < 16 && !skipped; k++) (skipped = await adm.evaluate(async () => { const h = await (await fetch("/")).text(); return !/<h3>Practice<\/h3>/.test(h) && /<h3>Teach Kai<\/h3>/.test(h); })), skipped || (await wait(1000));
+  // a session in the browser under that setup: it opens on Teach Kai, shows two step bars, keeps the practice page
+  // closed and goes from teaching straight to the test (each page keeps the settings for up to 10 s: wait them out)
+  await wait(10_500);
+  const short = await newPage(1366, 900, await browser.createBrowserContext());
+  await short.goto(BASE + "/", { waitUntil: "load" });
+  await short.waitForSelector("button[type=submit]");
+  if (await short.$("#code")) await short.type("#code", TEAM_CODE);
+  await short.click(".consent input");
+  await short.click("button[type=submit]");
+  await short.waitForFunction(() => location.pathname === "/teach", { timeout: 15000 });
+  const bars = await short.$$eval(".arms i", (els) => els.length);
+  await short.goto(BASE + "/practice", { waitUntil: "load" });
+  await short.waitForFunction(() => location.pathname === "/teach", { timeout: 15000 }); // not reached, and switched off
+  await short.waitForSelector(".skip");
+  await short.click(".skip");
+  await short.waitForSelector(".composer-foot .row .btn.small");
+  await short.click(".composer-foot .row .btn.small");
+  await short.waitForSelector(".ready .btn.primary");
+  const toTest = await short.$eval(".ready .btn.primary", (b) => b.textContent);
+  await short.click(".ready .btn.primary");
+  await short.waitForFunction(() => location.pathname === "/exercises", { timeout: 15000 });
+  await short.close();
+  check(bars === 2 && /test/i.test(toTest), `with the pretest, video and practice off a session opens on Teach Kai (${bars} step bars), keeps practice closed and goes on to the test ("${toTest?.trim()}")`);
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
   const blocks = await adm.$$eval(".study-block", (els) => els.length);

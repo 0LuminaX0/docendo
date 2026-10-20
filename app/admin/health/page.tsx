@@ -59,14 +59,17 @@ export default async function Page() {
   const maxCost = Math.max(0.001, ...perDay.map((p) => p.cost));
 
   // what went wrong
-  const count = (f: (e: (typeof recent)[number]) => boolean) => recent.filter(f).length;
+  // demo sessions (no model key) answer offline by design: what went wrong counts real sessions only
+  const demoSids = new Set(recent.filter((e) => e.t === "session_start" && e.demo).map((e) => e.sid));
+  const real = recent.filter((e) => !demoSids.has(e.sid));
+  const count = (f: (e: (typeof recent)[number]) => boolean) => real.filter(f).length;
   const problems = [
     ["Chat turns that failed (the learner had to resend)", count((e) => e.t === "chat_error")],
     ["Chat turns answered offline (model out of credits)", count((e) => e.t === "chat_turn" && ((e.degraded as unknown[]) ?? []).length > 0)],
     ["Kai's practice attempts made offline", count((e) => (e.t === "practice_kai_solve" || e.t === "practice_kai_reteach") && e.by === "offline")],
     ["Kai's replies with a lesson word the learner hadn't used (rewritten)", count((e) => e.t === "chat_turn" && ((e.leaked as unknown[]) ?? []).length > 0)],
     ["Kai's replies replaced by a fallback line", count((e) => e.t === "chat_turn" && !!e.fallback)],
-    ["Judge verdicts dropped (quote not in the message)", recent.filter((e) => e.t === "chat_turn").reduce((a, e) => a + ((e.dropped as unknown[]) ?? []).length, 0)],
+    ["Judge verdicts dropped (quote not in the message)", real.filter((e) => e.t === "chat_turn").reduce((a, e) => a + ((e.dropped as unknown[]) ?? []).length, 0)],
     ["Voice transcripts dropped as made up", count((e) => e.t === "voice_rejected")],
     ["Voice errors", count((e) => e.t === "voice_error")],
     ["Rate limits hit (chat, practice, voice)", count((e) => e.t === "chat_limited" || e.t === "practice_limited" || e.t === "voice_limited")],
@@ -128,7 +131,7 @@ export default async function Page() {
               <tbody>
                 {byRole.map((r) => (
                   <tr key={r.role}>
-                    <td>
+                    <td className="wrap">
                       {ROLE_NAME[r.role] ?? r.role}
                       <span className="note cnt-model">{r.models}</span>
                     </td>
@@ -150,6 +153,7 @@ export default async function Page() {
           </section>
           <section className="adm-card">
             <h2>What went wrong</h2>
+          <p className="note">Sessions with the model connected; demo sessions answer offline by design.</p>
             <ul className="adm-flags">
               {problems.map(([label, n]) => (
                 <li key={label} className={n ? "on" : ""}>
@@ -163,22 +167,35 @@ export default async function Page() {
         <div className="adm-stack">
           <section className="adm-card">
             <h2>Per day</h2>
-            <p className="note">Model cost per day; sessions started beside it.</p>
-            <ol className="ch-funnel">
-              {perDay.map((p) => (
-                <li key={p.d}>
-                  <span>
-                    {p.d.slice(8)}.{p.d.slice(5, 7)}
-                  </span>
-                  <span className="ch-pair">
-                    <i className="ch-d" style={{ width: `${(p.cost / maxCost) * 100}%` }} />
-                  </span>
-                  <b>
-                    {p.cost ? usd(p.cost) : "–"} <span className="note">{p.sessions || ""}</span>
-                  </b>
-                </li>
-              ))}
-            </ol>
+            <p className="note">Model cost, calls and sessions started, per UTC day.</p>
+            <table className="adm-table hc-days">
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th></th>
+                  <th>Cost</th>
+                  <th>Calls</th>
+                  <th>Sessions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perDay.map((p) => (
+                  <tr key={p.d} className={p.calls || p.sessions ? "" : "off"}>
+                    <td>
+                      {p.d.slice(8)}.{p.d.slice(5, 7)}
+                    </td>
+                    <td className="hc-bar">
+                      <span className="adm-bar">
+                        <i style={{ width: `${(p.cost / maxCost) * 100}%` }} />
+                      </span>
+                    </td>
+                    <td>{p.cost ? usd(p.cost) : "–"}</td>
+                    <td>{p.calls || "–"}</td>
+                    <td>{p.sessions || "–"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
           <section className="adm-card">
             <h2>Latest errors</h2>

@@ -32,6 +32,7 @@ export default function KaiSolve({
   q,
   entry,
   notebook,
+  quotes,
   busy,
   disabled,
   head,
@@ -44,6 +45,7 @@ export default function KaiSolve({
   q: Item;
   entry: KaiEntry;
   notebook: string[]; // Kai's notes before it has tried (shown while it works)
+  quotes: Record<string, string>; // per note, the learner's own words in it (bold)
   busy: boolean;
   disabled: boolean;
   head: React.ReactNode;
@@ -70,6 +72,11 @@ export default function KaiSolve({
   useEffect(() => {
     if (asking) fixBox.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [asking]);
+  // as the correction grows, keep its Send button above the bottom bar (only scrolls when it would be hidden)
+  const lines = text.split("\n").length + Math.floor(text.length / 60);
+  useEffect(() => {
+    if (asking && lines > 3) fixBox.current?.querySelector(".pact")?.scrollIntoView({ block: "nearest" });
+  }, [asking, lines]);
 
   return (
     <section className="pq kai-solve" aria-labelledby={`${q.id}-q`}>
@@ -97,7 +104,7 @@ export default function KaiSolve({
                 <p>{entry.correction}</p>
               </div>
             )}
-            <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} numbered={n === attempts.length - 1} fresh={n >= seen} onCall={(right) => onCall(n, right)} />
+            <Attempt a={a} n={n} q={q} lit={lit} onLight={setLit} shownNotes={last?.notes ?? notebook} fresh={n >= seen} onCall={(right) => onCall(n, right)} />
           </Fragment>
         ))}
 
@@ -127,7 +134,7 @@ export default function KaiSolve({
       </div>
 
       <div className="ks-note">
-        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} />
+        <KaiNotebook notes={last?.notes ?? notebook} before={attempts.length === 2 ? attempts[0]!.notes : undefined} lit={lit} onLight={setLit} quotes={quotes} />
         {asking && (
           <div className="ks-fix" ref={fixBox}>
             <h3>Correct Kai</h3>
@@ -186,7 +193,7 @@ function Attempt({
   q,
   lit,
   onLight,
-  numbered,
+  shownNotes,
   fresh,
   onCall,
 }: {
@@ -195,11 +202,17 @@ function Attempt({
   q: Item;
   lit: string[];
   onLight: (notes: string[]) => void;
-  numbered: boolean;
+  shownNotes: string[]; // the notebook as it is shown now (after a correction it differs from this try's)
   fresh: boolean;
   onCall: (right: boolean) => void;
 }) {
   const used = (s: { notes: number[] }) => s.notes.map((x) => a.notes[x - 1]).filter((t): t is string => !!t);
+  // a cited note's number in the notebook as shown now (a try before a correction cited the notebook as it was then);
+  // null: the correction struck it out
+  const nowAt = (x: number) => {
+    const i = shownNotes.indexOf(a.notes[x - 1] ?? "");
+    return i < 0 ? null : i + 1;
+  };
   const k = KEYS.indexOf(a.answer.trim().charAt(0).toUpperCase());
   const option = q.options && k >= 0 ? q.options[k] : undefined;
   const starts: number[] = [];
@@ -250,8 +263,17 @@ function Attempt({
             >
               <span>{shown}</span>
               {shown.length === s.text.length && s.notes.length > 0 && (
-                <span className="kcite" aria-label={numbered ? `from notebook line${s.notes.length > 1 ? "s" : ""} ${s.notes.join(", ")}` : "from Kai's notebook"}>
-                  {numbered ? s.notes.map((x) => <i key={x}>{x}</i>) : <i><BookOpen size={10} strokeWidth={2.6} /></i>}
+                <span className="kcite" aria-label={`from notebook line${s.notes.length > 1 ? "s" : ""} ${s.notes.map((x) => nowAt(x) ?? "struck out").join(", ")}`}>
+                  {s.notes.map((x) => {
+                    const at = nowAt(x);
+                    return at === null ? (
+                      <i key={x} className="gone" title="Struck out after your correction">
+                        <BookOpen size={10} strokeWidth={2.6} />
+                      </i>
+                    ) : (
+                      <i key={x}>{at}</i>
+                    );
+                  })}
                 </span>
               )}
             </li>

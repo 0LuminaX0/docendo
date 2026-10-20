@@ -99,6 +99,3 @@ export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyIte
   survey: s.survey.on && pack.survey.length ? pack.survey : null,
   copy: { ...pack.copy, studyLine: s.studyLine },
 });
-
-/** Seconds of video in the lesson as set up (0 when the video step is off). */
-export const lessonSeconds = (s: Pick<Settings, "watch">) => (s.watch.on ? s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0) : 0);

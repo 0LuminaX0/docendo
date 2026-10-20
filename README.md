@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://docendo-jade.vercel.app"><b>Live app</b></a> &nbsp;&nbsp;
+  <a href="#features">Features</a> &nbsp;&nbsp;
   <a href="#a-session-step-by-step">A session</a> &nbsp;&nbsp;
   <a href="#how-kai-works">How Kai works</a> &nbsp;&nbsp;
   <a href="#run-it-yourself">Run it yourself</a>
@@ -25,6 +26,29 @@ Explaining something to someone else is one of the most reliable ways to underst
 Kai is not a chatbot that already knows the answer. It is a classmate who missed the lecture. It writes down what you say, in your words, asks about what it still doesn't get, and believes your mistakes along with everything else. When Kai later works through a problem, all it has is that notebook.
 
 The current lesson is about **multi-armed bandits**: how greedy, ε-greedy and UCB decide what to try next, and why greedy can get stuck. The app was built for a small study in EPFL's CS-411 Digital Education course.
+
+## Features
+
+**Learning with Kai**
+- **A classmate who only knows what you said.** Every point Kai learns is checked against your exact words, and its notebook keeps them: each note one statement in your own words, with at most a few of Kai's words (in a lighter ink) where a short answer needs context.
+- **Questions, not lectures.** Kai asks one beginner's question at a time, says when something clicks, and now and then voices a typical wrong idea for you to catch.
+- **Kai's mind.** A live map of the lesson's ideas showing how far Kai has got with each, without ever giving away an answer.
+- **Practice that shows your gaps.** Kai solves problems from its notebook alone. Where you left a gap, it reasons from a beginner's wrong rule, so its mistakes point at what it wasn't taught.
+- **Help at the right moment.** A card replays the part of the video that covers Kai's question, once you've had a go yourself.
+- **Voice or keyboard.** Speak your explanation and watch it appear as you talk; edit before sending.
+- **A notes calculator.** Type a sum ending in `=` in any working field, and the result is written in, so the arithmetic never gets in the way.
+
+**Built for a study**
+- **Two conditions, fairly assigned.** Practise yourself (direct feedback) or watch Kai practise (recursive feedback), from each participant's own code, in balanced blocks.
+- **Parallel test forms and a follow-up test.** Two matched forms, alternated within each condition, and an optional delayed test days later with the other form.
+- **A short pretest and questions after the test**, including a check that the two kinds of practice felt different the way they should.
+- **Everything is recorded** (with consent, never names or codes) and exports to CSV for the analysis.
+
+**Built to be reused**
+- **Any topic.** A topic is a folder of files (videos, ideas, questions, problems, tests, wording), validated before it ships; nothing about bandits is written into the app.
+- **Steps that can be switched.** The pretest, the video and the practice can each be left out; every page and number follows.
+- **Works offline.** Without a model key the whole app runs on scripted stand-ins, marked as a demo.
+- **Accessible and light.** Readable contrast, keyboard use throughout, phone layouts, and a small browser download.
 
 ## A session, step by step
 
@@ -60,7 +84,7 @@ Six problems in two rounds of three, ten minutes in all. Each round has one prob
 
 ![Kai's second try is right, and each step points to the new note it came from](docs/practice-kai.png)
 
-Here Kai was never taught UCB, so its first try rests on a beginner's guess about it. After one sentence of correction, the second try uses the new note (number 10, highlighted while you point at a step) and gets it right.
+Here Kai was never taught UCB, so its first try rests on a beginner's guess about it. After one sentence of correction, the new note appears in a second ink, and the second try uses it (the note lights up while you point at a step) and gets it right.
 
 ### 4. Final test
 
@@ -139,7 +163,13 @@ pnpm build && pnpm shots    # retake the screenshots in this README
 
 ### A different topic
 
-Everything about the lesson lives in [topics/bandits/](topics/bandits): the videos and their timings, the map of ideas with Kai's questions and misconceptions, the practice problems and the test. `pnpm content validate bandits` checks it (for example, that no question Kai asks uses a term it shouldn't know yet) and `pnpm content bundle bandits` builds what the app reads.
+Nothing about bandits is built into the app: a topic is a pack of files in its own folder, like [topics/bandits/](topics/bandits). A pack holds the videos and their timings, the map of ideas with Kai's questions and misconceptions, the practice problems, the test forms, the questions before and after, and the words participants see (`copy.json`). To add one:
+
+1. Write its files in `topics/<slug>/`.
+2. Run `pnpm content validate <slug>`. It checks the whole pack (for example, that no question Kai asks uses a term it shouldn't know yet, and that the test forms match), and `pnpm content bundle <slug>` builds what the app reads.
+3. Add one line for it in [lib/server/topics.ts](lib/server/topics.ts).
+
+From then on, running a study on that topic is a setting, not a code change.
 
 ## Project layout
 

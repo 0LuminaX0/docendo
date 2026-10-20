@@ -4,19 +4,24 @@ import { hasTerm } from "../../content/terms";
 import { chatJson, MODELS, type OnCall } from "../llm";
 import { Verdict } from "./state";
 import { tokens } from "./text";
+import { annotate, type Refusal } from "./notes";
 
 export const Intent = z.enum(["explain", "answer", "ask_kai", "unsure", "move_on", "off_topic"]);
 
 export type Judgement = {
   intent: z.infer<typeof Intent>;
-  facts: { fact: string; verdict: Verdict; quote: string }[];
+  // note: the point as a whole sentence around the learner's words (null when the judge gave none or it failed the check)
+  facts: { fact: string; verdict: Verdict; quote: string; note?: string | null }[];
   // wrong beliefs the learner stated, open-ended (no fixed list); `belief` is the judge's summary, for the log only
-  misconceptions?: { node: string; quote: string; belief: string }[];
+  misconceptions?: { node: string; quote: string; belief: string; note?: string | null }[];
   termsUsed: string[]; // lexicon terms in the learner's message (computed, not judged)
   dropped?: { fact: string; quote: string }[]; // verdicts thrown out by the quote check (for logs)
+  notesDropped?: { quote: string; note: string; why: string }[]; // whole-sentence notes the note check refused (for logs)
 };
 
-type Reply = { claims?: string[]; intent: z.infer<typeof Intent>; facts: Judgement["facts"]; misconceptions?: { node: string; quote: string; belief: string }[] };
+// before/after: the few words the model puts around the quote; code assembles the note (notes.ts), so the quote is verbatim
+type Around = { before?: string; after?: string };
+type Reply = { claims?: string[]; intent: z.infer<typeof Intent>; facts: (Judgement["facts"][number] & Around)[]; misconceptions?: (NonNullable<Judgement["misconceptions"]>[number] & Around)[] };
 
 // the fact and node fields may only hold real ids, so the model can't return "n01.f1: <text>"
 const replyCache = new WeakMap<Bundle, z.ZodType<Reply>>();
@@ -30,17 +35,17 @@ function replySchema(bundle: Bundle) {
     // first, the message split into its separate claims: makes the model weigh each one (log only)
     claims: z.array(z.string()),
     intent: Intent,
-    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string() })),
-    misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), quote: z.string(), belief: z.string() })).optional(),
+    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string(), before: z.string(), after: z.string() })),
+    misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), quote: z.string(), belief: z.string(), before: z.string(), after: z.string() })).optional(),
   });
   replyCache.set(bundle, schema);
   return schema;
 }
 
 /** Keep misconceptions about real ideas whose quote is in the message, in the learner's words. */
-export function screenMisconceptions(bundle: Bundle, message: string, list: NonNullable<Judgement["misconceptions"]>) {
+export function screenMisconceptions(bundle: Bundle, message: string, list: (NonNullable<Judgement["misconceptions"]>[number] & Around)[]) {
   const nodes = new Set(bundle.nodes.map((n) => n.id));
-  const kept: NonNullable<Judgement["misconceptions"]> = [];
+  const kept: (NonNullable<Judgement["misconceptions"]>[number] & Around)[] = [];
   const dropped: { fact: string; quote: string }[] = [];
   for (const m of list.slice(0, 6)) {
     const quote = nodes.has(m.node) ? findQuote(message, m.quote) : null;
@@ -48,22 +53,22 @@ export function screenMisconceptions(bundle: Bundle, message: string, list: NonN
       dropped.push({ fact: `${m.node.slice(0, 12)} (misconception)`, quote: m.quote.slice(0, 200) });
       continue;
     }
-    if (!kept.some((k) => k.node === m.node && k.quote === quote)) kept.push({ node: m.node, quote, belief: m.belief.slice(0, 300) });
+    if (!kept.some((k) => k.node === m.node && k.quote === quote)) kept.push({ ...m, quote, belief: m.belief.slice(0, 300) });
   }
   return { kept, dropped };
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
-/** Keep only verdicts on real facts whose quote really is in the learner's message. */
-export function checkQuotes(bundle: Bundle, message: string, facts: Judgement["facts"]): Judgement["facts"] {
-  return screenQuotes(bundle, message, facts).kept;
+/** Keep only verdicts on real facts whose quote really is in the learner's message, each with Kai's note for it. */
+export function checkQuotes(bundle: Bundle, message: string, facts: (Judgement["facts"][number] & Around)[]): Judgement["facts"] {
+  return screenQuotes(bundle, message, facts).kept.map((v) => withNote(bundle, v, message, ""));
 }
 
-export function screenQuotes(bundle: Bundle, message: string, facts: Judgement["facts"]) {
+export function screenQuotes(bundle: Bundle, message: string, facts: (Judgement["facts"][number] & Around)[]) {
   const ids = new Set(bundle.nodes.flatMap((n) => n.facts.map((f) => f.id)));
   const seen = new Set<string>();
-  const kept: Judgement["facts"] = [];
+  const kept: (Judgement["facts"][number] & Around)[] = [];
   const dropped: { fact: string; quote: string }[] = [];
   for (const raw of facts) {
     // tolerate an id with its text attached ("n01.f1: …")
@@ -82,6 +87,12 @@ export function screenQuotes(bundle: Bundle, message: string, facts: Judgement["
     kept.push({ ...v, quote });
   }
   return { kept, dropped };
+}
+
+/** One verdict or misconception with Kai's note in place of the judge's raw words around its quote (notes.ts). */
+function withNote<T extends { quote: string; note?: string | null } & Around>(bundle: Bundle, v: T, message: string, kaiLast: string, others: { quote: string }[] = [], refused?: (r: Refusal) => void) {
+  const { before: _b, after: _a, ...rest } = v;
+  return { ...rest, ...annotate(bundle, v, message, kaiLast, others, refused) };
 }
 
 /**
@@ -128,6 +139,8 @@ For every fact the message explains, return:
 - fact: its id only, e.g. "n03.f2".
 - verdict: "correct" if the message gets the idea across. Be generous: informal wording, an analogy, a worked example or a short answer to the classmate's question all count, as long as the core idea is right. "partial" only if a key part of the fact is missing or it is too vague to tell. "wrong" if it says something that contradicts the fact.
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
+- before, after: the classmate writes the quote into their notebook, and it must still make sense when read alone later. So give the few words that go before and after the quote to make it one whole sentence (code puts them together: before + quote + after). Add only what the quote leaves implicit, taken from the classmate's question or the rest of the teacher's message: what "it" or "they" stands for, what the quote answers. Usually 2 to 8 words, often only before. Fill them whenever the quote doesn't say what it is about: it starts with "it", "they", "with", "and", a verb ("picks the…"), or it continues a sentence that began earlier in the message. Never add an idea, a term or a number the teacher didn't say, never use the wording of the facts above, and don't correct or improve the quote. If the quote already reads as a whole statement that names its subject, leave both empty. Never repeat the quote's words in before or after.
+  Examples. Classmate: "So what does greedy keep track of for each truck?" Teacher: "you store its average" → before "For each truck greedy tries,", after "". Classmate: "Does greedy ever go back to a truck that looked bad at first?" Teacher: "nope, never" → before "Going back to a truck that looked bad at first, for greedy:", after "". Teacher: "and never tries the others again" (earlier in the message: "Greedy always goes to the best average") → before "Greedy", after "".
 Only include facts the message actually addresses. Most messages address 0–3 facts.
 Credit every fact the message explains, whether or not it answers what the classmate just asked: teachers often move on to another idea, and that still counts.
 A message often mixes a right part and a wrong part, e.g. "UCB adds a bonus to each average and picks the highest total, and the bonus grows every time you pick it": credit the right part as "correct" for its fact (quoting just that part) and record the wrong part under misconceptions. A wrong part never cancels a right one.
@@ -136,6 +149,7 @@ misconceptions: every belief in the message that is wrong about the topic, wheth
 - node: the id of the idea it is about, e.g. "n07" (the part before the dot in the fact ids).
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words).
 - belief: one short sentence saying what the teacher believes, e.g. "exploring never picks the current favourite". Don't state the correct version.
+- before, after: as for facts: the few words around the quote that make it one sentence that makes sense alone, only from the classmate's question or the message (it stays wrong: don't fix it).
 Leave the list empty when nothing is wrong. Vague or incomplete is not wrong.
 
 intent, the main thing the message does:
@@ -166,7 +180,11 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
   onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
   const { kept, dropped } = screenQuotes(bundle, message, r.data.facts);
   const mis = screenMisconceptions(bundle, message, r.data.misconceptions ?? []);
-  return { intent: r.data.intent, facts: kept, misconceptions: mis.kept, dropped: [...dropped, ...mis.dropped], termsUsed: termsUsed(bundle, message) };
+  // what Kai writes down for each: the learner's words, made a statement that stands alone (notes.ts)
+  const notesDropped: Refusal[] = [];
+  const credited = kept.map((v) => withNote(bundle, v, message, kaiLast, mis.kept, (x) => notesDropped.push(x)));
+  const beliefs = mis.kept.map((m) => withNote(bundle, m, message, kaiLast, kept, (x) => notesDropped.push(x)));
+  return { intent: r.data.intent, facts: credited, misconceptions: beliefs, dropped: [...dropped, ...mis.dropped], notesDropped, termsUsed: termsUsed(bundle, message) };
 }
 
 /**
@@ -219,10 +237,15 @@ function idfFor(bundle: Bundle): Map<string, number> {
   return idf;
 }
 
-/** The message itself, cut at a word boundary if it is long (still a substring, so it passes the quote check). */
-function clip(message: string, max = 240): string {
+/**
+ * The message itself, cut if it is long: at the last sentence end that fits, else at a word boundary (still a
+ * substring, so it passes the quote check, and Kai's note doesn't stop mid-sentence where it can be helped).
+ */
+export function clip(message: string, max = 240): string {
   const m = message.trim();
   if (m.length <= max) return m;
   const cut = m.slice(0, max);
+  const sentence = Math.max(...[". ", "! ", "? ", "\n"].map((e) => cut.lastIndexOf(e)));
+  if (sentence >= 60) return cut.slice(0, sentence + 1).trimEnd();
   return cut.slice(0, Math.max(cut.lastIndexOf(" "), 40)).trimEnd();
 }

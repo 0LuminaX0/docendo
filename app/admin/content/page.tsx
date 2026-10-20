@@ -86,7 +86,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
       <section className="adm-card" id="ideas">
         <h2>Ideas and facts</h2>
         <p className="note">
-          Goal: {pack.bundle.goals[0]?.text}. Kai waits for the required facts; each has the beginner&apos;s question Kai asks for it. &quot;Explained&quot;: share of the {teachers.size} participants who taught Kai so far who explained the fact correctly.
+          Goal: {(pack.bundle.goals[0]?.text ?? "").replace(/\.+$/, "")}. Kai waits for the required facts; each has the beginner&apos;s question Kai asks for it.{" "}
+          {teachers.size ? `"Explained": share of the ${teachers.size} participants who taught Kai so far who explained the fact correctly.` : "No participant has taught Kai yet, so there are no shares beside the facts."}
         </p>
         <ol className="cnt-ideas">
           {lessonNodes.map((n) => (
@@ -174,7 +175,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                   <b>{p.title}</b>
                   <span className="grow" />
                   <span className="note">
-                    first try {pct(st.directFirst, st.direct)} of {st.direct}; Kai first try {pct(st.kaiFirst, st.rec)} of {st.rec}
+                    {st.direct || st.rec
+                      ? [st.direct ? `right first try ${pct(st.directFirst, st.direct)} of ${st.direct}` : null, st.rec ? `Kai right first try ${pct(st.kaiFirst, st.rec)} of ${st.rec}` : null].filter(Boolean).join("; ")
+                      : "no tries yet"}
                   </span>
                 </div>
                 <p>{p.prompt}</p>
@@ -239,7 +242,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                         {x.pair && <span className="note">twin of {x.pair}</span>}
                         <span className="grow" />
                         <span className="note">
-                          {pct(st.right, st.n)} of {st.n}
+                          {st.n ? `${pct(st.right, st.n)} right of ${st.n}` : "no answers yet"}
                         </span>
                       </div>
                       <p>{x.prompt}</p>

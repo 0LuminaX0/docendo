@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { barsOf, currentStep, firstStep, flowOf, minutesOf, nextStep, reached } from "../lib/flow";
 import { Settings, migrateSettings, publicOf } from "../lib/settings";
@@ -116,5 +117,42 @@ describe("Upstash replies", () => {
     expect(hashOf({ cABC: 3 })).toEqual({ cABC: "3" });
     expect(hashOf(null)).toEqual({});
     expect(hashOf([])).toEqual({});
+  });
+});
+
+describe("checking a topic pack before it ships", () => {
+  it("passes the bandits pack and catches a broken one", async () => {
+    const { checkPack } = await import("../content/pack");
+    const { mkdtempSync, mkdirSync, writeFileSync, cpSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    expect(checkPack("bandits").filter((i) => i.level === "error")).toEqual([]);
+    // a copy of the pack with a broken copy.json, uneven test forms and a practice problem needing an unknown fact
+    const root = mkdtempSync(join(tmpdir(), "docendo-pack-"));
+    const dir = join(root, "topics", "broken");
+    mkdirSync(dir, { recursive: true });
+    for (const f of ["bundle.json", "pretest.json", "survey.json"]) cpSync(join("topics/bandits", f), join(dir, f));
+    writeFileSync(join(dir, "copy.json"), JSON.stringify({ subject: "x" }));
+    const practice = JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"));
+    practice.items[0].needs = ["n99.f9"];
+    writeFileSync(join(dir, "practice.json"), JSON.stringify(practice));
+    const tests = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
+    tests.items = tests.items.filter((q: { id: string }) => q.id !== "r10");
+    writeFileSync(join(dir, "exercises.json"), JSON.stringify(tests));
+    const errors = checkPack("broken", root).filter((i) => i.level === "error").map((i) => `${i.where}: ${i.msg}`);
+    expect(errors.some((e) => e.startsWith("copy.json"))).toBe(true);
+    expect(errors.some((e) => e.includes("n99.f9"))).toBe(true);
+    expect(errors.some((e) => e.includes("parallel forms must match"))).toBe(true);
+  });
+});
+
+describe("the dashboard's score charts", () => {
+  it("follow the test's length, not a fixed 10", async () => {
+    const { charts } = await import("../lib/analytics");
+    const row = (sid: string, condition: string, testScore: number) => ({ sid, condition, entry: "participant", demo: false, phase: "main", startedAt: "2026-10-18T10:00:00Z", reachedStep: "results", testScore, testOf: 6 });
+    const c = charts({ sessions: [row("a", "direct", 4), row("b", "recursive", 6), row("c", "recursive", 5)] }, { all: true });
+    expect(c.testMax).toBe(6);
+    expect(c.hist.direct).toHaveLength(7);
+    expect(c.hist.recursive[6]).toBe(1);
   });
 });

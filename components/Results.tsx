@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Brain, Check, RotateCcw, X } from "lucide-react";
+import { Brain, Check, Minus, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
@@ -158,6 +158,7 @@ export default function Results() {
               const kaiKey = kaiLast ? "ABCDEF".indexOf(kaiLast.answer.trim().charAt(0).toUpperCase()) : -1;
               const kaiAnswer = !kaiLast ? null : p.options && kaiKey >= 0 ? (p.options[kaiKey] ?? kaiLast.answer) : kaiLast.answer;
               const solved = kai.length ? kai.some((x) => x.correct) : !!e?.correct;
+              const untried = !kai.length && (!e || !e.checks);
               const mine = kai.length ? kaiAnswer : !e?.answer ? null : p.options ? (p.options[Number(e.answer)] ?? null) : e.answer;
               const how = kai.length
                 ? kai[0]!.correct ? "Kai got it right on the first try" : kai[1]?.correct ? "Kai got it right after your correction" : "Kai didn't solve it"
@@ -171,8 +172,9 @@ export default function Results() {
                     <p>{p.prompt}</p>
                   </div>
                   <p className="note" style={{ margin: 0 }}>
-                    <span className={`tag ${solved ? "ok" : "no"}`} style={{ marginRight: 10 }}>
-                      {solved ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
+                    {/* a problem never reached isn't a failure: a neutral tag */}
+                    <span className={`tag ${solved ? "ok" : untried ? "skip" : "no"}`} style={{ marginRight: 10 }}>
+                      {solved ? <Check size={13} strokeWidth={3} /> : untried ? <Minus size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
                       {how}
                     </span>
                     {mine && !solved ? <>{kai.length ? "Kai's last answer" : "Your last answer"}: {mine}</> : null}

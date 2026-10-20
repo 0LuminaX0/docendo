@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { checkPack } from "./pack";
 import { Coverage, Graph, Locations, Questions, type Topic } from "./schema";
 import { readJson, topicPaths } from "./paths";
 import { ancestors, termsIn } from "./terms";
@@ -147,7 +148,8 @@ export async function runValidate(topic: Topic, { strict }: { strict: boolean })
   const questions = existsSync(p.questions) ? await readJson(p.questions, Questions) : undefined;
   const locations = existsSync(p.locations) ? await readJson(p.locations, Locations) : undefined;
   const coverage = existsSync(p.coverage) ? await readJson(p.coverage, Coverage) : undefined;
-  const issues = checkGraph(topic, graph, { questions, locations, coverage, strict });
+  // the graph, then the files the app serves from the pack (content/pack.ts)
+  const issues = [...checkGraph(topic, graph, { questions, locations, coverage, strict }), ...checkPack(topic.slug)];
 
   const errors = issues.filter((i) => i.level === "error");
   const warns = issues.filter((i) => i.level === "warn");

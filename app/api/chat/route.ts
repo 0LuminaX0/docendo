@@ -124,6 +124,7 @@ export async function POST(req: NextRequest) {
       misconceptions: tr.misconceptions,
       newCorrect: tr.judged.filter((v) => v.verdict === "correct" && old.get(v.fact)?.verdict !== "correct").map((v) => v.fact),
       dropped: tr.dropped ?? [],
+      notesDropped: tr.notesDropped ?? [], // whole-sentence notes the note check refused (the bare quote was kept)
       leaked: tr.leaked,
       fallback: tr.fallback,
       progress: result.progress,

@@ -6,6 +6,11 @@ import type { Mind, MindStatus, Question } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
 import { track } from "@/lib/client/log";
 import { useSaved } from "@/lib/client/store";
+import Quoted from "./Quoted";
+import { CONFIG } from "@/engine/tutor/config";
+
+/** 0.8 → "80%" */
+const percent = (v: number) => `${Math.round(v * 100)}%`;
 
 const STATUS_TEXT: Record<MindStatus, string> = {
   off: "Not part of this lesson, so Kai doesn't wait for it. It's here to show what the lesson connects to; if you know something about it, you can tell Kai anyway.",
@@ -351,7 +356,11 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
                         <Icon size={16} strokeWidth={2.4} aria-hidden="true" />
                         <div>
                           {q.ask ? <p className="qq">{q.ask}</p> : <p className="qq extra">Something extra you explained</p>}
-                          {!sameAsNext && q.words && <blockquote>“{q.words}”</blockquote>}
+                          {!sameAsNext && q.words && (
+                            <blockquote className={q.note ? "noted" : ""}>
+                              {q.note ? <Quoted text={q.note} quote={q.words} /> : <>“{q.words}”</>}
+                            </blockquote>
+                          )}
                           {!sameAsNext && <span className={`v v-${q.state}`}>{Q_TEXT[q.state]}</span>}
                         </div>
                       </div>
@@ -380,7 +389,9 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
           <li>Kai waits for the <b>{mind.facts.total} facts</b> that the videos cover. Ideas that aren&apos;t in the videos are greyed out and don&apos;t count.</li>
           <li>Kai asks about one fact at a time. After each message, a judge checks which facts you explained, and must quote your own words. An explained fact counts <b>1</b>, a partly explained one <b>½</b>, and a wrong one 0 until you correct it.</li>
           <li>If an answer only partly lands, Kai asks once more; then it moves on and the question stays open here. An idea is <b>done</b> once Kai has no questions left about it.</li>
-          <li>Kai feels <b>ready</b> at 80% ({mind.facts.needed} facts&apos; worth), or at 50% once you have been teaching for 8 minutes, as long as at least one idea is fully explained. The bar shows progress towards 80%.</li>
+          <li>
+            Kai feels <b>ready</b> at {percent(CONFIG.ready)} ({mind.facts.needed} facts&apos; worth), or at {percent(CONFIG.readyLate)} once you have been teaching for {CONFIG.lateAfterMin} minutes, as long as at least one idea is fully explained. The bar shows progress towards {percent(CONFIG.ready)}.
+          </li>
           <li>Kai always wraps up after {mind.maxTurns} messages.</li>
         </ul>
       </details>

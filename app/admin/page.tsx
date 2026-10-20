@@ -5,7 +5,7 @@ import { charts, inScope, summarize } from "@/lib/analytics";
 import { DailyBars, FunnelPairs, Legend, MinutesBars, Scatter, ScoreHist } from "@/components/admin/Charts";
 import { packFor } from "@/lib/server/content";
 import { currentStudy, topicList } from "@/lib/server/study";
-import { viewOf, viewTables } from "@/lib/server/adminview";
+import { viewHref, viewOf, viewTables } from "@/lib/server/adminview";
 import { BLOCKS, flowOf } from "@/lib/flow";
 import AdminShell from "@/components/admin/AdminShell";
 import ViewBar from "@/components/admin/ViewBar";
@@ -13,6 +13,7 @@ import ViewBar from "@/components/admin/ViewBar";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: admin", robots: { index: false, follow: false } };
 
+const clamp50 = (v: number) => Math.max(-50, Math.min(50, v));
 const pctText = (v: number | null) => (v === null ? "–" : `${v}%`);
 const minText = (v: number | null) => (v === null ? "–" : `${v} min`);
 
@@ -42,6 +43,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const underVersion = t.sessions.filter((x) => x.settingsVersion === version).length;
   const showSurvey = settings.survey.on || c.survey.some((q) => q.direct !== null || q.recursive !== null);
   const showPractice = settings.practice.on || s.practice.length > 0;
+  // a step the current setup switches off: its rows show only while sessions in view still reached it
+  const flow = flowOf(settings);
+  const skipped = (step: string) => ({ pretest: !flow.includes("pretest"), watch: !flow.includes("watch"), practice: !flow.includes("practice") })[step] ?? false;
 
   return (
     <AdminShell store={eventStore}>
@@ -78,6 +82,26 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         </Link>
       </section>
 
+
+      {s.sessions === 0 ? (
+        <section className="adm-card adm-empty">
+          <h2>No sessions in this view yet</h2>
+          <p className="note">
+            {view.scope === "participants"
+              ? "Participants' sessions appear here once someone starts with a participant code (not the shared team code, a trial or a team code)."
+              : "Nothing started in this period."}{" "}
+            {view.scope !== "all" && counts.all > 0 && (
+              <>
+                <Link href={viewHref("/admin", view, { scope: view.scope === "participants" ? "team" : "all" })}>
+                  See {view.scope === "participants" ? `the ${counts.team} team and test sessions` : `all ${counts.all} sessions`}
+                </Link>
+                , or make codes on <Link href="/admin/codes">Access</Link>.
+              </>
+            )}
+          </p>
+        </section>
+      ) : (
+        <>
       <section className="adm-kpis">
         <div><b>{s.sessions}</b><span>sessions: {s.byCondition.direct} direct, {s.byCondition.recursive} recursive</span></div>
         <div><b>{s.finished}</b><span>finished the test ({s.sessions ? Math.round((s.finished / s.sessions) * 100) : 0}%)</span></div>
@@ -86,7 +110,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         <div className={flagged ? "warn" : ""}><b>{flagged}</b><span>sessions to look at (data quality)</span></div>
         <div><b>${s.cost}</b><span>model cost{s.finished ? `, $${(s.cost / s.finished).toFixed(3)} a finished session` : ""}</span></div>
       </section>
-
       {/* two columns that stack on their own, so cards of different heights leave no gaps; full-width sections after */}
       <div className="adm-two">
         <div className="adm-stack">
@@ -97,18 +120,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           </section>
           <section className="adm-card">
             <h2>Final test scores</h2>
-            <p className="note">Share of each condition at each score, 0 to 10; the lines mark the means.</p>
+            <p className="note">Share of each condition at each score, 0 to {c.testMax}; the lines mark the means.</p>
             <ScoreHist hist={c.hist} />
           </section>
           <section className="adm-card">
             <h2>Pretest against final test</h2>
-            <p className="note">One dot per finished session (pretest 0 to 3 across, final test 0 to 10 up).</p>
-            <Scatter points={c.points} preMax={s.pretest.of} />
+            <p className="note">One dot per finished session (pretest 0 to {s.pretest.of} across, final test 0 to {c.testMax} up).</p>
+            <Scatter points={c.points} preMax={s.pretest.of} testMax={c.testMax} />
           </section>
           <section className="adm-card">
             <h2>Minutes per chapter</h2>
             <p className="note">Medians (direct / recursive). Practice is timed at the same length in both.</p>
-            <MinutesBars minutes={c.minutes} />
+            <MinutesBars minutes={c.minutes.filter((m) => !skipped(m.chapter.toLowerCase()) || m.direct !== null || m.recursive !== null)} />
           </section>
           <section className="adm-card">
             <h2>Final test items</h2>
@@ -139,7 +162,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           <section className="adm-card">
             <h2>How far people get</h2>
             <p className="note">Share of each condition&apos;s sessions that reached a step (counts: direct / recursive).</p>
-            <FunnelPairs funnel={c.funnel} />
+            <FunnelPairs funnel={c.funnel.filter((f) => !skipped(f.step) || f.direct || f.recursive)} />
           </section>
           <section className="adm-card">
             <h2>Recursive against direct, so far</h2>
@@ -152,8 +175,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                 </div>
                 <div className="adm-effect-bar" aria-hidden="true">
                   <span className="zero" />
-                  <span className="ci" style={{ left: `${50 + Math.max(-50, Math.min(50, cmp.lo * 10))}%`, right: `${50 - Math.max(-50, Math.min(50, cmp.hi * 10))}%` }} />
-                  <span className="pt" style={{ left: `${50 + Math.max(-50, Math.min(50, cmp.diff * 10))}%` }} />
+                  {/* the bar spans minus half the test to plus half of it */}
+                  <span className="ci" style={{ left: `${50 + clamp50(cmp.lo * (100 / c.testMax))}%`, right: `${50 - clamp50(cmp.hi * (100 / c.testMax))}%` }} />
+                  <span className="pt" style={{ left: `${50 + clamp50(cmp.diff * (100 / c.testMax))}%` }} />
                 </div>
                 <dl className="adm-dl">
                   <dt>Mean, recursive / direct</dt><dd>{cmp.m1} / {cmp.m2}</dd>
@@ -292,6 +316,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           </tbody>
         </table>
       </section>}
+        </>
+      )}
     </AdminShell>
   );
 }

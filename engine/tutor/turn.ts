@@ -36,6 +36,7 @@ export type TurnResult = {
     judged: Judgement["facts"];
     misconceptions: NonNullable<Judgement["misconceptions"]>;
     dropped: Judgement["dropped"];
+    notesDropped?: Judgement["notesDropped"];
     leaked: string[];
     fallback: boolean;
     readyReason: ReadyReason | null;
@@ -56,10 +57,10 @@ export function applyJudgement(state: State, j: Judgement): State {
   for (const v of j.facts) {
     // a vague later mention never undoes a correct explanation; only a wrong one does
     if (v.verdict === "partial" && known.get(v.fact)?.verdict === "correct") continue;
-    next.notebook.push({ fact: v.fact, verdict: v.verdict, words: v.quote.slice(0, 400), turn: next.turn });
+    next.notebook.push({ fact: v.fact, verdict: v.verdict, words: v.quote.slice(0, 400), note: v.note?.slice(0, 400) ?? null, turn: next.turn });
   }
   if (next.notebook.length > 300) next.notebook = next.notebook.slice(-300);
-  next.misconceptions = [...(state.misconceptions ?? []), ...(j.misconceptions ?? []).map((m) => ({ node: m.node, words: m.quote.slice(0, 400), turn: next.turn }))].slice(-100);
+  next.misconceptions = [...(state.misconceptions ?? []), ...(j.misconceptions ?? []).map((m) => ({ node: m.node, words: m.quote.slice(0, 400), note: m.note?.slice(0, 400) ?? null, turn: next.turn }))].slice(-100);
   for (const t of j.termsUsed) if (!next.usedTerms.includes(t)) next.usedTerms.push(t);
   // only a real answer counts as having a go (it unlocks the help card); chit-chat doesn't
   if (next.focus && ["explain", "answer", "unsure"].includes(j.intent)) next.memo[next.focus] = { ...memo(next, next.focus), attempts: memo(next, next.focus).attempts + 1 };
@@ -167,7 +168,7 @@ export async function takeTurn(
     done,
     help: !done && focus?.help[0] ? focus.help[0] : null,
     helpAvailable: !!focus && memo(state, focus.id).attempts > 0,
-    trace: { move, intent: j.intent, judged: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], leaked, fallback, readyReason: done ? (reason ?? "maxTurns") : null, drafts },
+    trace: { move, intent: j.intent, judged: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [], leaked, fallback, readyReason: done ? (reason ?? "maxTurns") : null, drafts },
   };
 }
 

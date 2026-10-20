@@ -4,8 +4,8 @@ import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { flush, track } from "@/lib/client/log";
 import { useStudySettings } from "./SettingsContext";
+import { Count } from "@/lib/words";
 
-const COUNT: Record<number, string> = { 1: "One quick question", 2: "Two quick questions", 3: "Three quick questions", 4: "Four quick questions", 5: "Five quick questions", 6: "Six quick questions", 7: "Seven quick questions", 8: "Eight quick questions" };
 
 /**
  * A few questions after the final test, before the score: effort, responsibility for Kai, how well the learner thinks
@@ -25,7 +25,7 @@ export default function Survey({ onDone }: { onDone: () => void }) {
     <section className="survey" aria-labelledby="survey-h">
       <div className="survey-head">
         <span className="eyebrow">Before your score</span>
-        <h1 id="survey-h">{COUNT[ITEMS.length] ?? `${ITEMS.length} quick questions`}</h1>
+        <h1 id="survey-h">{Count(ITEMS.length, "quick question")}</h1>
         <p className="lede">Your answers help us understand how learning by teaching works. There are no right answers.</p>
       </div>
       <ol className="survey-list">

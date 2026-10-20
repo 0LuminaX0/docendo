@@ -13,6 +13,7 @@ export type Question = {
   state: "answered" | "partly" | "wrong" | "asked" | "current";
   ask: string | null; // Kai's question, once asked or answered (null for facts without one)
   words: string | null; // what the learner said about it
+  note?: string | null; // the same as Kai wrote it down: a whole sentence with the learner's words inside
 };
 
 export type MindNode = {
@@ -58,7 +59,7 @@ export function mindView(bundle: Bundle, state: State): Mind {
     for (const f of n.facts) {
       const e = facts.get(f.id);
       const waited = need.includes(f);
-      if (e) questions.push({ state: STATE[e.verdict], ask: f.ask ?? null, words: e.words });
+      if (e) questions.push({ state: STATE[e.verdict], ask: f.ask ?? null, words: e.words, note: e.note ?? null });
       else if (!waited) continue;
       else if (f.id === current) questions.push({ state: "current", ask: f.ask ?? null, words: null });
       else if ((m.tries[f.id] ?? 0) > 0) questions.push({ state: "asked", ask: f.ask ?? null, words: null });

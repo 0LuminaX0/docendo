@@ -9,8 +9,10 @@ import { useStudySettings } from "./SettingsContext";
 import Scratchpad from "./Scratchpad";
 import { track } from "@/lib/client/log";
 import { useGuard, useNext } from "./useGuard";
+import { count, Count } from "@/lib/words";
 import { blankEntry, post, save, useSaved, type Condition, type KaiAttempt, type KaiEntry, type PracticeEntry, type PracticeState, type Saved } from "@/lib/client/store";
-import { notesOf, type State } from "@/engine/tutor/state";
+import { notesOf, quotesOf } from "@/engine/tutor/notebook";
+import type { State } from "@/engine/tutor/state";
 
 type Item = { id: string; round: number; title: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null };
 type Moment = { video: string; videoId: string; start: number; end: number; part: string };
@@ -26,7 +28,8 @@ const KEYS = "ABCDEF";
  * after the final test in both. When the time runs out, the test starts.
  */
 export default function Practice({ items }: { items: Item[] }) {
-  const { practiceMinutes: minutes, practiceTries: tries } = useStudySettings();
+  const { practiceMinutes: minutes, practiceTries: tries, flow } = useStudySettings();
+  const video = flow.includes("watch"); // Rewatch only when the study has a lesson to go back to
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "practice");
@@ -296,7 +299,8 @@ export default function Practice({ items }: { items: Item[] }) {
               </p>
             ) : (
               <p className="lede">
-                Two rounds of three problems, {minutes} minutes. A first try and one retry each; a light says if you&apos;re right. Solutions after the final test.
+                {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {minutes} minutes.{" "}
+                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right. Solutions after the final test.
               </p>
             )}
           </div>
@@ -336,6 +340,7 @@ export default function Practice({ items }: { items: Item[] }) {
               q={q}
               entry={ke}
               notebook={saved.chat.state ? notesOf(saved.chat.state) : []}
+              quotes={saved.chat.state ? quotesOf(saved.chat.state) : {}}
               busy={busy}
               failed={kaiFailed === q.id}
               onRetry={() => void solveKai()}
@@ -347,9 +352,11 @@ export default function Practice({ items }: { items: Item[] }) {
                 </span>
               }
               tools={
-                <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
-                  <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
-                </button>
+                video ? (
+                  <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
+                    <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
+                  </button>
+                ) : null
               }
               onReteach={(m) => void reteach(m)}
             />
@@ -412,9 +419,11 @@ export default function Practice({ items }: { items: Item[] }) {
                   {status}
                 </span>
                 <span className="grow" />
-                <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
-                  <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
-                </button>
+                {video && (
+                  <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
+                    <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
+                  </button>
+                )}
               </div>
             </div>
           </section>

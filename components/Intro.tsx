@@ -6,11 +6,10 @@ import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } f
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
 import { useStudySettings } from "./SettingsContext";
+import { count } from "@/lib/words";
 import { barsOf, blockOf, currentStep, firstStep, pathOf } from "@/lib/flow";
 
 const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: ListChecks } as const;
-
-const NUMBER: Record<number, string> = { 1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten" };
 
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
@@ -87,7 +86,7 @@ export default function Intro({
           <h1 className="title">{copy.headline}</h1>
           <p className="lede">
             {flow.includes("watch") ? "You'll watch a short lesson, then explain it to Kai, a classmate who missed the lecture." : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
-            {pretestItems ? `, starting with ${NUMBER[pretestItems] ?? pretestItems} quick questions` : ""}.
+            {pretestItems ? `, starting with ${count(pretestItems, "quick question")}` : ""}.
           </p>
         </div>
 

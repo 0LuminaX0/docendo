@@ -5,7 +5,7 @@ const SCOPE_NAME = { participants: "Participants", team: "Team and tests", all: 
 const PERIOD_NAME = (d: number | null) => (d ? `Last ${d} days` : "All time");
 
 /** The admin pages' filter row: whose sessions, which period, and (with several packs) which topic. */
-export default function ViewBar({ path, view, topics, counts }: { path: string; view: View; topics?: { slug: string; title: string }[]; counts?: Partial<Record<View["scope"], number>> }) {
+export default function ViewBar({ path, view, topics, counts, children }: { path: string; view: View; topics?: { slug: string; title: string }[]; counts?: Partial<Record<View["scope"], number>>; children?: React.ReactNode }) {
   return (
     <div className="adm-view" role="group" aria-label="Which sessions to count">
       <span className="adm-seg">
@@ -35,6 +35,7 @@ export default function ViewBar({ path, view, topics, counts }: { path: string; 
           ))}
         </span>
       )}
+      {children}
     </div>
   );
 }

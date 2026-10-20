@@ -2,7 +2,7 @@
   "topic": "bandits",
   "title": "Multi-armed bandits",
   "hash": "df4d9249c018e70c",
-  "builtAt": "2026-10-14T11:12:10.119Z",
+  "builtAt": "2026-10-19T13:53:12.554Z",
   "goals": [
     {
       "id": "G",
@@ -1156,8 +1156,8 @@
         "Okay, I think I'm with you so far. What comes next?"
       ],
       "wrapUp": [
-        "I think I've got the main ideas now. Do you want to test me?",
-        "Okay, I feel ready. Can you quiz me on it?"
+        "I think I've got the main ideas now. Let's see how they hold up.",
+        "Okay, I feel ready to try some problems with what you told me."
       ]
     }
   }

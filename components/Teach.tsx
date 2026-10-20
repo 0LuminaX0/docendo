@@ -11,7 +11,8 @@ import { useGuard, useNext } from "./useGuard";
 import { currentStep, pathOf } from "@/lib/flow";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
 import { logNotebook, track } from "@/lib/client/log";
-import { MESSAGE_MAX as MAX, type State } from "@/engine/tutor/state";
+import { MESSAGE_MAX as MAX } from "@/engine/tutor/config";
+import type { State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 import type { GraphView } from "@/lib/server/content";
 
@@ -390,7 +391,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
       )}
 
       {video && (
-        <Modal title={`Part ${video.v.part} at ${mmss(video.start)}`} onClose={() => setVideo(null)}>
+        <Modal title={`${video.v.title.replace(/^[^:]{2,30}:\s+/, "")} at ${mmss(video.start)}`} onClose={() => setVideo(null)}>
           <VideoFrame videoId={video.v.videoId} title={video.v.title} start={video.start} autoplay />
         </Modal>
       )}

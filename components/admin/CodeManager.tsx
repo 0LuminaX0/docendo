@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Copy, Plus, Trash2 } from "lucide-react";
 
 type Kind = "participant" | "trial" | "team";
-const KIND_NAME: Record<Kind, string> = { participant: "Participant (the study)", trial: "Trial run (as a participant, not counted)", team: "Team (shortcuts and switch)" };
+// short names for the select; what each means is on the page above (Ways in)
+const KIND_NAME: Record<Kind, string> = { participant: "Participant", trial: "Trial run", team: "Team" };
 const kindOf = (c: { team: boolean; trial?: boolean }): Kind => (c.team ? "team" : c.trial ? "trial" : "participant");
 
 type Code = { id: string; code: string; label: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive"; team: boolean; trial?: boolean; maxUses: number | null; active: boolean; createdAt: string; uses: number };
@@ -77,6 +79,9 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
             <Plus size={14} /> Make {form.count} {form.count === 1 ? "code" : "codes"}
           </button>
         </form>
+        <p className="note" style={{ marginTop: 10 }}>
+          Participant: the study. Trial run: exactly a participant&apos;s session, counted with the tests (to try the study yourself). Team: the test shortcuts and the &quot;You solve / Kai solves&quot; switch.
+        </p>
         {error && <p className="error" role="alert">{error}</p>}
       </section>
 
@@ -109,7 +114,13 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
                   </select>
                 </td>
                 <td>
-                  {c.uses}
+                  {c.uses ? (
+                    <Link href={`/admin/sessions?scope=all&q=${encodeURIComponent(c.id)}`} title="This code's sessions">
+                      {c.uses}
+                    </Link>
+                  ) : (
+                    c.uses
+                  )}
                   {c.maxUses ? ` of ${c.maxUses}` : ""}
                   {c.condition === "random" && c.draw && <span className="note"> (first: {c.draw})</span>}
                 </td>

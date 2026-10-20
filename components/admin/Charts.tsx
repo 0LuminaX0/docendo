@@ -21,11 +21,12 @@ export function DailyBars({ daily }: { daily: Charts["daily"] }) {
   const y = (v: number) => ((H - 24) * v) / max;
   return (
     <svg className="ch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Sessions started per day, by condition">
-      {[0.5, 1].map((f) => (
-        <g key={f}>
-          <line x1={pad} x2={W} y1={H - 18 - (H - 24) * f} y2={H - 18 - (H - 24) * f} className="ch-grid" />
-          <text x={pad - 6} y={H - 18 - (H - 24) * f + 4} className="ch-axis" textAnchor="end">
-            {Math.round(max * f)}
+      {/* gridlines at whole numbers, each value once (a small maximum would label 1 twice) */}
+      {[...new Set([Math.round(max / 2), max])].filter((v) => v > 0).map((v) => (
+        <g key={v}>
+          <line x1={pad} x2={W} y1={H - 18 - y(v)} y2={H - 18 - y(v)} className="ch-grid" />
+          <text x={pad - 6} y={H - 18 - y(v) + 4} className="ch-axis" textAnchor="end">
+            {v}
           </text>
         </g>
       ))}
@@ -70,7 +71,7 @@ export function FunnelPairs({ funnel }: { funnel: Charts["funnel"] }) {
   );
 }
 
-/** Final test scores, 0 to 10: side by side per score, as shares of each condition, with each mean marked. */
+/** Final test scores, 0 to the test's length: side by side per score, as shares of each condition, with each mean marked. */
 export function ScoreHist({ hist }: { hist: Charts["hist"] }) {
   const W = 560, H = 170, pad = 8, base = H - 22;
   const share = (h: number[]) => {
@@ -79,7 +80,7 @@ export function ScoreHist({ hist }: { hist: Charts["hist"] }) {
   };
   const d = share(hist.direct), r = share(hist.recursive);
   const max = Math.max(0.05, ...d, ...r);
-  const slot = (W - pad * 2) / 11;
+  const slot = (W - pad * 2) / hist.direct.length;
   const meanOf = (h: number[]) => {
     const n = h.reduce((a, b) => a + b, 0);
     return n ? h.reduce((a, v, i) => a + v * i, 0) / n : null;
@@ -91,7 +92,7 @@ export function ScoreHist({ hist }: { hist: Charts["hist"] }) {
       <line x1={pad} x2={W - pad} y1={base} y2={base} className="ch-grid" />
       {d.map((v, i) => (
         <g key={i}>
-          <title>{`${i} of 10: ${hist.direct[i]} direct, ${hist.recursive[i]} recursive`}</title>
+          <title>{`${i} of ${hist.direct.length - 1}: ${hist.direct[i]} direct, ${hist.recursive[i]} recursive`}</title>
           <rect x={pad + slot * i + slot * 0.14} y={base - (v / max) * (base - 14)} width={slot * 0.34} height={(v / max) * (base - 14)} rx={2} className="ch-d" />
           <rect x={pad + slot * i + slot * 0.52} y={base - (r[i]! / max) * (base - 14)} width={slot * 0.34} height={(r[i]! / max) * (base - 14)} rx={2} className="ch-r" />
           <text x={xOf(i)} y={H - 6} className="ch-axis" textAnchor="middle">
@@ -105,11 +106,11 @@ export function ScoreHist({ hist }: { hist: Charts["hist"] }) {
   );
 }
 
-/** Pretest (0 to 3) against final test (0 to 10), one dot per finished session, slightly spread so dots don't hide. */
-export function Scatter({ points, preMax = 3 }: { points: Charts["points"]; preMax?: number }) {
+/** Pretest against final test, one dot per finished session, slightly spread so dots don't hide. */
+export function Scatter({ points, preMax = 3, testMax = 10 }: { points: Charts["points"]; preMax?: number; testMax?: number }) {
   const W = 560, H = 200, left = 30, bottom = 22, top = 8, right = 10;
   const x = (v: number) => left + ((W - left - right) * v) / preMax;
-  const y = (v: number) => H - bottom - ((H - bottom - top) * v) / 10;
+  const y = (v: number) => H - bottom - ((H - bottom - top) * v) / testMax;
   const jitter = (s: string, k: number) => {
     let h = 0;
     for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0;
@@ -117,7 +118,7 @@ export function Scatter({ points, preMax = 3 }: { points: Charts["points"]; preM
   };
   return (
     <svg className="ch" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Pretest score against final test score">
-      {[0, 5, 10].map((v) => (
+      {[0, Math.round(testMax / 2), testMax].map((v) => (
         <g key={v}>
           <line x1={left} x2={W - right} y1={y(v)} y2={y(v)} className="ch-grid" />
           <text x={left - 8} y={y(v) + 4} className="ch-axis" textAnchor="end">
@@ -131,7 +132,7 @@ export function Scatter({ points, preMax = 3 }: { points: Charts["points"]; preM
         </text>
       ))}
       {points.map((p) => (
-        <circle key={p.sid} cx={x(Math.min(preMax, Math.max(0, p.pre + jitter(p.sid, 0))))} cy={y(Math.min(10, Math.max(0, p.test + jitter(p.sid, 8) * 2)))} r={4.5} className={p.cond === "recursive" ? "ch-r ch-dot" : "ch-d ch-dot"}>
+        <circle key={p.sid} cx={x(Math.min(preMax, Math.max(0, p.pre + jitter(p.sid, 0))))} cy={y(Math.min(testMax, Math.max(0, p.test + jitter(p.sid, 8) * 2)))} r={4.5} className={p.cond === "recursive" ? "ch-r ch-dot" : "ch-d ch-dot"}>
           <title>{`pretest ${p.pre}, test ${p.test} (${p.cond})`}</title>
         </circle>
       ))}

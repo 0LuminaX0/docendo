@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Docendo: live", robots: { index: false, follow: false } };
 
 const STEP_BY_PATH: Record<string, StepKey> = Object.fromEntries(BLOCKS.map((b) => [b.path, b.key]));
-const ago = (ms: number) => (ms < 60_000 ? "just now" : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min ago` : `${Math.round(ms / 3_600_000)} h ago`);
+const ago = (ms: number) => (ms < 60_000 ? "just now" : ms < 3_600_000 ? `${Math.round(ms / 60_000)} min ago` : ms < 2 * 86_400_000 ? `${Math.round(ms / 3_600_000)} h ago` : `${Math.round(ms / 86_400_000)} days ago`);
 
 /**
  * Sessions as they happen: everyone active in the last three hours, where they are in the session and when they last
@@ -35,6 +35,7 @@ export default async function Page() {
     return s.reachedStep === "results" ? "done" : idle < 5 * 60_000 ? "active" : idle < 30 * 60_000 ? "idle" : "gone";
   };
   const active = recent.filter((s) => state(s) === "active").length;
+  const last = [...t.sessions].filter((s) => s.lastAt).sort((a, b) => String(b.lastAt).localeCompare(String(a.lastAt)))[0];
 
   return (
     <AdminShell store={eventStore}>
@@ -127,6 +128,14 @@ export default async function Page() {
               <tr>
                 <td colSpan={10} className="note">
                   Nobody in the last three hours.
+                  {last ? (
+                    <>
+                      {" "}
+                      The last activity was {ago(now - Date.parse(String(last.lastAt)))} (<Link href={`/admin/sessions/${String(last.sid)}`}>that session</Link>).
+                    </>
+                  ) : (
+                    " No session has started yet."
+                  )}
                 </td>
               </tr>
             )}

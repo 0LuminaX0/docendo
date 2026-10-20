@@ -80,7 +80,6 @@ export async function POST(req: NextRequest) {
     if (d) return d; // checked before counting a use: coming back for the delayed test doesn't use the code up
   }
   if (stored) {
-    if (!stored.active) return fail(401, "That access code is no longer active.");
     const use = await useCode(stored);
     if (stored.maxUses && use > stored.maxUses) return fail(401, "That access code has already been used.");
     code = { id: stored.id, label: stored.label, use };

@@ -17,15 +17,16 @@ export default async function Page() {
   await requireAdmin();
   const codes = await listCodes();
   const t = await loadTables();
-  const n = (entry: string) => t.sessions.filter((s) => s.entry === entry && s.phase !== "delayed").length;
-  const demo = t.sessions.filter((s) => s.entry === "participant" && s.demo).length;
+  // first sessions only (a follow-up test is the same person again); a participant code in demo mode is a test
+  const main = t.sessions.filter((s) => s.phase !== "delayed");
+  const n = (entry: string) => main.filter((s) => s.entry === entry).length;
   const ways = [
     {
       name: "Participant codes",
       on: true,
       how: "Made below, one per person (or with more uses). The code sets the condition: direct, recursive, or random, which draws balanced blocks of 4. No shortcuts. A one-use code names one person, so they can come back for the follow-up test with it.",
       counted: "The study: the Dashboard's default view.",
-      sessions: n("participant") - demo,
+      sessions: main.filter((s) => s.entry === "participant" && !s.demo).length,
     },
     {
       name: "Trial runs",

@@ -14,11 +14,15 @@ export default async function Page() {
   await requireAdmin();
   const { settings, version, pack } = await currentStudy({ fresh: true });
   const events = await loadEvents();
-  const history = events
-    .filter((e) => e.t === "settings_change")
-    .slice(-12)
-    .reverse()
-    .map((e) => ({ at: e.at, version: String(e.version ?? ""), changed: (e.changed as string[] | undefined) ?? [], reset: !!e.reset }));
+  // the latest changes, newest first; the same save repeated in a row (a test, a double click) is one line with a count
+  const history: { at: string; version: string; changed: string[]; reset: boolean; times: number }[] = [];
+  for (const e of events.filter((e) => e.t === "settings_change").reverse()) {
+    const h = { at: e.at, version: String(e.version ?? ""), changed: (e.changed as string[] | undefined) ?? [], reset: !!e.reset, times: 1 };
+    const prev = history.at(-1);
+    if (prev && prev.version === h.version && prev.reset === h.reset && prev.changed.join() === h.changed.join()) prev.times++;
+    else if (history.length < 10) history.push(h);
+    else break;
+  }
   // how many sessions started under each version (the analysis can compare them)
   const perVersion: Record<string, number> = {};
   for (const e of events) if (e.t === "session_start" && e.settings) perVersion[String(e.settings)] = (perVersion[String(e.settings)] ?? 0) + 1;

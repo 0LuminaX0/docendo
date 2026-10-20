@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Check, Lock, Plus, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ExternalLink, Lock, Plus, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
 import type { LessonPart, Settings } from "@/lib/settings";
 import { BLOCKS, flowOf, type StepKey } from "@/lib/flow";
 import type { PackSummary } from "@/lib/server/study";
 
-type Change = { at: string; version: string; changed: string[]; reset: boolean };
+type Change = { at: string; version: string; changed: string[]; reset: boolean; times: number };
 
 const NAMES: Record<string, string> = {
   topic: "topic",
@@ -320,7 +320,10 @@ export default function SettingsForm({
                   <li key={i}>
                     <time dateTime={h.at}>{when(h.at)}</time>
                     <code>{h.version}</code>
-                    <span>{h.reset ? "back to the defaults" : h.changed.map((c) => NAMES[c] ?? c).join(", ") || "saved, nothing changed"}</span>
+                    <span>
+                      {h.reset ? "back to the defaults" : h.changed.map((c) => NAMES[c] ?? c).join(", ") || "saved, nothing changed"}
+                      {h.times > 1 && <span className="note"> ×{h.times}</span>}
+                    </span>
                     {perVersion[h.version] ? <span className="note">{perVersion[h.version]} sessions</span> : null}
                   </li>
                 ))}
@@ -351,6 +354,8 @@ export default function SettingsForm({
           </ol>
           <p className="note">Estimates: the lesson&apos;s length, the practice timer, about a minute per test question, and the usual 8 to 12 minutes of teaching.</p>
         </section>
+
+        <TryIt dirty={dirty} />
 
         <section className="adm-card set-card">
           <h2>Everywhere</h2>
@@ -473,5 +478,54 @@ function Part({ p, i, n, onChange, onMove, onRemove }: { p: LessonPart; i: numbe
         </button>
       </div>
     </li>
+  );
+}
+
+/**
+ * Try the study as a participant would: a one-use trial code in the chosen condition (a participant's session, no
+ * shortcuts, counted with the tests), opened on the welcome page in a new tab with the code filled in.
+ */
+function TryIt({ dirty }: { dirty: boolean }) {
+  const [cond, setCond] = useState<"direct" | "recursive">("recursive");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function go() {
+    setBusy(true);
+    setError(null);
+    // the tab opens now (a pop-up opened after the request would be blocked), then goes to the code's link
+    const tab = window.open("about:blank", "_blank");
+    const day = new Date().toISOString().slice(0, 10);
+    const res = await fetch("/api/admin/codes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "create", count: 1, prefix: "TRY", label: `try-out ${day}`, condition: cond, trial: true, maxUses: 1 }) });
+    const d = (await res.json().catch(() => ({}))) as { codes?: { code: string }[]; error?: string };
+    setBusy(false);
+    const code = d.codes?.[0]?.code;
+    if (!res.ok || !code) {
+      tab?.close();
+      return setError(d.error ?? "Couldn't make a trial code.");
+    }
+    const url = `${location.origin}/?code=${encodeURIComponent(code)}`;
+    if (tab) tab.location.href = url;
+    else location.href = url;
+  }
+  return (
+    <section className="adm-card set-card">
+      <h2>Try it as a participant</h2>
+      <p className="note">
+        A one-use trial code: exactly a participant&apos;s session in that condition, counted with the tests. {dirty ? "Save first: it runs the saved setup." : "It runs the saved setup."}
+      </p>
+      <div className="row">
+        <span className="adm-seg">
+          {(["direct", "recursive"] as const).map((c) => (
+            <button key={c} type="button" aria-current={cond === c ? "page" : undefined} onClick={() => setCond(c)}>
+              {c}
+            </button>
+          ))}
+        </span>
+        <button type="button" className="btn primary small" disabled={busy} onClick={() => void go()}>
+          <ExternalLink size={14} /> {busy ? "Opening…" : "Open"}
+        </button>
+      </div>
+      {error && <p className="error">{error}</p>}
+    </section>
   );
 }

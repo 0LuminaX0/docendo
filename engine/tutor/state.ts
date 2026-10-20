@@ -1,11 +1,11 @@
 import { z } from "zod";
 import type { Bundle } from "../../content/schema";
+import { activeMisconceptions, latest } from "./notebook";
 
 // Kai's state travels with the browser between turns and is validated on every
 // request. Tampering with it only changes that learner's own session.
 
-/** Longest learner message, in characters (about 600 words: room for a pasted explanation). */
-export const MESSAGE_MAX = 4000;
+export { MESSAGE_MAX } from "./config";
 
 export const Verdict = z.enum(["correct", "partial", "wrong"]);
 export type Verdict = z.infer<typeof Verdict>;
@@ -14,6 +14,9 @@ export const Entry = z.object({
   fact: z.string().max(12),
   verdict: Verdict,
   words: z.string().max(400), // the learner's own words
+  // the same point as a whole sentence Kai would jot down: the learner's words verbatim inside, plus only the context
+  // they leave implicit (from Kai's question or the rest of the message); decided in code (notes.ts)
+  note: z.string().max(400).nullable().optional(),
   turn: z.number().int().min(0).max(1000),
 });
 export type Entry = z.infer<typeof Entry>;
@@ -27,6 +30,7 @@ export type Entry = z.infer<typeof Entry>;
 export const Belief = z.object({
   node: z.string().max(12),
   words: z.string().max(400), // the learner's own words
+  note: z.string().max(400).nullable().optional(), // as a whole sentence (see Entry)
   turn: z.number().int().min(0).max(1000),
 });
 export type Belief = z.infer<typeof Belief>;
@@ -80,43 +84,9 @@ export function initialState(bundle: Bundle): State {
   };
 }
 
-/** Latest verdict per fact: a later verdict on the same fact replaces earlier ones. */
-export function latest(state: State): Map<string, Entry> {
-  const m = new Map<string, Entry>();
-  for (const e of state.notebook) m.set(e.fact, e);
-  return m;
-}
-
-/**
- * Misconceptions Kai still believes: a later correct explanation of any fact of
- * the same idea replaces them, as a later verdict replaces an earlier one on a
- * fact. (All stay in `state.misconceptions` for the log.)
- */
-export function activeMisconceptions(state: State): Belief[] {
-  const corrected = (m: Belief) => state.notebook.some((e) => e.verdict === "correct" && e.turn > m.turn && e.fact.split(".")[0] === m.node);
-  return (state.misconceptions ?? []).filter((m) => !corrected(m));
-}
-
-/**
- * Kai's notes as it reads them when solving: the latest word on each fact, then
- * the misconceptions it still believes, numbered from 1. The solver cites these
- * numbers, and the practice page's notebook shows the same list.
- */
-export function notesOf(state: State): string[] {
-  // one message can explain several facts, and the judge quotes a span of it per fact, so quotes overlap: a note whose
-  // words are already inside another is dropped, and the longer one keeps the place of the first
-  const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  const out: string[] = [];
-  const keys: string[] = [];
-  for (const words of [...[...latest(state).values()].map((e) => e.words), ...activeMisconceptions(state).map((m) => m.words)]) {
-    const k = norm(words);
-    if (!k) continue;
-    const i = keys.findIndex((o) => o.includes(k) || k.includes(o));
-    if (i < 0) (out.push(words), keys.push(k));
-    else if (k.length > keys[i]!.length) ((out[i] = words), (keys[i] = k));
-  }
-  return out.slice(-40);
-}
+// Kai's notebook as it reads it (latest, activeMisconceptions, notesOf, noteParts, quotesOf) lives in notebook.ts,
+// free of the schemas, so the browser can use it without them
+export { activeMisconceptions, latest, noteParts, notesOf, quotesOf } from "./notebook";
 
 /** Required facts the learner-facing videos cover: what Kai waits for. */
 export const teachableRequired = (n: Node) => n.facts.filter((f) => f.required && f.teachable);

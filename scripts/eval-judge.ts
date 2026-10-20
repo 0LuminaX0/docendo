@@ -45,6 +45,10 @@ const CASES: Case[] = [
   // mixed messages: a right part and a wrong part in one go, as learners write; the right part must still count
   { msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the restaurant it has visited the least.", want: { "n07.f1": "correct" }, not: ["n07.f2"], misconception: true },
   { msg: "UCB adds a bonus to each average and picks the option with the highest total, and that bonus grows every time you pick the option.", want: { "n11.f1": "correct" }, misconception: true },
+  // short answers to Kai's question: the note must turn them into a sentence that stands alone (reported, not scored)
+  { kai: "So what exactly am I choosing between each time?", msg: "between arms" },
+  { kai: "And when greedy picks a truck, what does it remember about it afterwards?", msg: "you store its average" },
+  { kai: "Does greedy ever go back to a truck that looked bad at first?", msg: "nope, never" },
   { msg: "idk", intent: "unsure", not: ["n01.f1", "n05.f1"] },
   { msg: "ok what's next?", intent: "move_on" },
   { msg: "Is this like the slot machines in a casino?", intent: "ask_kai" },
@@ -55,6 +59,8 @@ for (const model of models) {
   let hit = 0, want = 0, falseCredit = 0, intentOk = 0, intentN = 0, miscOk = 0, miscN = 0, errors = 0;
   const ms: number[] = [];
   const notes: string[] = [];
+  let noteN = 0, noteKept = 0;
+  const samples: string[] = [];
   await Promise.all(
     Array.from({ length: reps }, () => CASES).flat().map(async (c, k) => {
       const i = k % CASES.length;
@@ -63,6 +69,13 @@ for (const model of models) {
         const j = await llmJudge(bundle, c.msg, c.kai ?? "Could you teach me?", undefined, { timeoutMs: 30_000, retries: 0 });
         ms.push(Date.now() - t);
         const got = new Map(j.facts.map((f) => [f.fact, f.verdict]));
+        // Kai's notes: a whole sentence around the learner's words (notes.ts), else the bare quote
+        for (const d of j.notesDropped ?? []) samples.push(`#${i + 1} refused "${d.note}" (${d.why})`);
+        for (const v of [...j.facts, ...(j.misconceptions ?? [])]) {
+          noteN++;
+          if (v.note) noteKept++;
+          if (samples.length < 24 && (c.kai || v.note)) samples.push(`#${i + 1} "${v.quote}" → ${v.note ? `"${v.note}"` : "(the quote alone)"}`);
+        }
         for (const [f, v] of Object.entries(c.want ?? {})) {
           want++;
           if (got.get(f) === v) hit++;
@@ -82,5 +95,6 @@ for (const model of models) {
   console.log(`\n${model}`);
   console.log(`  facts found ${hit}/${want}, false credit ${falseCredit}, intent ${intentOk}/${intentN}, misconceptions ${miscOk}/${miscN}, errors ${errors}`);
   console.log(`  median ${ms[Math.floor(ms.length / 2)]} ms, slowest ${ms.at(-1)} ms`);
+  console.log(`  notes with Kai's words added ${noteKept}/${noteN} (the rest: the learner's words alone, or their whole sentence)${samples.length ? `\n    ${samples.join("\n    ")}` : ""}`);
   if (notes.length) console.log(`  ${notes.join("\n  ")}`);
 }

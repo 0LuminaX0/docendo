@@ -1,47 +1,21 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { z } from "zod";
 import { Bundle } from "../../content/schema";
 import { PracticeFile, checkNumber, checkPractice } from "../../content/practice";
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 import { DEFAULT_TOPIC, RAW_PACKS } from "./topics";
 import { makeMoments } from "./moments";
-import { SurveyItem, TopicCopy } from "../settings";
+import { TopicCopy } from "../settings";
+import { ExercisesFile, PretestFile, SurveyFile, type Exercise } from "../../content/pack";
+export type { Exercise };
 
 // A topic pack, parsed and ready to serve (lib/server/topics.ts lists the packs). Every route and page asks for the
 // pack it needs: a session's own (its token names the topic it started with), or the study's current one (Settings).
 // Built once per topic and kept.
 
-const Exercise = z
-  .object({
-    id: z.string(),
-    goal: z.string(),
-    type: z.string(),
-    section: z.string(),
-    form: z.enum(["A", "B"]).default("A"), // two parallel forms: one for the final test, the other for the delayed test
-    pair: z.string().optional(), // a form B item: its twin in form A
-    kind: z.enum(["choice", "number"]).default("choice"), // pick an option, or type a number
-    prompt: z.string(),
-    options: z.array(z.string()).min(2).max(6).optional(),
-    unit: z.string().optional(),
-    answer: z.number(), // choice: the option's index; number: the value
-    tolerance: z.number().min(0).optional(),
-    explain: z.string(),
-  })
-  .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
-export type Exercise = z.infer<typeof Exercise>;
 export type Form = "A" | "B";
 export const FORMS: Form[] = ["A", "B"];
 export const otherForm = (form: Form): Form => (form === "A" ? "B" : "A");
-
-const PretestItem = z.object({
-  id: z.string(),
-  kind: z.enum(["background", "knowledge"]),
-  prompt: z.string(),
-  options: z.array(z.string()).min(2).max(6),
-  answer: z.number().int().min(0).optional(), // knowledge items
-  exclude: z.number().int().min(0).optional(), // background: this answer flags the session as excluded from the analysis
-});
 
 /** Grade one answer: an option's index, or a typed number. */
 export function checkExercise(q: Exercise, a: number | string | null): boolean {
@@ -56,11 +30,11 @@ function build(slug: string) {
   const raw = RAW_PACKS[slug];
   if (!raw) throw new Error(`No topic pack "${slug}" (lib/server/topics.ts)`);
   const bundle: Bundle = Bundle.parse(raw.bundle);
-  const exercises = z.object({ title: z.string(), items: z.array(Exercise).min(1) }).parse(raw.exercises).items;
-  const pretest = z.object({ title: z.string(), items: z.array(PretestItem).min(1) }).parse(raw.pretest).items;
+  const exercises = ExercisesFile.parse(raw.exercises).items;
+  const pretest = PretestFile.parse(raw.pretest).items;
   const practiceFile = PracticeFile.parse(raw.practice);
   const practice = practiceFile.items;
-  const survey = z.object({ items: z.array(SurveyItem) }).parse(raw.survey).items;
+  const survey = SurveyFile.parse(raw.survey).items;
   const copy = TopicCopy.parse(raw.copy);
   const formItems = (form: Form) => exercises.filter((q) => q.form === form);
   const forms = FORMS.filter((f) => formItems(f).length > 0);
@@ -124,8 +98,6 @@ export const topicSlugs = () => Object.keys(RAW_PACKS);
 export const hasTopic = (slug: string) => slug in RAW_PACKS;
 export { DEFAULT_TOPIC };
 
-export type PublicExercise = ReturnType<Pack["publicExercises"]>[number];
-export type PublicPractice = Pack["publicPractice"][number];
 
 function graphOf(bundle: Bundle) {
   const l = layout(bundle.nodes);

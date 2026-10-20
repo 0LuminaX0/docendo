@@ -6,14 +6,8 @@ import type { Judgement } from "./judge";
 // Every move except wrapUp ends in one concrete question, so the learner always
 // knows what Kai is waiting for.
 
-export const CONFIG = {
-  ready: 0.8, // share of teachable required facts explained before Kai feels ready…
-  readyLate: 0.5, // …or this share once the learner has taught for lateAfterMin minutes
-  lateAfterMin: 8,
-  maxTurns: 30, // learner messages; Kai wraps up after this many regardless
-  tries: 1, // Kai asks each fact's question once…
-  triesIfClose: 2, // …or twice when the answer was partly right (or wrong)
-};
+export { CONFIG } from "./config";
+import { CONFIG } from "./config";
 
 export type Move = {
   type: MoveType;
