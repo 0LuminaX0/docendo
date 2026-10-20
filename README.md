@@ -1,23 +1,20 @@
-<h1 align="center"><img src="docs/logo.svg" width="44" height="44" align="absmiddle" alt="">&nbsp;Docendo</h1>
+<h1><img src="docs/logo.svg" width="40" height="40" align="absmiddle" alt="">&nbsp;Docendo</h1>
 
-<p align="center">
-  <b>Learn a topic by teaching it to Kai, an AI classmate who only knows what you tell it.</b><br>
-  <i>Docendo discimus: by teaching, we learn.</i>
-</p>
+> ***Docendo discimus***: by teaching, we learn.<br>
+> Learn a topic by explaining it to Kai, an AI classmate who only knows what you tell it.
 
-<p align="center">
-  <a href="https://docendo-jade.vercel.app"><b>Live app</b></a> &nbsp;&nbsp;
-  <a href="#features">Features</a> &nbsp;&nbsp;
-  <a href="#a-session-step-by-step">A session</a> &nbsp;&nbsp;
-  <a href="#how-kai-works">How Kai works</a> &nbsp;&nbsp;
-  <a href="#run-it-yourself">Run it yourself</a>
-</p>
+<br>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16">
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5.9">
-  <img src="https://img.shields.io/badge/EPFL-CS--411%20Digital%20Education-E2001A" alt="EPFL CS-411">
-</p>
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![React 19](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![OpenRouter](https://img.shields.io/badge/LLM-OpenRouter-6467F2?logo=openrouter&logoColor=white)](https://openrouter.ai)
+[![Vercel](https://img.shields.io/badge/deploy-Vercel-000000?logo=vercel&logoColor=white)](https://vercel.com)
+[![Upstash Redis](https://img.shields.io/badge/data-Upstash-00C98D?logo=upstash&logoColor=white)](https://upstash.com)
+[![Vitest](https://img.shields.io/badge/tested%20with-Vitest-6E9F18?logo=vitest&logoColor=white)](https://vitest.dev)
+[![EPFL CS-411](https://img.shields.io/badge/EPFL-CS--411%20Digital%20Education-E2001A)](https://www.epfl.ch)
+
+**[Live app](https://docendo-jade.vercel.app)** &nbsp;&nbsp; **[Features](#features)** &nbsp;&nbsp; **[A session](#a-session-step-by-step)** &nbsp;&nbsp; **[How Kai works](#how-kai-works)** &nbsp;&nbsp; **[The study](#the-study)** &nbsp;&nbsp; **[Run it yourself](#run-it-yourself)** &nbsp;&nbsp; **[Credits](#credits)**
 
 ![The start page: Kai introduces itself and the four steps of a session](docs/welcome.png)
 
@@ -199,3 +196,7 @@ Okita, S. Y., & Schwartz, D. L. (2013). Learning by teaching human pupils and te
 In line with the CS-411 rules on generative AI, we declare that Docendo was built with the help of an AI coding agent ([Claude Code](https://www.anthropic.com/claude-code) by Anthropic). The agent assisted with background research, the code, the map of ideas, the exercises and this README. The team set the direction and the requirements, reviewed and tested what the agent produced, and takes responsibility for the result.
 
 Kai itself runs on language models through OpenRouter, as does voice input. That is part of the product, not of how it was built.
+
+---
+
+<sub><img src="docs/logo.svg" width="16" height="16" alt="" align="absmiddle">&nbsp; Made with patience and a lot of questions from Kai. EPFL, 2026</sub>
