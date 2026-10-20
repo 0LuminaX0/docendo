@@ -3,7 +3,7 @@ import { CONFIG } from "../../engine/tutor/policy";
 import { teachableRequired } from "../../engine/tutor/state";
 import { BLOCKS, flowOf, minutesOf, type StepKey } from "../flow";
 import type { Settings } from "../settings";
-import { packFor, topicSlugs, type Pack } from "./content";
+import { hasTopic, packFor, topicSlugs, type Pack } from "./content";
 import { getSettings } from "./settings";
 
 // What a study consists of, counted from the topic pack and the settings rather than written down: the admin panel's
@@ -73,4 +73,14 @@ export const topicList = () => topicSlugs().map((slug) => ({ slug, title: packFo
 export async function currentStudy(opts: { fresh?: boolean } = {}) {
   const { settings, version } = await getSettings(opts);
   return { settings, version, pack: packFor(settings.topic) };
+}
+
+/** What the topic pack can't do with these settings (null: nothing), checked before every save. */
+export function settingsProblem(s: Settings): string | null {
+  if (!hasTopic(s.topic)) return `There is no topic pack "${s.topic}".`;
+  const pack = packFor(s.topic);
+  if (s.test.followUp && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Switch it off.`;
+  if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;
+  if (s.pretest.on && !pack.pretest.length) return `"${pack.title}" has no pretest: switch that step off.`;
+  return null;
 }

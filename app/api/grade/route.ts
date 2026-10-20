@@ -6,7 +6,7 @@ import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
 import { record } from "@/lib/server/events";
-import { markTest } from "@/lib/server/participants";
+import { followUpOpens, getParticipant, markTest } from "@/lib/server/participants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -101,5 +101,12 @@ export async function POST(req: NextRequest) {
   // the final test is done: now the practice problems' worked solutions can be shown too (not after the delayed test,
   // and not when the study has no practice step)
   const { settings } = await getSettings();
-  return ok({ score, of: items.length, items, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
+  // a person with a follow-up test (a code that names them, the follow-up switched on, two forms): when it opens
+  let followUp: { opensAt: number } | null = null;
+  if (session.phase === "main" && settings.test.followUp && pack.forms.length > 1 && session.pid && (session.entry === "participant" || session.entry === "trial")) {
+    const p = await getParticipant(session.pid).catch(() => null);
+    const opens = p ? followUpOpens(p, settings.test.followUpDays) : null;
+    if (opens !== null) followUp = { opensAt: opens };
+  }
+  return ok({ score, of: items.length, items, followUp, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
 }

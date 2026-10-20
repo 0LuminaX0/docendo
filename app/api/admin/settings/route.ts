@@ -5,7 +5,7 @@ import { fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limit } from "@/lib/server/limit";
 import { hasTopic, packFor } from "@/lib/server/content";
 import { defaults, getSettings, resetSettings, saveSettings } from "@/lib/server/settings";
-import { packSummary } from "@/lib/server/study";
+import { packSummary, settingsProblem } from "@/lib/server/study";
 import { Settings } from "@/lib/settings";
 
 export const runtime = "nodejs";
@@ -17,16 +17,6 @@ const Body = z.discriminatedUnion("action", [
   z.object({ action: z.literal("save"), settings: Settings }),
   z.object({ action: z.literal("reset") }),
 ]);
-
-/** What the pack can't do with these settings (a follow-up test needs two test forms). */
-function problems(s: Settings): string | null {
-  if (!hasTopic(s.topic)) return `There is no topic pack "${s.topic}".`;
-  const pack = packFor(s.topic);
-  if (s.test.followUpDays > 0 && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Set its days to 0.`;
-  if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;
-  if (s.pretest.on && !pack.pretest.length) return `"${pack.title}" has no pretest: switch that step off.`;
-  return null;
-}
 
 /** The study settings (admin only): check an edit, look at another topic, save, or go back to the defaults. */
 export async function POST(req: NextRequest) {
@@ -46,9 +36,9 @@ export async function POST(req: NextRequest) {
     const d = defaults(b.topic);
     return ok({ defaults: d, summary: packSummary(packFor(b.topic), d) });
   }
-  if (b.action === "check") return ok({ summary: packSummary(packFor(b.settings.topic), b.settings), problem: problems(b.settings) });
+  if (b.action === "check") return ok({ summary: packSummary(packFor(b.settings.topic), b.settings), problem: settingsProblem(b.settings) });
   if (b.action === "save") {
-    const p = problems(b.settings);
+    const p = settingsProblem(b.settings);
     if (p) return fail(400, p);
   }
   const version = b.action === "save" ? await saveSettings(b.settings) : await resetSettings();

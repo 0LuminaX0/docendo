@@ -75,7 +75,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             </li>
           ))}
           {settings.survey.on && <li>Questions after the test</li>}
-          {settings.test.followUpDays > 0 && <li>Follow-up after {settings.test.followUpDays} days</li>}
+          {settings.test.followUp && <li>Follow-up after {settings.test.followUpDays} days</li>}
         </ol>
         <Link className="btn ghost small" href="/admin/live">
           <i className={`adm-dot${live ? " on" : ""}`} /> {live} active now
@@ -241,11 +241,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
               <dt>Turns answered offline (no credits)</dt><dd>{s.teaching.degraded}</dd>
             </dl>
           </section>
-            {(settings.test.followUpDays > 0 || s.delayed.n > 0) && (
+            {(settings.test.followUp || s.delayed.n > 0) && (
               <section className="adm-card">
                 <h2>Follow-up test</h2>
                 <p className="note">
-                  {settings.test.followUpDays ? `Opens ${settings.test.followUpDays} days after the final test, with the other form.` : "Switched off (Study setup: the final test's follow-up days are 0)."}
+                  {settings.test.followUp ? `Opens ${settings.test.followUpDays} days after the final test, with the other form (or earlier, opened on Follow-up).` : "Switched off (Study setup, final test)."}
                 </p>
                 <dl className="adm-dl">
                   <dt>Came back / finished</dt><dd>{s.delayed.n} / {s.delayed.finished}</dd>

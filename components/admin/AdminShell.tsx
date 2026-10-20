@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpenText, Database, Download, HeartPulse, KeyRound, LayoutDashboard, LogOut, MessageSquareQuote, Radio, Users, Workflow } from "lucide-react";
+import { BookOpenText, CalendarClock, Database, Download, HeartPulse, KeyRound, LayoutDashboard, LogOut, MessageSquareQuote, Radio, Users, Workflow } from "lucide-react";
 
 // the sections in three groups: the data coming in, how the study is set up, how the system runs
 const NAV = [
@@ -14,6 +14,7 @@ const NAV = [
   ]],
   ["Study", [
     ["/admin/settings", "Study setup", Workflow],
+    ["/admin/follow-up", "Follow-up test", CalendarClock],
     ["/admin/content", "Topic content", BookOpenText],
     ["/admin/codes", "Access", KeyRound],
   ]],

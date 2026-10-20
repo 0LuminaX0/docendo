@@ -27,7 +27,7 @@ export default async function Page() {
       cards={cards}
       totalMinutes={Math.round(sum.total / 5) * 5}
       pretestItems={settings.pretest.on ? pack.pretest.length : 0}
-      followUpDays={settings.test.followUpDays || null}
+      followUpOn={settings.test.followUp}
     />
   );
 }

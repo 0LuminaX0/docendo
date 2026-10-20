@@ -48,8 +48,10 @@ const CASES: Case[] = [
   // short answers to Kai's question: the note must turn them into a sentence that stands alone (reported, not scored)
   { kai: "So what exactly am I choosing between each time?", msg: "between arms" },
   { kai: "And when greedy picks a truck, what does it remember about it afterwards?", msg: "you store its average" },
-  { kai: "Does greedy ever go back to a truck that looked bad at first?", msg: "nope, never" },
+  { kai: "Does greedy ever go back to a truck that looked bad at first?", msg: "nope, never", want: { "n05.f2": "correct" } }, // a real "no" still counts
   { msg: "idk", intent: "unsure", not: ["n01.f1", "n05.f1"] },
+  // after "i dunno": "not this either" is still not knowing, never a "no" that answers Kai's question (a real bug)
+  { kai: "Oh, you aren't sure either, and that is totally fine. Do I know in advance how good each option is, or what I will get when I pick it?", msg: "nope, not this either", intent: "unsure", not: ["n01.f2"] },
   { msg: "ok what's next?", intent: "move_on" },
   { msg: "Is this like the slot machines in a casino?", intent: "ask_kai" },
 ];

@@ -5,6 +5,7 @@ import { Redis } from "@upstash/redis";
 import { config } from "./env";
 import type { Condition } from "../codes";
 import type { Form } from "./content";
+import { hashOf } from "./admindata";
 
 // What the server keeps per participant, for the delayed test: the condition, which test form they took first, and
 // when each test was taken. Only for codes that name one person (a one-use code from the admin panel, or a participant
@@ -19,6 +20,7 @@ export type Participant = {
   topic?: string; // the topic pack of the first session (older records: the default topic); the delayed test keeps it
   startedAt: string;
   testAt?: string; // the final test was graded (the delayed test opens some days later)
+  opensAt?: string; // set in the admin panel: the follow-up is open from this moment (earlier than the schedule)
   delayedAt?: string; // the delayed test was graded
 };
 
@@ -46,6 +48,40 @@ export async function getParticipant(pid: string): Promise<Participant | null> {
     return v ? (typeof v === "string" ? (JSON.parse(v) as Participant) : (v as Participant)) : null;
   }
   return (await readData()).participants[pid] ?? null;
+}
+
+/** Everyone the server keeps a record for, newest first. */
+export async function listParticipants(): Promise<Participant[]> {
+  let all: Participant[];
+  if (redis) all = Object.values(hashOf(await redis.hgetall(KEY))).flatMap((v) => {
+    try {
+      return [JSON.parse(v) as Participant];
+    } catch {
+      return [];
+    }
+  });
+  else all = Object.values((await readData()).participants);
+  return all.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+}
+
+/** When a person's follow-up opens: the admin panel's early opening, else the schedule (null: no final test yet). */
+export function followUpOpens(p: Participant, days: number): number | null {
+  if (!p.testAt) return null;
+  const scheduled = Date.parse(p.testAt) + days * 86_400_000;
+  return p.opensAt ? Math.min(scheduled, Date.parse(p.opensAt)) : scheduled;
+}
+
+/** Open the follow-up now for these people, or (open: false) put them back on the schedule. */
+export async function setFollowUpOpen(pids: string[], open: boolean): Promise<number> {
+  let n = 0;
+  for (const pid of pids) {
+    const p = await getParticipant(pid);
+    if (!p || !p.testAt || p.delayedAt) continue;
+    const { opensAt: _o, ...rest } = p;
+    await putParticipant(open ? { ...rest, opensAt: new Date().toISOString() } : rest);
+    n++;
+  }
+  return n;
 }
 
 export async function putParticipant(p: Participant) {

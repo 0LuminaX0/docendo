@@ -21,6 +21,8 @@ export type GradeResult = {
   items: { id: string; kind?: "choice" | "number"; chosen: number | string | null; answer: number; key?: string; correct: boolean; explain: string }[];
   // the practice problems' worked solutions, shown only after the test (absent in older sessions)
   practice?: { id: string; round: number; title: string; prompt: string; options: string[] | null; answer: string; answerIndex: number | null; steps: string[] }[];
+  // a person with a follow-up test: when it opens (null or absent: no follow-up for this session)
+  followUp?: { opensAt: number } | null;
 };
 
 export type PracticeEntry = {

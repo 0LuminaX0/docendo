@@ -764,7 +764,10 @@ button { font: inherit; color: inherit; }
 .adm-form label.adm-check { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; padding-bottom: 10px; }
 .adm-inline { width: auto !important; padding: 4px 8px !important; font-size: 13.5px !important; }
 .adm-search { width: 240px; }
-.adm-rowact { display: flex; gap: 4px; align-items: center; justify-content: flex-end; }
+/* a table's action cell: stays a table cell (a flex cell loses the row's divider), its buttons side by side */
+.adm-rowact { text-align: right; white-space: nowrap; }
+.adm-rowact > * { vertical-align: middle; }
+.adm-rowact > * + * { margin-left: 4px; }
 .adm-login { min-height: 100dvh; display: grid; place-items: center; background: #f7f8fa; padding: 16px; }
 .adm-login-box { width: min(380px, 100%); background: #fff; border: 1px solid var(--rule); border-radius: 18px; padding: 26px 26px 24px; display: flex; flex-direction: column; gap: 14px; }
 .adm-login-box h1 { margin: 0; font: 700 24px var(--font-display), sans-serif; }
@@ -1133,3 +1136,19 @@ textarea.dictating::placeholder { color: transparent; }
 .adm-seg button { border: 0; background: none; cursor: pointer; padding: 6px 11px; border-radius: 8px; font: 600 13px var(--font-body), sans-serif; color: var(--ink-2); }
 .adm-seg button:hover { background: var(--sunk); }
 .adm-seg button[aria-current="page"] { background: var(--ink); color: #fff; }
+
+/* the follow-up test's invitation on the results page */
+.followup-card { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 16px; background: var(--blue-soft); color: var(--ink); }
+.followup-card > svg { flex: none; color: var(--blue-ink); margin-top: 2px; }
+.followup-card h2 { margin: 0 0 4px; font: 700 18px var(--font-display), sans-serif; }
+.followup-card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+
+/* admin: the follow-up test */
+.fu-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.fu-bar .grow { flex: 1; }
+.fu-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 700; border-radius: 99px; padding: 2px 9px; background: var(--sunk); color: var(--ink-2); }
+.fu-status.open { background: var(--green-soft); color: #1f7a4a; }
+.fu-status.done { background: var(--blue-soft); color: var(--blue-ink); }
+.fu-status.first { color: var(--muted); }
+.ok-text { font-size: 13.5px; font-weight: 600; color: #1f7a4a; }
+.error-text { font-size: 13.5px; font-weight: 600; color: #b42318; }

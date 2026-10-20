@@ -24,7 +24,7 @@ const Env = z.object({
   IP_TURNS_PER_MIN: z.coerce.number().int().positive().default(120), // a whole network (a lab room shares one IP)
   IP_SESSIONS_PER_HOUR: z.coerce.number().int().positive().default(60),
   SESSION_DAYS: z.coerce.number().positive().max(30).default(10), // how long a session (and its progress on the device) lasts
-  DELAYED_TEST_DAYS: z.coerce.number().positive().max(60).optional(), // the delayed test opens this many days after the final test; unset: none
+  DELAYED_TEST_DAYS: z.coerce.number().min(0).max(60).optional(), // the follow-up test opens this many days after the final test; unset: off (the admin panel can switch it)
   DOCENDO_TOPIC: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(), // the topic pack a fresh install runs (lib/server/topics.ts); the Settings page can switch it
 });
 

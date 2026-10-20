@@ -50,7 +50,7 @@ describe("settings", () => {
     const m = merge(old);
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
     expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5 });
-    expect(m.test.followUpDays).toBe(9);
+    expect(m.test).toEqual({ followUp: true, followUpDays: 9 });
     expect(m.tools).toEqual({ calculator: false, voice: true });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
@@ -154,5 +154,22 @@ describe("the dashboard's score charts", () => {
     expect(c.testMax).toBe(6);
     expect(c.hist.direct).toHaveLength(7);
     expect(c.hist.recursive[6]).toBe(1);
+  });
+});
+
+describe("the follow-up test", () => {
+  it("reads an older test block (0 days meant off) into the switch and the days", () => {
+    expect(merge({ test: { followUpDays: 0 } }).test.followUp).toBe(false);
+    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5 });
+    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0 });
+  });
+  it("opens on the schedule, or earlier when the admin panel opened it", async () => {
+    const { followUpOpens } = await import("../lib/server/participants");
+    const testAt = "2026-10-01T10:00:00.000Z";
+    const base = { pid: "c1", cond: "direct" as const, form: "A" as const, startedAt: testAt };
+    expect(followUpOpens(base, 7)).toBeNull(); // no final test yet
+    expect(followUpOpens({ ...base, testAt }, 7)).toBe(Date.parse(testAt) + 7 * 86_400_000);
+    expect(followUpOpens({ ...base, testAt, opensAt: "2026-10-02T09:00:00.000Z" }, 7)).toBe(Date.parse("2026-10-02T09:00:00.000Z"));
+    expect(followUpOpens({ ...base, testAt, opensAt: "2026-10-30T09:00:00.000Z" }, 7)).toBe(Date.parse(testAt) + 7 * 86_400_000); // never later than the schedule
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Brain, Check, Minus, RotateCcw, X } from "lucide-react";
+import { Brain, CalendarClock, Check, Minus, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
@@ -76,6 +76,22 @@ export default function Results() {
           </div>
           )}
         </div>
+
+        {/* the follow-up test: when to come back, and how (only for a code that names this person) */}
+        {!delayed && r.followUp && (
+          <section className="followup-card" aria-labelledby="fu-h">
+            <CalendarClock size={22} aria-hidden="true" />
+            <div>
+              <h2 id="fu-h">One more short test, later</h2>
+              <p>
+                {r.followUp.opensAt <= Date.now()
+                  ? "Your follow-up test is open now."
+                  : `From ${new Date(r.followUp.opensAt).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}, you can take a follow-up test.`}{" "}
+                It has {r.of} new questions on the same ideas and takes about {r.of} minutes. Come back to this site on this device, or enter the same access code. It helps us see what stays with you over time.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* asked while the session is fresh: at the bottom of a long review most people never reached it */}
         <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />

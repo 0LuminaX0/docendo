@@ -418,6 +418,23 @@ await phoneHome.goto(BASE + "/", { waitUntil: "load" });
 await phoneHome.waitForSelector("button[type=submit]");
 await shot(phoneHome, "10-phone-welcome", true);
 
+// the follow-up on the participant's side: a finished session whose graded test came with a follow-up date shows the
+// invitation on the results page, and the welcome page offers "Take the follow-up test" (the server decides if open)
+{
+  const fp = await newPage(1366, 900, await browser.createBrowserContext());
+  await fp.goto(BASE + "/", { waitUntil: "load" });
+  const later = Date.now() + 3 * 86_400_000;
+  await fp.evaluate((v) => localStorage.setItem("docendo:session:v1", v), JSON.stringify({ ...finalSession, team: false, result: { ...finalSession.result, followUp: { opensAt: later } } }));
+  await fp.goto(BASE + "/results", { waitUntil: "load" });
+  const invited = await fp.waitForSelector(".followup-card", { timeout: 10000 }).then(() => true, () => false);
+  await fp.goto(BASE + "/", { waitUntil: "load" });
+  await fp.waitForSelector(".intro-go .btn");
+  const offered = await fp.$$eval(".intro-go .btn", (bs) => bs.some((b) => /follow-up test/i.test(b.textContent)));
+  const hint = await fp.$eval(".intro-go", (e) => /scheduled for/i.test(e.textContent));
+  await fp.close();
+  check(invited && offered && hint, "the results page invites people back for the follow-up, and the welcome page offers it with the scheduled date");
+}
+
 // voice input: the mic shows beside Send when a model is set up (hidden in demo mode; here the flag is flipped
 // in the browser only, so the button renders; the server stays in demo mode and refuses to transcribe)
 {
@@ -463,7 +480,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
   // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first
   const firstForm = (await post("/api/grade", { token: used.json.token, kind: "items" })).json.form;
-  await post("/api/grade", { token: used.json.token, answers: Array(10).fill(null) });
+  const graded = await post("/api/grade", { token: used.json.token, answers: Array(10).fill(null) });
   const early = await post("/api/session", { accessCode: code, consent: true });
   await wait(2500);
   const fu = await (await browser.createBrowserContext()).newPage();
@@ -489,10 +506,29 @@ await shot(phoneHome, "10-phone-welcome", true);
   await shot(fu, "12b-follow-up-results", true);
   const again = await post("/api/session", { accessCode: code, consent: true });
   check(
-    early.status === 409 && /opens on/.test(early.json.error) && otherForm && fuScore === "10/10" && again.status === 409 && /both tests/.test(again.json.error),
-    `delayed test: not before it opens; then the same code gives the other form (${firstForm} first), graded ${fuScore}; then "done both"`,
+    typeof graded.json.followUp?.opensAt === "number" && early.status === 409 && /opens on/.test(early.json.error) && otherForm && fuScore === "10/10" && again.status === 409 && /both tests/.test(again.json.error),
+    `delayed test: the graded test says when it opens; not before; then the same code gives the other form (${firstForm} first), graded ${fuScore}; then "done both"`,
   );
   await fu.close();
+
+  // opened early from the admin panel: with a 30-day schedule a trial participant is told to wait, the admin opens it
+  // now (the Follow-up page's action), and the same code starts the follow-up test
+  const sched = await post("/api/admin/followup", { action: "setting", followUp: true, followUpDays: 30 });
+  await wait(10_500); // each route keeps the settings for up to 10 s
+  const made2 = (await post("/api/admin/codes", { action: "create", count: 1, prefix: "FU", label: "e2e follow-up", condition: "direct", trial: true, maxUses: 1 })).json.codes?.[0];
+  const s2 = await post("/api/session", { accessCode: made2.code, consent: true });
+  const g2 = await post("/api/grade", { token: s2.json.token, answers: Array(10).fill(null) });
+  const tooSoon = await post("/api/session", { accessCode: made2.code, consent: true });
+  await adm.goto(BASE + "/admin/follow-up", { waitUntil: "load" });
+  const waiting = await adm.$$eval("tbody tr", (rows) => rows.filter((r) => r.textContent.includes("waiting")).length);
+  await shot(adm, "11-admin-follow-up", true);
+  const opened = await post("/api/admin/followup", { action: "open", pids: [made2.id] });
+  const back2 = await post("/api/session", { accessCode: made2.code, consent: true });
+  await post("/api/admin/codes", { action: "delete", code: made2.code });
+  check(
+    sched.status === 200 && g2.json.followUp?.opensAt > Date.now() + 20 * 86_400_000 && tooSoon.status === 409 && waiting > 0 && opened.json.changed === 1 && back2.status === 200 && back2.json.phase === "delayed",
+    `follow-up opened early: a 30-day schedule makes a trial code wait (listed on Follow-up as waiting), "Open now" lets the same code start it (${back2.json.phase})`,
+  );
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
   // settings: a change reaches the participant pages, is versioned, and goes back to the defaults
   const base = await post("/api/admin/settings", { action: "reset" });

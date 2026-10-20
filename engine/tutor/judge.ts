@@ -141,6 +141,7 @@ For every fact the message explains, return:
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
 - before, after: the classmate writes the quote into their notebook, and it must still make sense when read alone later. So give the few words that go before and after the quote to make it one whole sentence (code puts them together: before + quote + after). Add only what the quote leaves implicit, taken from the classmate's question or the rest of the teacher's message: what "it" or "they" stands for, what the quote answers. Usually 2 to 8 words, often only before. Fill them whenever the quote doesn't say what it is about: it starts with "it", "they", "with", "and", a verb ("picks the…"), or it continues a sentence that began earlier in the message. Never add an idea, a term or a number the teacher didn't say, never use the wording of the facts above, and don't correct or improve the quote. If the quote already reads as a whole statement that names its subject, leave both empty. Never repeat the quote's words in before or after.
   Examples. Classmate: "So what does greedy keep track of for each truck?" Teacher: "you store its average" → before "For each truck greedy tries,", after "". Classmate: "Does greedy ever go back to a truck that looked bad at first?" Teacher: "nope, never" → before "Going back to a truck that looked bad at first, for greedy:", after "". Teacher: "and never tries the others again" (earlier in the message: "Greedy always goes to the best average") → before "Greedy", after "".
+A short "no" or "nope" counts when it clearly answers the classmate's question as asked ("nope, never" to "would I ever go back?"). When it only says they don't know ("nope, no idea", "not this either", "me neither" after an "I don't know"), it is "unsure": credit nothing for it.
 Only include facts the message actually addresses. Most messages address 0–3 facts.
 Credit every fact the message explains, whether or not it answers what the classmate just asked: teachers often move on to another idea, and that still counts.
 A message often mixes a right part and a wrong part, e.g. "UCB adds a bonus to each average and picks the highest total, and the bonus grows every time you pick it": credit the right part as "correct" for its fact (quoting just that part) and record the wrong part under misconceptions. A wrong part never cancels a right one.
@@ -156,7 +157,7 @@ intent, the main thing the message does:
 - "explain": teaching something on their own initiative.
 - "answer": replying to what the classmate just asked (even a short "no, only the one you picked"); prefer this over "explain" when the message answers Kai's question.
 - "ask_kai": asking the classmate a question, e.g. "Is this like the slot machines in a casino?", "What do you think greedy does?". Any message that is mainly a question to Kai is "ask_kai", even if it's about something new.
-- "unsure": saying they don't know or aren't sure ("idk", "no idea").
+- "unsure": saying they don't know or aren't sure ("idk", "no idea", "not this either", "me neither", "nope, no clue"), also when it starts with "no" or "nope": a "no" that only says they don't know is not an answer to the classmate's question.
 - "move_on": asking to move on or saying they're done with this part ("what's next?", "that's it", "next one").
 - "off_topic": chit-chat, or messages that make no sense. Never use it for a question to Kai.`;
 
@@ -184,7 +185,27 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
   const notesDropped: Refusal[] = [];
   const credited = kept.map((v) => withNote(bundle, v, message, kaiLast, mis.kept, (x) => notesDropped.push(x)));
   const beliefs = mis.kept.map((m) => withNote(bundle, m, message, kaiLast, kept, (x) => notesDropped.push(x)));
-  return { intent: r.data.intent, facts: credited, misconceptions: beliefs, dropped: [...dropped, ...mis.dropped], notesDropped, termsUsed: termsUsed(bundle, message) };
+  return consistent({ intent: r.data.intent, facts: credited, misconceptions: beliefs, dropped: [...dropped, ...mis.dropped], notesDropped, termsUsed: termsUsed(bundle, message) });
+}
+
+// intents that say the message teaches nothing: "I don't know", chit-chat, "what's next?"
+const NOT_TEACHING = new Set<Judgement["intent"]>(["unsure", "off_topic", "move_on"]);
+
+/**
+ * One reading of a message, not two: one the judge classes as "I don't know", off-topic or "move on" can't also
+ * explain a fact or state a misconception. Its verdicts are dropped (and logged), so Kai's reply ("let's leave that
+ * part") and Kai's notebook and mind agree. The judge once read "nope, not this either" (after "i dunno") as unsure
+ * and, at the same time, as a right answer to Kai's yes/no question.
+ */
+export function consistent(j: Judgement): Judgement {
+  if (!NOT_TEACHING.has(j.intent) || (!j.facts.length && !j.misconceptions?.length)) return j;
+  const why = `(dropped: the message is ${j.intent.replace("_", " ")})`;
+  return {
+    ...j,
+    facts: [],
+    misconceptions: [],
+    dropped: [...(j.dropped ?? []), ...j.facts.map((v) => ({ fact: v.fact, quote: `${v.quote.slice(0, 160)} ${why}` })), ...(j.misconceptions ?? []).map((m) => ({ fact: `${m.node} (misconception)`, quote: `${m.quote.slice(0, 160)} ${why}` }))],
+  };
 }
 
 /**
@@ -197,7 +218,7 @@ export function mockJudge(bundle: Bundle, message: string): Judgement {
   const lower = message.toLowerCase();
   const idf = idfFor(bundle);
   const lessonWords = tokens(message).filter((t) => idf.has(t)).length;
-  const intent: Judgement["intent"] = /\b(don'?t know|not sure|no idea|idk)\b/.test(lower)
+  const intent: Judgement["intent"] = /\b(don'?t know|dunno|not sure|no idea|no clue|idk|not this either|me neither)\b/.test(lower)
     ? "unsure"
     : /\b(what'?s next|what next|next (one|topic|idea|thing|question)|that'?s (it|all)|move on|skip( it| this)?|let'?s continue|keep going)\b/.test(lower) && lessonWords < 3
       ? "move_on"
@@ -222,7 +243,7 @@ export function mockJudge(bundle: Bundle, message: string): Judgement {
       if (share >= 0.4) facts.push({ fact: f.id, verdict: "correct", quote: clip(message) });
       else if (share >= 0.22) facts.push({ fact: f.id, verdict: "partial", quote: clip(message) });
     }
-  return { intent, facts: checkQuotes(bundle, message, facts), termsUsed: termsUsed(bundle, message) };
+  return consistent({ intent, facts: checkQuotes(bundle, message, facts), termsUsed: termsUsed(bundle, message) });
 }
 
 const idfCache = new WeakMap<Bundle, Map<string, number>>();

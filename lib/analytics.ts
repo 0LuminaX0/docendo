@@ -76,6 +76,7 @@ export function tables(events: Ev[]) {
       lastPath: [...of("client_page_view")].pop()?.path ?? null,
       consent: start?.consent ?? null,
       daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
+      openedEarly: start?.openedEarly ?? null, // delayed sessions: opened early from the admin panel (Follow-up), not on the schedule
       since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)
       // after the final test, before the score (topics/bandits/survey.json): scales 1 to 7; lights = the manipulation
       // check (0 my own understanding, 1 Kai's, 2 not sure)

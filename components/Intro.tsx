@@ -22,14 +22,14 @@ export default function Intro({
   cards,
   totalMinutes,
   pretestItems,
-  followUpDays,
+  followUpOn,
 }: {
   accessRequired: boolean;
   demo: boolean;
   cards: Record<"watch" | "teach" | "practice" | "exercises", string>; // what each step's card says (app/page.tsx)
   totalMinutes: number;
   pretestItems: number; // questions before the first step (0: none)
-  followUpDays: number | null; // the delayed test opens this many days after the final test (null: no delayed test)
+  followUpOn: boolean; // the study has a follow-up test (Study setup)
 }) {
   const router = useRouter();
   const { flow, copy } = useStudySettings();
@@ -73,8 +73,10 @@ export default function Intro({
     }
   }
 
-  // a finished session on this device: the follow-up test, once it is open (participants only)
-  const followUp = saved && followUpDays && saved.step === "results" && saved.phase !== "delayed" && !saved.team && saved.finishedAt ? saved.finishedAt + followUpDays * 86_400_000 : null;
+  // a finished session on this device with a follow-up test (the server said so when it graded the final test). The
+  // server decides whether it is open (the admin panel can open it early), so the button is always there; the date is
+  // only shown as a hint
+  const followUp = followUpOn && saved && saved.step === "results" && saved.phase !== "delayed" && saved.result?.followUp ? saved.result.followUp.opensAt : null;
   const opensText = followUp ? new Date(followUp).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) : "";
 
   return (
@@ -134,7 +136,7 @@ export default function Intro({
             {saved ? (
               <div className="row">
                 {followUp && (
-                  <button className="btn primary" disabled={busy || !agree || Date.now() < followUp} onClick={() => void start(saved.token)} title={Date.now() < followUp ? `Opens on ${opensText}` : agree ? undefined : "Tick the box first"}>
+                  <button className="btn primary" disabled={busy || !agree} onClick={() => void start(saved.token)} title={agree ? undefined : "Tick the box first"}>
                     {busy ? "Starting…" : <>Take the follow-up test <ArrowRight size={17} /></>}
                   </button>
                 )}
@@ -165,7 +167,7 @@ export default function Intro({
                 </button>
               </form>
             ) : null}
-            {followUp && Date.now() < followUp && <p className="note">Your follow-up test opens on {opensText}.</p>}
+            {followUp && Date.now() < followUp && !info && <p className="note">Your follow-up test is scheduled for {opensText}.</p>}
             {info && <p className="info" role="status">{info}</p>}
             {error && <p className="error" role="alert">{error}</p>}
           </div>

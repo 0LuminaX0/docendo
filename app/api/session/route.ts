@@ -8,7 +8,7 @@ import { deviceOf, record } from "@/lib/server/events";
 import { readCode, type Condition } from "@/lib/codes";
 import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
 import { DEFAULT_TOPIC, otherForm, packFor } from "@/lib/server/content";
-import { getParticipant, nextForm, putParticipant, type Participant } from "@/lib/server/participants";
+import { followUpOpens, getParticipant, nextForm, putParticipant, type Participant } from "@/lib/server/participants";
 import { getSettings } from "@/lib/server/settings";
 import type { Settings } from "@/lib/settings";
 import { flowOf } from "@/lib/flow";
@@ -32,15 +32,15 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: 
  * test, with the other form, once it is open. null: no delayed test applies, so the code works as before.
  */
 async function delayedTest(p: Participant, req: NextRequest, st: { settings: Settings; version: string }): Promise<Response | null> {
-  const days = st.settings.test.followUpDays;
   const pack = packFor(p.topic ?? DEFAULT_TOPIC);
-  if (!days || !p.testAt || pack.forms.length < 2) return null;
+  if (!st.settings.test.followUp || !p.testAt || pack.forms.length < 2) return null;
   if (p.delayedAt) return fail(409, "You've done both tests. Thank you for taking part!");
-  const opens = Date.parse(p.testAt) + days * 86_400_000;
+  // the schedule (days after the final test), or earlier if the admin panel opened it
+  const opens = followUpOpens(p, st.settings.test.followUpDays)!;
   if (Date.now() < opens) return fail(409, `Your follow-up test opens on ${day(opens)}. Come back then with the same code.`, { opensAt: opens });
   const who = { cond: p.cond, entry: p.trial ? ("trial" as const) : ("participant" as const), pid: p.pid, form: otherForm(p.form), phase: "delayed" as const, topic: pack.slug };
   const { token, sid, expiresAt } = issueToken(who, st.settings.sessionDays);
-  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: who.entry, phase: "delayed", form: who.form, topic: pack.slug, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
+  record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: who.entry, phase: "delayed", form: who.form, topic: pack.slug, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, openedEarly: !!p.opensAt, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
   return ok({ token, expiresAt, demo: config.demo, team: false, condition: p.cond, phase: "delayed" });
 }
 

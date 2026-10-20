@@ -27,6 +27,7 @@ const NAMES: Record<string, string> = {
   stopAfterMessages: "stop after messages",
   stopAfterMinutes: "stop after minutes",
   delayedTestDays: "follow-up days",
+  followUp: "follow-up test",
   calculator: "calculator",
   voice: "voice input",
   lesson: "video lesson",
@@ -279,17 +280,16 @@ export default function SettingsForm({
 
                     {k === "exercises" && (
                       <div className="study-fields grid">
-                        <Num
-                          label={twoForms ? "Follow-up test after this many days (0: none)" : "Follow-up test (needs a second test form)"}
-                          value={s.test.followUpDays}
-                          min={0}
-                          max={60}
-                          step={1}
-                          disabled={!twoForms && s.test.followUpDays === 0}
-                          onChange={(v) => patch("test", { followUpDays: v })}
-                          changed={s.test.followUpDays !== defaults.test.followUpDays}
+                        <Toggle
+                          label="Follow-up test"
+                          hint={twoForms ? "The other test form, some days later, for codes that name one person. Who is waiting, and opening it early: Follow-up." : "Needs a second test form in the topic pack."}
+                          value={s.test.followUp}
+                          onChange={(v) => twoForms && patch("test", { followUp: v })}
+                          changed={s.test.followUp !== defaults.test.followUp}
                         />
-                        <p className="note">The follow-up takes the other form and needs codes that name one person (a shared code names nobody).</p>
+                        {s.test.followUp && (
+                          <Num label="Opens on its own after this many days (0: right away)" value={s.test.followUpDays} min={0} max={60} step={1} onChange={(v) => patch("test", { followUpDays: v })} changed={s.test.followUpDays !== defaults.test.followUpDays} />
+                        )}
                       </div>
                     )}
                   </div>

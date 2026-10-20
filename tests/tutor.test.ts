@@ -335,3 +335,24 @@ describe("ideas around the lesson", () => {
     expect(factScore(bundle, s).correct).toBe(0);
   });
 });
+
+describe("one reading of a message", () => {
+  it("drops verdicts from a message the judge classes as not teaching", async () => {
+    const { consistent } = await import("../engine/tutor/judge");
+    const j = consistent({ intent: "unsure", facts: [{ fact: "n01.f2", verdict: "correct", quote: "nope, not this either" }], termsUsed: [] });
+    expect(j.facts).toEqual([]);
+    expect(j.dropped?.[0]?.quote).toMatch(/unsure/);
+    const kept = consistent({ intent: "answer", facts: [{ fact: "n01.f2", verdict: "partial", quote: "nope, you only find out by trying" }], termsUsed: [] });
+    expect(kept.facts).toHaveLength(1);
+  });
+});
+
+describe("the offline judge on not knowing", () => {
+  it("reads 'i dunno' and 'not this either' as unsure, and credits nothing", () => {
+    for (const m of ["i dunno", "nope, not this either", "me neither"]) {
+      const j = mockJudge(bundle, m);
+      expect(j.intent).toBe("unsure");
+      expect(j.facts).toEqual([]);
+    }
+  });
+});
