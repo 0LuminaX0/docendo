@@ -6,6 +6,7 @@ import banditsPretest from "../../topics/bandits/pretest.json";
 import banditsSurvey from "../../topics/bandits/survey.json";
 import banditsCoverage from "../../topics/bandits/coverage.json";
 import banditsCopy from "../../topics/bandits/copy.json";
+import banditsScript from "../../topics/bandits/script.json";
 import banditsIntro from "../../topics/bandits/sources/chunks/mab-intro.json";
 import banditsDml from "../../topics/bandits/sources/chunks/mab-dml.json";
 
@@ -26,6 +27,7 @@ export type RawPack = {
   survey: unknown;
   coverage: unknown;
   copy: unknown;
+  script?: unknown; // Kai's fixed teaching questions (script.json); without it Kai chooses its questions itself
   chunks: Record<string, unknown>; // transcript chunks per video source id
 };
 
@@ -38,6 +40,7 @@ export const RAW_PACKS: Record<string, RawPack> = {
     survey: banditsSurvey,
     coverage: banditsCoverage,
     copy: banditsCopy,
+    script: banditsScript,
     chunks: { "mab-intro": banditsIntro, "mab-dml": banditsDml },
   },
 };

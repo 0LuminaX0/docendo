@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Bundle } from "./schema";
 import { PracticeFile } from "./practice";
 import { SurveyItem, TopicCopy } from "../lib/settings";
+import { hasTerm } from "./terms";
 
 // The files a topic pack gives the app (besides the bundle): the final test's forms, the pretest, the questions after
 // the test and the participant-facing words. One set of schemas for the server (lib/server/content.ts parses the pack
@@ -40,6 +41,37 @@ export const PretestItem = z.object({
 export const PretestFile = z.object({ title: z.string(), items: z.array(PretestItem).min(1) });
 export const SurveyFile = z.object({ items: z.array(SurveyItem) });
 
+// Kai's fixed teaching questions (optional): with them Kai asks the same questions of everyone, in order, instead of
+// choosing its next question from the lesson's ideas (engine/tutor/script.ts).
+export const ScriptFile = z.object({
+  note: z.string().optional(),
+  opening: z.string().min(10), // Kai's first words, before the first question
+  minutes: z.number().positive().default(10), // Kai wraps up at the first message after this long
+  shortWords: z.number().int().positive().default(15), // an answer shorter than this gets "Can you say more about that?"
+  questions: z
+    .array(
+      z.object({
+        id: z.string().regex(/^[a-z0-9-]+$/),
+        node: z.string().nullable().default(null), // the idea it is about: Kai's focus (Kai's mind, the help card)
+        sayMore: z.boolean().default(true), // a short answer gets one "say more"; not for "anything else?" questions
+        text: z.string().min(10),
+      }),
+    )
+    .min(1),
+  lines: z.object({
+    wrote: z.string().includes("{notes}"), // before the next question: what Kai wrote down, in the learner's words
+    wroteNothing: z.string(),
+    sayMore: z.string(),
+    dontKnow: z.string(),
+    moveOn: z.string(),
+    notAnswer: z.string(),
+    askedKai: z.string(),
+    ready: z.string(), // the wrap-up, followed by Kai's notes
+    readyEmpty: z.string(),
+  }),
+});
+export type ScriptFile = z.infer<typeof ScriptFile>;
+
 type Issue = { level: "error" | "warn"; where: string; msg: string };
 
 /** Everything the app will read from topics/<slug>/, checked as the server will parse it, plus what ties it together. */
@@ -68,6 +100,7 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   const practice = read("practice.json", PracticeFile);
   const tests = read("exercises.json", ExercisesFile);
   const pretest = read("pretest.json", PretestFile, false);
+  const script = read("script.json", ScriptFile, false);
   const facts = new Set(bundle?.nodes.flatMap((n) => n.facts.map((f) => f.id)) ?? []);
 
   // practice: what Kai's gate needs must be real facts
@@ -85,6 +118,16 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     if (!b.length) warn("exercises.json", "one test form only: the follow-up test can't be switched on");
   }
   if (pretest) for (const q of pretest.items) if (q.kind === "knowledge" && q.answer === undefined) err("pretest.json", `${q.id} is a knowledge item without an answer`);
+  // Kai's fixed questions: about real ideas, and naming no lesson term beyond the rules' names (they leak nothing)
+  if (script && bundle) {
+    const ids = script.questions.map((q) => q.id);
+    for (const id of ids.filter((x, i) => ids.indexOf(x) !== i)) err("script.json", `question ${id} appears twice`);
+    for (const q of script.questions) if (q.node && !bundle.nodes.some((n) => n.id === q.node)) err("script.json", `${q.id} is about ${q.node}, which isn't an idea in the bundle`);
+    // the topic's and the rules' names are fine; anything else could hand the learner a fact
+    const names = /^(multi-armed bandits?|multi-arm bandits?|bandits?|greedy|ε|epsilon|ε-greedy|epsilon-greedy|epsilon greedy|ucb|ucb1)$/i;
+    for (const q of [{ id: "opening", text: script.opening }, ...script.questions])
+      for (const n of bundle.nodes) for (const t of n.lexicon) if (!names.test(t) && hasTerm(q.text, t)) warn("script.json", `${q.id} uses "${t}" (${n.id}): Kai's questions should name no lesson term but the rules' names`);
+  }
 
   // the videos' transcripts, for Rewatch moments and Kai's help
   for (const v of bundle?.videos ?? []) if (!existsSync(join(dir, "sources", "chunks", `${v.id}.json`))) warn("sources", `no transcript chunks for ${v.id}: no Rewatch moments or help in it`);

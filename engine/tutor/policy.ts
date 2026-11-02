@@ -21,7 +21,7 @@ export type Move = {
 
 const PROBES = ["why", "whatIf", "compute"] as const;
 
-export type ReadyReason = "score" | "time" | "maxTurns";
+export type ReadyReason = "score" | "time" | "maxTurns" | "script"; // script: Kai asked its last fixed question
 
 /**
  * Why Kai feels ready, or null. Ready at 80% of what it waits for, or at 50%

@@ -6,7 +6,7 @@ import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 import { DEFAULT_TOPIC, RAW_PACKS } from "./topics";
 import { makeMoments } from "./moments";
 import { TopicCopy } from "../settings";
-import { ExercisesFile, PretestFile, SurveyFile, type Exercise } from "../../content/pack";
+import { ExercisesFile, PretestFile, ScriptFile, SurveyFile, type Exercise } from "../../content/pack";
 export type { Exercise };
 
 // A topic pack, parsed and ready to serve (lib/server/topics.ts lists the packs). Every route and page asks for the
@@ -36,6 +36,7 @@ function build(slug: string) {
   const practice = practiceFile.items;
   const survey = SurveyFile.parse(raw.survey).items;
   const copy = TopicCopy.parse(raw.copy);
+  const script = raw.script ? ScriptFile.parse(raw.script) : null;
   const formItems = (form: Form) => exercises.filter((q) => q.form === form);
   const forms = FORMS.filter((f) => formItems(f).length > 0);
   let graph: GraphView | null = null;
@@ -44,6 +45,8 @@ function build(slug: string) {
     slug,
     title: bundle.title,
     copy,
+    /** Kai's fixed teaching questions, or null: Kai then chooses its questions from the lesson's ideas. */
+    script,
     bundle,
     exercises,
     /** The test forms this pack has (a follow-up test needs two). */
