@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import type { Passage } from "@/lib/lesson";
 import type { State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 
@@ -9,11 +10,13 @@ import type { Mind } from "@/engine/tutor/mind";
 // without the server's secret, and answers are graded on the server.
 
 // learned: the ideas Kai finished with this reply (shown as a small milestone under it)
-export type Turn = { role: "kai" | "learner"; text: string; mood?: Mood; help?: { part: number; start: number }; learned?: string[] };
+// help: a video moment the learner opened ({ part, start }), or a passage of the text lesson ({ section, title })
+export type Turn = { role: "kai" | "learner"; text: string; mood?: Mood; help?: { part: number; start: number } | { section: string; title: string }; learned?: string[] };
 // the judge's moods (great, okay, confused) plus faces drawn only in the browser: neutral, thinking, aha (an idea just
 // landed), proud (Kai feels ready)
 export type Mood = "neutral" | "great" | "okay" | "confused" | "thinking" | "aha" | "proud";
-export type Help = { video: string; start: number; end: number };
+/** Kai's help card: a moment of the video lesson, or a passage of the text lesson (its text once help is open). */
+export type Help = { video: string; start: number; end: number } | Passage;
 export type GradeResult = {
   score: number;
   of: number;
@@ -60,6 +63,7 @@ export type Saved = {
   practice?: PracticeState; // absent in sessions started before the practice chapter existed
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
   watchedSec?: number[]; // seconds watched per lesson part
+  readStartedAt?: number; // a text lesson: when reading began (the minimum time before "Continue" survives a reload)
   chat: {
     startedAt?: number; // when the teach page first opened (for Kai's 8-minute rule and the log)
     turns: Turn[];

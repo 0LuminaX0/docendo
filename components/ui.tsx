@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { FlaskConical, Play, X } from "lucide-react";
 import type { Mood } from "@/lib/client/store";
-import { barsOf, blockOf, type StepKey } from "@/lib/flow";
+import { barsOf, stepName, type StepKey } from "@/lib/flow";
 import { useStudySettings } from "./SettingsContext";
 
 /**
@@ -12,11 +12,11 @@ import { useStudySettings } from "./SettingsContext";
  * The step bars are the main steps the study runs (lib/flow.ts), lit up to `step`; none on the welcome page.
  */
 export function Header({ step, right, demo, label, left }: { step?: StepKey; right?: React.ReactNode; demo?: boolean; label?: string; left?: React.ReactNode }) {
-  const { flow } = useStudySettings();
+  const { flow, lessonKind } = useStudySettings();
   const bars = barsOf(flow);
   // the results light every bar; a step without a bar (the pretest) none
   const phase = step === "results" ? bars.length : step ? bars.indexOf(step) + 1 : 0;
-  const name = step && step !== "results" && phase > 0 ? blockOf(step).name : "";
+  const name = step && step !== "results" && phase > 0 ? stepName(step, lessonKind) : "";
   return (
     <div className="topwrap">
     <header className={`top${left ? " has-tools" : ""}`}>

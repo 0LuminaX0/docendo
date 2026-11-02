@@ -10,7 +10,9 @@ export default async function Page() {
   const sum = packSummary(pack, settings);
   // what each step card says, from the pack and the settings
   const cards = {
-    watch: `A short video lesson on ${pack.copy.subject}${settings.watch.parts.length > 1 ? `, in ${settings.watch.parts.length} parts that play one after another` : ""}. About ${sum.minutes.watch} minutes.`,
+    watch: pack.lesson
+      ? `A short text lesson on ${pack.copy.subject}, with figures. About ${sum.minutes.watch} minutes of reading.`
+      : `A short video lesson on ${pack.copy.subject}${settings.watch.parts.length > 1 ? `, in ${settings.watch.parts.length} parts that play one after another` : ""}. About ${sum.minutes.watch} minutes.`,
     teach: `Explain the ideas in your own words. Kai asks questions until it feels it understands. About ${sum.minutes.teach} minutes.`,
     practice: `${sum.practice.rounds.length > 1 ? `${Count(sum.practice.rounds.length, "short round")} of problems` : Count(sum.practice.problems, "short problem")}${settings.practice.tries > 1 ? `, with ${count(settings.practice.tries, "try", "tries")} each` : ""}. ${settings.practice.minutes} minutes.`,
     exercises: (() => {

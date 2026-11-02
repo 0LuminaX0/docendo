@@ -46,7 +46,7 @@ export type TurnResult = {
 
 export function opening(bundle: Bundle, state: State): string {
   const first = state.focus ? bundle.nodes.find((n) => n.id === state.focus) : undefined;
-  return `Hi! I'm Kai. I missed the lecture on ${bundle.title.toLowerCase()}, and I heard you just watched it. Could you teach me? ${first?.probes.open ?? "Where should we start?"}`;
+  return `Hi! I'm Kai. I missed the lecture on ${bundle.title.toLowerCase()}, and I heard you just went through it. Could you teach me? ${first?.probes.open ?? "Where should we start?"}`;
 }
 
 /** Apply the judgement to a copy of the state: notebook, used terms, attempts on the focus, unparking. */

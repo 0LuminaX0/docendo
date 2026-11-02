@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { Bundle } from "./schema";
 import { PracticeFile } from "./practice";
+import { FIGURES, FORMULAS } from "../lib/lesson";
 import { SurveyItem, TopicCopy } from "../lib/settings";
 
 // The files a topic pack gives the app (besides the bundle): the final test's forms, the pretest, the questions after
@@ -28,6 +29,24 @@ export const Exercise = z
   .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
 export type Exercise = z.infer<typeof Exercise>;
 export const ExercisesFile = z.object({ title: z.string(), items: z.array(Exercise).min(1) });
+
+// The text lesson (optional; lesson.json): read on the lesson step instead of the videos. Paragraphs take **bold**; a
+// figure or formula is named by id (lib/lesson.ts, components/lesson/). Each section names the ideas it explains, for
+// the help passage that matches Kai's question or a practice problem.
+export const LessonBlock = z.union([z.object({ p: z.string().min(1) }), z.object({ formula: z.string() }), z.object({ figure: z.string(), caption: z.string() })]);
+export const LessonFile = z.object({
+  note: z.string().optional(),
+  title: z.string(),
+  minutes: z.number().positive(), // reading time, for the welcome page and the step cards
+  minSeconds: z.number().int().min(0).default(0), // "Continue" opens after this long on the page
+  remindSeconds: z.number().int().min(0).default(0), // a gentle reminder to move on after this long (0: none)
+  intro: z.string(),
+  // Kai's reply to a message copied from the text (COPIED_RUN shared words in a row, lib/lesson.ts): nothing is judged
+  copied: z.string().default("That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?"),
+  sections: z.array(z.object({ id: z.string().regex(/^[a-z0-9-]+$/), title: z.string(), nodes: z.array(z.string()).default([]), blocks: z.array(LessonBlock).min(1) })).min(1),
+  end: z.string(),
+});
+export type LessonFile = z.infer<typeof LessonFile>;
 
 export const PretestItem = z.object({
   id: z.string(),
@@ -67,6 +86,7 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   read("survey.json", SurveyFile, false);
   const practice = read("practice.json", PracticeFile);
   const tests = read("exercises.json", ExercisesFile);
+  const lesson = read("lesson.json", LessonFile, false);
   const pretest = read("pretest.json", PretestFile, false);
   const facts = new Set(bundle?.nodes.flatMap((n) => n.facts.map((f) => f.id)) ?? []);
 
@@ -88,6 +108,17 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
 
   // the videos' transcripts, for Rewatch moments and Kai's help
   for (const v of bundle?.videos ?? []) if (!existsSync(join(dir, "sources", "chunks", `${v.id}.json`))) warn("sources", `no transcript chunks for ${v.id}: no Rewatch moments or help in it`);
+  // the text lesson: figures and formulas that exist, ideas that are in the bundle, each lesson idea in some section
+  if (lesson) {
+    for (const s of lesson.sections) {
+      for (const b of s.blocks) {
+        if ("figure" in b && !(FIGURES as readonly string[]).includes(b.figure)) err("lesson.json", `${s.id}: no figure "${b.figure}" (lib/lesson.ts)`);
+        if ("formula" in b && !(FORMULAS as readonly string[]).includes(b.formula)) err("lesson.json", `${s.id}: no formula "${b.formula}" (lib/lesson.ts)`);
+      }
+      for (const n of s.nodes) if (bundle && !bundle.nodes.some((x) => x.id === n)) err("lesson.json", `${s.id} explains ${n}, which isn't an idea in the bundle`);
+    }
+    for (const n of bundle?.nodes.filter((x) => x.inLesson !== false) ?? []) if (!lesson.sections.some((s) => s.nodes.includes(n.id))) warn("lesson.json", `no section explains ${n.id} (${n.label}): no help passage for it`);
+  }
 
   // the app knows only registered packs
   const registry = join(root, "lib", "server", "topics.ts");
