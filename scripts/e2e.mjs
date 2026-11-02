@@ -49,7 +49,6 @@ mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
 const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
-const answers = testItems.map((q) => q.answer);
 /** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
 async function passSurvey(page, answer = true) {
   await page.waitForSelector(".survey");
@@ -63,14 +62,21 @@ async function passSurvey(page, answer = true) {
   return hidden;
 }
 
-/** Answer the test shown on a page (either form), right except the ids in `wrong`; returns the ids in shown order. */
-async function answerTest(page, wrong = []) {
+/**
+ * Answer the test shown on a page (either form, or the part of a two-form test on screen): right except the ids in
+ * `wrong`, "I don't know" for the ids in `idk`, and a reason for every item that asks for one except the ids in
+ * `noReason`. Returns the ids in shown order.
+ */
+async function answerTest(page, wrong = [], idk = [], noReason = []) {
   const shown = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
   for (const id of shown) {
     const t = testItems.find((x) => x.id === id);
     const c = await page.$(`.q[data-q="${id}"]`);
-    if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(wrong.includes(id) ? t.answer + 10 : t.answer));
-    else await c.$eval(`.opt:nth-child(${(wrong.includes(id) ? (t.answer + 1) % 4 : t.answer) + 1}) input`, (el) => el.click());
+    if (idk.includes(id)) await c.$eval(".opt.idk input", (el) => el.click());
+    else if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await page.keyboard.type(String(wrong.includes(id) ? t.answer + 10 : t.answer));
+    else if (t.kind === "multi") for (const k of wrong.includes(id) ? t.answer.slice(0, 1) : t.answer) await c.$eval(`.opts .opt:nth-child(${k + 1}) input`, (el) => el.click());
+    else await c.$eval(`.opts .opt:nth-child(${(wrong.includes(id) ? (t.answer + 1) % t.options.length : t.answer) + 1}) input`, (el) => el.click());
+    if (t.reason && !noReason.includes(id) && !idk.includes(id)) await c.$eval(".qwork textarea", (el) => el.focus()), await page.keyboard.type("It follows from how the rule picks.");
   }
   return shown;
 }
@@ -257,33 +263,34 @@ for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
 await page.$eval(".submitbar .btn", (e) => e.click());
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
-// the learner's own order: the choice items first, then the number items, all from one form
+// the learner's own order, all from one form; every question offers "I don't know" and asks for the reason
 const shownIds = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
 const shownItems = shownIds.map((id) => testItems.find((t) => t.id === id));
-const kindsShown = shownItems.map((t) => t.kind ?? "choice");
 const mainForm = shownItems[0].form;
-check(shownIds.length === 10 && shownItems.every((t) => t.form === mainForm) && kindsShown.lastIndexOf("choice") < kindsShown.indexOf("number"), `the final test shows one form (${mainForm}): the choice items first, then the number items (${shownIds.join(" ")})`);
-// the working field below is checked on q01 (or its twin r01), which it fills with the right answer
-const avgId = mainForm === "B" ? "r01" : "q01";
-// one choice item and one other number item wrong on purpose
-await answerTest(page, [shownItems.find((t) => t.kind !== "number").id, shownItems.findLast((t) => t.kind === "number" && t.id !== avgId).id]);
-const avg = await page.$(`.q[data-q="${avgId}"]`);
-await avg.$eval(".qwork textarea", (el) => el.focus());
-await page.keyboard.type(mainForm === "B" ? "(5 * 18 + 30) / 6 =" : "(4 * 12 + 22) / 5 =");
-const want = mainForm === "B" ? "20" : "14";
-await page.waitForFunction((id, w) => new RegExp(`= ${w}$`).test(document.querySelector(`.q[data-q="${id}"] .qwork textarea`)?.value ?? ""), {}, avgId, want);
-await (await avg.$(".qans input")).click({ count: 3 });
-await page.keyboard.press("Backspace");
-await avg.$eval(".scratch-bar .linkish", (el) => el.click());
-const used = await avg.$eval(".qans input", (el) => el.value);
-check(used === want, `the final test has a working field under each question that calculates and fills the answer (${used})`);
+const idks = (await page.$$(".q .opt.idk")).length;
+const reasonFields = (await page.$$(".q .qreason textarea")).length;
+check(shownIds.length === 10 && shownItems.every((t) => t.form === mainForm) && idks === 10 && reasonFields === 10, `the final test shows one form (${mainForm}), each question with “I don't know” and a field for the reason (${shownIds.join(" ")})`);
+// one choice item wrong, one "I don't know", and one answered without its reason at first
+const wrongId = shownItems.find((t) => t.kind === "choice").id;
+const idkId = shownItems.find((t) => t.id !== wrongId).id;
+const lastId = shownItems.findLast((t) => t.id !== wrongId && t.id !== idkId).id;
+await answerTest(page, [wrongId], [idkId], [lastId]);
+const blocked = await page.$eval(".submitbar .btn.primary", (b) => b.disabled);
+const hinted = !!(await page.$(`.q[data-q="${lastId}"] .qreason-hint`));
+// the reason field calculates like the working field: a sum ending in = gets its result
+await page.$eval(`.q[data-q="${lastId}"] .qwork textarea`, (el) => el.focus());
+await page.keyboard.type("Random picks are spread evenly.\n0.1 / 4 =");
+await page.waitForFunction((id) => /= 0\.025$/.test(document.querySelector(`.q[data-q="${id}"] .qwork textarea`)?.value ?? ""), {}, lastId);
+const open = await page.$eval(".submitbar .btn.primary", (b) => !b.disabled);
+check(blocked && hinted && open, "a question counts as answered only with its reason, and the reason field calculates like the working field");
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
 const scoreHidden = await passSurvey(page);
 check(scoreHidden, "six questions come after the test, before the score");
 const score = (await page.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
-check(score === "8/10", `graded on the server: ${score} (2 wrong on purpose)`);
+const reasonShown = await page.$$eval(".your-reason", (els) => els.length);
+check(score === "8/10" && reasonShown > 0, `graded on the server: ${score} (one wrong, one “I don't know”), the learner's reasons shown with the explanations`);
 check((await page.$$(".review .pq")).length === practiceItems.length, "results show the practice solutions after the test");
 await shot(page, "08-results", true);
 
@@ -352,10 +359,12 @@ await skip.waitForFunction(() => location.pathname === "/exercises");
 await skip.waitForSelector(".q");
 const nq = (await skip.$$(".q")).length;
 for (let i = 1; i <= nq; i++) await skip.$eval(`.q:nth-of-type(${i}) .opt input`, (e) => e.click()).catch(() => {});
-await skip.evaluate((n) => {
+await skip.evaluate(() => {
   const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
-  localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, answers: Array(n).fill(0) }));
-}, 10);
+  const answers = s.testItems.map((q) => (q.kind === "multi" ? [0] : 0));
+  const testWork = Object.fromEntries(s.testItems.map((q) => [q.id, "A reason in a few words."]));
+  localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, answers, testWork }));
+});
 await skip.reload({ waitUntil: "load" });
 await skip.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
 await skip.$eval(".submitbar .btn.primary", (e) => e.click());
@@ -538,7 +547,9 @@ await shot(phoneHome, "10-phone-welcome", true);
   for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
   const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, watch: { on: true, parts: [{ ...base.json.settings.watch.parts[0], videoId: "nope" }] } } });
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
-  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false } } });
+  // (and the pilot's test: both forms, one after the other)
+  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: true } } });
+  const bothAndFollowUp = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, test: { ...base.json.settings.test, followUp: true, both: true } } });
   let skipped = false;
   for (let k = 0; k < 16 && !skipped; k++) (skipped = await adm.evaluate(async () => { const h = await (await fetch("/")).text(); return !/<h3>Practice<\/h3>/.test(h) && /<h3>Teach Kai<\/h3>/.test(h); })), skipped || (await wait(1000));
   // a session in the browser under that setup: it opens on Teach Kai, shows two step bars, keeps the practice page
@@ -562,8 +573,30 @@ await shot(phoneHome, "10-phone-welcome", true);
   const toTest = await short.$eval(".ready .btn.primary", (b) => b.textContent);
   await short.click(".ready .btn.primary");
   await short.waitForFunction(() => location.pathname === "/exercises", { timeout: 15000 });
-  await short.close();
   check(bars === 2 && /test/i.test(toTest), `with the pretest, video and practice off a session opens on Teach Kai (${bars} step bars), keeps practice closed and goes on to the test ("${toTest?.trim()}")`);
+  // the pilot's test: both forms as two parts, the session's own form first; part 2 opens once part 1 is complete,
+  // and part 1 is then locked; the anchor (V9 = T10) is asked once
+  await short.waitForSelector(".q");
+  const part1 = await answerTest(short);
+  const goOn = await short.$eval(".submitbar .btn.primary", (b) => b.textContent);
+  await short.click(".submitbar .btn.primary");
+  await short.waitForSelector(".quiz-done");
+  const part2Ids = await short.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+  const part2 = await answerTest(short, [], [part2Ids[0]]);
+  await shot(short, "08c-pilot-part-2");
+  await short.click(".submitbar .btn.primary");
+  await short.waitForFunction(() => location.pathname === "/results");
+  await passSurvey(short);
+  const pilotScore = (await short.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
+  const perPart = await short.$eval(".parts-score", (e) => e.textContent);
+  await shot(short, "08d-pilot-results", true);
+  await short.close();
+  const formOf = (id) => testItems.find((t) => t.id === id).form;
+  const asked = [...part1, ...part2];
+  check(
+    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === 10 && part2.length === 9 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === "18/19" && /Part 1: 10 of 10 · Part 2: 8 of 9/.test(perPart),
+    `the pilot's test: both forms in two parts (${formOf(part1[0])} first), part 2 after part 1 is complete, the anchor once, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
+  );
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
   const blocks = await adm.$$eval(".study-block", (els) => els.length);
@@ -606,6 +639,8 @@ if (existsSync(logFile)) {
   const missing = need.filter((t) => !has(t));
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
+  const pilot = evs.find((e) => e.t === "grade" && Array.isArray(e.forms) && e.forms.length === 2);
+  check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 1, "the pilot's test logs each part, each form's score (the anchor in both) and every reason");
 } else check(false, "research log written to .data/events.jsonl");
 
 // nothing secret in what the browser downloads (client scripts and prerendered pages):

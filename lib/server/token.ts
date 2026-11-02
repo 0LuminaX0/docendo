@@ -13,8 +13,9 @@ import { DEFAULT_TOPIC } from "./topics";
  * shared ACCESS_CODE or a team code (test shortcuts); open: no code needed (local development). */
 export type Entry = "participant" | "trial" | "team" | "open";
 // form: the test form this session takes (A or B); phase: the main session, or the delayed test on its own;
-// topic: the topic pack the session started with (it keeps it if the study switches topics meanwhile)
-type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string };
+// topic: the topic pack the session started with (it keeps it if the study switches topics meanwhile); both: the final
+// test has both forms, its own form first (a pilot, settings test.both), fixed when the session starts
+type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string; both?: boolean };
 export type Who = Omit<Payload, "sid" | "exp">;
 
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
@@ -38,7 +39,8 @@ export function verifyToken(token: string | undefined): Payload | null {
     if (typeof p.sid !== "string" || typeof p.exp !== "number" || p.exp < Date.now()) return null;
     // tokens issued before conditions existed are team sessions in the direct condition
     // older tokens: form A, main session, the default topic
-    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC };
+    // tokens issued before the pilot's two-form test: one form
+    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC, both: p.both === true && p.phase !== "delayed" };
   } catch {
     return null;
   }

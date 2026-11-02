@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
-import exercisesJson from "../topics/bandits/exercises.json";
-import { checkNumber } from "../content/practice";
-import { seedOf, testOrder } from "../lib/order";
 import { Bundle } from "../content/schema";
 import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
 
@@ -66,127 +63,6 @@ describe("practice problems", () => {
     // here: choice answers are spread over the options
     const positions = practice.items.filter((p) => p.kind === "choice").map((p) => p.answer);
     expect(new Set(positions).size).toBeGreaterThan(2);
-  });
-});
-
-describe("final test items", () => {
-  type T = { id: string; form?: string; pair?: string; section: string; kind?: string; prompt: string; options?: string[]; answer: number; tolerance?: number };
-  const test = exercisesJson.items as T[];
-  const forms = { A: test.filter((x) => (x.form ?? "A") === "A"), B: test.filter((x) => x.form === "B") };
-  const q = (id: string) => test.find((x) => x.id === id)!;
-  const key = (id: string) => q(id).options![q(id).answer]!;
-  const ucb = (avg: number, lnT: number, n: number) => avg + Math.sqrt((2 * lnT) / n);
-
-  it("have keys that match their own numbers", () => {
-    // q01: four students averaging 12 minutes, then 22
-    expect(q("q01").answer).toBeCloseTo((4 * 12 + 22) / 5);
-    // q02: days 1-3 A 4, B 7, C 6; day 4 greedy takes B (7) and gets 3; day 5 takes C (6) and gets 5
-    const avg = { A: 4, B: (7 + 3) / 2, C: (6 + 5) / 2 };
-    expect(argmax([avg.A, avg.B, avg.C])).toBe(2);
-    expect(key("q02")).toMatch(/^C: its average, 5\.5/);
-    // q03: B's average stays between 3 and 4, always above A's single 2: A gets none
-    expect(q("q03").answer).toBe(0);
-    // q04: greedy takes the highest average, B's 8.0
-    expect(argmax([7.9, 8.0, 6.0])).toBe(1);
-    expect(key("q04")).toMatch(/^B/);
-    // q05: 1,000 visitors × ε 0.2 ÷ 4 banners
-    expect(q("q05").answer).toBeCloseTo((1000 * 0.2) / 4);
-    // q08: 0.60 + √(2 × 3.91 / 8)
-    expect(Math.abs(q("q08").answer - ucb(0.6, 3.91, 8))).toBeLessThanOrEqual(q("q08").tolerance!);
-    expect(Math.abs(q("q08").answer - ucb(0.6, Math.log(50), 8))).toBeLessThanOrEqual(q("q08").tolerance!);
-    // q09: ln 20 ≈ 3.0; A 7.0 over 10, B 6.0 over 2, C 6.6 over 8: A wins by a little, with the rounded or the exact ln
-    for (const lnT of [3.0, Math.log(20)]) expect(argmax([ucb(7, lnT, 10), ucb(6, lnT, 2), ucb(6.6, lnT, 8)])).toBe(0);
-    expect(key("q09")).toMatch(/^A: its average plus its bonus, about 7\.77/);
-    // q10: ln t ≈ 4.6; A 4.0 over 50, C 3.0 over 4 → C; C gets 3 (average unchanged) over 5 → A
-    expect(ucb(3, 4.6, 4)).toBeGreaterThan(ucb(4, 4.6, 50));
-    expect(ucb(3, 4.6, 5)).toBeLessThan(ucb(4, 4.6, 50));
-    expect(key("q10")).toMatch(/^A: one more play shrinks/);
-  });
-
-  it("form B's keys match their own numbers too", () => {
-    expect(q("r01").answer).toBeCloseTo((5 * 18 + 30) / 6);
-    // r02: vanilla 5, mango 8, pistachio 7; day 4 mango (8) gets 4; day 5 pistachio (7) gets 6
-    expect(argmax([5, (8 + 4) / 2, (7 + 6) / 2])).toBe(2);
-    expect(key("r02")).toMatch(/^Pistachio: its average, 6\.5/);
-    expect(q("r03").answer).toBe(0);
-    expect(argmax([8.4, 8.5, 7.0])).toBe(1);
-    expect(key("r04")).toMatch(/^B/);
-    expect(q("r05").answer).toBeCloseTo((2000 * 0.15) / 5);
-    expect(Math.abs(q("r08").answer - ucb(3.2, 3.4, 5))).toBeLessThanOrEqual(q("r08").tolerance!);
-    expect(Math.abs(q("r08").answer - ucb(3.2, Math.log(30), 5))).toBeLessThanOrEqual(q("r08").tolerance!);
-    for (const lnT of [3.2, Math.log(25)]) expect(argmax([ucb(8, lnT, 16), ucb(6.8, lnT, 2), ucb(7.6, lnT, 8)])).toBe(0);
-    expect(key("r09")).toMatch(/^Vanilla: its average plus its bonus, about 8\.63/);
-    expect(ucb(7, 5, 4)).toBeGreaterThan(ucb(8, 5, 40));
-    expect(ucb(7, 5, 5)).toBeLessThan(ucb(8, 5, 40));
-    expect(key("r10")).toMatch(/^A: one more reader shrinks/);
-  });
-
-  it("come in two parallel forms: each B item is the twin of an A item (same idea and kind), ten each", () => {
-    expect(forms.A).toHaveLength(10);
-    expect(forms.B).toHaveLength(10);
-    const twins = new Set<string>();
-    for (const b of forms.B) {
-      const a = forms.A.find((x) => x.id === b.pair);
-      expect(a, b.id).toBeDefined();
-      expect(b.kind ?? "choice", b.id).toBe(a!.kind ?? "choice");
-      expect(b.section, b.id).toBe(a!.section);
-      expect(b.options?.length ?? 0, b.id).toBe(a!.options?.length ?? 0);
-      twins.add(b.pair!);
-    }
-    expect(twins.size).toBe(10); // every A item has exactly one twin
-    // no prompt is shared between the forms, so nobody meets a question twice
-    for (const b of forms.B) expect(forms.A.some((a) => a.prompt === b.prompt), b.id).toBe(false);
-  });
-
-  it("grade typed numbers with their tolerance", () => {
-    expect(checkNumber("14", 14, 0.05)).toBe(true);
-    expect(checkNumber("14.0 ", 14, 0.05)).toBe(true);
-    expect(checkNumber("13", 14, 0.05)).toBe(false);
-    expect(checkNumber("0", 0, 0)).toBe(true);
-    expect(checkNumber("1,59", 1.589, 0.02)).toBe(true);
-    expect(checkNumber("1.55", 1.589, 0.02)).toBe(false);
-    expect(checkNumber("about 50", 50, 1)).toBe(false); // words aren't a number
-  });
-
-  it("mix choice and number items, and number items have no options", () => {
-    const numbers = test.filter((x) => x.kind === "number");
-    for (const f of [forms.A, forms.B]) expect(f.filter((x) => x.kind === "number").length).toBeGreaterThanOrEqual(3);
-    for (const x of numbers) expect(x.options, x.id).toBeUndefined();
-  });
-
-  it("use settings of their own, never the lesson's or practice's", () => {
-    for (const x of test) expect(x.prompt, x.id).not.toMatch(/restaurant|food truck|slot machine|headline/i);
-  });
-
-  it("don't give the key away by its length", () => {
-    // test-wise learners pick the longest, most careful option: the key must not stand out
-    for (const x of test.filter((t) => t.options)) {
-      const others = x.options!.filter((_, k) => k !== x.answer).map((o) => o.length);
-      expect(x.options![x.answer]!.length, x.id).toBeLessThanOrEqual(Math.max(...others) * 1.1);
-    }
-  });
-
-  it("spread their keys over the positions, in each form", () => {
-    for (const f of [forms.A, forms.B]) {
-      const counts = [0, 0, 0, 0];
-      for (const x of f.filter((t) => t.options)) counts[x.answer]!++;
-      expect(Math.max(...counts)).toBeLessThanOrEqual(2);
-      expect(counts.filter((c) => c > 0).length).toBe(4);
-    }
-  });
-});
-
-describe("final test order", () => {
-  const items = (exercisesJson.items as { id: string; kind?: string; form?: string }[]).filter((q) => (q.form ?? "A") === "A");
-  const withKind = items.map((q) => ({ id: q.id, kind: q.kind ?? "choice" }));
-  it("puts the choice items first, then the number items, each part shuffled per learner and stable", () => {
-    const a = testOrder(withKind, seedOf("token-a"));
-    expect([...a].sort()).toEqual(items.map((q) => q.id).sort());
-    const kinds = a.map((id) => withKind.find((q) => q.id === id)!.kind);
-    expect(kinds.lastIndexOf("choice")).toBeLessThan(kinds.indexOf("number"));
-    expect(testOrder(withKind, seedOf("token-a"))).toEqual(a); // a reload shows the same order
-    const orders = new Set(["a", "b", "c", "d", "e", "f"].map((t) => testOrder(withKind, seedOf(`token-${t}`)).join()));
-    expect(orders.size).toBeGreaterThan(3); // learners get different orders
   });
 });
 

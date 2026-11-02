@@ -7,7 +7,8 @@ import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
 import Survey from "./Survey";
 import { useStudySettings } from "./SettingsContext";
-import { parts, useTestItems } from "./Exercises";
+import { parts, REASON_PROMPT, TestTable, useTestItems } from "./Exercises";
+import { DONT_KNOW } from "@/lib/answers";
 import { save, useSaved } from "@/lib/client/store";
 import { flush, track } from "@/lib/client/log";
 import { useState } from "react";
@@ -61,6 +62,10 @@ export default function Results() {
               <div className="dots" aria-hidden="true">
                 {r.items.map((x) => <i key={x.id} className={x.correct ? "ok" : "no"} />)}
               </div>
+              {/* a pilot's two forms: the score in each part */}
+              {r.parts && r.parts.length > 1 && (
+                <p className="note parts-score">{r.parts.map((p, k) => `Part ${k + 1}: ${p.score} of ${p.of}`).join(" · ")}</p>
+              )}
             </div>
           </div>
           {!delayed && (
@@ -116,26 +121,36 @@ export default function Results() {
             const shown = list.map((x, j) => ({ ...x, n: start + j + 1 })).filter(({ i }) => view === "all" || !r.items[i]!.correct);
             if (!shown.length) return null;
             return (
-            <section key={title} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <h2 className="quiz-section">{title}</h2>
+            <section key={title || "items"} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {title && <h2 className="quiz-section">{title}</h2>}
               <ol>
                 {shown.map(({ q, i, n }) => {
                   const g = r.items[i]!;
+                  // multi-select: the true statements, and the ones the learner ticked
+                  const isKey = (k: number) => (Array.isArray(g.answer) ? g.answer.includes(k) : k === g.answer);
+                  const mine = (k: number) => (Array.isArray(g.chosen) ? g.chosen.includes(k) : k === g.chosen);
+                  const reason = q.reason ? saved.testWork?.[q.id]?.trim() : null;
                   return (
                     <li className="q" key={q.id} style={{ counterSet: `q ${n}` }}>
-                      <p className="qt">{q.prompt}</p>
+                      <div className="qt">
+                        <p>{q.prompt}</p>
+                        {q.table && <TestTable table={q.table} />}
+                        {q.question && <p>{q.question}</p>}
+                      </div>
                       {q.options ? (
                       <div className="opts">
                         {q.options.map((o, k) => (
-                          <div key={k} className={`opt${k === g.answer ? " right" : k === g.chosen ? " wrong" : ""}`} style={{ cursor: "default" }}>
+                          <div key={k} className={`opt${isKey(k) ? " right" : mine(k) ? " wrong" : ""}${q.kind === "multi" && mine(k) ? " ticked" : ""}`} style={{ cursor: "default" }}>
                             <span className="key" aria-hidden="true">{KEYS[k]}</span>
                             <span>
                               {o}
-                              {k === g.chosen && <span className="sr-only"> (your answer)</span>}
-                              {k === g.answer && <span className="sr-only"> (correct answer)</span>}
+                              {q.kind === "multi" && <span className="note"> {isKey(k) ? "(true)" : "(false)"}</span>}
+                              {mine(k) && <span className={q.kind === "multi" ? "tick-mark" : "sr-only"}>{q.kind === "multi" ? " ✓ ticked" : " (your answer)"}</span>}
+                              {isKey(k) && q.kind !== "multi" && <span className="sr-only"> (correct answer)</span>}
                             </span>
                           </div>
                         ))}
+                        {g.chosen === DONT_KNOW && <p className="note">You answered “I don&apos;t know”.</p>}
                       </div>
                       ) : (
                         <p className="qnum">
@@ -150,8 +165,13 @@ export default function Results() {
                       <div className="after">
                         <span className={`tag ${g.correct ? "ok" : "no"}`} style={{ alignSelf: "flex-start" }}>
                           {g.correct ? <Check size={13} strokeWidth={3} /> : <X size={13} strokeWidth={3} />}
-                          {g.correct ? "Correct" : g.chosen === null ? "Not answered" : "Not quite"}
+                          {g.correct ? "Correct" : g.chosen === null ? "Not answered" : g.chosen === DONT_KNOW ? "Not known" : "Not quite"}
                         </span>
+                        {reason && (
+                          <p className="note your-reason">
+                            <span className="sr-only">{REASON_PROMPT} </span>Your reason: {reason}
+                          </p>
+                        )}
                         <p className="explain">{g.explain}</p>
                       </div>
                     </li>

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   if (b.action === "setting") {
     const { settings } = await getSettings({ fresh: true });
-    const next = { ...settings, test: { followUp: b.followUp, followUpDays: b.followUpDays } };
+    const next = { ...settings, test: { ...settings.test, followUp: b.followUp, followUpDays: b.followUpDays } };
     const problem = settingsProblem(next);
     if (problem) return fail(400, problem);
     const version = await saveSettings(next);
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const now = Date.now();
     pids = (await listParticipants())
       .filter((p) => (b.who === "all" ? true : b.who === "trials" ? !!p.trial : !p.trial))
-      .filter((p) => !p.delayedAt && (followUpOpens(p, settings.test.followUpDays) ?? Infinity) > now && p.testAt)
+      .filter((p) => !p.delayedAt && !p.both && (followUpOpens(p, settings.test.followUpDays) ?? Infinity) > now && p.testAt)
       .map((p) => p.pid);
   } else pids = b.pids;
   const open = b.action !== "schedule";

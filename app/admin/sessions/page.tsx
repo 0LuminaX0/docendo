@@ -49,7 +49,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         </div>
         <div className="adm-actions">
           <span className="note">Export</span>
-          {(["sessions", "turns", "practice", "test"] as const).map((x) => (
+          {(["sessions", "turns", "practice", "test", "reasons"] as const).map((x) => (
             <a key={x} className="btn ghost small" href={`/api/admin/export?table=${x}`}>{x}.csv</a>
           ))}
         </div>

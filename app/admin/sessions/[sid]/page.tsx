@@ -69,7 +69,7 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
     .filter((x) => x.checks.length || x.kai.length || x.skipped);
 
   // the final test, in the order the learner saw it
-  const gradeItems = (grade?.items as { id: string; kind?: string; chosen: number | string | null; correct: boolean; pos?: number | null; work?: string | null }[]) ?? [];
+  const gradeItems = (grade?.items as { id: string; kind?: string; chosen: number | number[] | string | null; correct: boolean; pos?: number | null; work?: string | null; reason?: string | null }[]) ?? [];
   const testRows = [...gradeItems].sort((a, b) => (a.pos ?? 99) - (b.pos ?? 99)).map((x) => ({ x, q: pack.exercises.find((q) => q.id === x.id) }));
 
   const steps = [
@@ -194,10 +194,25 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
                       <code>{x.id}</code> {q?.prompt ?? ""}
                     </span>
                     <span className="sd-a">
-                      {x.chosen === null ? <span className="note">no answer</span> : q?.kind === "choice" ? <Option i={Number(x.chosen)} text={q.options?.[Number(x.chosen)]} /> : `${String(x.chosen)}${q?.unit ? ` ${q.unit}` : ""}`}
+                      {x.chosen === null ? (
+                        <span className="note">no answer</span>
+                      ) : x.chosen === "idk" ? (
+                        <span className="note">I don&apos;t know</span>
+                      ) : Array.isArray(x.chosen) ? (
+                        x.chosen.map((k) => <Option key={k} i={k} text={q?.options?.[k]} />)
+                      ) : q?.kind === "choice" ? (
+                        <Option i={Number(x.chosen)} text={q.options?.[Number(x.chosen)]} />
+                      ) : (
+                        `${String(x.chosen)}${q?.unit ? ` ${q.unit}` : ""}`
+                      )}
                       <Verdict ok={x.correct} />
                     </span>
-                    {!x.correct && q && <span className="sd-key">key: {q.kind === "choice" ? <Option i={q.answer} text={q.options?.[q.answer]} /> : keyText(q)}</span>}
+                    {!x.correct && q && (
+                      <span className="sd-key">
+                        key: {q.kind === "number" ? keyText(q) : (Array.isArray(q.answer) ? q.answer : [q.answer]).map((k) => <Option key={k} i={k} text={q.options?.[k]} />)}
+                      </span>
+                    )}
+                    {x.reason && <span className="sd-work">reason: {x.reason}</span>}
                     {x.work && <span className="sd-work">working: {x.work}</span>}
                   </li>
                 ))}

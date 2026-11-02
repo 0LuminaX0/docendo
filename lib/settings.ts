@@ -46,8 +46,9 @@ export const Settings = z
     teach: z.object({ stopAfterMessages: z.number().int().min(0).max(30), stopAfterMinutes: z.number().min(0).max(30) }),
     practice: z.object({ on: z.boolean(), minutes: z.number().min(2).max(60), tries: z.number().int().min(1).max(5) }),
     // the final test is always on (the outcome). The follow-up test: on or off, and how many days after the final test
-    // it opens on its own (0: right away); the admin panel can also open it early for one person or everyone
-    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60) }),
+    // it opens on its own (0: right away); the admin panel can also open it early for one person or everyone. both: the
+    // pilot's final test, both forms one after the other (each session's own form first), with no follow-up then
+    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false) }),
     survey: z.object({ on: z.boolean() }),
     sessionDays: z.number().int().min(1).max(30),
     // the same in every condition

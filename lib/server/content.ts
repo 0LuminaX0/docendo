@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { Bundle } from "../../content/schema";
-import { PracticeFile, checkNumber, checkPractice } from "../../content/practice";
+import { PracticeFile, checkPractice } from "../../content/practice";
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 import { DEFAULT_TOPIC, RAW_PACKS } from "./topics";
 import { makeMoments } from "./moments";
@@ -17,13 +17,9 @@ export type Form = "A" | "B";
 export const FORMS: Form[] = ["A", "B"];
 export const otherForm = (form: Form): Form => (form === "A" ? "B" : "A");
 
-/** Grade one answer: an option's index, or a typed number. */
-export function checkExercise(q: Exercise, a: number | string | null): boolean {
-  if (a === null) return false;
-  return q.kind === "choice" ? a === q.answer : checkNumber(String(a), q.answer, q.tolerance);
-}
-/** The key as the results page shows it. */
-export const keyText = (q: Exercise) => (q.kind === "choice" ? q.options![q.answer]! : `${q.answer}${q.unit ? ` ${q.unit}` : ""}`);
+// grading one answer, the key as shown, and which items a session answers: content/test.ts (shared with the tests)
+export { checkExercise, gradeTest, isKey, keyText } from "../../content/test";
+import { sessionItems } from "../../content/test";
 export { checkPractice };
 
 function build(slug: string) {
@@ -52,9 +48,13 @@ function build(slug: string) {
     formItems,
     /** A fingerprint of a form's content, logged with every graded test: answers to an edited item stay apart. */
     testVersion: (form: Form) => createHash("sha1").update(JSON.stringify(formItems(form))).digest("hex").slice(0, 8),
-    /** What the browser may see before grading: one form's questions, no answers, no explanations. Sent per session
-     * (the learner's form only), so the other form's questions aren't in the page before the delayed test. */
-    publicExercises: (form: Form) => formItems(form).map(({ id, section, kind, prompt, options, unit }) => ({ id, section, kind, prompt, options: options ?? null, unit: unit ?? null })),
+    /** The items a session answers: its form, or (both) its form and then the other, an anchor asked once. */
+    sessionItems: (form: Form, both = false) => sessionItems(exercises, form, both),
+    /** What the browser may see before grading: the session's questions, no answers, no explanations, nothing for the
+     * team (rubric, diagnosis). Sent per session, so the other form's questions aren't in the page before the delayed
+     * test. */
+    publicExercises: (form: Form, both = false) =>
+      sessionItems(exercises, form, both).map(({ id, form, section, kind, prompt, table, question, options, unit, dontKnow, reason }) => ({ id, form, section, kind, prompt, table: table ?? null, question: question ?? null, options: options ?? null, unit: unit ?? null, dontKnow, reason })),
     pretest,
     /** No answers, no exclusion rule: the browser only shows the questions. */
     publicPretest: pretest.map(({ id, prompt, options }) => ({ id, prompt, options })),
