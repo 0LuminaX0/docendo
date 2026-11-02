@@ -643,12 +643,14 @@ if (existsSync(staticDir)) {
   for (const path of ["/", "/pretest", "/watch", "/teach", "/mind", "/practice", "/exercises", "/results"]) rendered.push(await fetch(BASE + path).then((r) => r.text(), () => ""));
   const shipped = [...read(staticDir, /\.(js|css|json)$/), ...read(pagesDir, /\.(html|rsc)$/), ...rendered].join("\n");
   check(shipped.includes(practiceItems[0].prompt.slice(0, 40)), "the bundle scan sees what the browser gets (a public practice prompt is found)");
+  const lessonText = existsSync(join(TOPIC, "lesson.json")) ? readFileSync(join(TOPIC, "lesson.json"), "utf8") : "";
   const secrets = [
     ...practiceItems.flatMap((p) => p.steps.map((st) => st.text)),
     ...JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.explain),
     // the test questions too: they come per session from the server (its own form), never with the page
     ...JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.map((q) => q.prompt),
-    ...bundle.nodes.flatMap((n) => n.facts.map((f) => f.text)),
+    // a fact the text lesson itself states (participants read it on purpose) is no leak
+    ...bundle.nodes.flatMap((n) => n.facts.map((f) => f.text)).filter((t) => !lessonText.includes(t.slice(0, 40))),
   ].map((t) => t.slice(0, 40));
   const leaked = secrets.filter((t) => shipped.includes(t));
   check(!leaked.length, `the browser bundle holds no solution, explanation, test question or lesson fact (${secrets.length} checked${leaked.length ? `; found: ${leaked.slice(0, 3).join(" | ")}` : ""})`);
