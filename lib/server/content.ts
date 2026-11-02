@@ -8,6 +8,7 @@ import { makeMoments } from "./moments";
 import { TopicCopy } from "../settings";
 import { ExercisesFile, PretestFile, SurveyFile, type Exercise } from "../../content/pack";
 export type { Exercise };
+import { pretestItems, pretestSets } from "../../content/pretest";
 
 // A topic pack, parsed and ready to serve (lib/server/topics.ts lists the packs). Every route and page asks for the
 // pack it needs: a session's own (its token names the topic it started with), or the study's current one (Settings).
@@ -31,7 +32,9 @@ function build(slug: string) {
   if (!raw) throw new Error(`No topic pack "${slug}" (lib/server/topics.ts)`);
   const bundle: Bundle = Bundle.parse(raw.bundle);
   const exercises = ExercisesFile.parse(raw.exercises).items;
-  const pretest = PretestFile.parse(raw.pretest).items;
+  // the pretest: every item, and what a session takes unless a pilot runs every set (content/pretest.ts)
+  const pretestAll = PretestFile.parse(raw.pretest).items;
+  const pretest = pretestItems(pretestAll, pretestSets(pretestAll).slice(0, 1));
   const practiceFile = PracticeFile.parse(raw.practice);
   const practice = practiceFile.items;
   const survey = SurveyFile.parse(raw.survey).items;
@@ -56,8 +59,13 @@ function build(slug: string) {
      * (the learner's form only), so the other form's questions aren't in the page before the delayed test. */
     publicExercises: (form: Form) => formItems(form).map(({ id, section, kind, prompt, options, unit }) => ({ id, section, kind, prompt, options: options ?? null, unit: unit ?? null })),
     pretest,
-    /** No answers, no exclusion rule: the browser only shows the questions. */
-    publicPretest: pretest.map(({ id, prompt, options }) => ({ id, prompt, options })),
+    /** Every pretest item (a pilot takes every set), the sets in file order, and a fingerprint of the content. */
+    pretestAll,
+    pretestSets: pretestSets(pretestAll),
+    pretestVersion: createHash("sha1").update(JSON.stringify(pretestAll)).digest("hex").slice(0, 8),
+    /** No answers, no exclusion rule, nothing for the team: the browser only shows the questions, every set's (the
+     * page takes the session's sets). */
+    publicPretest: pretestAll.map(({ id, kind, set, prompt, options }) => ({ id, kind, set: set ?? "", prompt, options })),
     practiceFile,
     practice,
     /** What the browser may see before checking: no answers, no solutions. */

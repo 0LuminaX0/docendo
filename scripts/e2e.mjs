@@ -75,6 +75,16 @@ async function answerTest(page, wrong = []) {
   return shown;
 }
 const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
+/** Answer the pretest questions on screen: "I don't know" where offered, else the second option. Returns their ids. */
+async function answerPretest(page) {
+  const ids = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+  for (const id of ids)
+    await page.$eval(`.q[data-q="${id}"]`, (q) => {
+      const opts = [...q.querySelectorAll(".opt")];
+      (opts.find((o) => o.textContent.includes("I don't know")) ?? opts[1]).querySelector("input").click();
+    });
+  return ids;
+}
 const CHROME =
   process.env.CHROME_PATH ??
   { darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", win32: "C:/Program Files/Google/Chrome/Application/chrome.exe" }[process.platform] ??
@@ -107,11 +117,10 @@ async function start(page, welcomeShot = null) {
   await page.click(".consent input");
   if (welcomeShot) check(offBefore && !(await page.$eval("button[type=submit]", (b) => b.disabled)), "Start waits for the study consent to be ticked");
   await page.click("button[type=submit]");
-  // the pretest: five questions, the last option of each ("I don't know" on the knowledge items)
+  // the pretest: "I don't know" on the knowledge items, the second option on the screening questions (not excluded)
   await page.waitForFunction(() => location.pathname === "/pretest");
   await page.waitForSelector(".q");
-  const n = (await page.$$(".q")).length;
-  for (let i = 0; i < n; i++) await page.$eval(`.q:nth-child(${i + 1}) .opt:last-child input`, (el) => el.click());
+  await answerPretest(page);
   if (welcomeShot) await shot(page, "00b-pretest");
   await page.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
   await page.click(".submitbar .btn.primary");
@@ -537,6 +546,34 @@ await shot(phoneHome, "10-phone-welcome", true);
   let shown = false;
   for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
   const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, watch: { on: true, parts: [{ ...base.json.settings.watch.parts[0], videoId: "nope" }] } } });
+  // the pilot's pretest: every set, one after the other as parts, in an order that alternates with the test form
+  const preBoth = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: true, both: true } } });
+  let preShown = false;
+  for (let k = 0; k < 16 && !preShown; k++) (preShown = await adm.evaluate(async () => /starting with 13 quick questions/.test(await (await fetch("/")).text()))), preShown || (await wait(1000));
+  await wait(10_500); // the pretest page keeps its own copy of the settings for up to 10 s
+  const pre = await newPage(1366, 900, await browser.createBrowserContext());
+  await pre.goto(BASE + "/", { waitUntil: "load" });
+  await pre.waitForSelector("button[type=submit]");
+  if (await pre.$("#code")) await pre.type("#code", TEAM_CODE);
+  await pre.click(".consent input");
+  await pre.click("button[type=submit]");
+  await pre.waitForFunction(() => location.pathname === "/pretest", { timeout: 15000 });
+  await pre.waitForSelector(".q");
+  const prePart1 = await answerPretest(pre);
+  const preGoOn = await pre.$eval(".submitbar .btn.primary", (b) => b.textContent);
+  await pre.click(".submitbar .btn.primary");
+  await pre.waitForSelector(".pre-done");
+  const prePart2 = await answerPretest(pre);
+  await shot(pre, "00c-pretest-pilot-part-2");
+  const preForm = await pre.evaluate(() => JSON.parse(atob(JSON.parse(localStorage.getItem("docendo:session:v1")).token.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"))).form);
+  await pre.click(".submitbar .btn.primary");
+  await pre.waitForFunction(() => location.pathname === "/watch", { timeout: 15000 });
+  await pre.close();
+  const firstSet = preForm === "B" ? "h" : "k";
+  check(
+    preBoth.status === 200 && preShown && prePart1.length === 8 && prePart1.slice(0, 3).join() === "q1,q2,q3" && prePart1[3].startsWith(firstSet) && prePart2.length === 5 && !prePart2[0].startsWith(firstSet) && /part 2/i.test(preGoOn),
+    `the pilot's pretest: the screening questions and one set, then the other set as part 2 (form ${preForm}: ${firstSet === "k" ? "C1" : "C2"} first), then the lesson`,
+  );
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
   const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false } } });
   let skipped = false;
@@ -604,6 +641,9 @@ if (existsSync(logFile)) {
   const has = (t) => evs.some((e) => e.t === t);
   const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
+  const pilotPre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 2);
+  const onePre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 1);
+  check(pilotPre && pilotPre.of === 10 && pilotPre.dontKnow === 10 && !pilotPre.excluded && onePre && onePre.of === 5 && pilotPre.setScores && has("client_pretest_part"), "the pretest logs the sets taken in order and the score in each (5 items, or 10 in the pilot)");
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
 } else check(false, "research log written to .data/events.jsonl");

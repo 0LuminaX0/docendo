@@ -36,6 +36,16 @@ export const PretestItem = z.object({
   options: z.array(z.string()).min(2).max(6),
   answer: z.number().int().min(0).optional(), // knowledge items
   exclude: z.number().int().min(0).optional(), // background: this answer flags the session as excluded from the analysis
+  // knowledge items: the set it belongs to (a session takes the first set, a pilot all of them: settings pretest.both);
+  // for the team only, never sent to the browser: the first set's item it is a harder version of, what it measures,
+  // what each option shows, why the key is right, the share correct the team expects, and notes
+  set: z.string().regex(/^[A-Za-z0-9_-]{1,12}$/).optional(),
+  pair: z.string().optional(),
+  measures: z.string().optional(),
+  diagnosis: z.array(z.string()).optional(),
+  explain: z.string().optional(),
+  estimate: z.number().min(0).max(1).optional(),
+  note: z.string().optional(),
 });
 export const PretestFile = z.object({ title: z.string(), items: z.array(PretestItem).min(1) });
 export const SurveyFile = z.object({ items: z.array(SurveyItem) });
@@ -85,6 +95,22 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     if (!b.length) warn("exercises.json", "one test form only: the follow-up test can't be switched on");
   }
   if (pretest) for (const q of pretest.items) if (q.kind === "knowledge" && q.answer === undefined) err("pretest.json", `${q.id} is a knowledge item without an answer`);
+
+  // the pretest's sets: every knowledge item in one when any is, sets of the same size, pairs in the first set, keys
+  // and exclusions on real options, one diagnosis per option
+  if (pretest) {
+    const knowledge = pretest.items.filter((q) => q.kind === "knowledge");
+    const sets = [...new Set(knowledge.flatMap((q) => (q.set ? [q.set] : [])))];
+    if (sets.length && knowledge.some((q) => !q.set)) err("pretest.json", "some knowledge items have a set and some don't");
+    const size = (s: string) => knowledge.filter((q) => q.set === s).length;
+    if (sets.some((s) => size(s) !== size(sets[0]!))) warn("pretest.json", `the sets differ in size (${sets.map((s) => `${s}: ${size(s)}`).join(", ")})`);
+    for (const q of pretest.items) {
+      if (q.answer !== undefined && q.answer >= q.options.length) err("pretest.json", `${q.id}: the key is not an option`);
+      if (q.exclude !== undefined && q.exclude >= q.options.length) err("pretest.json", `${q.id}: the excluding answer is not an option`);
+      if (q.pair && !knowledge.some((x) => x.id === q.pair && x.set === sets[0])) err("pretest.json", `${q.id} pairs ${q.pair}, which isn't in the first set`);
+      if (q.diagnosis && q.diagnosis.length !== q.options.length) err("pretest.json", `${q.id}: ${q.diagnosis.length} diagnoses for ${q.options.length} options`);
+    }
+  }
 
   // the videos' transcripts, for Rewatch moments and Kai's help
   for (const v of bundle?.videos ?? []) if (!existsSync(join(dir, "sources", "chunks", `${v.id}.json`))) warn("sources", `no transcript chunks for ${v.id}: no Rewatch moments or help in it`);

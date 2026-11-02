@@ -204,11 +204,11 @@ describe("pretest", () => {
       expect(q.options.at(-1), q.id).toBe("I don't know");
     }
     for (const q of items.filter((x) => x.kind === "background")) expect(q.answer, q.id).toBeUndefined();
-    expect(items.filter((x) => x.exclude !== undefined)).toHaveLength(1);
+    expect(items.filter((x) => x.exclude !== undefined).map((x) => x.id)).toEqual(["q1", "q2"]); // an RL course; could explain UCB
   });
 
   it("doesn't reuse the practice or test items' settings, so it doesn't prime them", () => {
-    for (const q of items) expect(q.prompt, q.id).not.toMatch(/food truck|headline|slot machine|banner|coffee|podcast|study app|greedy|UCB|ε/i);
+    for (const q of items) expect(q.prompt, q.id).not.toMatch(/food truck|headline|slot machine|banner|coffee|podcast|study app|festival|exercise type|cake|audio tour|page layout|thumbnail|canteen|subject line|recipe|greedy|UCB|ε/i);
   });
 });
 

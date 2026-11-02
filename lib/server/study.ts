@@ -39,13 +39,21 @@ export function packSummary(pack: Pack, s: Settings) {
     forms,
     pretest: { items: pack.pretest.length, knowledge: pack.pretest.filter((q) => q.kind === "knowledge").length },
     survey: pack.survey.length,
+    pretestSets: pack.pretestSets.filter(Boolean), // the pretest's knowledge sets (a pilot can take them all)
     coverage,
     flow,
     minutes,
     total: flow.reduce((a, k) => a + minutes[k], 0) + (s.survey.on && pack.survey.length ? 1 : 0),
     // one line per block for the Settings page, from the pack and the settings
     blocks: {
-      pretest: `${plural(pack.pretest.length, "question")} (${pack.pretest.filter((q) => q.kind === "knowledge").length} on neighbouring ideas), about ${minutes.pretest} min`,
+      pretest: (() => {
+        // the questions a session answers: the background ones and the first set, or in a pilot every set
+        const both = s.pretest.both && pack.pretestSets.length > 1;
+        const n = both ? pack.pretestAll.length : pack.pretest.length;
+        const knowledge = (both ? pack.pretestAll : pack.pretest).filter((q) => q.kind === "knowledge").length;
+        const sets = pack.pretestSets.filter(Boolean);
+        return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: set ${sets[0]}`) : ""}), about ${Math.max(1, Math.round(n * 0.4))} min`;
+      })(),
       watch: s.watch.parts.length ? `${plural(s.watch.parts.length, "part")} from ${plural(new Set(s.watch.parts.map((p) => p.videoId)).size, "video")}, ${mmss(lessonSec)} in all` : "no parts yet",
       teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; usually about ${minutes.teach} min`,
       practice: `${plural(pack.practice.length, "problem")}${rounds.length > 1 ? ` in ${rounds.length} rounds (${rounds.map((r) => pack.practice.filter((p) => p.round === r).length).join(" + ")})` : ""}, ${s.practice.minutes} min`,
@@ -82,5 +90,6 @@ export function settingsProblem(s: Settings): string | null {
   if (s.test.followUp && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Switch it off.`;
   if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;
   if (s.pretest.on && !pack.pretest.length) return `"${pack.title}" has no pretest: switch that step off.`;
+  if (s.pretest.both && pack.pretestSets.length < 2) return `Every pretest set needs two sets, and "${pack.title}" has one. Switch it off.`;
   return null;
 }
