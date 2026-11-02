@@ -34,18 +34,18 @@
           "id": "n01.f1",
           "required": true,
           "ask": "So what do I actually choose between each time, and how many times do I get to choose?",
-          "text": "You repeatedly choose one of several options, called arms, for example which of three restaurants to eat at every night for 300 days."
+          "text": "Each round you choose one of several options, again and again (for example where to have lunch every day for a year). Each option pays a random reward around its own true average, which stays the same and which you don't know."
         },
         {
           "id": "n01.f2",
           "required": true,
-          "ask": "Do I know in advance how good each option is, or what I'll get when I pick it?",
-          "text": "Each arm gives a random reward from its own distribution, and these distributions and their averages are hidden at the start."
+          "ask": "When I pick one option, do I find out anything about the others?",
+          "text": "You only see the reward of the option you chose, so you learn about an option only by choosing it."
         },
         {
           "id": "n01.f3",
           "required": false,
-          "text": "The goal is to collect as much total reward as possible over all the rounds, not only to find out which arm is best."
+          "text": "The goal is to collect as much total reward as possible over all the rounds, not only to find out which option is best."
         }
       ],
       "lexicon": [
@@ -120,13 +120,18 @@
           "id": "n03.f1",
           "required": true,
           "ask": "How do I put a number on how good an option seems so far?",
-          "text": "An arm's value is estimated by the average (mean) of the rewards it has given so far."
+          "text": "An option's estimate is the average of the rewards it has given so far."
         },
         {
           "id": "n03.f2",
           "required": true,
           "ask": "Can I trust that number after only one or two tries?",
-          "text": "The estimate changes every time the arm is tried, and estimates from only a few tries can be far from the true average."
+          "text": "An average from few tries can be far from the true average; every new reward moves the estimate, and an average from many tries is more reliable."
+        },
+        {
+          "id": "n03.f3",
+          "required": false,
+          "text": "Every rule starts by trying each option once, so that each option has an average."
         }
       ],
       "lexicon": [
@@ -195,13 +200,14 @@
           "id": "n05.f1",
           "required": true,
           "ask": "Once I have those numbers, what's the simplest rule for choosing?",
-          "text": "Greedy (exploit only) always picks the arm with the best average so far, for example after trying each restaurant once."
+          "text": "Greedy picks the option with the highest average in every round. It keeps updating the averages, and when another option's average overtakes the favourite's, greedy switches to that option.",
+          "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching."
         },
         {
           "id": "n05.f2",
-          "required": true,
-          "ask": "With that rule, would I ever go back to an option that looked bad early on?",
-          "text": "Greedy never tries an arm on purpose to learn more, so arms that looked bad early are never tried again."
+          "required": false,
+          "ask": "With that rule, would I ever pick an option just to find out more about it?",
+          "text": "Greedy never picks an option just to learn more about it."
         }
       ],
       "lexicon": [
@@ -234,18 +240,19 @@
           "id": "n06.f1",
           "required": true,
           "ask": "What could go wrong with greedy if the best option happens to give a bad result the first time?",
-          "text": "Because greedy only goes back to the current best, one unlucky early reward from the truly best arm can hide it for the rest of the game."
+          "text": "Lock-in: once an option's average is too low, greedy never picks it again, so its average is never corrected, even if it is truly the best option (for example after one unlucky first try).",
+          "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end."
         },
         {
           "id": "n06.f2",
           "required": true,
-          "ask": "Can you show me with the restaurants how that could actually happen?",
-          "text": "Example: if restaurant 1 (mean 10) happens to give 7 on day one and restaurant 2 (mean 8) gives 8, exploit only eats at restaurant 2 for the remaining 297 days."
+          "ask": "Can you show me with an example how that could actually happen?",
+          "text": "Example: if truck A is truly the best but its first lunch is poor, greedy eats at the other trucks from then on and never finds out."
         },
         {
           "id": "n06.f3",
           "required": false,
-          "text": "Being stuck costs the gap between the two arms' averages on every remaining round."
+          "text": "Being stuck costs the gap between the two options' averages on every remaining round."
         }
       ],
       "lexicon": [
@@ -280,18 +287,20 @@
           "id": "n07.f1",
           "required": true,
           "ask": "Is there a way to mostly pick the best one but still try the others now and then? How would that work?",
-          "text": "ε-greedy picks a random arm with a small probability ε (for example 10%) and otherwise picks the arm with the best average so far."
+          "text": "ε-greedy makes a random pick with a fixed probability ε (for example 0.1) in every round, early and late, however reliable its averages are; otherwise it picks the option with the highest average.",
+          "assume": "ε-greedy explores less and less once its averages become reliable."
         },
         {
           "id": "n07.f2",
           "required": true,
           "ask": "When it does try something else, how does it decide which one to try?",
-          "text": "Its random picks ignore the estimates, so it spends as many of them on arms already known to be bad as on arms it knows little about."
+          "text": "The random pick chooses every option with equal chance (1 in k for k options), the favourite included, whatever their averages or how often they were tried.",
+          "assume": "When ε-greedy picks at random, it chooses among the options other than the favourite."
         },
         {
           "id": "n07.f3",
           "required": false,
-          "text": "With 3 arms and ε = 0.1, the arm that currently looks best is picked with probability 0.9 + 0.1/3 ≈ 0.93."
+          "text": "With 3 options and ε = 0.1, the favourite is picked with probability 0.9 + 0.1/3 ≈ 0.93."
         }
       ],
       "lexicon": [
@@ -329,18 +338,18 @@
           "id": "n08.f1",
           "required": true,
           "ask": "Is there a name for trying options to learn about them, versus sticking with my favourite?",
-          "text": "Exploration means trying arms to learn about them; exploitation means picking the best arm you know of to collect reward."
+          "text": "Exploration means trying options to learn about them; exploitation means picking the option that looks best so far to collect reward."
         },
         {
           "id": "n08.f2",
           "required": true,
           "ask": "What goes wrong if I try new things too rarely, or too often?",
-          "text": "Too little exploration risks locking onto a worse arm; too much exploration wastes rounds on arms you already know are worse."
+          "text": "Too little exploration risks locking onto a worse option; too much exploration wastes rounds on options you already know are worse."
         },
         {
           "id": "n08.f3",
           "required": false,
-          "text": "How much exploration pays off depends on how far apart and how noisy the arms are, and on how many rounds are left."
+          "text": "How much exploration pays off depends on how far apart and how noisy the options are, and on how many rounds are left."
         }
       ],
       "lexicon": [
@@ -466,18 +475,25 @@
           "id": "n11.f1",
           "required": true,
           "ask": "Is there a smarter way to score each option, instead of picking at random? How is the score made?",
-          "text": "UCB1 picks the arm with the highest score: its average plus a bonus √(2 ln t / n), where t is the current round (day) and n is the number of times that arm was tried."
+          "text": "UCB gives each option a score, its average plus a bonus, and picks the option with the highest score. There is no randomness: the same history always gives the same pick.",
+          "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average."
         },
         {
           "id": "n11.f2",
           "required": true,
-          "ask": "Why would that score favour options I've hardly tried?",
-          "text": "The average is the exploitation part and the bonus is the exploration part: arms tried only a few times get the benefit of the doubt."
+          "ask": "What decides how much that extra part of the score counts?",
+          "text": "The size of every bonus is set by c, a setting chosen in advance to match how much the rewards are expected to vary. The bonus does not adapt to the rewards actually observed, and c does not change the averages.",
+          "assume": "The bonus adapts to how much an option's observed rewards vary."
         },
         {
           "id": "n11.f3",
           "required": false,
-          "text": "UCB1 is deterministic: with the same history it always picks the same arm."
+          "text": "An option that has never been picked has an unlimited bonus, which is why UCB tries every option once first."
+        },
+        {
+          "id": "n11.f4",
+          "required": false,
+          "text": "The bonus gives options tried only a few times the benefit of the doubt: UCB treats each option as if it were as good as it could plausibly be, the upper end of a confidence interval around its average."
         }
       ],
       "lexicon": [
@@ -518,13 +534,16 @@
           "id": "n12.f1",
           "required": true,
           "ask": "What happens to an option's bonus each time I try it?",
-          "text": "Each time an arm is tried its n goes up, so its bonus shrinks and it becomes less likely to be picked just to learn more about it."
+          "text": "Each time an option is picked, its bonus shrinks (its n grows); picks of other options do not shrink it.",
+          "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not."
         },
         {
           "id": "n12.f2",
           "required": true,
-          "ask": "Could an option I haven't tried for ages ever get picked again?",
-          "text": "The ln t on top grows slowly with every round, so an arm that has been ignored for a long time eventually gets tried again."
+          "ask": "Does an option's bonus change while I'm not picking it?",
+          "text": "Every bonus grows with the round number (ln t), without limit but more and more slowly, so the bonus of an option that is not picked keeps growing. Only how often an option was picked matters, not when.",
+          "assume": "An option's bonus stays the same while it is not picked.",
+          "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals."
         }
       ],
       "lexicon": [
@@ -535,7 +554,7 @@
       "probes": {
         "open": "What happens to an arm's chances right after I finally try it again?",
         "why": "Why does trying an arm make it less likely to be chosen the next day?",
-        "whatIf": "What if I never pick an arm for a very long time, does it get forgotten?",
+        "whatIf": "What if I had tried an option only once so far, how much should its bonus count then?",
         "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
       }
     },
@@ -687,13 +706,13 @@
           "id": "n16.f1",
           "required": true,
           "ask": "How much should I trust an average from one visit compared with one from a hundred?",
-          "text": "An average based on one visit is much less reliable than one based on a hundred visits."
+          "text": "An average based on one try is much less reliable than one based on a hundred tries."
         },
         {
           "id": "n16.f2",
           "required": true,
           "ask": "If two options have about the same average, does it matter how many times I tried each?",
-          "text": "So comparing averages alone ignores how many samples each is based on: 2.9 from 1 visit could really be higher than 3 from 100 visits."
+          "text": "So comparing averages alone ignores how many tries each is based on: 2.9 from 1 try could really be higher than 3 from 100 tries."
         }
       ],
       "lexicon": [

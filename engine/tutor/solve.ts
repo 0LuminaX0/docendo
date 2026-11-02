@@ -19,16 +19,21 @@ import { termsUsed } from "./judge";
 // come from its own reasoning, never from an answer swapped in at the end:
 // - a misconception still believed: the model solves freely from the notes, so
 //   the misconception leads it astray;
-// - a fact missing: Kai reasons from a beginner's wrong rule for that fact (one
-//   of the problem's `beliefs`, picked at random), so its wrong answer follows
-//   from its steps.
+// - a fact missing: Kai says it is guessing and reasons from its own assumption
+//   for that fact (the fact's `assume` in the graph, one per fact, copied into
+//   the problem's `beliefs` with the answer it leads to), so its wrong answer
+//   follows from its steps and has a named cause. With several facts missing,
+//   the first in `needs` order (the order the steps use them) decides. A vague
+//   explanation counts as missing, except where the problem lists a vague
+//   reading that still leads to the key (the bonus "grows", without "ever more
+//   slowly", is enough to see that it grows).
 // A right answer without the facts, or an answer that doesn't follow from the
 // guess, is replaced by the offline attempt (also built on the guess). Without
 // a model (demo mode) or when the model fails, the offline solver answers.
 
 export type Step = { text: string; notes: number[] };
 export type Gate = { needs: string[]; missing: string[]; absent: string[]; vague: string[]; misled: string[]; canBeRight: boolean };
-export type Guess = { replaces: string; belief: string; answer: number };
+export type Guess = { replaces: string; belief: string; answer: number; when?: "absent" | "vague" };
 export type Solution = {
   steps: Step[];
   answer: string; // option letter, or the number as Kai wrote it
@@ -48,9 +53,20 @@ export { notesOf };
 export const alts = (need: string) => need.split("|");
 const ideaOf = (fact: string) => fact.split(".")[0]!;
 
+/** Does this answer (an option index, or a number) count as the key? */
+const leadsToKey = (item: PracticeItem, answer: number) => checkPractice(item, item.kind === "choice" ? answer : String(answer));
+
+/** Kai's assumption for a need, as told nothing about it ("absent") or only vaguely ("vague"): the problem's belief for
+ * that case, else the one for both. */
+export function beliefFor(item: PracticeItem, need: string, how: "absent" | "vague"): Guess | null {
+  const mine = (item.beliefs ?? []).filter((b) => alts(need).includes(b.replaces));
+  return mine.find((b) => b.when === how) ?? mine.find((b) => !b.when) ?? null;
+}
+
 /**
  * Can Kai get this problem right? Only with every need met (one of its facts explained correctly; a vague,
- * partial explanation isn't enough) and no misconception left about the ideas involved.
+ * partial explanation isn't enough unless the problem's vague reading of it still leads to the key) and no
+ * misconception left about the ideas involved.
  */
 export function gate(item: PracticeItem, state: State): Gate {
   const needs = item.needs ?? [...new Set(item.steps.flatMap((s) => s.facts))];
@@ -63,7 +79,9 @@ export function gate(item: PracticeItem, state: State): Gate {
   const open = missing.filter((n) => !believed.some((m) => alts(n).some((f) => ideaOf(f) === m.node)));
   const absent = open.filter((n) => !alts(n).some((f) => facts.has(f))); // told nothing about it
   const vague = open.filter((n) => alts(n).some((f) => facts.has(f))); // told only vaguely (or wrongly) about it
-  return { needs, missing, absent, vague, misled, canBeRight: !missing.length && !misled.length };
+  // a vague explanation whose reading still gets there is enough for this problem
+  const enough = (n: string) => vague.includes(n) && (() => { const b = beliefFor(item, n, "vague"); return !!b && b.when === "vague" && leadsToKey(item, b.answer); })();
+  return { needs, missing, absent, vague, misled, canBeRight: !misled.length && missing.every(enough) };
 }
 
 /** A small deterministic hash: a guess is random across notebooks but the same for the same notebook. */
@@ -73,8 +91,19 @@ function pick(seed: string, n: number): number {
   return (h >>> 0) % n;
 }
 
-/** The beginner's rule Kai falls back on: one for a fact it was told nothing or only vaguely about, picked at random. */
+/**
+ * The assumption Kai reasons from when the gate is shut: for the first need in `needs` order (the order the steps use
+ * them) that Kai was told nothing or only vaguely about and whose assumption leads to a wrong answer. Deterministic, so
+ * the same notebook always fails at the same place. Without one (content without beliefs, or only a misconception
+ * shuts the gate), a beginner's rule picked at random as before.
+ */
 export function chooseGuess(item: PracticeItem, g: Gate, seed: string): Guess | null {
+  for (const n of g.needs) {
+    const how = g.absent.includes(n) ? "absent" : g.vague.includes(n) ? "vague" : null;
+    if (!how) continue;
+    const b = beliefFor(item, n, how);
+    if (b && !leadsToKey(item, b.answer)) return b;
+  }
   const all = item.beliefs ?? [];
   const ideas = new Set(g.misled.length ? (item.needs ?? []).flatMap(alts).map(ideaOf) : []);
   const forMissing = all.filter((b) => [...g.absent, ...g.vague].some((n) => alts(n).includes(b.replaces)));
@@ -125,7 +154,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
   const g = gate(item, state);
   // a fact Kai was told nothing or only vaguely about: it reasons from a beginner's reading of it. (A misconception
   // is what it was told: the model reasons from that, and the gate's safety net catches a right answer.)
-  const guess = g.absent.length || g.vague.length ? chooseGuess(item, g, `${item.id}|${notes.join("|")}`) : null;
+  const guess = !g.canBeRight && (g.absent.length || g.vague.length) ? chooseGuess(item, g, `${item.id}|${notes.join("|")}`) : null;
   const vagueGuess = !!guess && g.vague.some((n) => alts(n).includes(guess.replaces));
   // options are numbered for the model: trucks and headlines are named by letters, and "B" must never be ambiguous
   const problem =
@@ -236,9 +265,11 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
   const steps: Step[] = [];
   let broken = false;
   let followed: Guess | null = null;
+  const inNeed = (list: string[], f: string) => list.some((n) => alts(n).includes(f));
+  // where Kai goes wrong: the first step that uses the fact it is guessing about, or an idea it was told wrongly about
+  const fails = (f: string) => inNeed(g.needs, f) && (guess ? f === guess.replaces || misledIdeas.has(ideaOf(f)) : inNeed(g.missing, f) || misledIdeas.has(ideaOf(f)));
   for (const s of item.steps) {
-    const inNeed = (list: string[], f: string) => list.some((n) => alts(n).includes(f));
-    const gap = s.facts.find((f) => inNeed(g.needs, f) && (inNeed(g.missing, f) || misledIdeas.has(ideaOf(f))));
+    const gap = s.facts.find(fails);
     if (!gap || g.canBeRight) {
       const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
       steps.push({ text: s.text, notes: [...new Set(cite)] });

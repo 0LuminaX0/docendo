@@ -13,9 +13,12 @@ export const PracticeItem = z
     // notebook holds all of them, correctly explained (engine/tutor/solve.ts, gate). "a|b": either fact carries the
     // rule (UCB's "average plus bonus, pick the highest" is n11.f1 or n11.f2). Default: every step's facts.
     needs: z.array(z.string()).min(1).optional(),
-    // recursive feedback: a beginner's wrong rule for a needed fact, and the (wrong) answer it leads to. When Kai
-    // lacks the fact, it reasons from one of these, so its wrong answer follows from its own reasoning.
-    beliefs: z.array(z.object({ replaces: z.string(), belief: z.string(), answer: z.number() })).optional(),
+    // recursive feedback: Kai's assumption for a needed fact (the fact's `assume` in the graph, word for word) and the
+    // answer it leads to here. When Kai lacks the fact, it says it is guessing and reasons from this, so its wrong
+    // answer follows from its own reasoning. `when`: only for a fact Kai was told nothing about ("absent") or only
+    // vaguely ("vague", the fact's `assumeVague`); unset, both. A vague reading may lead to the key: then a vague
+    // explanation is enough for this problem.
+    beliefs: z.array(z.object({ replaces: z.string(), belief: z.string(), answer: z.number(), when: z.enum(["absent", "vague"]).optional() })).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),
     prompt: z.string(),

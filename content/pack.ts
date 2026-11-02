@@ -73,6 +73,21 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   // practice: what Kai's gate needs must be real facts
   for (const p of practice?.items ?? [])
     for (const need of p.needs ?? []) for (const f of need.split("|")) if (bundle && !facts.has(f)) err("practice.json", `${p.id} needs ${f}, which isn't a fact in the bundle`);
+  // Kai's assumptions: one per fact, copied word for word, and one for every need that leads to a wrong option
+  const factById = new Map(bundle?.nodes.flatMap((n) => n.facts.map((f) => [f.id, f] as const)) ?? []);
+  for (const p of practice?.items ?? []) {
+    for (const b of p.beliefs ?? []) {
+      const f = factById.get(b.replaces);
+      const own = b.when === "vague" ? f?.assumeVague : f?.assume;
+      if (bundle && own && b.belief !== own) err("practice.json", `${p.id}: the assumption for ${b.replaces} differs from the fact's ${b.when === "vague" ? "assumeVague" : "assume"} in the graph`);
+      if (p.kind === "choice" && !(b.answer >= 0 && b.answer < (p.options?.length ?? 0))) err("practice.json", `${p.id}: the assumption for ${b.replaces} leads to no option`);
+    }
+    for (const need of p.needs ?? []) {
+      const absent = (p.beliefs ?? []).find((b) => need.split("|").includes(b.replaces) && b.when !== "vague");
+      if (p.beliefs && !absent) err("practice.json", `${p.id}: no assumption for ${need}, so Kai can't fail there with a named cause`);
+      else if (absent && absent.answer === p.answer) err("practice.json", `${p.id}: the assumption for ${need} leads to the key, so ${need} isn't needed`);
+    }
+  }
 
   // the final test: ids unique, forms the same length, each twin real
   if (tests) {

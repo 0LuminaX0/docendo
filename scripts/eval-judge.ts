@@ -22,36 +22,53 @@ const models = (args.includes("--models") ? args[args.indexOf("--models") + 1]! 
 const reps = Number(args.includes("--reps") ? args[args.indexOf("--reps") + 1] : 1);
 const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json", "utf8")));
 
-type Case = { kai?: string; msg: string; want?: Record<string, "correct" | "wrong">; not?: string[]; intent?: string; misconception?: boolean };
+type Case = { kai?: string; msg: string; want?: Record<string, "correct" | "partial" | "wrong">; not?: string[]; intent?: string; misconception?: boolean };
+// The lesson's facts (F1 to F15 in the team's item design): given ones (n01, n03, n16) and teachable ones with the
+// misconception Kai assumes when they weren't explained. Each teachable fact has a right version, and its misconception
+// stated as a learner would, which must not get credit. n12.f2 also has a vague version (growth without its slowing).
 const CASES: Case[] = [
-  { kai: "So what exactly is the problem we're solving here? What do I get to choose each time?", msg: "So imagine you go out to eat every night and there are a few restaurants. You don't know which one is best, you only find out by eating there.", want: { "n01.f1": "correct" }, intent: "answer" },
-  { kai: "Do I know in advance how good each option is?", msg: "no, you only find out by trying, and even then each night is a bit random", want: { "n01.f2": "correct" } },
-  { msg: "Every night you choose one of three restaurants to eat at, again and again.", want: { "n01.f1": "correct" }, intent: "explain" },
-  { msg: "Each visit gives you a random amount of happiness, and you can't see how good each place really is on average.", want: { "n01.f2": "correct" } },
-  { msg: "You keep the average of what each restaurant gave you so far, that's your guess of how good it is.", want: { "n03.f1": "correct" } },
-  { msg: "Greedy always picks the restaurant with the best average so far.", want: { "n05.f1": "correct" }, not: ["n07.f1", "n11.f2"] },
-  { kai: "With that rule, would I ever go back to an option that looked bad early on?", msg: "no, never, it doesn't try the others again just to learn", want: { "n05.f2": "correct" }, intent: "answer" },
-  { msg: "If the best place gives you one bad night at the start, greedy might never find out it's actually the best.", want: { "n06.f1": "correct" } },
-  { msg: "Epsilon greedy picks a random restaurant with probability epsilon, like 10% of the time, and otherwise the best average.", want: { "n07.f1": "correct" } },
-  { msg: "When epsilon greedy explores, it goes to the restaurant it has visited the least.", not: ["n07.f2"], misconception: true },
-  { msg: "Its random picks don't care about the averages, so it wastes as many on restaurants it knows are bad as on the others.", want: { "n07.f2": "correct" } },
-  { msg: "Exploring is trying places to learn about them, exploiting is going to the best one you know.", want: { "n08.f1": "correct" } },
-  { msg: "UCB adds a bonus to each average that's bigger for options you tried less, and picks the highest total.", want: { "n11.f2": "correct" }, not: ["n05.f1"] },
-  { msg: "Every time you try an option, its bonus gets a bit smaller.", want: { "n12.f1": "correct" } },
-  { msg: "Greedy is the smartest strategy, it always finds the best restaurant in the end.", misconception: true, not: ["n05.f2", "n06.f1"] },
+  { kai: "So what exactly is the problem we're solving here? What do I get to choose each time?", msg: "Every day you pick one of three food trucks for lunch. Each truck's lunches are random around some true average that you don't know.", want: { "n01.f1": "correct" }, intent: "answer" },
+  { kai: "When I pick one option, do I find out anything about the others?", msg: "no, you only see how good the lunch was at the truck you went to", want: { "n01.f2": "correct" } },
+  { msg: "You keep the average of what each truck gave you so far, that's your guess of how good it is.", want: { "n03.f1": "correct" } },
+  // F4: greedy follows the leader and switches; its misconception commits after the first tries
+  { msg: "Greedy always picks the truck with the best average so far, and if another truck's average gets higher it switches to that one.", want: { "n05.f1": "correct" }, not: ["n07.f1", "n11.f1"] },
+  { msg: "Greedy always picks the truck with the best average so far.", want: { "n05.f1": "correct" } },
+  { msg: "Greedy just picks whatever looked best after the first day and then stays there for the rest of the year.", not: ["n05.f1"], misconception: true },
+  // F5: lock-in; its misconception: the averages fix themselves
+  { msg: "If the best truck has one bad lunch at the start, greedy might never go back to it, so it never finds out it's actually the best.", want: { "n06.f1": "correct" } },
+  { msg: "Greedy is fine in the long run, the averages fix themselves and it ends up at the best truck.", not: ["n06.f1"], misconception: true },
+  // F6: a fixed ε, early and late; its misconception: exploring fades
+  { msg: "Epsilon greedy picks a random truck with probability epsilon, like 10% of the days, and otherwise the best average. That stays 10% the whole year.", want: { "n07.f1": "correct" } },
+  { msg: "Epsilon greedy explores a lot at the start and then less and less once it knows which truck is best.", not: ["n07.f1"], misconception: true },
+  // F7: a random pick among all, the favourite included; its misconception: never the favourite
+  { msg: "When it picks randomly, every truck has the same chance, including the one with the best average.", want: { "n07.f2": "correct" } },
+  { msg: "When epsilon greedy explores, it goes to one of the other trucks, never the favourite.", not: ["n07.f2"], misconception: true },
+  { msg: "Exploring is trying trucks to learn about them, exploiting is going to the one that looks best.", want: { "n08.f1": "correct" } },
+  // F9: the score and the highest one; its misconception: the least tried
+  { msg: "UCB gives every truck a score, its average plus a bonus, and always picks the highest score. There's no randomness in it.", want: { "n11.f1": "correct" }, not: ["n05.f1"] },
+  { msg: "UCB always goes to the truck you've tried the fewest times.", not: ["n11.f1"], misconception: true },
+  // F14: c, set beforehand; its misconception: the bonus adapts to the observed spread
+  { msg: "How big the bonuses are is set beforehand with a constant c, depending on how much the lunches usually vary. It doesn't look at the actual lunches.", want: { "n11.f2": "correct" } },
+  { msg: "The bonus is bigger for trucks whose lunches have been all over the place.", not: ["n11.f2"], misconception: true },
+  // F10: own picks shrink the bonus; its misconception: every bonus shrinks with time
+  { msg: "Every time you go to a truck, its bonus gets a bit smaller. Going to the other trucks doesn't make it smaller.", want: { "n12.f1": "correct" } },
+  { msg: "All the bonuses shrink over time as the days go by.", not: ["n12.f1"], misconception: true },
+  // F11: growth with the round number, ever more slowly; vague without the slowing; its misconception: it stays put
+  { msg: "While you don't go to a truck, its bonus keeps growing with the day number, but slower and slower, and it never stops growing.", want: { "n12.f2": "correct" } },
+  { msg: "The bonus of a truck you don't visit grows over time.", want: { "n12.f2": "partial" } },
+  { msg: "If you don't pick a truck, its bonus just stays where it was.", not: ["n12.f2"], misconception: true },
   // teaching something other than what Kai asked: it still counts
-  { kai: "Could greedy ever make a mistake and never realize it?", msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the restaurant it has visited the least.", want: { "n07.f1": "correct" }, misconception: true },
-  { kai: "So what do I actually choose between each time?", msg: "Greedy always goes to the restaurant with the best average so far and never tries the others again just to learn.", want: { "n05.f1": "correct", "n05.f2": "correct" } },
+  { kai: "Could greedy ever make a mistake and never realize it?", msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the truck it has visited the least.", want: { "n07.f1": "correct" }, misconception: true },
   // mixed messages: a right part and a wrong part in one go, as learners write; the right part must still count
-  { msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the restaurant it has visited the least.", want: { "n07.f1": "correct" }, not: ["n07.f2"], misconception: true },
-  { msg: "UCB adds a bonus to each average and picks the option with the highest total, and that bonus grows every time you pick the option.", want: { "n11.f1": "correct" }, misconception: true },
+  { msg: "Epsilon greedy picks randomly 10% of the time, and when it does it always goes to the truck it knows least about.", want: { "n07.f1": "correct" }, not: ["n07.f2"], misconception: true },
+  { msg: "UCB adds a bonus to each average and picks the option with the highest total, and that bonus grows every time you pick the option.", want: { "n11.f1": "correct" }, not: ["n12.f1"], misconception: true },
   // short answers to Kai's question: the note must turn them into a sentence that stands alone (reported, not scored)
-  { kai: "So what exactly am I choosing between each time?", msg: "between arms" },
+  { kai: "So what exactly am I choosing between each time?", msg: "between food trucks" },
   { kai: "And when greedy picks a truck, what does it remember about it afterwards?", msg: "you store its average" },
-  { kai: "Does greedy ever go back to a truck that looked bad at first?", msg: "nope, never", want: { "n05.f2": "correct" } }, // a real "no" still counts
+  { kai: "With that rule, would I ever pick an option just to find out more about it?", msg: "nope, never", want: { "n05.f2": "correct" } }, // a real "no" still counts
   { msg: "idk", intent: "unsure", not: ["n01.f1", "n05.f1"] },
   // after "i dunno": "not this either" is still not knowing, never a "no" that answers Kai's question (a real bug)
-  { kai: "Oh, you aren't sure either, and that is totally fine. Do I know in advance how good each option is, or what I will get when I pick it?", msg: "nope, not this either", intent: "unsure", not: ["n01.f2"] },
+  { kai: "Oh, you aren't sure either, and that is totally fine. When I pick one option, do I find out anything about the others?", msg: "nope, not this either", intent: "unsure", not: ["n01.f2"] },
   { msg: "ok what's next?", intent: "move_on" },
   { msg: "Is this like the slot machines in a casino?", intent: "ask_kai" },
 ];
@@ -82,6 +99,7 @@ for (const model of models) {
           want++;
           if (got.get(f) === v) hit++;
           else if (v === "correct" && got.get(f) === "partial") (hit += 0.5, notes.push(`#${i + 1} only partial for ${f}`));
+          else if (v === "partial" && got.get(f) === "correct") notes.push(`#${i + 1} credited a vague ${f} as correct`);
           else notes.push(`#${i + 1} missed ${f} (${got.get(f) ?? "none"})`);
         }
         for (const f of c.not ?? []) if (got.get(f) === "correct") (falseCredit++, notes.push(`#${i + 1} wrongly credited ${f}`));

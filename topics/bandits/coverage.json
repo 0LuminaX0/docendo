@@ -1,7 +1,7 @@
 {
-  "decidedBy": "manual: Claude (claude-opus-5-5), from reading both transcripts in full (ritvikmath e3L4VocZnnQ + DataMListic 8CquWcViBfg)",
-  "decidedAt": "2026-10-07",
-  "graphHash": "693326ca1d699d5c",
+  "decidedBy": "manual: Claude (claude-opus-5-5), from reading both transcripts in full (ritvikmath e3L4VocZnnQ + DataMListic 8CquWcViBfg); lesson facts re-decided 2026-11-02 for the F1 to F15 fact list",
+  "decidedAt": "2026-11-02",
+  "graphHash": "ddd38570a291ef3a",
   "facts": {
     "n01.f1": {
       "status": "covered",
@@ -14,10 +14,10 @@
     "n01.f2": {
       "status": "covered",
       "where": [
-        "mab-intro#1",
         "mab-intro#2",
-        "mab-dml#0"
-      ]
+        "mab-intro#17"
+      ],
+      "note": "the averages are hidden until you visit; an explore day is \"purely to get another data point\""
     },
     "n01.f3": {
       "status": "covered",
@@ -57,6 +57,13 @@
         "mab-dml#3"
       ]
     },
+    "n03.f3": {
+      "status": "covered",
+      "where": [
+        "mab-intro#11"
+      ],
+      "note": "exploit only tries each restaurant once first; the other rules are shown from a running start"
+    },
     "n04.f1": {
       "status": "partial",
       "where": [
@@ -70,11 +77,13 @@
       "note": "not shown"
     },
     "n05.f1": {
-      "status": "covered",
+      "status": "partial",
       "where": [
-        "mab-intro#11",
-        "mab-dml#2"
-      ]
+        "mab-dml#2",
+        "mab-dml#3"
+      ],
+      "note": "ritvikmath's exploit only commits after three days and never updates (Kai's assumption for this fact); DataMListic's exploit step takes the highest estimate so far and updates it",
+      "accepted": "the text lesson states it"
     },
     "n05.f2": {
       "status": "covered",
@@ -180,24 +189,30 @@
       "note": "linear growth is stated for random selection only"
     },
     "n11.f1": {
-      "status": "partial",
+      "status": "covered",
       "where": [
-        "mab-dml#4"
+        "mab-dml#4",
+        "mab-dml#5"
       ],
-      "note": "the bonus is described (it shrinks with samples) but the formula √(2 ln t / n) isn't shown"
+      "note": "the score as estimate plus bonus; UCB selects the option whose upper bound reaches the top"
     },
     "n11.f2": {
+      "status": "absent",
+      "where": [],
+      "note": "neither video mentions c or says that the bonus ignores the observed rewards",
+      "accepted": "the text lesson states it"
+    },
+    "n11.f3": {
+      "status": "absent",
+      "where": [],
+      "note": "untried options are not discussed"
+    },
+    "n11.f4": {
       "status": "covered",
       "where": [
         "mab-dml#4"
-      ]
-    },
-    "n11.f3": {
-      "status": "partial",
-      "where": [
-        "mab-dml#5"
       ],
-      "note": "implied: UCB picks the arm whose upper bound reaches the top, with no random step"
+      "note": "\"give it the benefit of the doubt\""
     },
     "n12.f1": {
       "status": "covered",
@@ -209,7 +224,8 @@
     "n12.f2": {
       "status": "absent",
       "where": [],
-      "note": "the growth of the bonus over rounds isn't discussed"
+      "note": "the growth of the bonus over rounds isn't discussed",
+      "accepted": "the text lesson states it"
     },
     "n13.f1": {
       "status": "covered",

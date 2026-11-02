@@ -28,37 +28,32 @@ describe("practice problems", () => {
     expect(parseNumber("about 210")).toBeNull();
   });
 
-  it("accept right answers in any reasonable form and reject wrong ones", () => {
-    expect(checkPractice(item("p5"), "867")).toBe(true);
-    expect(checkPractice(item("p5"), "≈ 870")).toBe(true);
-    expect(checkPractice(item("p5"), "866.7")).toBe(true);
-    expect(checkPractice(item("p5"), "800")).toBe(false); // explore picks never land on the favourite
-    expect(checkPractice(item("p5"), "917")).toBe(false); // explore picks lean towards good averages
-    expect(checkPractice(item("p1"), String(item("p1").answer))).toBe(true);
-    expect(checkPractice(item("p1"), String((item("p1").answer + 1) % 4))).toBe(false);
+  it("accept the key and reject every other option", () => {
+    for (const p of practice.items)
+      p.options!.forEach((_, k) => expect(checkPractice(p, k), `${p.id} option ${k}`).toBe(k === p.answer));
   });
 
-  // verify-items: every numeric key is recomputed here, so a typo in the content fails the build
+  // verify-items: every number behind a key is recomputed here, so a typo in the content fails the build
   it("have keys that match their own numbers", () => {
-    expect(item("p5").answer).toBeCloseTo(1000 * (0.8 + 0.2 / 3), 1);
-    // p3: UCB picks the highest average + bonus (A 6.1 + 0.5, B 4.8 + 1.9, C 5.5 + 0.8)
-    expect(argmax([6.1 + 0.5, 4.8 + 1.9, 5.5 + 0.8])).toBe(1);
-    expect(item("p3").answer).toBe(1);
-    // p6: B's new score 4.0 + 0.6 against A 5.4, C 3.8, D 5.1: A wins
-    expect(argmax([5.4, 4.0 + 0.6, 3.8, 5.1])).toBe(0);
-    expect(item("p6").options![item("p6").answer]).toMatch(/plays A/);
-    // p1 and p4: greedy's averages after the first tries pick B
-    expect(argmax([2, 5, 1])).toBe(1);
-    expect(argmax([0, 1, 0])).toBe(1);
-    expect(item("p1").options![item("p1").answer]).toMatch(/^At B/);
-    expect(item("p4").options![item("p4").answer]).toMatch(/^B:/);
+    // p1: ε = 0.2, four stages, A the favourite: 800 by exploiting, 200 random picks of which a quarter land on each stage
+    expect(1000 * (0.8 + 0.2 / 4)).toBeCloseTo(850);
+    expect(item("p1").options![item("p1").answer]).toMatch(/^About 850 to A; B and C about equally/);
+    // p2: the stem's scores (average plus bonus) make UCB pick Dialogues
+    expect(argmax([6.3 + 1.0, 5.0 + 2.5, 4.0 + 1.5])).toBe(1);
+    // p4: B wins in the same round whatever the bonus scale c and the round t (bonus c √(ln t / n))
+    const score = (avg: number, n: number, c: number, t: number) => avg + c * Math.sqrt(Math.log(t) / n);
+    for (const c of [0.01, 0.1, 0.5, 1, 3]) for (const t of [110, 1000, 1e6]) expect(argmax([score(6.0, 50, c, t), score(6.4, 10, c, t), score(5.0, 10, c, t), score(6.4, 40, c, t)])).toBe(1);
+    // p5: UCB picks A or B depending on c, never C or D
+    const p5 = (c: number) => argmax([score(0.12, 2000, c, 6530), score(0.11, 30, c, 6530), score(0.02, 2000, c, 6530), score(0.1, 2500, c, 6530)]);
+    const winners = new Set([0.001, 0.01, 0.02, 0.05, 0.1, 0.5, 2].map(p5));
+    expect([...winners].sort()).toEqual([0, 1]);
   });
 
-  it("come in two rounds that practise the same ideas in the same order", () => {
+  it("come in two rounds that practise the same ideas", () => {
     const r1 = practice.items.filter((p) => p.round === 1).map((p) => p.idea);
     const r2 = practice.items.filter((p) => p.round === 2).map((p) => p.idea);
-    expect(r1).toEqual(["greedy", "epsilon", "ucb"]);
-    expect(r2).toEqual(r1);
+    expect(r1).toHaveLength(3);
+    expect([...r2].sort()).toEqual([...r1].sort());
   });
 
   it("only use ideas the lesson teaches, and don't put every answer in the same place", () => {
@@ -66,6 +61,17 @@ describe("practice problems", () => {
     // here: choice answers are spread over the options
     const positions = practice.items.filter((p) => p.kind === "choice").map((p) => p.answer);
     expect(new Set(positions).size).toBeGreaterThan(2);
+  });
+
+  it("need only teachable facts, listed in the order the steps use them", () => {
+    const teachable = new Set(bundle.nodes.flatMap((n) => n.facts.filter((f) => f.required && f.teachable && f.assume).map((f) => f.id)));
+    for (const p of practice.items) {
+      const needs = p.needs ?? [];
+      for (const n of needs) expect(teachable.has(n), `${p.id} needs ${n}, which needs an assumption and must be taught`).toBe(true);
+      const firstUse = (n: string) => p.steps.findIndex((s) => s.facts.includes(n));
+      for (const n of needs) expect(firstUse(n), `${p.id}: a step uses ${n}`).toBeGreaterThanOrEqual(0);
+      expect(needs.map(firstUse), `${p.id}: needs in step order`).toEqual([...needs.map(firstUse)].sort((a, b) => a - b));
+    }
   });
 });
 
@@ -212,57 +218,152 @@ describe("pretest", () => {
   });
 });
 
-import { initialState } from "../engine/tutor/state";
-import { isRight, notesOf, offlineSolve } from "../engine/tutor/solve";
+import { initialState, type State } from "../engine/tutor/state";
+import { beliefFor, chooseGuess, gate, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
+
+// a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
+const taughtState = (facts: string[], vague: string[] = []): State => ({
+  ...initialState(bundle),
+  turn: facts.length,
+  notebook: facts.map((fact, i) => ({ fact, verdict: vague.includes(fact) ? ("partial" as const) : ("correct" as const), words: `note about ${fact}`, turn: i + 1 })),
+});
+const LETTERS = "ABCDEF";
+const factOf = (id: string) => bundle.nodes.flatMap((n) => n.facts).find((f) => f.id === id)!;
+
+describe("the knowledge base: facts Kai can be taught, and its assumptions", () => {
+  const lesson = bundle.nodes.filter((n) => n.inLesson !== false);
+  const needed = new Set(practice.items.flatMap((p) => p.needs ?? []));
+
+  it("gives every fact a practice problem needs one assumption, and never needs a given fact", () => {
+    for (const id of needed) expect(factOf(id).assume, `${id} has Kai's assumption`).toBeTruthy();
+    // given facts: the setup, averages and how reliable they are, trying each option once
+    for (const id of ["n01.f1", "n01.f2", "n03.f1", "n03.f3", "n16.f1"]) expect(needed.has(id), `${id} is given`).toBe(false);
+    // the teachable facts of the lesson: greedy, lock-in, ε-greedy (2), UCB's score and c, the bonus's two rules
+    const withAssumption = lesson.flatMap((n) => n.facts.filter((f) => f.assume).map((f) => f.id));
+    expect(withAssumption).toEqual(["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]);
+    for (const id of withAssumption) expect(factOf(id).required && factOf(id).teachable, id).toBe(true);
+  });
+
+  it("copies each fact's assumption into the problems word for word, one per fact", () => {
+    for (const p of practice.items)
+      for (const b of p.beliefs ?? []) {
+        const f = factOf(b.replaces);
+        expect(b.belief, `${p.id} ${b.replaces}`).toBe(b.when === "vague" ? f.assumeVague : f.assume);
+      }
+  });
+});
 
 describe("Kai solving practice problems (recursive feedback)", () => {
   const base = initialState(bundle);
-  const p1 = item("p1");
-  const taught = {
-    ...base,
-    notebook: (["n03.f1", "n05.f1", "n05.f2", "n06.f1"] as const).map((fact, i) => ({ fact, verdict: "correct" as const, words: `note about ${fact}`, turn: i + 1 })),
-  };
 
-  it("gets a problem right when the notebook holds every fact it needs, citing the notes", () => {
-    const s = offlineSolve(bundle, p1, taught);
-    expect(s.correct).toBe(true);
-    expect(s.steps.every((st) => st.notes.length > 0)).toBe(true);
+  it("gets every problem right when the notebook holds every fact it needs, citing the notes", () => {
+    for (const p of practice.items) {
+      const s = offlineSolve(bundle, p, taughtState(p.needs ?? []));
+      expect(s.correct, p.id).toBe(true);
+      expect(s.guess, p.id).toBeNull();
+      // a step that uses a taught fact cites its note
+      p.steps.forEach((st, i) => {
+        if (st.facts.some((f) => (p.needs ?? []).includes(f))) expect(s.steps[i]!.notes.length, `${p.id} step ${i + 1}`).toBeGreaterThan(0);
+      });
+    }
   });
 
-  it("goes wrong where a fact is missing, and says it guessed", () => {
-    const s = offlineSolve(bundle, p1, base);
-    expect(s.correct).toBe(false);
-    expect(s.steps[0]!.text).toMatch(/didn't tell me/);
-    expect(s.steps[0]!.notes).toEqual([]);
+  it("goes wrong where a needed fact is missing: at that fact's step, with its assumption, to the option the assumption predicts", () => {
+    for (const p of practice.items)
+      for (const n of p.needs ?? []) {
+        const st = taughtState((p.needs ?? []).filter((x) => x !== n));
+        const g = gate(p, st);
+        expect(g.canBeRight, `${p.id} without ${n}`).toBe(false);
+        const b = beliefFor(p, n, "absent")!;
+        expect(b, `${p.id} has an assumption for ${n}`).toBeTruthy();
+        expect(checkPractice(p, b.answer), `${p.id}: Kai's assumption for ${n} leads to a wrong option`).toBe(false);
+        expect(chooseGuess(p, g, "any")).toEqual(b);
+        const s = offlineSolve(bundle, p, st);
+        expect(s.answer, `${p.id} without ${n}`).toBe(LETTERS[b.answer]);
+        expect(s.correct).toBe(false);
+        // the attempt follows the solution up to the first step that uses the missing fact, and says it is guessing there
+        const at = p.steps.findIndex((x) => x.facts.includes(n));
+        expect(s.steps[at]!.text, `${p.id} without ${n}`).toMatch(/didn't tell me/);
+        expect(s.steps[at]!.text).toContain(b.belief);
+        expect(s.steps.slice(0, at).map((x) => x.text)).toEqual(p.steps.slice(0, at).map((x) => x.text));
+      }
+  });
+
+  it("with several facts missing, fails at the first one in the order the steps use them", () => {
+    for (const p of practice.items) {
+      const s = offlineSolve(bundle, p, base);
+      const first = beliefFor(p, p.needs![0]!, "absent")!;
+      expect(s.guess, p.id).toEqual(first);
+      expect(s.answer, p.id).toBe(LETTERS[first.answer]);
+    }
+  });
+
+  it("treats a vague explanation as missing, unless the problem's vague reading still leads to the key", () => {
+    for (const p of practice.items)
+      for (const n of p.needs ?? []) {
+        const st = taughtState(p.needs ?? [], [n]);
+        const b = beliefFor(p, n, "vague")!;
+        const s = offlineSolve(bundle, p, st);
+        if (b.when === "vague" && checkPractice(p, b.answer)) {
+          expect(gate(p, st).canBeRight, `${p.id}: a vague ${n} is enough`).toBe(true);
+          expect(s.correct).toBe(true);
+        } else {
+          expect(gate(p, st).canBeRight, `${p.id}: a vague ${n} isn't enough`).toBe(false);
+          expect(s.answer).toBe(LETTERS[b.answer]);
+          expect(s.steps.find((x) => x.text.includes(b.belief))!.text).toMatch(/vaguely/);
+        }
+      }
+    // the bonus "grows" without "ever more slowly": enough to see that it grows (p2, p3), not to see the gaps grow (p6)
+    expect(gate(item("p2"), taughtState(item("p2").needs!, ["n12.f2"])).canBeRight).toBe(true);
+    expect(offlineSolve(bundle, item("p6"), taughtState(item("p6").needs!, ["n12.f2"])).answer).toBe("B");
+    expect(offlineSolve(bundle, item("p6"), taughtState(item("p6").needs!.filter((n) => n !== "n12.f2"))).answer).toBe("D");
+  });
+
+  it("is not affected by a fact the problem doesn't list", () => {
+    const lessonFacts = bundle.nodes.filter((n) => n.inLesson !== false).flatMap((n) => n.facts.filter((f) => f.required && f.teachable).map((f) => f.id));
+    for (const p of practice.items) {
+      const all = taughtState(lessonFacts);
+      for (const other of lessonFacts.filter((f) => !(p.needs ?? []).includes(f)))
+        expect(gate(p, { ...all, notebook: all.notebook.filter((e) => e.fact !== other) }).canBeRight, `${p.id} without ${other}`).toBe(true);
+    }
+  });
+
+  it("fails the same way for the same notebook, whatever the seed", () => {
+    const p = item("p6");
+    const st = taughtState(["n07.f1"]);
+    const guesses = new Set(Array.from({ length: 10 }, (_, i) => chooseGuess(p, gate(p, st), `seed${i}`)!.replaces));
+    expect([...guesses]).toEqual(["n11.f1"]);
   });
 
   it("follows a stated misconception and points to the learner's words", () => {
-    const st = { ...taught, misconceptions: [{ node: "n05", words: "greedy checks the other trucks now and then", turn: 5 }], notebook: taught.notebook.map((e) => (e.fact === "n05.f2" ? { ...e, verdict: "wrong" as const } : e)) };
-    const s = offlineSolve(bundle, p1, st);
+    const p = item("p1");
+    const st: State = { ...taughtState(["n07.f1"]), misconceptions: [{ node: "n07", words: "when it explores it picks one of the other stages, never the favourite", turn: 3 }] };
+    const s = offlineSolve(bundle, p, st);
     expect(s.correct).toBe(false);
-    const bad = s.steps.find((x) => x.text.includes("now and then"))!;
-    expect(s.notes[bad.notes[0]! - 1]).toBe("greedy checks the other trucks now and then");
+    const bad = s.steps.find((x) => x.text.includes("never the favourite"))!;
+    expect(s.notes[bad.notes[0]! - 1]).toBe("when it explores it picks one of the other stages, never the favourite");
+    expect(s.answer).toBe("A"); // what skipping the favourite predicts: about 800 to A
   });
 
-  it("numbers the notes without lesson text, and reads Kai's answer as a letter or a number", () => {
+  it("numbers the notes without lesson text, and reads Kai's answer as a letter", () => {
+    const taught = taughtState(["n07.f1", "n07.f2"]);
     expect(notesOf(taught)).toEqual(taught.notebook.map((e) => e.words));
     // overlapping quotes from one message are one note, the longest, in the place of the first
-    const overlap = {
+    const overlap: State = {
       ...taught,
       notebook: [
         { fact: "n01.f1", verdict: "correct" as const, words: "You choose one of several options.", turn: 1 },
-        { fact: "n01.f2", verdict: "correct" as const, words: "You choose one of several options. Each gives a random reward.", turn: 1 },
+        { fact: "n01.f2", verdict: "correct" as const, words: "You choose one of several options. You only see what you picked.", turn: 1 },
         { fact: "n03.f1", verdict: "correct" as const, words: "The estimate is the average", turn: 2 },
         { fact: "n05.f1", verdict: "correct" as const, words: "the estimate is the average!", turn: 3 },
       ],
     };
-    expect(notesOf(overlap)).toEqual(["You choose one of several options. Each gives a random reward.", "The estimate is the average"]);
-    expect(isRight(p1, "D")).toBe(true);
-    expect(isRight(p1, "d) At B")).toBe(true);
+    expect(notesOf(overlap)).toEqual(["You choose one of several options. You only see what you picked.", "The estimate is the average"]);
+    const p1 = item("p1");
+    expect(isRight(p1, "C")).toBe(true);
+    expect(isRight(p1, "c) About 850 to A")).toBe(true);
     expect(isRight(p1, "A")).toBe(false);
-    expect(isRight(item("p5"), "about 867 visitors")).toBe(true);
-    expect(isRight(item("p5"), "800")).toBe(false);
-    expect(isRight(item("p5"), "I'm not sure")).toBe(false);
+    expect(isRight(p1, "I'm not sure")).toBe(false);
   });
 });
 
@@ -281,20 +382,16 @@ describe("misconceptions Kai still believes", () => {
   });
 });
 
-import { gate, solve, type Solution } from "../engine/tutor/solve";
-
 describe("the gate: Kai can't be right without the facts", () => {
   const base = initialState(bundle);
-  const p3 = item("p3");
-  const ucb = { ...base, notebook: [{ fact: "n11.f2", verdict: "correct" as const, words: "UCB adds a bonus to each average and picks the highest total", turn: 1 }] };
+  const p4 = item("p4");
+  const ucb = taughtState(["n11.f1", "n12.f1"]);
 
   it("opens only with every needed fact explained correctly and no misconception left about them", () => {
-    expect(gate(p3, base)).toMatchObject({ needs: ["n11.f1|n11.f2"], missing: ["n11.f1|n11.f2"], canBeRight: false });
-    // either fact carries the rule: "adds a bonus to each average and picks the highest total" is credited as n11.f1
-    expect(gate(p3, { ...base, notebook: [{ fact: "n11.f1", verdict: "correct" as const, words: "adds a bonus and picks the highest", turn: 1 }] }).canBeRight).toBe(true);
-    expect(gate(p3, ucb).canBeRight).toBe(true);
-    expect(gate(p3, { ...ucb, notebook: [{ ...ucb.notebook[0]!, verdict: "partial" as const }] }).canBeRight).toBe(false); // vague isn't enough
-    expect(gate(p3, { ...ucb, misconceptions: [{ node: "n11", words: "UCB picks at random", turn: 2 }] }).canBeRight).toBe(false);
+    expect(gate(p4, base)).toMatchObject({ needs: ["n11.f1", "n12.f1"], missing: ["n11.f1", "n12.f1"], absent: ["n11.f1", "n12.f1"], canBeRight: false });
+    expect(gate(p4, ucb).canBeRight).toBe(true);
+    expect(gate(p4, taughtState(["n11.f1", "n12.f1"], ["n11.f1"])).canBeRight).toBe(false); // vague isn't enough here
+    expect(gate(p4, { ...ucb, misconceptions: [{ node: "n11", words: "UCB picks at random", turn: 3 }] }).canBeRight).toBe(false);
     for (const p of practice.items)
       for (const n of p.needs ?? []) {
         for (const f of n.split("|")) expect(factIds.has(f), `${p.id} needs ${f}`).toBe(true);
@@ -302,61 +399,17 @@ describe("the gate: Kai can't be right without the facts", () => {
       }
   });
 
-  it("replaces a model's right answer without the facts by a wrong guess", async () => {
-    const lucky = async (): Promise<Solution> => ({ steps: [{ text: "I add the bonus.", notes: [] }], answer: "B", correct: true, notes: [], leaked: [], by: "model", gate: gate(p3, base), guess: null });
+  it("replaces a model's right answer without the facts by the assumption's wrong one", async () => {
+    const lucky = async (): Promise<Solution> => ({ steps: [{ text: "I add the bonus.", notes: [] }], answer: "B", correct: true, notes: [], leaked: [], by: "model", gate: gate(p4, base), guess: null });
     let why = "";
-    const s = await solve(bundle, p3, base, { demo: false, model: lucky, onError: (e) => (why = String(e)) });
+    const s = await solve(bundle, p4, base, { demo: false, model: lucky, onError: (e) => (why = String(e)) });
     expect(s.correct).toBe(false);
     expect(s.by).toBe("offline");
+    expect(s.answer).toBe("C"); // UCB picks the least tried, whatever its average: B or C
     expect(why).toMatch(/without the facts/);
     // with the facts, the model's right answer stands
-    const earned = async (): Promise<Solution> => ({ ...(await lucky()), gate: gate(p3, ucb) });
-    expect((await solve(bundle, p3, ucb, { demo: false, model: earned })).correct).toBe(true);
-  });
-
-  it("guesses at random among the wrong answers, numbers included", () => {
-    for (const p of practice.items) {
-      const guesses = new Set<string>();
-      for (let t = 0; t < 30; t++) {
-        const s = offlineSolve(bundle, p, { ...base, notebook: [{ fact: "n01.f1", verdict: "correct" as const, words: `note ${t}`, turn: 1 }] });
-        expect(s.correct, p.id).toBe(false);
-        guesses.add(s.answer);
-      }
-      expect(guesses.size, `${p.id} guesses vary`).toBeGreaterThan(1);
-    }
-  });
-});
-
-describe("Kai's guesses (beliefs) when a needed fact is missing", () => {
-  const base = initialState(bundle);
-
-  it("are wrong, stand in for a needed fact, and cover every needed fact of every problem", () => {
-    for (const p of practice.items) {
-      const bs = p.beliefs ?? [];
-      expect(bs.length, p.id).toBeGreaterThan(0);
-      for (const b of bs) {
-        expect((p.needs ?? []).some((n) => n.split("|").includes(b.replaces)), `${p.id}: ${b.belief}`).toBe(true);
-        expect(checkPractice(p, p.kind === "choice" ? b.answer : String(b.answer)), `${p.id}: ${b.belief}`).toBe(false);
-      }
-      for (const n of p.needs ?? []) expect(bs.some((b) => n.split("|").includes(b.replaces)), `${p.id} has a guess for ${n}`).toBe(true);
-    }
-  });
-
-  it("make the offline attempt reason from the guess to the guess's answer", () => {
-    for (const p of practice.items) {
-      const s = offlineSolve(bundle, p, base);
-      expect(s.guess, p.id).not.toBeNull();
-      expect(s.steps.some((x) => x.text.includes(s.guess!.belief)), p.id).toBe(true);
-      expect(s.answer, p.id).toBe(p.kind === "choice" ? "ABCDEF"[s.guess!.answer] : String(s.guess!.answer));
-      expect(s.correct, p.id).toBe(false);
-    }
-  });
-
-  it("pick a guess for the fact that is actually missing", async () => {
-    const { chooseGuess } = await import("../engine/tutor/solve");
-    const p1 = item("p1");
-    const knowsF1 = { ...base, notebook: [{ fact: "n05.f1", verdict: "correct" as const, words: "greedy picks the best average", turn: 1 }] };
-    for (let i = 0; i < 10; i++) expect(chooseGuess(p1, gate(p1, knowsF1), `seed${i}`)!.replaces).toBe("n05.f2");
+    const earned = async (): Promise<Solution> => ({ ...(await lucky()), gate: gate(p4, ucb) });
+    expect((await solve(bundle, p4, ucb, { demo: false, model: earned })).correct).toBe(true);
   });
 });
 
@@ -427,15 +480,6 @@ describe("exports", () => {
     expect(csvCell(-3)).toBe("-3");
     expect(csvCell("-0.5")).toBe("-0.5");
     expect(csvCell("greedy picks the best")).toBe("greedy picks the best");
-  });
-});
-
-describe("the offline attempt with a misconception", () => {
-  it("answers what the misconception leads to", () => {
-    const st = { ...initialState(bundle), turn: 2, notebook: [{ fact: "n07.f1", verdict: "correct" as const, words: "epsilon greedy sometimes explores at random", turn: 1 }], misconceptions: [{ node: "n07", words: "when it explores it goes to the restaurant it has visited the least", turn: 2 }] };
-    const s = offlineSolve(bundle, item("p2"), st);
-    expect(s.steps[0]!.text).toContain("visited the least");
-    expect(s.answer).toBe("B"); // "Only at C, the truck you have tried least"
   });
 });
 

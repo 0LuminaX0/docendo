@@ -96,6 +96,12 @@ export const Fact = z.object({
   // Kai's question for this fact, in a novice's voice. Answering it explains the
   // fact, but it must not contain the answer. Shown to the learner only once asked.
   ask: z.string().min(10).optional(),
+  // Kai's own assumption when nobody explained this fact (a known misconception, one per teachable fact). When a
+  // practice problem needs the fact and Kai lacks it, Kai says it is guessing and reasons from this, so its wrong
+  // answer follows from a named cause (engine/tutor/solve.ts). assumeVague: how Kai reads a vague explanation of the
+  // fact, when that differs (e.g. "the bonus grows" without "ever more slowly").
+  assume: z.string().min(10).optional(),
+  assumeVague: z.string().min(10).optional(),
 });
 export type Fact = z.infer<typeof Fact>;
 
@@ -211,7 +217,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional() });
 export const BundleNode = z.object({
   inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),
