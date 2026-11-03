@@ -22,7 +22,7 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | Admin | `/admin` with a sidebar: a dashboard of charts (balance, funnel, scores and a preliminary comparison, pretest against test, survey and manipulation check, data quality), sessions with detail, access codes, feedback, Settings (versioned, logged per session), CSV/JSONL export |
 | Survey | Six questions after the test, before the score (effort, responsibility, judged understanding, practice, enjoyment, manipulation check); optional |
 | Research log | Every turn, try, click, video and calculator event; notebook snapshots; `pnpm events export` |
-| Checks | 105 unit tests, `pnpm e2e` (37 browser checks, incl. consent, the survey, a second tab, settings, the delayed test, the admin panel and phone layouts), live evals: `pnpm eval:judge` (45/45), `pnpm eval:solver` (30/30), `pnpm eval:chat` |
+| Checks | 182 unit tests, `pnpm e2e` (46 browser checks, incl. consent, the chapter reader, the survey, a second tab, settings, the follow-up test, the pilot's two forms, the admin panel and phone layouts), live evals 2026-11-03: `pnpm eval:judge` (48/54 facts, no false credit, all intents and misconceptions), `pnpm eval:solver` (199/200 as predicted), `pnpm eval:teach` (41 reactions, no invented ideas) |
 
 ## Next, in order
 
