@@ -262,6 +262,18 @@ export default function SettingsForm({
                       </div>
                     )}
 
+                    {on && k === "pretest" && (
+                      <div className="study-fields grid">
+                        <Toggle
+                          label="Every set, one after the other (pilot)"
+                          hint={summary.pretestSets.length > 1 ? `Every new session takes the background questions and then every set (${summary.pretestSets.join(", ")}) as parts, in an order that alternates with its test form. Otherwise only ${summary.pretestSets[0]}.` : "Needs a second set of knowledge items in the pack's pretest."}
+                          value={s.pretest.both}
+                          onChange={(v) => summary.pretestSets.length > 1 && patch("pretest", { both: v })}
+                          changed={s.pretest.both !== defaults.pretest.both}
+                        />
+                      </div>
+                    )}
+
                     {k === "teach" && (
                       <div className="study-fields grid">
                         <p className="note span">When participants may end teaching themselves (&quot;I&apos;ve taught all I can&quot;), whichever comes first. Team sessions can from the start.</p>

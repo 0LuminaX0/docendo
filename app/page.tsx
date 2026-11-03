@@ -30,7 +30,7 @@ export default async function Page() {
       demo={config.demo}
       cards={cards}
       totalMinutes={Math.round(sum.total / 5) * 5}
-      pretestItems={settings.pretest.on ? pack.pretest.length : 0}
+      pretestItems={settings.pretest.on ? (settings.pretest.both && pack.pretestSets.length > 1 ? pack.pretestAll.length : pack.pretest.length) : 0}
       followUpOn={settings.test.followUp}
     />
   );

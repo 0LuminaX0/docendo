@@ -8,6 +8,7 @@ import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
 import { record } from "@/lib/server/events";
 import { followUpOpens, getParticipant, markTest } from "@/lib/server/participants";
+import { gradePretest } from "@/content/pretest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,9 @@ const Body = z.union([
     order: z.array(z.string().max(10)).max(ITEMS).optional(), // the order the learner saw the items in
     since: z.enum(SINCE).optional(), // delayed test: studied the topic since the session?
   }),
+  // the pretest by item id, with the sets the page showed, in order (the pilot takes every set; the array form above
+  // is the first set's items in file order, from pages loaded before the sets)
+  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.record(z.string().max(20), z.number().int().min(0).max(9)), sets: z.array(z.string().max(20)).min(1).max(4) }),
 ]);
 
 /**
@@ -59,15 +63,14 @@ export async function POST(req: NextRequest) {
   if (!r.ok) return fail(429, "Too many attempts. Try again later.", { retryAfter: r.retryAfter });
 
   if (body.data.kind === "pretest") {
-    const { pretest } = pack;
-    if (session.phase === "delayed" || body.data.answers.length !== pretest.length) return fail(400, "Bad request.");
-    const a = body.data.answers;
-    const knowledge = pretest.map((q, i) => ({ q, a: a[i]! })).filter((x) => x.q.kind === "knowledge");
-    const score = knowledge.filter((x) => x.a === x.q.answer).length;
-    const dontKnow = knowledge.filter((x) => x.q.options[x.a] === "I don't know").length;
-    const excluded = pretest.some((q, i) => q.exclude !== undefined && a[i] === q.exclude);
-    const answers = Object.fromEntries(pretest.map((q, i) => [q.id, a[i]!]));
-    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, answers, score, of: knowledge.length, dontKnow, excluded });
+    if (session.phase === "delayed") return fail(400, "Bad request.");
+    const b = body.data;
+    // by item id with its sets, or (older pages) one answer per item of the first set, in file order
+    const raw = Array.isArray(b.answers) ? (b.answers.length === pack.pretest.length ? Object.fromEntries(pack.pretest.map((q, i) => [q.id, (b.answers as number[])[i]!])) : null) : b.answers;
+    const g = raw ? gradePretest(pack.pretestAll, raw, "sets" in b ? b.sets : pack.pretestSets.slice(0, 1)) : null;
+    if (!g) return fail(400, "Bad request.");
+    // sets: the knowledge sets in the order taken (a pilot: every set); setScores: right of asked, per set
+    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, version: pack.pretestVersion, answers: g.answers, sets: g.sets, score: g.score, of: g.of, setScores: g.setScores, dontKnow: g.dontKnow, excluded: g.excluded });
     return ok({ ok: true });
   }
 

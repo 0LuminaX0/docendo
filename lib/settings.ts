@@ -39,7 +39,8 @@ export const Settings = z
   .object({
     topic: z.string().min(1).max(40), // a topic pack's slug
     studyLine: z.string().trim().max(120), // the small line above the welcome page's title
-    pretest: z.object({ on: z.boolean() }),
+    // both: the pilot's pretest, every set of knowledge items one after the other (content/pretest.ts)
+    pretest: z.object({ on: z.boolean(), both: z.boolean().default(false) }),
     // the lesson, played back to back as one video
     watch: z.object({ on: z.boolean(), parts: z.array(LessonPart).max(8) }),
     // teaching is always on (it is what the platform is about); when participants may end it themselves, whichever first

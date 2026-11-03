@@ -137,7 +137,8 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
             <h2>Pretest</h2>
             {pre ? (
               <ol className="sd-qs">
-                {pack.pretest.map((q) => {
+                {/* the items this session answered (a pilot: every set), in the order taken */}
+                {pack.pretestAll.filter((q) => (pre.answers as Record<string, number> | undefined)?.[q.id] !== undefined).sort((x, y) => ((pre.sets as string[] | undefined) ?? []).indexOf(x.set ?? "") - ((pre.sets as string[] | undefined) ?? []).indexOf(y.set ?? "")).map((q) => {
                   const a = (pre.answers as Record<string, number> | undefined)?.[q.id];
                   return (
                     <li key={q.id}>

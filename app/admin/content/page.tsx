@@ -73,7 +73,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
       <nav className="adm-toc" aria-label="On this page">
         <a href="#ideas">Ideas and facts ({lessonNodes.length})</a>
         <a href="#videos">Videos ({pack.bundle.videos.length})</a>
-        {pack.pretest.length > 0 && <a href="#pretest">Pretest ({pack.pretest.length})</a>}
+        {pack.pretestAll.length > 0 && <a href="#pretest">Pretest ({pack.pretestAll.length})</a>}
         <a href="#practice">Practice ({pack.practice.length})</a>
         {pack.forms.map((f) => (
           <a key={f} href={`#form-${f}`}>
@@ -137,23 +137,37 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
         </ul>
       </section>
 
-      {pack.pretest.length > 0 && (
+      {pack.pretestAll.length > 0 && (
         <section className="adm-card" id="pretest">
           <h2>Before you start</h2>
+          {pack.pretestSets.filter(Boolean).length > 1 && (
+            <p className="note">
+              A session takes the background questions and set {pack.pretestSets[0]}; with &quot;every set&quot; on (Study setup, pilot) every set ({pack.pretestSets.join(", ")}) in an order that alternates with its test form.
+            </p>
+          )}
           <ol className="cnt-items">
-            {pack.pretest.map((p) => (
+            {pack.pretestAll.map((p) => (
               <li key={p.id} id={p.id}>
                 <p>
-                  <code>{p.id}</code> <span className="adm-pill">{p.kind}</span> {p.prompt}
+                  <code>{p.id}</code> <span className="adm-pill">{p.set ? `set ${p.set}` : p.kind}</span> {p.measures && <b>{p.measures} </b>}
+                  {p.pair && <span className="note">(harder version of {p.pair}) </span>}
+                  {p.prompt}
                 </p>
                 <ol className="cnt-opts">
                   {p.options.map((o, i) => (
                     <li key={i} className={p.answer === i ? "key" : p.exclude === i ? "excl" : ""}>
                       <span>{LETTERS[i]}</span> {o}
                       {p.exclude === i && <em> excludes the session</em>}
+                      {p.diagnosis?.[i] && p.answer !== i && p.options[i] !== "I don't know" && <span className="note"> ({p.diagnosis[i]})</span>}
                     </li>
                   ))}
                 </ol>
+                {(p.explain || p.estimate !== undefined) && (
+                  <p className="note">
+                    {p.explain}
+                    {p.estimate !== undefined && ` Expected ${Math.round(p.estimate * 100)}% correct.`}
+                  </p>
+                )}
               </li>
             ))}
           </ol>

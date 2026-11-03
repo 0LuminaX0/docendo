@@ -11,7 +11,7 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | Part | State |
 | --- | --- |
 | Start | Access codes made in the admin panel (condition direct, recursive or random-balanced; uses per code), the older HMAC codes, or the shared team code |
-| Pretest | 2 background questions (RL course flags `excluded`) and 3 knowledge items with "I don't know" |
+| Pretest | The team's option C: 3 screening questions (an RL course or knowing a bandit algorithm flags `excluded`) and set C1, 5 knowledge items with "I don't know"; the harder set C2 for the pilot (`pretest.both`: both sets as two parts, order alternating with the test form) |
 | 1 Read (was Watch) | The team's text lesson (lesson.json, 2026-11-02): 5 sections, 3 formulas, 5 figures; not selectable, Continue after 4 min, closed once left; paste off in the chat, Kai's fixed reply to text copied word for word (15 words in a row), overlap logged per turn. Without lesson.json: 8:12 lesson, three video parts in one player |
 | 2 Teach Kai | Kai asks nine fixed questions (script.json, 2026-11-02) and repeats back what it wrote down in the learner's words, one "say more" after a short answer, ready after the last question or 10 min; judge (facts, open-ended misconceptions, quote check) and notebook as before. Without script.json: policy, writer with term filter, readiness 80% or 50% after 8 min; Kai's mind shows the lesson's 9 ideas inside the topic's 19-idea tree (the others dimmed, credited as bonus if explained) |
 | 3 Practice, direct | 2 rounds × 3 problems, two tries, working with a calculator, Rewatch, 10 min |

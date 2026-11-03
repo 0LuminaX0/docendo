@@ -187,12 +187,17 @@ export function tables(events: Ev[]) {
       pretestScore: first("pretest")?.score ?? null, // knowledge items right, of pretestOf
       pretestOf: first("pretest")?.of ?? null,
       pretestDontKnow: first("pretest")?.dontKnow ?? null,
-      // every pretest answer, by item id (any topic pack); the two after it are the bandits pack's background items,
-      // kept as named columns for the analysis scripts
+      // every pretest answer, by item id (any topic pack), with the pretest's version; the three after it are the bandits
+      // pack's background items, kept as named columns for the analysis scripts (q1 to q3; b1 and b2 before 2026-11-02)
       pretestAnswers: first("pretest")?.answers ?? null,
-      rlCourse: (first("pretest")?.answers as Record<string, number> | undefined)?.b1 === 0 ? true : first("pretest") ? false : null,
-      heardOfBandits: (first("pretest")?.answers as Record<string, number> | undefined)?.b2 ?? null, // 0 no, 1 the name, 2 roughly how they work
-      excluded: first("pretest")?.excluded ?? null, // took an RL course: keep the data, leave out of the main analysis
+      pretestVersion: first("pretest")?.version ?? null,
+      rlCourse: ((a) => (a ? (a.q1 ?? a.b1) === 0 : null))(first("pretest")?.answers as Record<string, number> | undefined), // or bandits covered in a course
+      heardOfBandits: ((a) => a?.q2 ?? a?.b2 ?? null)(first("pretest")?.answers as Record<string, number> | undefined), // q2: 0 never heard, 1 the name, 2 roughly how they work, 3 could explain one (b2: 0 to 2)
+      statsCourse: (first("pretest")?.answers as Record<string, number> | undefined)?.q3 ?? null, // 0 passed one, 1 taking one now, 2 no
+      // the knowledge sets taken, in order (a pilot: every set), and the score in each
+      pretestSets: ((first("pretest")?.sets as string[] | undefined) ?? []).join(" ") || null,
+      ...Object.fromEntries(Object.entries((first("pretest")?.setScores as Record<string, { score: number; of: number }> | undefined) ?? {}).flatMap(([set, v]) => [[`pretestScore_${set}`, v.score], [`pretestOf_${set}`, v.of]])),
+      excluded: first("pretest")?.excluded ?? null, // an RL course, or could explain a bandit algorithm: keep the data, leave out of the main analysis
       minPretest: minutes(ms(view("/pretest")), tAt.watch),
       testScore: grade?.score ?? null,
       feedbackRating: [...of("client_feedback")].pop()?.rating ?? null,

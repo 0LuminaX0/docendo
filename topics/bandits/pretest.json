@@ -1,65 +1,289 @@
 {
   "title": "Before you start",
-  "note": "About 2 minutes, before the video. Two background questions (b1 screens out people who took a reinforcement learning course: they are flagged, not stopped) and three knowledge items. The items measure prior knowledge on neighbouring ideas (an average payoff, regret, and how sample size changes a confidence interval, the idea behind UCB's bonus), not the practice or test items, so they don't prime them. Each has an 'I don't know' option to cut guessing. Answers stay on the server; nothing is shown back.",
+  "note": "The team's pretest, option C (2 November 2026): about 4 minutes before the lesson, without the rules. Three screening questions (q1 and q2 flag a session as excluded: an RL course or bandits covered in a course; could explain an algorithm such as UCB; q3, a probability or statistics course, is only recorded until the team decides), then a set of five knowledge items, each with \"I don't know\" and no written reason: two on the maths the lesson builds on (K1, K2: √n, ln t) and three on everyday statistical reasoning behind the post-test (R1 to R3: small samples scatter more, picking the best result picks up luck, you only learn about what you choose), with no algorithm named. Set C1 is the default (keys c, d, b, c, a). Set C2 measures the same five things with harder items (H1 to H5, keys c, a, b, d, c; pair names the C1 item). Pilot (settings, pretest.both): every session takes both sets, one after the other, in an order that alternates with the session's test form (A: C1 first, B: C2 first). It checks that the groups start alike and gives a covariate; it does not measure learning gain.",
   "items": [
     {
-      "id": "b1",
+      "id": "q1",
       "kind": "background",
-      "prompt": "Have you taken a course on reinforcement learning?",
+      "prompt": "Have you taken a course on reinforcement learning, or covered multi-armed bandits in any course?",
       "options": [
         "Yes",
         "No"
       ],
-      "exclude": 0
+      "exclude": 0,
+      "note": "Yes means excluded (flagged, not stopped)."
     },
     {
-      "id": "b2",
+      "id": "q2",
       "kind": "background",
-      "prompt": "Before today, had you heard of multi-armed bandits?",
+      "prompt": "Before today, how well did you know multi-armed bandits?",
       "options": [
-        "No",
-        "I've heard the name",
-        "Yes, I know roughly how they work"
-      ]
+        "I had never heard of them",
+        "I had heard the name",
+        "I knew roughly how they work",
+        "I could explain an algorithm such as UCB"
+      ],
+      "exclude": 3,
+      "note": "The team's proposal: (c) is recorded, (d) is excluded."
+    },
+    {
+      "id": "q3",
+      "kind": "background",
+      "prompt": "Have you passed a course on probability or statistics?",
+      "options": [
+        "Yes",
+        "I'm taking one now",
+        "No"
+      ],
+      "note": "Recorded only; whether \"No\" excludes is a question for Dominic."
     },
     {
       "id": "k1",
       "kind": "knowledge",
-      "prompt": "A game pays 10 francs with probability 0.2 and nothing otherwise. If you play it many times, what do you win per game on average?",
+      "set": "C1",
+      "measures": "sample size and confidence intervals",
+      "prompt": "You estimate the true average of a noisy measurement twice, once from 10 readings and once from 1,000 readings. Compared with the 95% confidence interval from 1,000 readings, how wide is the interval from 10 readings?",
       "options": [
-        "2 francs",
-        "8 francs",
-        "10 francs",
-        "It can't be said",
+        "About as wide",
+        "About 2 times as wide",
+        "About 10 times as wide",
+        "About 100 times as wide",
         "I don't know"
       ],
-      "answer": 0
+      "answer": 2,
+      "diagnosis": [
+        "the width does not depend on the number of readings",
+        "growth by the logarithm",
+        "correct",
+        "width proportional to the number of readings",
+        "I don't know"
+      ],
+      "explain": "The width shrinks with √n, and √(1,000 / 10) = 10. With only 10 readings the t-value makes it about 11 times, still closest to (c). It underlies why the bonus of a rarely tried option is large and shrinks with every try (F10).",
+      "estimate": 0.55
     },
     {
       "id": "k2",
       "kind": "knowledge",
-      "prompt": "In a multi-armed bandit problem, what is the \"regret\" of a strategy?",
+      "set": "C1",
+      "measures": "logarithmic growth",
+      "prompt": "A quantity equals ln t. As t goes from 10 to 100, it rises by about 2.3. How much further must t grow for the quantity to rise by another 2.3?",
       "options": [
-        "How often it changes its mind about the best option",
-        "The reward it missed compared with always choosing the best option",
-        "The reward it collects from options that turn out to be bad",
-        "How long it takes to find the best option",
+        "It never rises by another 2.3",
+        "By about 90, to t = 190",
+        "By about 180, to t = 280",
+        "By about 900, to t = 1,000",
         "I don't know"
       ],
-      "answer": 1
+      "answer": 3,
+      "diagnosis": [
+        "logarithm confused with a curve that levels off",
+        "equal steps in t give equal rises",
+        "the needed step doubles each time",
+        "correct",
+        "I don't know"
+      ],
+      "explain": "ln 1,000 − ln 100 = ln 10 ≈ 2.3, so each equal rise needs t to grow tenfold. It underlies why an unpicked option's bonus keeps growing without limit but takes ever longer to grow by the same amount (F11; V4, T9).",
+      "estimate": 0.55
     },
     {
-      "id": "k3",
+      "id": "r1",
       "kind": "knowledge",
-      "prompt": "You estimate the true average of a noisy sensor twice: once from 10 readings and once from 1,000 readings. How do the two 95% confidence intervals for the true average compare?",
+      "set": "C1",
+      "measures": "small samples land at both ends",
+      "prompt": "A country ranks its 1,000 schools by this year's average exam score. Schools have between 20 and 2,000 students. Suppose all schools teach equally well, so a school's average differs only because of which students happen to attend. The top 50 schools turn out to be mostly small schools. Which schools most likely make up the bottom 50?",
       "options": [
-        "The one from 10 readings is wider",
-        "The one from 1,000 readings is wider",
-        "They are equally wide",
-        "It depends only on the average itself",
+        "Mostly large schools",
+        "Mostly small schools",
+        "Schools of all sizes, in proportion to how common they are",
+        "Mostly medium-sized schools",
         "I don't know"
       ],
-      "answer": 0
+      "answer": 1,
+      "diagnosis": [
+        "if the small ones top the list, the large ones must be at the bottom",
+        "correct",
+        "size cannot matter when teaching is equal",
+        "the two ends of the size range take the two ends of the ranking",
+        "I don't know"
+      ],
+      "explain": "Averages of small groups scatter more, so small schools fill both ends of the ranking (Wainer's \"most dangerous equation\"). It underlies why an early average from few tries can be far off in either direction.",
+      "estimate": 0.35,
+      "note": "In simulation (200 rankings, equal teaching, sizes 20 to 2,000), 99% of the bottom 50 were smaller than the median school. Replaces the café version of the hospital problem, which many statistics students know."
+    },
+    {
+      "id": "r2",
+      "kind": "knowledge",
+      "set": "C1",
+      "measures": "picking the best result picks up luck",
+      "prompt": "A company tries 20 new suppliers with one delivery each. The suppliers truly differ in quality, and each delivery's quality also varies by chance. The company gives a second order to the supplier whose first delivery was best. What should it expect from that second delivery?",
+      "options": [
+        "As good as the first delivery",
+        "Better than the first delivery",
+        "Worse than the first, still above the average supplier",
+        "Worse than the first, and below the average supplier",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "one result shows the true quality",
+        "a good start means a good streak",
+        "correct",
+        "overcorrection",
+        "I don't know"
+      ],
+      "explain": "The best first delivery was partly luck, so the second is expected to fall back towards the supplier's true quality, which is still likely above average (regression to the mean). It underlies why a too-high start corrects itself once the option is tried again (D1).",
+      "estimate": 0.4
+    },
+    {
+      "id": "r3",
+      "kind": "knowledge",
+      "set": "C1",
+      "measures": "you only learn about what you choose",
+      "prompt": "A bank grants loans only to applicants its scoring rule rates as safe, and records whether each loan is repaid. Can the bank find out from these records whether its rule turns away many people who would have repaid?",
+      "options": [
+        "No, not from these records alone",
+        "Yes, from these records alone",
+        "Yes, once it has enough records",
+        "Yes, if it also records the rejected applicants' incomes",
+        "I don't know"
+      ],
+      "answer": 0,
+      "diagnosis": [
+        "correct",
+        "the records cover everyone who matters",
+        "more data fixes everything",
+        "more information about them replaces their outcomes",
+        "I don't know"
+      ],
+      "explain": "Rejected applicants never produce a repayment record, so no amount of data about the accepted ones, or about the rejected ones' incomes, shows how many of the rejected would have repaid. In bandit terms, an option that is never chosen never produces data (F2, F5).",
+      "estimate": 0.55
+    },
+    {
+      "id": "h1",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "k1",
+      "measures": "sample size and confidence intervals (harder)",
+      "prompt": "A 95% confidence interval for an average, based on 25 readings, is 2.0 wide. About how many readings would make it 0.5 wide, if the readings vary as much as before?",
+      "options": [
+        "About 50",
+        "About 100",
+        "About 400",
+        "About 1,600",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "square root applied the wrong way",
+        "width proportional to the number of readings",
+        "correct",
+        "squared twice",
+        "I don't know"
+      ],
+      "explain": "The width shrinks with √n, so an interval 4 times narrower needs 16 times as many readings: 25 × 16 = 400. The t-value makes it slightly fewer, still closest to 400. It underlies why a bonus halves only when an option's tries quadruple.",
+      "estimate": 0.45
+    },
+    {
+      "id": "h2",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "k2",
+      "measures": "growth without limit (harder)",
+      "prompt": "Which of these sums grows without limit as more and more terms are added? Sum 1: 1 + 1/2 + 1/3 + 1/4 + … Sum 2: 1 + 1/4 + 1/9 + 1/16 + …",
+      "options": [
+        "Only sum 1",
+        "Only sum 2",
+        "Both",
+        "Neither",
+        "I don't know"
+      ],
+      "answer": 0,
+      "diagnosis": [
+        "correct",
+        "mixes up which terms shrink fast enough",
+        "any endless sum of positive terms grows without limit",
+        "terms that shrink towards zero must give a finite sum",
+        "I don't know"
+      ],
+      "explain": "Sum 1, the harmonic series, grows like ln n: without limit, but ever more slowly. Sum 2 approaches π²/6 ≈ 1.64. It is the distinction between slowing and stopping behind F11.",
+      "estimate": 0.45
+    },
+    {
+      "id": "h3",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "r1",
+      "measures": "few against many reviews, both ends (harder)",
+      "prompt": "Restaurant A has an average of 4.8 stars from 5 reviews; restaurant B has 4.6 stars from 500 reviews. Which restaurant's true average is more likely to be above 4.9, and which is more likely to be below 4.5?",
+      "options": [
+        "Above 4.9: A; below 4.5: B",
+        "A for both",
+        "B for both",
+        "Above 4.9: B; below 4.5: A",
+        "I don't know"
+      ],
+      "answer": 1,
+      "diagnosis": [
+        "the lower average looks more likely to be too low",
+        "correct",
+        "more reviews, more room for extreme values",
+        "both effects reversed",
+        "I don't know"
+      ],
+      "explain": "With 5 reviews, A's true average can lie far from 4.8 in either direction; with 500 reviews, B's lies very close to 4.6.",
+      "estimate": 0.35,
+      "note": "The key held in a Bayesian simulation under three different assumptions about typical ratings."
+    },
+    {
+      "id": "h4",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "r2",
+      "measures": "choosing on few results (harder)",
+      "prompt": "Two companies each test 20 suppliers before a large order: company X with one delivery per supplier, company Y with ten. Each then gives the large order to the supplier with the best test results. Whose chosen supplier will, on average, fall further short of its test results?",
+      "options": [
+        "Y's",
+        "Both about equally",
+        "Neither",
+        "X's",
+        "I don't know"
+      ],
+      "answer": 3,
+      "diagnosis": [
+        "more test deliveries give more chances for a lucky high score",
+        "both picked their best supplier, so both are equally lucky",
+        "the best test results show the true quality",
+        "correct",
+        "I don't know"
+      ],
+      "explain": "Picking the best of 20 single deliveries mostly picks luck, while averages of ten deliveries contain much less of it. It underlies why greedy's choice after one try per option is unreliable.",
+      "estimate": 0.45,
+      "note": "In simulation (20 suppliers, true quality 70 ± 5, each delivery ± 10), X's chosen supplier fell short by 17 points on average and Y's by 3."
+    },
+    {
+      "id": "h5",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "r3",
+      "measures": "data only from those you chose (harder)",
+      "prompt": "A company hires only applicants who score above 70 on an entry test. Among the people it hired, the test score barely predicts how well they do the job. Can the company conclude that the test is useless for choosing staff?",
+      "options": [
+        "Yes: among the people hired, the score barely predicts performance",
+        "Yes, provided it has data on many employees",
+        "No: everyone hired scored above 70, so the data hide what the score does",
+        "No: it should first check that the test was marked correctly",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "the data look clear",
+        "more data fixes everything",
+        "correct",
+        "right conclusion, irrelevant reason",
+        "I don't know"
+      ],
+      "explain": "The company never sees how people scoring below 70 would have done, and within the narrow range it hired, scores differ little (range restriction): you only learn about the options you choose (F2, F5).",
+      "estimate": 0.35
     }
   ]
 }
