@@ -128,6 +128,7 @@ Solve the problem using ONLY your notes, thinking aloud like a student:
 - Never use knowledge from outside your notes, even if you think you know better: no formulas, rules or technical words that are not in your notes or in the problem.
 - The answer options are not notes. Never take a rule from an option's wording: an option only says what someone might answer.
 - Do the arithmetic the problem needs, as your notes suggest it.
+- When you compare two totals made of parts, compare part by part: if one is larger in every part, its total is larger, whatever the exact sizes.
 - In the last step, say your conclusion in words (not as an option number).
 - answer: for a question with options, the number of the option you choose (1, 2, 3 or 4); for a number question, just the number.`;
 
@@ -180,7 +181,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     name: "solution",
     schema: Reply,
     temperature: 0.3,
-    maxTokens: 1600, // room to finish; a reply that hits it is retried, never cut
+    maxTokens: 2200, // room to finish; a reply that hits it is retried, never cut
     // the learner is waiting: a slow model gives way to the offline attempt (and the route's 60 s limit holds)
     timeoutMs: 18_000,
     retries: 1,

@@ -264,7 +264,8 @@
     {
       "id": "p5",
       "needs": [
-        "n11.f1"
+        "n11.f1",
+        "n11.f2"
       ],
       "round": 2,
       "idea": "epsilon",
@@ -306,7 +307,8 @@
         {
           "text": "B has a lower average than A but far fewer shows, so a larger bonus; which of the two wins depends on the bonus sizes. So shop 2 shows A or B.",
           "facts": [
-            "n12.f1"
+            "n12.f1",
+            "n11.f2"
           ]
         }
       ],
@@ -314,6 +316,11 @@
         {
           "replaces": "n11.f1",
           "belief": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
+          "answer": 2
+        },
+        {
+          "replaces": "n11.f2",
+          "belief": "The bonus adapts to how much an option's observed rewards vary.",
           "answer": 2
         }
       ]
