@@ -43,8 +43,10 @@ export const Settings = z
     pretest: z.object({ on: z.boolean(), both: z.boolean().default(false) }),
     // the lesson, played back to back as one video
     watch: z.object({ on: z.boolean(), parts: z.array(LessonPart).max(8) }),
-    // teaching is always on (it is what the platform is about); when participants may end it themselves, whichever first
-    teach: z.object({ stopAfterMessages: z.number().int().min(0).max(30), stopAfterMinutes: z.number().min(0).max(30) }),
+    // teaching is always on (it is what the platform is about); when participants may end it themselves, whichever first.
+    // fixed: Kai asks the pack's fixed questions (script.json), the same for everyone, else it chooses its own from the
+    // lesson's ideas. mind: Kai's mind, the graph of what Kai has understood (off for the study runs)
+    teach: z.object({ stopAfterMessages: z.number().int().min(0).max(30), stopAfterMinutes: z.number().min(0).max(30), fixed: z.boolean().default(true), mind: z.boolean().default(true) }),
     practice: z.object({ on: z.boolean(), minutes: z.number().min(2).max(60), tries: z.number().int().min(1).max(5) }),
     // the final test is always on (the outcome). The follow-up test: on or off, and how many days after the final test
     // it opens on its own (0: right away); the admin panel can also open it early for one person or everyone. both: the
@@ -52,8 +54,9 @@ export const Settings = z
     test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false) }),
     survey: z.object({ on: z.boolean() }),
     sessionDays: z.number().int().min(1).max(30),
-    // the same in every condition
-    tools: z.object({ calculator: z.boolean(), voice: z.boolean() }),
+    // the same in every condition. help: the part of the lesson about the idea in question, while teaching (Kai's card)
+    // and in practice (Rewatch or Reread)
+    tools: z.object({ calculator: z.boolean(), voice: z.boolean(), help: z.boolean().default(false) }),
     // the model budget for the whole site, per day (chat turns, Kai's solving, voice)
     dailyTurnLimit: z.number().int().min(50).max(50_000),
   })
@@ -91,6 +94,8 @@ export type PublicSettings = {
   stopAfterMinutes: number;
   calculator: boolean;
   voice: boolean;
+  help: boolean; // the lesson's passage or video moment as help, while teaching and in practice
+  mind: boolean; // Kai's mind (the graph) while teaching and after the results
   survey: SurveyItem[] | null; // null: no questions after the test
   copy: TopicCopy & { studyLine: string };
   lessonKind: "video" | "text"; // the lesson step: the videos, or the pack's text lesson (lesson.json)
@@ -103,6 +108,8 @@ export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyIte
   stopAfterMinutes: s.teach.stopAfterMinutes,
   calculator: s.tools.calculator,
   voice: s.tools.voice,
+  help: s.tools.help,
+  mind: s.teach.mind,
   survey: s.survey.on && pack.survey.length ? pack.survey : null,
   copy: { ...pack.copy, studyLine: s.studyLine },
   lessonKind: pack.lesson ? "text" : "video",

@@ -164,8 +164,9 @@ export async function chatText(opts: {
   messages: Message[];
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<{ text: string; usage: Usage; ms: number }> {
-  const { model, messages, temperature = 0.6, maxTokens = 300 } = opts;
+  const { model, messages, temperature = 0.6, maxTokens = 300, timeoutMs = TIMEOUT_MS } = opts;
   const t0 = Date.now();
   let why = "";
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -180,7 +181,7 @@ export async function chatText(opts: {
         provider: { data_collection: "deny", sort: PROVIDER_SORT },
         usage: { include: true },
       }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (res.status === 429 || res.status >= 500) {
       why = `${res.status} ${(await res.text()).slice(0, 160)}`;

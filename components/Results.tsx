@@ -19,7 +19,8 @@ export default function Results() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
-  const { survey } = useStudySettings();
+  const study = useStudySettings();
+  const { survey } = study;
   // the review starts with the questions the learner missed (their explanations matter most); "All" shows every one
   const [show, setShow] = useState<"missed" | "all" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export default function Results() {
               </div>
               {/* a pilot's two forms: the score in each part */}
               {r.parts && r.parts.length > 1 && (
-                <p className="note parts-score">{r.parts.map((p, k) => `Part ${k + 1}: ${p.score} of ${p.of}`).join(" · ")}</p>
+                <p className="note parts-score">{r.parts.map((p, k) => `Part ${k + 1}: ${p.score} of ${p.of}`).join(", ")}</p>
               )}
             </div>
           </div>
@@ -74,9 +75,9 @@ export default function Results() {
             <div className="bubble">
               Thanks for teaching me! You sent me {taught} explanation{taught === 1 ? "" : "s"}
               {saved.chat.done ? " and I ended up feeling ready" : ""}, at {Math.round((saved.chat.mind?.understanding ?? saved.chat.progress) * 100)}% understanding. The whole session took about {minutes} minute{minutes === 1 ? "" : "s"}.{" "}
-              <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
+              {study.mind && <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
                 <Brain size={15} /> See what I learned
-              </Link>
+              </Link>}
             </div>
           </div>
           )}

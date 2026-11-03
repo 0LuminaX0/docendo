@@ -279,6 +279,20 @@ export default function SettingsForm({
                         <p className="note span">When participants may end teaching themselves (&quot;I&apos;ve taught all I can&quot;), whichever comes first. Team sessions can from the start.</p>
                         <Num label="After this many messages" value={s.teach.stopAfterMessages} min={0} max={30} step={1} onChange={(v) => patch("teach", { stopAfterMessages: v })} changed={s.teach.stopAfterMessages !== defaults.teach.stopAfterMessages} />
                         <Num label="Or after this many minutes" value={s.teach.stopAfterMinutes} min={0} max={30} step={0.5} onChange={(v) => patch("teach", { stopAfterMinutes: v })} changed={s.teach.stopAfterMinutes !== defaults.teach.stopAfterMinutes} />
+                        <Toggle
+                          label="Kai's fixed questions"
+                          hint={summary.scriptQuestions ? `Kai asks everyone the same ${summary.scriptQuestions} questions, in order, and reacts to each answer in its own words. Off: Kai chooses its next question from the lesson's ideas. A session keeps the way it started.` : "The topic pack has no fixed questions (script.json): Kai chooses its own."}
+                          value={s.teach.fixed && !!summary.scriptQuestions}
+                          onChange={(v) => summary.scriptQuestions && patch("teach", { fixed: v })}
+                          changed={s.teach.fixed !== defaults.teach.fixed}
+                        />
+                        <Toggle
+                          label="Kai's mind"
+                          hint="The graph of what Kai has understood, beside the chat and after the results. Switch it off for the study runs: it shows learners which ideas Kai still lacks."
+                          value={s.teach.mind}
+                          onChange={(v) => patch("teach", { mind: v })}
+                          changed={s.teach.mind !== defaults.teach.mind}
+                        />
                       </div>
                     )}
 
@@ -388,6 +402,7 @@ export default function SettingsForm({
           <Num label="A session lasts (days, on the device)" value={s.sessionDays} min={1} max={30} step={1} onChange={(v) => set("sessionDays", v)} changed={changed("sessionDays")} />
           <Toggle label="Calculator in the working fields" hint="Typing a sum and = writes the result. Off: the fields stay, without the sums. The same in every condition." value={s.tools.calculator} onChange={(v) => patch("tools", { calculator: v })} changed={s.tools.calculator !== defaults.tools.calculator} />
           <Toggle label="Voice input" hint={demo ? "This server runs in demo mode, so voice is hidden anyway." : "A microphone in the chat and the correction box; about $0.003 a minute of speech."} value={s.tools.voice} onChange={(v) => patch("tools", { voice: v })} changed={s.tools.voice !== defaults.tools.voice} />
+          <Toggle label="Help from the lesson" hint={s.watch.on ? "The part of the lesson about the idea in question: a card while teaching, and Rewatch (or Reread) in practice. The same in every condition." : "Needs the lesson step: there is nothing to go back to."} value={s.tools.help} onChange={(v) => patch("tools", { help: v })} changed={s.tools.help !== defaults.tools.help} />
           <Num label="Model calls per day, whole site (chat, Kai's solving, voice)" value={s.dailyTurnLimit} min={50} max={50000} step={50} onChange={(v) => set("dailyTurnLimit", v)} changed={changed("dailyTurnLimit")} />
         </section>
       </aside>

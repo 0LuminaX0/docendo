@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "ddd38570a291ef3a",
-  "builtAt": "2026-11-02T14:22:13.296Z",
+  "hash": "37567c56e2b2d415",
+  "builtAt": "2026-11-03T16:32:26.822Z",
   "goals": [
     {
       "id": "G",
@@ -290,7 +290,8 @@
           "required": true,
           "teachable": true,
           "ask": "Once I have those numbers, what's the simplest rule for choosing?",
-          "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching."
+          "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
+          "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it."
         },
         {
           "id": "n05.f2",
@@ -350,7 +351,8 @@
           "required": true,
           "teachable": true,
           "ask": "What could go wrong with greedy if the best option happens to give a bad result the first time?",
-          "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end."
+          "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end.",
+          "hunch": "My hunch is that it sorts itself out: if greedy keeps going, the averages even out and it ends up on the best one."
         },
         {
           "id": "n06.f2",
@@ -417,7 +419,8 @@
           "required": true,
           "teachable": true,
           "ask": "Is there a way to mostly pick the best one but still try the others now and then? How would that work?",
-          "assume": "ε-greedy explores less and less once its averages become reliable."
+          "assume": "ε-greedy explores less and less once its averages become reliable.",
+          "hunch": "I'd imagine it explores less as it goes, once it's more sure of its averages."
         },
         {
           "id": "n07.f2",
@@ -425,7 +428,8 @@
           "required": true,
           "teachable": true,
           "ask": "When it does try something else, how does it decide which one to try?",
-          "assume": "When ε-greedy picks at random, it chooses among the options other than the favourite."
+          "assume": "When ε-greedy picks at random, it chooses among the options other than the favourite.",
+          "hunch": "When it picks at random, I'd guess it skips the favourite, since that one gets picked anyway."
         },
         {
           "id": "n07.f3",
@@ -666,7 +670,8 @@
           "required": true,
           "teachable": true,
           "ask": "Is there a smarter way to score each option, instead of picking at random? How is the score made?",
-          "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average."
+          "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
+          "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times."
         },
         {
           "id": "n11.f2",
@@ -674,7 +679,8 @@
           "required": true,
           "teachable": true,
           "ask": "What decides how much that extra part of the score counts?",
-          "assume": "The bonus adapts to how much an option's observed rewards vary."
+          "assume": "The bonus adapts to how much an option's observed rewards vary.",
+          "hunch": "My guess is that the bonus depends on how much an option's rewards jump around."
         },
         {
           "id": "n11.f3",
@@ -742,7 +748,8 @@
           "required": true,
           "teachable": true,
           "ask": "What happens to an option's bonus each time I try it?",
-          "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not."
+          "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
+          "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not."
         },
         {
           "id": "n12.f2",
@@ -751,7 +758,9 @@
           "teachable": true,
           "ask": "Does an option's bonus change while I'm not picking it?",
           "assume": "An option's bonus stays the same while it is not picked.",
-          "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals."
+          "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
+          "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
+          "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often."
         }
       ],
       "lexicon": [

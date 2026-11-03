@@ -123,7 +123,7 @@ const Reply = z.object({
 const SYSTEM = `You are Kai, a student who missed a lecture. Everything you know about its topic is in YOUR NOTES: what a classmate told you, in their words. You believe your notes, even where they might be wrong.
 
 Solve the problem using ONLY your notes, thinking aloud like a student:
-- Write 3 to 5 steps in the first person. Each step is one or two complete sentences and does one thing: applies one thing from your notes, works something out from the problem, or draws the conclusion. Each step follows from the one before.
+- Write 2 to 5 steps in the first person: as many as your notes give you something to work with, so only 2 or 3 when they say little. Each step is one or two complete sentences and does one thing: applies one thing from your notes, works something out from the problem, or draws the conclusion. Each step follows from the one before.
 - Each step lists in "notes" the numbers of the notes it relies on (none for a step that only uses the problem's numbers). Don't write note numbers in the text.
 - Never use knowledge from outside your notes, even if you think you know better: no formulas, rules or technical words that are not in your notes or in the problem.
 - The answer options are not notes. Never take a rule from an option's wording: an option only says what someone might answer.
@@ -134,12 +134,24 @@ Solve the problem using ONLY your notes, thinking aloud like a student:
 // a misconception or a vague note: the model solves freely, its notes lead it
 const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say so and guess like a beginner; never fill the gap with what you think the right rule is.`;
 
+// a guess is a beginner's hunch, not a rule: said once, briefly and unsure, in Kai's own words, and without blaming the
+// classmate. With next to nothing in the notes Kai keeps it short: a beginner doing their best, not a worked solution
+const HUNCH = (hunch: string | undefined, thin: boolean) =>
+  `\n\nHow you say it: as a hunch, once, in your own plain words, short and unsure${hunch ? `, for example: "${hunch}"` : ""}. Don't recite it as a rule, and don't blame your classmate ("you never told me"): it's your notes that are thin on this.` +
+  (thin ? ` Your notes have little or nothing for this problem, so keep the whole thing short and simple: 2 or 3 steps, no long working, like someone trying their best with little to go on.` : "");
+
 // a missing fact: Kai's own guess for it, and where that guess leads; the steps must get there honestly
 const fromGuess = (guess: Guess, item: PracticeItem, vague: boolean) => `
 
-${vague ? "Your notes are vague about one thing this problem needs, and you understood them this way" : "Your classmate never told you one thing this problem needs. For that part you rely on your own guess"}, which you believe:
+${vague ? "Your notes are vague about one thing this problem needs, and you understood them this way" : "Your notes say nothing about one thing this problem needs. For that part you go with your own guess"}, which you believe:
 "${guess.belief}"
-Reason from your notes and this ${vague ? "understanding" : "guess"}, so that your conclusion follows from it: ${conclusion(item, guess.answer)}. When you first use it, say plainly that ${vague ? "this is how you understood what your classmate told you" : "it's your own guess because your classmate didn't tell you this"}. Never weigh other rules, never mention what the right rule might be, and never change your mind at the end.`;
+Reason from your notes and this ${vague ? "understanding" : "guess"}, so that your conclusion follows from it: ${conclusion(item, guess.answer)}. When you first use it, say plainly that ${vague ? "this is how you understood your notes" : "it's your own guess, since your notes don't cover it"}. Never weigh other rules, never mention what the right rule might be, and never change your mind at the end.`;
+
+/** How Kai words its guess: the hunch the graph pairs with that assumption (assume → hunch, assumeVague → hunchVague). */
+export function hunchFor(bundle: Bundle, guess: Guess): string | undefined {
+  const f = bundle.nodes.flatMap((n) => n.facts).find((x) => x.id === guess.replaces);
+  return guess.belief === f?.assumeVague ? f?.hunchVague : guess.belief === f?.assume ? f?.hunch : undefined;
+}
 
 // what the guess leads to, in words (option numbers stay out of Kai's steps)
 const conclusion = (item: PracticeItem, answer: number) => (item.kind === "choice" ? `"${item.options![answer]}" (option ${answer + 1})` : `about ${Math.round(answer)}${item.unit ? ` ${item.unit}` : ""}`);
@@ -156,6 +168,8 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
   // is what it was told: the model reasons from that, and the gate's safety net catches a right answer.)
   const guess = !g.canBeRight && (g.absent.length || g.vague.length) ? chooseGuess(item, g, `${item.id}|${notes.join("|")}`) : null;
   const vagueGuess = !!guess && g.vague.some((n) => alts(n).includes(guess.replaces));
+  // thin: the notebook meets none of the problem's needs
+  const thin = g.missing.length === g.needs.length;
   // options are numbered for the model: trucks and headlines are named by letters, and "B" must never be ambiguous
   const problem =
     item.kind === "choice"
@@ -171,7 +185,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     timeoutMs: 18_000,
     retries: 1,
     messages: [
-      { role: "system", content: SYSTEM + (guess ? fromGuess(guess, item, vagueGuess) : g.canBeRight ? "" : UNSURE) + (stricter ? STRICTER : "") },
+      { role: "system", content: SYSTEM + (guess ? fromGuess(guess, item, vagueGuess) + HUNCH(hunchFor(bundle, guess), thin) : g.canBeRight ? "" : UNSURE) + (stricter ? STRICTER : "") },
       { role: "user", content: `YOUR NOTES:\n${notes.length ? notes.map((n, i) => `[${i + 1}] "${n}"`).join("\n") : "(empty: you were told nothing)"}\n\nPROBLEM:\n${problem}` },
     ],
   });
@@ -285,18 +299,18 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
       const match = closestBelief(item, words);
       if (match) followed = match;
     }
-    else if (told && guess) steps.push({ text: `You only told me vaguely: "${told.words}". I understood it like this: ${guess.belief}`, notes: [notes.indexOf(told.words) + 1].filter((n) => n > 0) });
-    else steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
+    else if (told && guess) steps.push({ text: `My notes only say "${told.words}". ${hunchFor(bundle, guess) ?? `I understood it like this: ${guess.belief}`}`, notes: [notes.indexOf(told.words) + 1].filter((n) => n > 0) });
+    else steps.push({ text: guess ? `My notes don't cover this part. ${hunchFor(bundle, guess) ?? `I'm guessing: ${guess.belief}`}` : "My notes don't cover this part, so I'll have to guess.", notes: [] });
     broken = true;
     break;
   }
   if (!g.canBeRight && !broken) {
-    steps.push({ text: guess ? `You didn't tell me how this part works, so I'm guessing: ${guess.belief}` : "You didn't tell me how this part works, so I'll have to guess.", notes: [] });
+    steps.push({ text: guess ? `My notes don't cover this part. ${hunchFor(bundle, guess) ?? `I'm guessing: ${guess.belief}`}` : "My notes don't cover this part, so I'll have to guess.", notes: [] });
     broken = true;
   }
   const value = g.canBeRight ? item.answer : (followed?.answer ?? guess?.answer ?? wrongAnswer(item, seed));
   const answer = item.kind === "choice" ? LETTERS[value]! : String(Math.round(value * 100) / 100);
-  if (broken) steps.push({ text: `So my answer is ${answerText(item, value)}.`, notes: [] });
+  if (broken) steps.push({ text: `So I'll go with ${answerText(item, value)}.`, notes: [] });
   return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess };
 }
 

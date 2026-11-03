@@ -86,6 +86,9 @@ export type Saved = {
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
   watchedSec?: number[]; // seconds watched per lesson part
   readStartedAt?: number; // a text lesson: when reading began (the minimum time before "Continue" survives a reload)
+  readAt?: number; // a text lesson: the chapter on screen, and the furthest one reached (a reload keeps the place)
+  readMax?: number;
+  readChapterAt?: number; // when the chapter on screen opened (its "Next" waits for a quick read of it)
   chat: {
     startedAt?: number; // when the teach page first opened (for Kai's 8-minute rule and the log)
     turns: Turn[];

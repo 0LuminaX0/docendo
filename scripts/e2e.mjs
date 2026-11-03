@@ -98,6 +98,25 @@ const CHROME =
 
 const runStarted = new Date();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-first-run", "--disable-gpu"] });
+
+// the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
+// (the admin part resets the settings later)
+{
+  const ctx = await browser.createBrowserContext();
+  const a = await ctx.newPage();
+  await a.goto(BASE + "/admin/login", { waitUntil: "load" });
+  await a.type("#pw", ADMIN_PW);
+  await a.$eval("form button", (e) => e.click());
+  await a.waitForSelector(".adm-main", { timeout: 15000 });
+  const status = await a.evaluate(async () => {
+    const post = (body) => fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
+    const base = await post({ action: "reset" });
+    return (await post({ action: "save", settings: { ...base.j.settings, tools: { ...base.j.settings.tools, help: true } } })).status;
+  });
+  if (status !== 200) throw new Error(`could not switch the lesson's help on for the walkthrough (${status})`);
+  await ctx.close();
+  await new Promise((r) => setTimeout(r, 10_500)); // each route keeps the settings for up to 10 s
+}
 const errors = [];
 const checks = [];
 const check = (ok, what) => checks.push(`${ok ? "✓" : "✗"} ${what}`);
@@ -140,11 +159,13 @@ async function leaveWatch(p) {
   if (await p.$(".lesson")) {
     await p.evaluate(() => {
       const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
-      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 30 * 60_000 }));
+      // on the last chapter, opened long ago
+      const last = document.querySelectorAll(".lesson-steps li").length - 1;
+      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 30 * 60_000, readChapterAt: Date.now() - 30 * 60_000, readAt: last, readMax: last }));
     });
     await p.reload({ waitUntil: "load" });
-    await p.waitForSelector(".lesson-bar .btn.primary:not([disabled])");
-    await p.click(".lesson-bar .btn.primary");
+    await p.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
+    await p.click(".lesson-nav .btn.primary");
   } else {
     await p.click(".aside .btn.primary");
     await p.waitForSelector(".aside .btn.primary.small");
@@ -161,14 +182,37 @@ await imagesLoaded(page);
 const textLesson = !!(await page.$(".lesson"));
 if (textLesson) {
   const lessonFile = JSON.parse(readFileSync(join(TOPIC, "lesson.json"), "utf8"));
-  const shape = await page.evaluate(() => ({
-    sections: document.querySelectorAll(".lesson-section").length,
-    formulas: document.querySelectorAll(".lesson-formula math").length,
-    figures: document.querySelectorAll(".lesson-fig svg").length,
-    select: getComputedStyle(document.querySelector(".lesson")).userSelect,
-    waits: document.querySelector(".lesson-bar .btn.primary").disabled,
-  }));
-  check(shape.sections === lessonFile.sections.length && shape.formulas === 3 && shape.figures === 5 && shape.select === "none" && shape.waits, `the lesson is a text (${shape.sections} sections, ${shape.formulas} formulas, ${shape.figures} figures) that can't be selected, and Continue waits for the reading time`);
+  const look = () =>
+    page.evaluate(() => ({
+      shown: [...document.querySelectorAll(".lesson-section")].map((e) => e.dataset.section),
+      formulas: document.querySelectorAll(".lesson-formula math").length,
+      figures: document.querySelectorAll(".lesson-fig svg").length,
+      select: getComputedStyle(document.querySelector(".lesson")).userSelect,
+      waits: document.querySelector(".lesson-nav .btn.primary").disabled,
+      ahead: [...document.querySelectorAll(".lesson-steps button")].filter((b) => b.disabled).length,
+    }));
+  const first = await look();
+  // every chapter in turn: the chapter's Next opens after a quick read of it (moved into the past here)
+  const seen = { formulas: first.formulas, figures: first.figures, shown: [...first.shown] };
+  for (let k = 1; k < lessonFile.sections.length; k++) {
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readChapterAt: Date.now() - 10 * 60_000 }));
+    });
+    await page.reload({ waitUntil: "load" });
+    await page.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
+    await page.click(".lesson-nav .btn.primary");
+    await page.waitForFunction((id) => document.querySelector(".lesson-section")?.dataset.section === id, {}, lessonFile.sections[k].id);
+    const now = await look();
+    seen.formulas += now.formulas;
+    seen.figures += now.figures;
+    seen.shown.push(...now.shown);
+  }
+  const lastWaits = (await look()).waits;
+  check(
+    first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === 3 && seen.figures === 5 && first.select === "none" && lastWaits,
+    `the lesson is a text read one chapter at a time (${seen.shown.length} chapters, ${seen.formulas} formulas, ${seen.figures} figures), the chapters ahead closed, that can't be selected; Next waits for a quick read and the last step for the reading time`,
+  );
 } else {
   await wait(2500); // let the YouTube player paint
   check((await page.$$(".lb-part")).length === (bundle.segments?.length || bundle.videos.length), "the lesson plays as one video with a part per segment");
@@ -379,7 +423,7 @@ await skip.waitForFunction(() => document.querySelectorAll(".kattempt").length =
 await skip.waitForSelector(".kcall button", { timeout: 60000 });
 await skip.$eval(".kcall button:first-of-type", (e) => e.click());
 const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
-check(kaiWrong && hasNotebook && /didn't tell me|guessing|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
+check(kaiWrong && hasNotebook && /notes don't cover|notes only say|guess|imagine|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
 await wait(2500); // the steps and the new notes finish appearing
 await shot(skip, "07e-kai-second-try");
 // on to the test and the results: they report Kai's outcome on the problems Kai worked on
@@ -655,7 +699,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const formOf = (id) => testItems.find((t) => t.id === id).form;
   const asked = [...part1, ...part2];
   check(
-    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === 10 && part2.length === 9 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === "18/19" && /Part 1: 10 of 10 · Part 2: 8 of 9/.test(perPart),
+    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === 10 && part2.length === 9 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === "18/19" && /Part 1: 10 of 10, Part 2: 8 of 9/.test(perPart),
     `the pilot's test: both forms in two parts (${formOf(part1[0])} first), part 2 after part 1 is complete, the anchor once, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
   const back = await post("/api/admin/settings", { action: "reset" });

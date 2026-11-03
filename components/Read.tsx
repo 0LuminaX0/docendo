@@ -2,21 +2,32 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock } from "lucide-react";
 import { Header, mmss } from "./ui";
 import { useGuard, useNext } from "./useGuard";
-import { Section } from "./lesson/LessonBody";
+import { Block } from "./lesson/LessonBody";
 import { useSaved } from "@/lib/client/store";
 import { pathOf } from "@/lib/flow";
 import { track } from "@/lib/client/log";
-import type { Lesson } from "@/lib/lesson";
+import type { Lesson, LessonSection } from "@/lib/lesson";
+
+/** Seconds a chapter stays on screen before "Next" opens: a quick read of its words (about 400 a minute), at least 8. */
+export const chapterSeconds = (s: LessonSection) => {
+  const words = s.blocks.reduce((a, b) => a + ("p" in b ? b.p.split(/\s+/).length : "figure" in b ? 12 + b.caption.split(/\s+/).length : 10), 0);
+  return Math.max(8, Math.round(words * 0.15));
+};
+
+const plainTitle = (t: string) => t.replace(/^\d+\.\s*/, "");
 
 /**
- * Step 1 with a text lesson (the pack's lesson.json), instead of the videos. The text arrives from the server with the
- * page, never in the browser's code. It can't be selected or copied (participants explain from memory, not by pasting:
- * copy and drag attempts are logged), "Continue" opens after `minSeconds` (kept with the session, so a reload doesn't
- * restart it) and a reminder to move on shows after `remindSeconds`. The time read, how far down the page the learner
- * got and the copy attempts are logged when they continue.
+ * Step 1 with a text lesson (the pack's lesson.json), instead of the videos: one chapter at a time, like slides, so
+ * the learner reads each part instead of scrolling past it. "Next" sits at the end of the chapter and opens after a
+ * quick read of it (chapterSeconds); the chapters already read stay open (the bar on top, "Back"), the ones ahead
+ * don't. The text arrives from the server with the page, never in the browser's code. It can't be selected or copied
+ * (participants explain from memory, not by pasting: copy and drag attempts are logged), the last chapter's
+ * "teach Kai" opens after `minSeconds` in all (kept with the session, so a reload doesn't restart it), and a reminder to
+ * move on shows after `remindSeconds`. Logged: each chapter's time when the learner leaves it (read_chapter), and on
+ * continuing the time read, the chapters reached and the copy attempts.
  */
 export default function Read({ lesson }: { lesson: Lesson }) {
   const router = useRouter();
@@ -25,31 +36,29 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const nextOf = useNext();
   const [now, setNow] = useState(() => Date.now());
   const copies = useRef(0);
-  const reach = useRef(0);
   const reminded = useRef(false);
+  const perChapter = useRef<Record<string, number>>({});
+  const n = lesson.sections.length;
 
   // when reading began, once per session
   useEffect(() => {
-    if (saved && !saved.readStartedAt) update((s) => ({ ...s, readStartedAt: Date.now() }));
+    if (saved && !saved.readStartedAt) update((s) => ({ ...s, readStartedAt: Date.now(), readChapterAt: Date.now() }));
   }, [saved, update]);
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
-  // how far down the text the learner got (share of the page height)
-  useEffect(() => {
-    const onScroll = () => {
-      const h = document.documentElement.scrollHeight;
-      reach.current = Math.max(reach.current, h ? Math.min(1, (window.scrollY + window.innerHeight) / h) : 1);
-    };
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
+  const at = Math.min(saved?.readAt ?? 0, n - 1);
+  const max = Math.max(at, Math.min(saved?.readMax ?? 0, n - 1));
   const elapsed = Math.max(0, (now - (saved?.readStartedAt ?? now)) / 1000);
   const left = Math.max(0, lesson.minSeconds - elapsed);
   const remind = lesson.remindSeconds > 0 && elapsed >= lesson.remindSeconds;
+  const since = saved?.readChapterAt ?? saved?.readStartedAt ?? now; // when the chapter on screen opened
+  const onChapter = Math.max(0, (now - since) / 1000);
+  const section = lesson.sections[at]!;
+  // a chapter read before opens at once; a new one after a quick read of it
+  const wait = at < max ? 0 : Math.max(0, chapterSeconds(section) - onChapter);
   useEffect(() => {
     if (remind && !reminded.current) (reminded.current = true), track("read_reminder", { readSec: Math.round(elapsed) });
   }, [remind, elapsed]);
@@ -80,46 +89,109 @@ export default function Read({ lesson }: { lesson: Lesson }) {
     track("read_copy_attempt", { kind: e.type });
   };
 
-  function next() {
-    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(reach.current * 100), copyAttempts: copies.current, reminded: reminded.current });
-    const n = nextOf("watch");
-    update((s) => ({ ...s, step: s.step === "watch" ? n.step : s.step }));
-    router.push(n.path);
+  /** Leave the chapter on screen for chapter `to` (logged with the time spent on it). */
+  function go(to: number, via: string) {
+    const sec = Math.round((Date.now() - since) / 1000);
+    perChapter.current[section.id] = (perChapter.current[section.id] ?? 0) + sec;
+    track("read_chapter", { chapter: section.id, index: at, sec, to: lesson.sections[to]?.id ?? null, via });
+    update((s) => ({ ...s, readAt: to, readMax: Math.max(s.readMax ?? 0, to), readChapterAt: Date.now() }));
+    window.scrollTo({ top: 0 });
   }
 
+  function next() {
+    const sec = Math.round((Date.now() - since) / 1000);
+    perChapter.current[section.id] = (perChapter.current[section.id] ?? 0) + sec;
+    track("read_chapter", { chapter: section.id, index: at, sec, to: null, via: "continue" });
+    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(((max + 1) / n) * 100), chapters: max + 1, chapterSec: lesson.sections.map((x) => perChapter.current[x.id] ?? 0), copyAttempts: copies.current, reminded: reminded.current });
+    const s = nextOf("watch");
+    update((x) => ({ ...x, step: x.step === "watch" ? s.step : x.step }));
+    router.push(s.path);
+  }
+
+  const last = at === n - 1;
   return (
     <div className="shell">
       <Header step="watch" demo={saved.demo} />
       <main className="page">
         <article className="lesson" onCopy={refuse} onCut={refuse} onDragStart={refuse}>
-          <h1 className="title">{lesson.title}</h1>
-          <p className="lesson-intro">
-            <strong>Before you start.</strong> {lesson.intro}
-          </p>
-          {lesson.sections.map((s) => (
-            <Section key={s.id} s={s} />
-          ))}
-          <p className="lesson-end">
-            <em>{lesson.end}</em>
+          <p className="lesson-kicker">{lesson.title}</p>
+          <ol className="lesson-steps" aria-label="Chapters">
+            {lesson.sections.map((s, i) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className={i === at ? "now" : i <= max ? "done" : ""}
+                  disabled={i > max || i === at}
+                  aria-current={i === at ? "step" : undefined}
+                  onClick={() => go(i, "bar")}
+                  title={i <= max ? plainTitle(s.title) : "Opens once you get there"}
+                >
+                  <span className="bar" aria-hidden="true" />
+                  <span className="lbl">{plainTitle(s.title).replace(/:.*$/, "")}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+
+          {at === 0 && (
+            <p className="lesson-intro">
+              <strong>Before you start.</strong> {lesson.intro}
+            </p>
+          )}
+          <section className="lesson-section lesson-slide" key={section.id} data-section={section.id} aria-live="polite">
+            <p className="lesson-count">
+              Chapter {at + 1} of {n}
+            </p>
+            <h1 className="title">{plainTitle(section.title)}</h1>
+            {section.blocks.map((b, i) => (
+              <Block key={i} b={b} />
+            ))}
+          </section>
+          {last && (
+            <p className="lesson-end">
+              <em>{lesson.end}</em>
+            </p>
+          )}
+
+          <nav className="lesson-nav" aria-label="Chapters">
+            {at > 0 ? (
+              <button className="btn ghost" onClick={() => go(at - 1, "back")}>
+                <ArrowLeft size={17} /> Back
+              </button>
+            ) : (
+              <span />
+            )}
+            {!last ? (
+              <button className="btn primary" onClick={() => go(at + 1, "next")} disabled={wait > 0}>
+                {wait > 0 ? (
+                  <>
+                    <Clock size={16} aria-hidden="true" /> Next in {Math.ceil(wait)} s
+                  </>
+                ) : (
+                  <>
+                    Next: {plainTitle(lesson.sections[at + 1]!.title).replace(/:.*$/, "")} <ArrowRight size={17} />
+                  </>
+                )}
+              </button>
+            ) : (
+              <button className="btn primary" onClick={next} disabled={left > 0 || wait > 0}>
+                {left > 0 || wait > 0 ? (
+                  <>
+                    <Clock size={16} aria-hidden="true" /> Teach Kai in {mmss(Math.max(left, wait))}
+                  </>
+                ) : (
+                  <>
+                    <Check size={17} /> I&apos;ve read it, teach Kai
+                  </>
+                )}
+              </button>
+            )}
+          </nav>
+          <p className="note lesson-foot">
+            {remind ? "You've been reading for a while. Continue to Kai when you're ready." : last ? "The text closes when you go on: you'll explain it to Kai from memory." : "Take your time. You can go back to the chapters you've read."}
           </p>
         </article>
       </main>
-      <div className="lesson-bar">
-        <span className="note">
-          {left > 0 ? (
-            <>
-              <Clock size={15} aria-hidden="true" /> Take your time: you can continue in {mmss(left)}.
-            </>
-          ) : remind ? (
-            "You've been reading for a while. Continue to Kai when you're ready."
-          ) : (
-            "When you're ready, explain it to Kai. The text won't be available then."
-          )}
-        </span>
-        <button className="btn primary" onClick={next} disabled={left > 0}>
-          I&apos;ve read it, teach Kai <ArrowRight size={17} />
-        </button>
-      </div>
     </div>
   );
 }

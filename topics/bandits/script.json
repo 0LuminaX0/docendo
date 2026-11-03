@@ -1,27 +1,29 @@
 {
-  "note": "Kai's fixed teaching questions, the same for everyone and in this order (the team's design, 2 November 2026). None names a fact, so the questions leak nothing; most ask for the learner's own example or an application, which reciting the lesson cannot supply, and after each rule Kai asks whether there is anything else it should know. Between questions Kai repeats what it wrote down, in the learner's words (no model writes these lines, so they cannot leak lesson content). A short answer to a question marked sayMore gets one \"Can you say more about that?\". Kai wraps up after the last question, or at the first message after `minutes`.",
-  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits, and I'd love you to teach me. I'll ask you a few questions.",
+  "note": "Kai's fixed teaching questions, the same for everyone and in this order: the lesson's ideas as the graph orders them (the problem, then each rule: how it chooses, and how it plays out over many rounds), then a choice between the rules and anything else. They are a novice's questions, written down while looking at the slides (so Kai knows the rules' names and nothing about them): none says what a rule does, what goes wrong or what to compare, and the three rules get the same questions. Before each question Kai reacts to the answer in its own words (a model writes that line from the notebook, term-checked; the question itself is never rewritten). A short answer to a question marked sayMore gets one \"Can you say more about that?\"; a question left unanswered comes back once after the last one. Kai wraps up after the last question, or at the first message after `minutes`.",
+  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits, so I looked at the slides and wrote down some questions. Could you help me with them?",
   "minutes": 10,
   "shortWords": 15,
   "questions": [
-    { "id": "problem", "node": "n01", "sayMore": true, "text": "What problem are these rules trying to solve? Can you explain it with an example of your own, not the one from the lesson?" },
-    { "id": "greedy", "node": "n05", "sayMore": true, "text": "How does greedy decide what to pick? And what can go wrong with it?" },
-    { "id": "greedy-else", "node": "n05", "sayMore": false, "text": "Is there anything else I should know about greedy?" },
-    { "id": "epsilon", "node": "n07", "sayMore": true, "text": "How does ε-greedy decide? Can you walk me through one round?" },
-    { "id": "epsilon-else", "node": "n07", "sayMore": false, "text": "Is there anything else I should know about ε-greedy?" },
-    { "id": "ucb", "node": "n11", "sayMore": true, "text": "How does UCB decide? Can you make up a small example with a few options and show me which one it picks, and why?" },
-    { "id": "ucb-else", "node": "n11", "sayMore": false, "text": "Is there anything else I should know about UCB?" },
-    { "id": "other", "node": null, "sayMore": true, "text": "What makes each of the three rules pick something other than its favourite?" },
-    { "id": "anything", "node": null, "sayMore": false, "text": "Is there anything else I should know to use these rules on a new problem?" }
+    { "id": "problem", "node": "n01", "sayMore": true, "text": "First, could you explain what problem all this is about, with an example of your own rather than the one from the lesson?" },
+    { "id": "greedy", "node": "n05", "sayMore": true, "text": "The first rule on the slides is called greedy. How does it choose what to pick each round?" },
+    { "id": "greedy-long", "node": "n06", "sayMore": true, "text": "If greedy keeps going for many rounds, how does that play out?" },
+    { "id": "epsilon", "node": "n07", "sayMore": true, "text": "Then there's ε-greedy. How does that one choose, round by round?" },
+    { "id": "epsilon-long", "node": "n07", "sayMore": true, "text": "And if ε-greedy keeps going for many rounds, how does that play out?" },
+    { "id": "ucb", "node": "n11", "sayMore": true, "text": "The last one is UCB. How does it decide which option to pick?" },
+    { "id": "ucb-example", "node": "n11", "sayMore": true, "text": "Could you make up a small example with a few options and show me which one UCB would pick, and why?" },
+    { "id": "ucb-long", "node": "n12", "sayMore": true, "text": "And if UCB keeps going for many rounds, how does that play out?" },
+    { "id": "choose", "node": null, "sayMore": true, "text": "If you had to use one of the three rules on a real problem, which would you pick, and why?" },
+    { "id": "anything", "node": null, "sayMore": false, "text": "Is there anything else I should know before I try some problems on my own?" }
   ],
   "lines": {
-    "wrote": "I wrote down: {notes}.",
+    "wrote": "Okay, I wrote down: {notes}.",
     "wroteNothing": "Hmm, I'm not sure what to write down from that.",
     "sayMore": "Can you say more about that?",
-    "dontKnow": "Okay, let's leave that one.",
+    "dontKnow": "No worries, let's leave that one for now.",
     "moveOn": "Okay.",
     "notAnswer": "Sorry, I didn't quite get that.",
     "askedKai": "I don't know that myself, that's why I'm asking you!",
+    "back": "Can we go back to one I'm still stuck on?",
     "ready": "Thanks, I think I've got it now. Here's what I wrote down:",
     "readyEmpty": "Thanks! My notes are still pretty empty, but let's try some problems."
   }

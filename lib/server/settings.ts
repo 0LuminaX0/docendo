@@ -34,12 +34,12 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
     studyLine: "A learning-by-teaching study for CS-411 Digital Education, EPFL",
     pretest: { on: true, both: false },
     watch: { on: true, parts: defaultLesson(pack) },
-    teach: { stopAfterMessages: 12, stopAfterMinutes: 8 },
+    teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
     test: { followUp: config.delayedTestDays !== undefined, followUpDays: config.delayedTestDays ?? 7, both: false },
     survey: { on: true },
     sessionDays: Math.round(config.sessionHours / 24),
-    tools: { calculator: true, voice: true },
+    tools: { calculator: true, voice: true, help: false },
     dailyTurnLimit: config.dailyTurnLimit,
   };
 }

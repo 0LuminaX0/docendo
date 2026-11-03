@@ -49,9 +49,9 @@ describe("settings", () => {
     const old = { practiceMinutes: 12, practiceTries: 3, stopAfterMessages: 6, stopAfterMinutes: 5, sessionDays: 7, delayedTestDays: 9, calculator: false, voice: true, dailyTurnLimit: 900, lesson: [{ videoId: "e3L4VocZnnQ", start: 0, end: 111, title: "Part one", channel: "x" }] };
     const m = merge(old);
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
-    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5 });
+    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true });
     expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false });
-    expect(m.tools).toEqual({ calculator: false, voice: true });
+    expect(m.tools).toEqual({ calculator: false, voice: true, help: false });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
     expect(migrateSettings({ topic: "bandits" })).toEqual({ topic: "bandits" }); // new shape: unchanged

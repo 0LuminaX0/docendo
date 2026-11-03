@@ -114,6 +114,7 @@ export const ScriptFile = z.object({
     moveOn: z.string(),
     notAnswer: z.string(),
     askedKai: z.string(),
+    back: z.string().default("Can we go back to one I'm still stuck on?"), // before a question left unanswered, asked again
     ready: z.string(), // the wrap-up, followed by Kai's notes
     readyEmpty: z.string(),
   }),
@@ -155,6 +156,11 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   // practice: what Kai's gate needs must be real facts
   for (const p of practice?.items ?? [])
     for (const need of p.needs ?? []) for (const f of need.split("|")) if (bundle && !facts.has(f)) err("practice.json", `${p.id} needs ${f}, which isn't a fact in the bundle`);
+  // how Kai says each assumption when it guesses: a hunch for every assume (and assumeVague)
+  for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
+    if (f.assume && !f.hunch) warn("graph", `${f.id} has an assumption but no hunch: Kai would recite the assumption as a rule`);
+    if (f.assumeVague && !f.hunchVague) warn("graph", `${f.id} has a vague assumption but no hunchVague`);
+  }
   // Kai's assumptions: one per fact, copied word for word, and one for every need that leads to a wrong option
   const factById = new Map(bundle?.nodes.flatMap((n) => n.facts.map((f) => [f.id, f] as const)) ?? []);
   for (const p of practice?.items ?? []) {
@@ -201,6 +207,13 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     const names = /^(multi-armed bandits?|multi-arm bandits?|bandits?|greedy|ε|epsilon|ε-greedy|epsilon-greedy|epsilon greedy|ucb|ucb1)$/i;
     for (const q of [{ id: "opening", text: script.opening }, ...script.questions])
       for (const n of bundle.nodes) for (const t of n.lexicon) if (!names.test(t) && hasTerm(q.text, t)) warn("script.json", `${q.id} uses "${t}" (${n.id}): Kai's questions should name no lesson term but the rules' names`);
+    // the graph's order: no question about an idea before a question about an idea it builds on
+    const nodeOf = new Map(bundle.nodes.map((n) => [n.id, n]));
+    const builds = (id: string, on: string, seen = new Set<string>()): boolean =>
+      (nodeOf.get(id)?.needs ?? []).some((p) => p === on || (!seen.has(p) && (seen.add(p), builds(p, on, seen))));
+    script.questions.forEach((q, i) => {
+      for (const later of script.questions.slice(i + 1)) if (q.node && later.node && builds(q.node, later.node)) warn("script.json", `${q.id} (${q.node}) comes before ${later.id} (${later.node}), which it builds on`);
+    });
   }
 
   // the pretest's sets: every knowledge item in one when any is, sets of the same size, pairs in the first set, keys

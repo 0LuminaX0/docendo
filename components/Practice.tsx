@@ -30,8 +30,8 @@ const KEYS = "ABCDEF";
  * after the final test in both. When the time runs out, the test starts.
  */
 export default function Practice({ items }: { items: Item[] }) {
-  const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind } = useStudySettings();
-  const video = flow.includes("watch"); // Rewatch (or Reread, for a text lesson) only when the study has a lesson to go back to
+  const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind, help } = useStudySettings();
+  const video = help && flow.includes("watch"); // Rewatch (or Reread, for a text lesson): switched on, and the study has a lesson to go back to
   const text = lessonKind === "text";
   const router = useRouter();
   const [saved, update] = useSaved();

@@ -95,7 +95,7 @@ describe("pretest", () => {
 });
 
 import { initialState, type State } from "../engine/tutor/state";
-import { beliefFor, chooseGuess, gate, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
+import { beliefFor, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
 
 // a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
 const taughtState = (facts: string[], vague: string[] = []): State => ({
@@ -157,10 +157,14 @@ describe("Kai solving practice problems (recursive feedback)", () => {
         const s = offlineSolve(bundle, p, st);
         expect(s.answer, `${p.id} without ${n}`).toBe(LETTERS[b.answer]);
         expect(s.correct).toBe(false);
-        // the attempt follows the solution up to the first step that uses the missing fact, and says it is guessing there
+        // the attempt follows the solution up to the first step that uses the missing fact, and says it is guessing
+        // there, as a hunch in plain words (the assumption's own wording stays for the log), never blaming the learner
         const at = p.steps.findIndex((x) => x.facts.includes(n));
-        expect(s.steps[at]!.text, `${p.id} without ${n}`).toMatch(/didn't tell me/);
-        expect(s.steps[at]!.text).toContain(b.belief);
+        const hunch = hunchFor(bundle, b)!;
+        expect(hunch, `${n} has a hunch`).toBeTruthy();
+        expect(s.steps[at]!.text, `${p.id} without ${n}`).toBe(`My notes don't cover this part. ${hunch}`);
+        expect(s.steps[at]!.text).toMatch(/\b(guess|imagine|hunch)/);
+        expect(s.steps.map((x) => x.text).join(" ")).not.toMatch(/you (didn't|never) told? me/i);
         expect(s.steps.slice(0, at).map((x) => x.text)).toEqual(p.steps.slice(0, at).map((x) => x.text));
       }
   });
@@ -186,7 +190,7 @@ describe("Kai solving practice problems (recursive feedback)", () => {
         } else {
           expect(gate(p, st).canBeRight, `${p.id}: a vague ${n} isn't enough`).toBe(false);
           expect(s.answer).toBe(LETTERS[b.answer]);
-          expect(s.steps.find((x) => x.text.includes(b.belief))!.text).toMatch(/vaguely/);
+          expect(s.steps.find((x) => x.text.includes(hunchFor(bundle, b)!))!.text).toMatch(/^My notes only say "/);
         }
       }
     // the bonus "grows" without "ever more slowly": enough to see that it grows (p2, p3), not to see the gaps grow (p6)

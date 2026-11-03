@@ -15,7 +15,7 @@
 //   misconception the last needed fact stated wrongly (its misconception, in a learner's words) → a wrong option
 //   unlisted (--unlisted) every teachable fact but one the problem doesn't need → the key
 // Keep a problem only if: full right ≥ 9/10, each "without" at its predicted option ≥ 8/10, unlisted unchanged.
-// Also counted: answered by the model (not the offline fallback), 3 to 5 steps, a step that says Kai is guessing
+// Also counted: answered by the model (not the offline fallback), 2 to 5 steps (2 or 3 with an empty notebook), a step that says Kai is guessing
 // where a fact is missing, and lesson terms Kai used that its notes didn't give it (leaks). With --audit the judge
 // model reads every attempt that lacked a fact and says whether a step states or uses a fact Kai wasn't told.
 // Costs real credits.
@@ -134,7 +134,7 @@ async function auditOf(c: Case, steps: string[], onCost: (c: number) => void) {
 
 type Row = { model: string; item: string; case: string; lacking: number; expected: string; answer: string; asExpected: boolean; byModel: boolean; steps: number; guessing: boolean; leaked: string[]; audit?: z.infer<typeof Audit>; ms: number; cost: number; why: string; text: string[] };
 const rows: Row[] = [];
-const GUESSING = /\b(guess|guessing|assum|didn'?t tell|did not tell|never told|wasn'?t told|not sure|my notes don'?t|notes don'?t say|vague)/i;
+const GUESSING = /\b(guess|guessing|assum|imagine|hunch|didn'?t tell|did not tell|never told|wasn'?t told|not sure|my notes don'?t|notes don'?t (?:say|cover)|nothing in my notes|vague)/i;
 for (const model of models) {
   (MODELS as { solver: string }).solver = model;
   const jobs = cases.flatMap((c) => Array.from({ length: reps }, () => c));
@@ -159,7 +159,7 @@ for (const model of models) {
   const r = rows.filter((x) => x.model === model);
   const ms = r.map((x) => x.ms).sort((a, b) => a - b);
   console.log(`\n${model}  (${r.length} attempts, ${reps} per case)`);
-  console.log(`  as predicted ${share(r, (x) => x.asExpected)}, by the model ${share(r, (x) => x.byModel)}, 3 to 5 steps ${share(r.filter((x) => x.byModel), (x) => x.steps >= 3 && x.steps <= 5)}`);
+  console.log(`  as predicted ${share(r, (x) => x.asExpected)}, by the model ${share(r, (x) => x.byModel)}, 2 to 5 steps ${share(r.filter((x) => x.byModel), (x) => x.steps >= 2 && x.steps <= 5)}, with nothing taught at most 3 ${share(r.filter((x) => x.byModel && x.case === "skipped"), (x) => x.steps <= 3)}`);
   const lacking = r.filter((x) => x.byModel && x.lacking > 0);
   console.log(`  where a fact was missing: says it is guessing ${share(lacking, (x) => x.guessing)}, lesson terms it wasn't given ${lacking.filter((x) => x.leaked.length).length}`);
   if (audit) {

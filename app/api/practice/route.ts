@@ -156,8 +156,9 @@ export async function POST(req: NextRequest) {
   }
   // the help: the lesson moments (or, with a text lesson, the sections) that explain the facts this problem needs, no answer
   const facts = [...new Set(item.steps.flatMap((s) => s.facts))];
-  const passages = settings.watch.on && pack.lesson ? pack.passagesFor(facts) : [];
-  const moments = settings.watch.on && !pack.lesson ? pack.momentsFor(facts, settings.watch.parts) : [];
+  const lesson = settings.watch.on && settings.tools.help;
+  const passages = lesson && pack.lesson ? pack.passagesFor(facts) : [];
+  const moments = lesson && !pack.lesson ? pack.momentsFor(facts, settings.watch.parts) : [];
   record({ t: "practice_hint", sid: session.sid, id: item.id, moments: moments.map((m) => `${m.video}@${Math.round(m.start)}`), passages: passages.map((p) => p.section) });
   return ok({ moments, passages });
 }

@@ -46,6 +46,7 @@ export function packSummary(pack: Pack, s: Settings) {
     test, // what one session answers (the pilot: both forms)
     pretest: { items: pack.pretest.length, knowledge: pack.pretest.filter((q) => q.kind === "knowledge").length },
     survey: pack.survey.length,
+    scriptQuestions: pack.script?.questions.length ?? 0, // Kai's fixed questions (0: the pack has none)
     pretestSets: pack.pretestSets.filter(Boolean), // the pretest's knowledge sets (a pilot can take them all)
     coverage,
     flow,
@@ -62,7 +63,7 @@ export function packSummary(pack: Pack, s: Settings) {
         return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: set ${sets[0]}`) : ""}), about ${Math.max(1, Math.round(n * 0.4))} min`;
       })(),
       watch: s.watch.parts.length ? `${plural(s.watch.parts.length, "part")} from ${plural(new Set(s.watch.parts.map((p) => p.videoId)).size, "video")}, ${mmss(lessonSec)} in all` : "no parts yet",
-      teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; usually about ${minutes.teach} min`,
+      teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; ${s.teach.fixed && pack.script ? `${plural(pack.script.questions.length, "fixed question")}, wrapping up after the last or at ${pack.script.minutes} min` : `Kai chooses its questions; usually about ${minutes.teach} min`}${s.teach.mind ? "" : "; Kai's mind hidden"}`,
       practice: `${plural(pack.practice.length, "problem")}${rounds.length > 1 ? ` in ${rounds.length} rounds (${rounds.map((r) => pack.practice.filter((p) => p.round === r).length).join(" + ")})` : ""}, ${s.practice.minutes} min`,
       exercises: `${test.both ? `both forms, one after the other (pilot), ${plural(test.items, "question")} in all; ` : ""}${testText}, about ${minutes.exercises} min`,
       results: `the score, every answer explained${s.practice.on ? ", the practice's worked solutions" : ""}`,
@@ -70,7 +71,8 @@ export function packSummary(pack: Pack, s: Settings) {
     } as Record<StepKey | "survey", string>,
     // part of the study design: changed in code, with a reason, not mid-study
     fixed: [
-      ["Kai feels ready", `at ${CONFIG.ready * 100}% of the ${facts.length} facts it waits for, or ${CONFIG.readyLate * 100}% after ${CONFIG.lateAfterMin} minutes of teaching (engine/tutor/policy.ts)`],
+      ...(pack.script ? ([["Kai's fixed questions", `${plural(pack.script.questions.length, "question")}, the same for everyone, in order; one \"can you say more?\" after a short answer, the question again once after a reply that isn't an answer (topics/${pack.slug}/script.json)`]] as [string, string][]) : []),
+      ["Kai feels ready", `${s.teach.fixed && pack.script ? "with the fixed questions: after the last one; otherwise " : ""}at ${CONFIG.ready * 100}% of the ${facts.length} facts it waits for, or ${CONFIG.readyLate * 100}% after ${CONFIG.lateAfterMin} minutes of teaching (engine/tutor/policy.ts)`],
       ["Kai wraps up", `after ${CONFIG.maxTurns} learner messages (engine/tutor/policy.ts)`],
       ["Practice problems", `${plural(pack.practice.length, "problem")}, the same in both conditions (topics/${pack.slug}/practice.json)`],
       ["Final test", `${testText} (topics/${pack.slug}/exercises.json)`],

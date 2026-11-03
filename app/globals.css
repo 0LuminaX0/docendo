@@ -1186,8 +1186,26 @@ textarea.dictating::placeholder { color: transparent; }
 .lesson-formula mtd { text-align: left; padding: 2px 0; }
 .lesson-formula mtd + mtd { padding-left: 1.4em; }
 .lesson .lesson-end { color: var(--muted); margin-top: 26px; }
-.lesson-bar { position: sticky; bottom: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: center; padding: 12px 24px; background: rgba(255, 255, 255, 0.96); border-top: 1px solid var(--rule); }
-.lesson-bar .note { display: inline-flex; align-items: center; gap: 6px; }
+/* the text lesson as chapters, one at a time */
+.lesson .lesson-kicker { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; color: var(--muted); margin: 0 0 10px; }
+.lesson-steps { list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; margin: 0 0 26px; padding: 0; }
+.lesson-steps button { display: flex; flex-direction: column; gap: 7px; width: 100%; padding: 4px 0; border: 0; background: none; text-align: left; font: inherit; font-size: 12.5px; color: var(--muted); cursor: pointer; border-radius: 6px; }
+.lesson-steps button:disabled { cursor: default; }
+.lesson-steps .bar { display: block; height: 5px; border-radius: 99px; background: var(--rule); transition: background 0.25s; }
+.lesson-steps .done .bar { background: #f3a19b; }
+.lesson-steps .now .bar { background: var(--red); }
+.lesson-steps .now { color: var(--ink); font-weight: 600; }
+.lesson-steps .done:hover .lbl { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+.lesson-steps .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lesson .lesson-count { font-size: 13.5px; font-weight: 600; color: var(--muted); margin: 0 0 4px; }
+.lesson-slide .title { margin-bottom: 18px; }
+.lesson-slide { animation: slide-in 0.28s ease-out; }
+@keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lesson-slide { animation: none; } }
+.lesson-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.lesson-nav .btn:disabled { opacity: 0.7; }
+.lesson .lesson-foot { margin: 10px 0 0; text-align: right; }
+@media (max-width: 560px) { .lesson-steps .lbl { display: none; } .lesson .lesson-foot { text-align: left; } }
 /* a passage of the lesson shown again as help (teaching, practice) */
 .passage { -webkit-user-select: none; user-select: none; max-height: min(70vh, 640px); overflow-y: auto; }
 .passage p { font-size: 15.5px; line-height: 1.6; margin: 0 0 12px; }

@@ -4,7 +4,7 @@ import type { Judgement } from "./judge";
 import { CONFIG, isReady, nextMove, readyReason, type Move, type ReadyReason } from "./policy";
 import { blankMemo, latest, memo, nodeStatus, progress, type State } from "./state";
 import { mindView, type Mind } from "./mind";
-import type { Turn } from "./writer";
+import type { Reaction, Turn } from "./writer";
 
 /**
  * How Kai feels about the learner's last message:
@@ -18,6 +18,8 @@ export type Mood = "neutral" | "great" | "okay" | "confused";
 export type Deps = {
   judge: (bundle: Bundle, message: string, kaiLast: string) => Promise<Judgement>;
   write: (bundle: Bundle, state: State, move: Move, history: Turn[], mood: Mood, avoid: string[]) => Promise<string>;
+  // Kai's reaction before a fixed question (script.json), with no question of its own; without it, a fixed line
+  react?: (bundle: Bundle, state: State, kind: Reaction, history: Turn[], next: string | null, mood: Mood, avoid: string[]) => Promise<string>;
 };
 
 export type TurnResult = {

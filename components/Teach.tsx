@@ -207,7 +207,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   }
 
   const pct = Math.round(mind.understanding * 100);
-  const tools = (
+  const tools = study.mind && (
     <div className="seg" role="group" aria-label="View">
         <button type="button" aria-pressed={view === "chat"} onClick={() => (setView("chat"), track("view_toggle", { to: "chat" }))} aria-label="Chat">
           <MessageCircle size={16} strokeWidth={2.2} />
@@ -224,7 +224,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
         <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
           {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
         </span>
-        <button type="button" className="meter" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={`${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.`} style={{ border: 0, background: "none", cursor: "pointer", padding: 0 }}>
+        <button type="button" className="meter" disabled={!study.mind} onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={study.mind ? `${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.` : `${pct}% of what Kai needs to feel ready.`} style={{ border: 0, background: "none", cursor: study.mind ? "pointer" : "default", padding: 0, color: "inherit" }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <span className="fill" style={{ display: "block", width: `${Math.max(4, pct)}%` }} />
@@ -237,7 +237,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   return (
     <div className="shell">
       <Header step="teach" demo={saved.demo} left={tools} right={status} />
-      {view === "mind" ? (
+      {view === "mind" && study.mind ? (
         <main className="teach-mind">
           <MindView graph={graph} mind={mind} popout />
         </main>
@@ -310,9 +310,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   <button className="btn primary" onClick={goPractice}>
                     {flow.includes("practice") ? "Go to practice" : "Go to the test"} <ArrowRight size={17} />
                   </button>
-                  <button className="btn ghost" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "ready" }))}>
-                    <Brain size={17} /> See Kai&apos;s mind
-                  </button>
+                  {study.mind && (
+                    <button className="btn ghost" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "ready" }))}>
+                      <Brain size={17} /> See Kai&apos;s mind
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -375,7 +377,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                 />
                 {dict.ghost}
                 <div className="actions">
-                  {chat.help && (
+                  {study.help && chat.help && (
                     <button
                       type="button"
                       className="help"
