@@ -19,6 +19,13 @@ if (!existsSync(join(ROOT, ".next", "BUILD_ID"))) {
   process.exit(1);
 }
 const exercises = JSON.parse(readFileSync(join(ROOT, "topics/bandits/exercises.json"), "utf8")).items;
+// what a learner might write as the reason, by the rule an item is about
+const REASON = {
+  Greedy: "Greedy keeps trying the option whose average is too high until it falls, so it ends up on the best one.",
+  "ε-greedy": "The random picks happen at the same rate all the time and land on every option equally often.",
+  UCB: "The bonus shrinks each time an option is picked and grows again slowly while it isn't.",
+  Comparison: "ε-greedy keeps exploring at random, while UCB's bonus decides and its exploration fades.",
+};
 const env = { ...process.env, ACCESS_CODE: CODE, UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ADMIN_PASSWORD: "", CODE_SECRET: "", SESSION_TURNS_PER_MIN: "200" };
 const server = spawn("pnpm", ["exec", "next", "start", "-p", String(PORT)], { env, stdio: "ignore", detached: true });
 const stop = () => {
@@ -146,18 +153,15 @@ await p.$eval(".submitbar .btn", (e) => e.click());
 await p.waitForFunction(() => location.pathname === "/exercises", { timeout: 20000 });
 await p.waitForSelector(".q");
 const shown = await p.$$eval(".q", (els) => els.map((e) => e.dataset.q));
+// every item: its key (the true statements of a multi-select one) and a reason in the learner's words
 for (const id of shown) {
   const t = exercises.find((x) => x.id === id);
   const c = await p.$(`.q[data-q="${id}"]`);
   if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await p.keyboard.type(String(t.answer));
-  else await c.$eval(`.opt:nth-child(${t.answer + 1}) input`, (el) => el.click());
+  else for (const k of Array.isArray(t.answer) ? t.answer : [t.answer]) await c.$eval(`.opts .opt:nth-child(${k + 1}) input`, (el) => el.click());
+  if (t.reason) await c.$eval(".qwork textarea", (el) => el.focus()), await p.keyboard.type(REASON[t.section] ?? "That is how the rule picks.");
 }
-// working that belongs to the question: the calculation its answer comes from
-const WORK = { q01: "(4 × 12 + 22) / 5 =", q05: "1000 × 0.2 / 4 =", q08: "0.6 + √(2 × 3.91 / 8) =", r01: "(5 × 18 + 30) / 6 =", r05: "2000 × 0.15 / 5 =", r08: "3.2 + √(2 × 3.4 / 5) =" };
-const num = shown.find((id) => WORK[id]);
-await p.$eval(`.q[data-q="${num}"]`, (e) => (e.scrollIntoView({ block: "start" }), scrollBy(0, -90)));
-await p.$eval(`.q[data-q="${num}"] .qwork textarea`, (el) => el.focus());
-await p.keyboard.type(WORK[num]);
+await p.$eval(`.q[data-q="${shown[0]}"]`, (e) => (e.scrollIntoView({ block: "start" }), scrollBy(0, -90)));
 await wait(500);
 await shot("test");
 await p.click(".submitbar .btn.primary");

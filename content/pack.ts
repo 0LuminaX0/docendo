@@ -15,19 +15,38 @@ export const Exercise = z
   .object({
     id: z.string(),
     goal: z.string(),
-    type: z.string(),
-    section: z.string(),
-    form: z.enum(["A", "B"]).default("A"), // two parallel forms: one for the final test, the other for the delayed test
+    type: z.string(), // what it asks of the learner (near or far transfer, a changed rule, …)
+    section: z.string(), // the rule it is about
+    // two forms: one for the final test, the other for the delayed test (or both in the final test: settings test.both)
+    form: z.enum(["A", "B"]).default("A"),
     pair: z.string().optional(), // a form B item: its twin in form A
-    kind: z.enum(["choice", "number"]).default("choice"), // pick an option, or type a number
+    same: z.string().optional(), // identical to this item of the other form (an anchor): asked once when a session takes both
+    title: z.string().optional(), // a short name for the team (admin panel); never sent to the browser
+    kind: z.enum(["choice", "multi", "number"]).default("choice"), // pick an option, tick every true statement, or type a number
     prompt: z.string(),
+    table: z.object({ head: z.array(z.string()).min(2), rows: z.array(z.array(z.string())).min(1) }).optional(), // under the prompt
+    question: z.string().optional(), // asked under the table
     options: z.array(z.string()).min(2).max(6).optional(),
     unit: z.string().optional(),
-    answer: z.number(), // choice: the option's index; number: the value
+    // choice: the option's index; multi: the true statements' indices; number: the value
+    answer: z.union([z.number(), z.array(z.number().int().min(0)).min(1)]),
     tolerance: z.number().min(0).optional(),
-    explain: z.string(),
+    dontKnow: z.boolean().default(false), // offers "I don't know" (graded wrong, logged as such)
+    reason: z.boolean().default(false), // asks for the reason in a sentence or two (scored later against the rubric)
+    explain: z.string(), // shown with the results
+    // for the team only, never sent to the browser: how a reason is scored, what each option shows (correct, or the
+    // misconception it reflects), the share correct the team expects, and where the item comes from
+    rubric: z.string().optional(),
+    diagnosis: z.array(z.string()).optional(),
+    estimate: z.number().min(0).max(1).optional(),
+    note: z.string().optional(),
   })
-  .refine((q) => (q.kind === "choice" ? !!q.options && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.options.length : !q.options), "choice items need options and a valid key; number items have none");
+  .refine((q) => {
+    const n = q.options?.length ?? 0;
+    if (q.kind === "choice") return n > 0 && typeof q.answer === "number" && Number.isInteger(q.answer) && q.answer >= 0 && q.answer < n;
+    if (q.kind === "multi") return n > 0 && Array.isArray(q.answer) && new Set(q.answer).size === q.answer.length && q.answer.every((k) => k < n);
+    return !q.options && typeof q.answer === "number";
+  }, "choice items need options and a valid key, multi-select items options and the true statements' indices; number items have no options");
 export type Exercise = z.infer<typeof Exercise>;
 export const ExercisesFile = z.object({ title: z.string(), items: z.array(Exercise).min(1) });
 
@@ -142,7 +161,8 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     }
   }
 
-  // the final test: ids unique, forms the same length, each twin real
+  // the final test: ids unique, forms the same length, each twin real, each anchor identical to its twin, one
+  // diagnosis per option, tables with full rows
   if (tests) {
     const ids = tests.items.map((q) => q.id);
     for (const id of ids.filter((x, i) => ids.indexOf(x) !== i)) err("exercises.json", `item ${id} appears twice`);
@@ -151,6 +171,15 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     if (b.length && a.length !== b.length) err("exercises.json", `form A has ${a.length} items and form B ${b.length}: parallel forms must match`);
     for (const q of b) if (q.pair && !a.some((x) => x.id === q.pair)) err("exercises.json", `${q.id} is the twin of ${q.pair}, which isn't in form A`);
     if (!b.length) warn("exercises.json", "one test form only: the follow-up test can't be switched on");
+    const shown = (q: (typeof tests.items)[number]) => JSON.stringify([q.kind, q.prompt, q.table ?? null, q.question ?? null, q.options ?? null, q.answer]);
+    for (const q of tests.items) {
+      const twin = q.same ? tests.items.find((x) => x.id === q.same) : null;
+      if (q.same && (!twin || twin.form === q.form)) err("exercises.json", `${q.id} is the same as ${q.same}, which isn't an item of the other form`);
+      else if (twin && shown(twin) !== shown(q)) err("exercises.json", `${q.id} is marked the same as ${q.same} but differs from it: an anchor must be identical`);
+      if (q.diagnosis && q.diagnosis.length !== (q.options?.length ?? 0)) err("exercises.json", `${q.id}: ${q.diagnosis.length} diagnoses for ${q.options?.length ?? 0} options`);
+      if (q.table && q.table.rows.some((r) => r.length !== q.table!.head.length)) err("exercises.json", `${q.id}: a table row doesn't match the head`);
+      if (q.reason && !q.rubric) warn("exercises.json", `${q.id} asks for a reason but has no rubric to score it`);
+    }
   }
   if (pretest) for (const q of pretest.items) if (q.kind === "knowledge" && q.answer === undefined) err("pretest.json", `${q.id} is a knowledge item without an answer`);
   // Kai's fixed questions: about real ideas, and naming no lesson term beyond the rules' names (they leak nothing)

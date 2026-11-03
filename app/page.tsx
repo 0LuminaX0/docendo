@@ -18,7 +18,9 @@ export default async function Page() {
     exercises: (() => {
       const f = sum.forms[0];
       if (!f) return "Questions to see what stuck.";
-      const kinds = f.choice && f.number ? ": some to choose, some to work out" : f.number ? " to work out" : " to choose";
+      // the pilot: both forms, one after the other
+      if (sum.test.both) return `Two short tests, one after the other (${count(sum.test.items, "question")} in all), to see what stuck. About ${sum.minutes.exercises} minutes.`;
+      const kinds = f.reasons === f.items ? ": pick an answer and say why in a sentence or two" : f.number && f.items > f.number ? ": some to choose, some to work out" : f.number ? " to work out" : " to choose";
       return `${Count(f.items, "question")} to see what stuck${kinds}. About ${sum.minutes.exercises} minutes.`;
     })(),
   };

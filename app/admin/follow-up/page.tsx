@@ -21,7 +21,8 @@ export default async function Page() {
   const [people, codes, t] = await Promise.all([listParticipants(), listCodes(), loadTables()]);
   const label = new Map(codes.map((c) => [c.id, c.label]));
   const now = Date.now();
-  const rows: Person[] = people.map((p) => {
+  // people whose final test had both forms (the pilot) have no follow-up: nothing unseen is left
+  const rows: Person[] = people.filter((p) => !p.both).map((p) => {
     const sessions = t.sessions.filter((s) => s.pid === p.pid);
     const main = sessions.filter((s) => s.phase !== "delayed" && s.testScore !== null && s.testScore !== undefined).pop();
     const late = sessions.filter((s) => s.phase === "delayed" && s.testScore !== null && s.testScore !== undefined).pop();

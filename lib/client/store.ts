@@ -4,6 +4,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { Passage } from "@/lib/lesson";
 import type { State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
+import type { TestAnswer } from "@/lib/answers";
 
 // Progress lives in this browser only (localStorage), so a reload or a closed
 // tab doesn't lose the session. Nothing here is secret: the token is useless
@@ -20,12 +21,30 @@ export type Help = { video: string; start: number; end: number } | Passage;
 export type GradeResult = {
   score: number;
   of: number;
-  // choice items: chosen is the option's index; number items: the typed answer, and key the value with its unit
-  items: { id: string; kind?: "choice" | "number"; chosen: number | string | null; answer: number; key?: string; correct: boolean; explain: string }[];
+  // choice items: chosen is the option's index; multi: the statements ticked (answer: the true ones); number items: the
+  // typed answer, and key the value with its unit; "idk": I don't know
+  items: { id: string; form?: "A" | "B"; kind?: "choice" | "multi" | "number"; chosen: TestAnswer; answer: number | number[]; key?: string; correct: boolean; explain: string }[];
+  // a pilot's two forms: the score in each part (absent with one form)
+  parts?: { form: "A" | "B"; score: number; of: number }[];
   // the practice problems' worked solutions, shown only after the test (absent in older sessions)
   practice?: { id: string; round: number; title: string; prompt: string; options: string[] | null; answer: string; answerIndex: number | null; steps: string[] }[];
   // a person with a follow-up test: when it opens (null or absent: no follow-up for this session)
   followUp?: { opensAt: number } | null;
+};
+
+/** One test question as the browser gets it: no key, no explanation, nothing for the team. */
+export type TestItem = {
+  id: string;
+  form?: "A" | "B";
+  section: string;
+  kind: "choice" | "multi" | "number";
+  prompt: string;
+  table?: { head: string[]; rows: string[][] } | null;
+  question?: string | null;
+  options: string[] | null;
+  unit: string | null;
+  dontKnow?: boolean;
+  reason?: boolean;
 };
 
 export type PracticeEntry = {
@@ -79,10 +98,11 @@ export type Saved = {
     // so the next look can mark what changed
     mindSeen?: Record<string, [string, number, number]>;
   };
-  answers: (number | string | null)[]; // final test: an option's index, or a typed number
-  testWork?: Record<string, string>; // final test: the working under each question
+  answers: TestAnswer[]; // final test: an option's index, the statements ticked, a typed number, or "idk" (lib/answers.ts)
+  testWork?: Record<string, string>; // final test: the reason (or the working) under each question
   testOrder?: string[]; // final test: the item ids in the order this learner sees them (lib/order.ts)
-  testItems?: { id: string; section: string; kind: "choice" | "number"; prompt: string; options: string[] | null; unit: string | null }[]; // this session's form, from the server
+  testItems?: TestItem[]; // this session's questions (its form, or both in a pilot), from the server
+  testPart?: number; // a pilot's two forms: how many parts are done and locked (0: on the first)
   since?: "no" | "a little" | "a lot"; // delayed test: has the learner looked at the topic since the session?
   result: GradeResult | null;
   feedbackSent?: boolean;

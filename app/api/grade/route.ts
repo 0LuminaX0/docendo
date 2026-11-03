@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { checkExercise, keyText, packFor } from "@/lib/server/content";
+import { gradeTest, keyText, otherForm, packFor } from "@/lib/server/content";
+import { DONT_KNOW } from "@/lib/answers";
 import { getSettings } from "@/lib/server/settings";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limitAll } from "@/lib/server/limit";
@@ -11,20 +12,21 @@ import { followUpOpens, getParticipant, markTest } from "@/lib/server/participan
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ITEMS = 30; // at most, per form (the form's own length is checked below)
+const ITEMS = 40; // at most, per session (both forms in a pilot; the session's own length is checked below)
 // the delayed test asks first whether the learner has looked at the topic since: a confound for a delayed measure
 const SINCE = ["no", "a little", "a lot"] as const;
 
 const Body = z.union([
   z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.array(z.number().int().min(0).max(9)).max(ITEMS) }),
-  // the session's test questions (its own form only, without answers)
+  // the session's test questions (its own form, or both forms in a pilot; without answers)
   z.object({ token: z.string().max(400), kind: z.literal("items") }),
   z.object({
     token: z.string().max(400),
     kind: z.literal("test").optional(),
-    // an option's index, or a typed number (as typed), in the form's file order
-    answers: z.array(z.union([z.number().int().min(0).max(9), z.string().max(40)]).nullable()).max(ITEMS),
-    work: z.record(z.string().max(10), z.string().max(2_000)).optional(), // the learner's working per question, for the log
+    // in the order the server sent the items: an option's index, the statements ticked (multi), a typed number (as
+    // typed), or "idk" (I don't know)
+    answers: z.array(z.union([z.number().int().min(0).max(9), z.array(z.number().int().min(0).max(9)).max(6), z.string().max(40)]).nullable()).max(ITEMS),
+    work: z.record(z.string().max(10), z.string().max(2_000)).optional(), // per question: the reason it asked for, or the learner's working
     order: z.array(z.string().max(10)).max(ITEMS).optional(), // the order the learner saw the items in
     since: z.enum(SINCE).optional(), // delayed test: studied the topic since the session?
   }),
@@ -32,7 +34,8 @@ const Body = z.union([
 
 /**
  * Grade on the server, so the answers never ship to the browser: the final test or the delayed test (results go
- * back), or the pretest (recorded only; nothing is shown back). Each session takes its own form (A or B, in the token).
+ * back), or the pretest (recorded only; nothing is shown back). Each session takes its own form (A or B, in the token),
+ * or in a pilot both forms, its own first (content/test.ts).
  */
 export async function POST(req: NextRequest) {
   if (!sameOrigin(req)) return fail(403, "Requests from other sites are not allowed.");
@@ -45,7 +48,8 @@ export async function POST(req: NextRequest) {
   if (body.data.kind === "items") {
     const r = await limitAll([[`items:sid:${session.sid}`, 30, 3600, "local"]]);
     if (!r.ok) return fail(429, "Too many requests. Try again later.");
-    return ok({ items: pack.publicExercises(session.form), form: session.form, phase: session.phase });
+    const forms = session.both ? [session.form, otherForm(session.form)] : [session.form];
+    return ok({ items: pack.publicExercises(session.form, session.both), form: session.form, forms, phase: session.phase });
   }
 
   const r = await limitAll([
@@ -68,34 +72,48 @@ export async function POST(req: NextRequest) {
   }
 
   const answers = "answers" in body.data ? body.data.answers : [];
-  const form = pack.formItems(session.form);
-  if (answers.length !== form.length) return fail(400, "Bad request.");
-  const items = form.map((q, i) => {
-    const a = answers[i] ?? null;
-    // a choice item takes an index, a number item a typed string: anything else counts as unanswered
-    const chosen = q.kind === "choice" ? (typeof a === "number" ? a : null) : typeof a === "string" && a.trim() ? a.trim() : null;
-    return { id: q.id, kind: q.kind, chosen, answer: q.answer, key: keyText(q), correct: checkExercise(q, chosen), explain: q.explain };
-  });
-  const score = items.filter((x) => x.correct).length;
+  const asked = pack.sessionItems(session.form, session.both);
+  if (answers.length !== asked.length) return fail(400, "Bad request.");
+  // anything that isn't a valid answer to its item counts as unanswered (content/test.ts)
+  const g = gradeTest(pack.exercises, session.form, !!session.both, answers);
+  const items = g.asked.map(({ q, chosen, correct }) => ({ id: q.id, form: q.form, kind: q.kind, chosen, answer: q.answer, key: keyText(q), correct, explain: q.explain }));
   const work = "work" in body.data ? body.data.work : undefined;
   const order = "order" in body.data ? body.data.order : undefined;
   const since = "since" in body.data ? (body.data.since ?? null) : null;
-  const pos = (id: string) => (order && order.length === form.length ? order.indexOf(id) + 1 || null : null);
+  const pos = (id: string) => (order && order.length === asked.length ? order.indexOf(id) + 1 || null : null);
+  const versions = Object.fromEntries(g.forms.map((f) => [f, pack.testVersion(f)]));
   record({
     t: "grade",
     sid: session.sid,
     condition: session.cond,
     pid: session.pid,
     phase: session.phase, // main: the final test; delayed: the follow-up test
-    form: session.form,
+    form: session.form, // the session's form (in a pilot: the one it took first)
+    forms: g.forms, // the forms it took, in order (a pilot: both)
     topic: pack.slug,
     version: pack.testVersion(session.form),
+    versions, // each form's version (an item's answers count for the version of its own form)
     ...(session.phase === "delayed" ? { since } : {}),
-    score,
-    of: items.length,
+    score: g.score, // over the items it answered (an anchor once)
+    of: g.of,
+    formScores: g.perForm, // per form, each complete: an anchor answered once counts in both
+    dontKnow: g.asked.filter((x) => x.chosen === DONT_KNOW).length,
     answers: items.map((x) => x.chosen),
     order: order ?? null,
-    items: items.map((x) => ({ id: x.id, kind: x.kind, pos: pos(x.id), chosen: x.chosen, answer: x.answer, correct: x.correct, work: work?.[x.id] ?? null })),
+    items: g.asked.map(({ q, chosen, correct }) => ({
+      id: q.id,
+      form: q.form,
+      version: versions[q.form],
+      kind: q.kind,
+      pos: pos(q.id),
+      chosen,
+      answer: q.answer,
+      correct,
+      // the reason the item asked for (scored later against its rubric), or the learner's working
+      ...(q.reason ? { reason: work?.[q.id] ?? null } : { work: work?.[q.id] ?? null }),
+    })),
+    // items the session didn't see because it answered their twin (the anchor): they take the twin's answer
+    copies: g.copies.map((c) => ({ id: c.q.id, form: c.q.form, from: c.from, chosen: c.chosen, correct: c.correct })),
   });
   if (session.pid && (session.entry === "participant" || session.entry === "trial")) await markTest(session.pid, session.phase).catch(() => {});
   // the final test is done: now the practice problems' worked solutions can be shown too (not after the delayed test,
@@ -103,10 +121,12 @@ export async function POST(req: NextRequest) {
   const { settings } = await getSettings();
   // a person with a follow-up test (a code that names them, the follow-up switched on, two forms): when it opens
   let followUp: { opensAt: number } | null = null;
-  if (session.phase === "main" && settings.test.followUp && pack.forms.length > 1 && session.pid && (session.entry === "participant" || session.entry === "trial")) {
+  if (session.phase === "main" && !session.both && settings.test.followUp && pack.forms.length > 1 && session.pid && (session.entry === "participant" || session.entry === "trial")) {
     const p = await getParticipant(session.pid).catch(() => null);
     const opens = p ? followUpOpens(p, settings.test.followUpDays) : null;
     if (opens !== null) followUp = { opensAt: opens };
   }
-  return ok({ score, of: items.length, items, followUp, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
+  // per part (a pilot's two forms): what the learner answered in each
+  const parts = g.forms.map((f) => ({ form: f, score: g.asked.filter((x) => x.q.form === f && x.correct).length, of: g.asked.filter((x) => x.q.form === f).length }));
+  return ok({ score: g.score, of: g.of, items, parts, followUp, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
 }

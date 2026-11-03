@@ -238,6 +238,22 @@ button { font: inherit; color: inherit; }
 .qnum b { font-variant-numeric: tabular-nums; padding: 2px 10px; border-radius: 8px; background: var(--sunk); }
 .qnum b.ok { background: var(--green-soft); color: #1f7a4a; }
 .qnum b.no { background: var(--red-soft); color: #b42318; }
+/* the post-test: a question with a table under it, a multi-select, "I don't know", the reason, a part already done */
+.q div.qt { display: flex; flex-direction: column; gap: 12px; }
+.q div.qt p { margin: 0; }
+.qtable-wrap { overflow-x: auto; }
+.qtable { border-collapse: collapse; font-weight: 400; font-size: 15px; font-variant-numeric: tabular-nums; }
+.qtable th, .qtable td { padding: 6px 14px; border-bottom: 1px solid var(--rule); text-align: right; }
+.qtable th[scope="row"], .qtable thead th:first-child { text-align: left; font-weight: 600; }
+.qtable thead th { font-weight: 700; font-size: 13.5px; color: var(--ink-2); }
+.opt.idk { border-style: dashed; }
+.opt.idk .key { background: transparent; border: 1px dashed var(--rule); }
+.opt.ticked .tick-mark { font-weight: 700; white-space: nowrap; }
+.qreason-label { margin: 0 0 6px; font-weight: 600; font-size: 14.5px; }
+.qreason-hint { margin: 6px 0 0; }
+.your-reason { margin: 0; font-style: italic; }
+.quiz-done { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; padding: 12px 16px; border-radius: 12px; background: var(--sunk); font-size: 14.5px; }
+.parts-score { margin: 0; }
 @media (max-width: 640px) {
   .q { grid-template-columns: minmax(0, 1fr); padding: 20px 0 24px; row-gap: 14px; }
   .q::before { width: 26px; height: 26px; }

@@ -2,6 +2,8 @@
 // Shared by `pnpm events export` (CSV files) and the admin dashboard, so both always count the same way.
 // Pure: no file or network access here.
 
+import { seedOf } from "./order";
+
 export type Ev = { t: string; sid: string; at: string; [k: string]: unknown };
 export type Tables = ReturnType<typeof tables>;
 
@@ -43,6 +45,7 @@ export function tables(events: Ev[]) {
   const turns: Record<string, unknown>[] = [];
   const practice: Record<string, unknown>[] = [];
   const test: Record<string, unknown>[] = [];
+  const reasons: Record<string, unknown>[] = [];
   const video: Record<string, unknown>[] = [];
   const feedback: Record<string, unknown>[] = [];
 
@@ -195,6 +198,17 @@ export function tables(events: Ev[]) {
       feedbackRating: [...of("client_feedback")].pop()?.rating ?? null,
       feedback: [...of("client_feedback")].pop()?.text ?? null,
       testOf: grade?.of ?? null,
+      // the pilot's two-form test: the forms in the order taken, each form's score (complete: the anchor counts in
+      // both), "I don't know" answers, reasons written, and minutes on each part
+      testForms: ((grade?.forms as string[] | undefined) ?? (grade ? [String(grade.form ?? "A")] : [])).join(" ") || null,
+      testScoreA: (grade?.formScores as Record<string, { score: number }> | undefined)?.A?.score ?? null,
+      testOfA: (grade?.formScores as Record<string, { of: number }> | undefined)?.A?.of ?? null,
+      testScoreB: (grade?.formScores as Record<string, { score: number }> | undefined)?.B?.score ?? null,
+      testOfB: (grade?.formScores as Record<string, { of: number }> | undefined)?.B?.of ?? null,
+      testDontKnow: grade?.dontKnow ?? null,
+      testReasons: grade ? count((grade.items as { reason?: string | null }[]) ?? [], (it) => !!it.reason?.trim()) : null,
+      minTestPart1: first("client_test_part") ? minutes(tAt.test, ms(first("client_test_part"))) : null,
+      minTestPart2: first("client_test_part") ? minutes(ms(first("client_test_part")), tAt.results) : null,
       tabHidden: of("client_tab_hidden").length,
       tabAwaySec: Math.round(sum(of("client_tab_visible").map((e) => Number(e.awayMs ?? 0))) / 1000),
       llmCalls: llm.length,
@@ -284,8 +298,13 @@ export function tables(events: Ev[]) {
       });
     }
 
-    for (const it of (grade?.items as { id: string; pos?: number | null; chosen: number | string | null; answer: number; correct: boolean; work?: string | null }[]) ?? [])
-      test.push({ sid, phase: grade?.phase ?? "main", form: grade?.form ?? "A", version: grade?.version ?? null, id: it.id, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, work: it.work ?? null });
+    type TestRow = { id: string; form?: string; version?: string; kind?: string; pos?: number | null; chosen: unknown; answer: unknown; correct: boolean; work?: string | null; reason?: string | null };
+    for (const it of (grade?.items as TestRow[]) ?? []) {
+      // ref: the key that joins a reason scored blind (the reasons table) back to its session
+      const ref = refOf(sid, it.id);
+      test.push({ sid, phase: grade?.phase ?? "main", form: it.form ?? grade?.form ?? "A", version: it.version ?? grade?.version ?? null, id: it.id, kind: it.kind ?? null, pos: it.pos ?? null, chosen: it.chosen, answer: it.answer, correct: it.correct, dontKnow: it.chosen === "idk", work: it.work ?? null, reason: it.reason ?? null, ref });
+      if (it.reason?.trim()) reasons.push({ ref, item: it.id, form: it.form ?? grade?.form ?? "A", chosen: letters(it.chosen), reason: it.reason.trim(), score: "" });
+    }
 
     for (const e of of("client_feedback"))
       feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null, testOf: grade?.of ?? null });
@@ -293,8 +312,15 @@ export function tables(events: Ev[]) {
     for (const e of evs.filter((x) => x.t.startsWith("client_video_")))
       video.push({ sid, at: new Date(ms(e)!).toISOString(), event: e.t.replace("client_video_", ""), seg: e.seg ?? null, pos: e.pos ?? null, from: e.from ?? null, to: e.to ?? null, rate: e.rate ?? null, code: e.code ?? null });
   }
-  return { sessions, turns, practice, test, video, feedback };
+  // the reasons, for scoring against the rubrics without seeing who wrote them or in which condition: shuffled by ref
+  reasons.sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+  return { sessions, turns, practice, test, video, feedback, reasons };
 }
+
+/** A short, stable key for one answer (session and item), that tells nothing about the session. */
+const refOf = (sid: string, id: string) => `${seedOf(`${sid}:${id}`).toString(36)}${seedOf(`${id}:${sid}`).toString(36)}`.slice(0, 12);
+/** A test answer as letters: 2 → "C", [1, 3] → "B D", "idk" → "I don't know". */
+const letters = (a: unknown) => (a === "idk" ? "I don't know" : Array.isArray(a) ? a.map((k) => "ABCDEF"[Number(k)] ?? "?").join(" ") : typeof a === "number" ? ("ABCDEF"[a] ?? "?") : a === null || a === undefined ? "" : String(a));
 
 // ---------- the admin dashboard's summary ----------
 

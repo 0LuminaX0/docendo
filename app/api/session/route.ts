@@ -33,7 +33,7 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: 
  */
 async function delayedTest(p: Participant, req: NextRequest, st: { settings: Settings; version: string }): Promise<Response | null> {
   const pack = packFor(p.topic ?? DEFAULT_TOPIC);
-  if (!st.settings.test.followUp || !p.testAt || pack.forms.length < 2) return null;
+  if (!st.settings.test.followUp || !p.testAt || pack.forms.length < 2 || p.both) return null;
   if (p.delayedAt) return fail(409, "You've done both tests. Thank you for taking part!");
   // the schedule (days after the final test), or earlier if the admin panel opened it
   const opens = followUpOpens(p, st.settings.test.followUpDays)!;
@@ -99,8 +99,11 @@ export async function POST(req: NextRequest) {
     // the final test's form: kept from an earlier start of the same person, else balanced within the condition
     // (a pack with one form: always that one)
     const form = pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? (await nextForm(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team")));
-    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug }, st.settings.sessionDays);
+    // the pilot (settings test.both): both forms in the final test, this form first, so the order alternates with the
+    // form within each condition. A person who started before keeps how their test was set up.
+    const both = pack.forms.length > 1 && (known ? known.both === true : st.settings.test.both);
+    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), startedAt: new Date().toISOString() });
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}) }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -108,6 +111,7 @@ export async function POST(req: NextRequest) {
       condition: who.cond,
       phase: "main",
       form, // the final test's form (A or B); the delayed test takes the other
+      testForms: both ? [form, otherForm(form)] : [form], // the pilot: both forms, this one first
       topic: pack.slug, // the topic pack (Settings); the session keeps it
       consent: CONSENT_VERSION,
       settings: st.version, // the study settings this session started under (admin panel, Settings)

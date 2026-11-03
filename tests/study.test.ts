@@ -50,7 +50,7 @@ describe("settings", () => {
     const m = merge(old);
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
     expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5 });
-    expect(m.test).toEqual({ followUp: true, followUpDays: 9 });
+    expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false });
     expect(m.tools).toEqual({ calculator: false, voice: true });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
@@ -137,7 +137,7 @@ describe("checking a topic pack before it ships", () => {
     practice.items[0].needs = ["n99.f9"];
     writeFileSync(join(dir, "practice.json"), JSON.stringify(practice));
     const tests = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
-    tests.items = tests.items.filter((q: { id: string }) => q.id !== "r10");
+    tests.items = tests.items.filter((q: { id: string }) => q.id !== "v10");
     writeFileSync(join(dir, "exercises.json"), JSON.stringify(tests));
     const errors = checkPack("broken", root).filter((i) => i.level === "error").map((i) => `${i.where}: ${i.msg}`);
     expect(errors.some((e) => e.startsWith("copy.json"))).toBe(true);
@@ -160,8 +160,8 @@ describe("the dashboard's score charts", () => {
 describe("the follow-up test", () => {
   it("reads an older test block (0 days meant off) into the switch and the days", () => {
     expect(merge({ test: { followUpDays: 0 } }).test.followUp).toBe(false);
-    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5 });
-    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0 });
+    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5, both: false });
+    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0, both: false });
   });
   it("opens on the schedule, or earlier when the admin panel opened it", async () => {
     const { followUpOpens } = await import("../lib/server/participants");

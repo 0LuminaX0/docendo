@@ -16,6 +16,7 @@ export type Participant = {
   pid: string;
   cond: Condition;
   form: Form; // the final test's form; the delayed test takes the other one
+  both?: boolean; // the final test had both forms (a pilot): no delayed test, nothing unseen is left
   trial?: boolean; // a dry run's code: the delayed test works the same, counted with the tests
   topic?: string; // the topic pack of the first session (older records: the default topic); the delayed test keeps it
   startedAt: string;

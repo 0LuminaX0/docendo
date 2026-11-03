@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/server/admin";
 import { eventStore } from "@/lib/server/events";
-import { hasTopic, keyText, packFor } from "@/lib/server/content";
+import { hasTopic, isKey, keyText, packFor } from "@/lib/server/content";
 import { currentStudy, topicList } from "@/lib/server/study";
 import { viewTables } from "@/lib/server/adminview";
 import AdminShell from "@/components/admin/AdminShell";
@@ -238,19 +238,35 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                     <li key={x.id} id={x.id}>
                       <div className="cnt-item-head">
                         <code>{x.id}</code>
-                        <span className="adm-pill">{x.kind === "number" ? "number" : "choice"}</span>
+                        <span className="adm-pill">{x.kind === "number" ? "number" : x.kind === "multi" ? "select all" : "choice"}</span>
+                        {x.title && <b>{x.title}</b>}
                         {x.pair && <span className="note">twin of {x.pair}</span>}
+                        {x.same && <span className="note">the same as {x.same} (asked once with both forms)</span>}
+                        {x.estimate !== undefined && <span className="note">expected {Math.round(x.estimate * 100)}%</span>}
                         <span className="grow" />
                         <span className="note">
                           {st.n ? `${pct(st.right, st.n)} right of ${st.n}` : "no answers yet"}
                         </span>
                       </div>
                       <p>{x.prompt}</p>
+                      {x.table && (
+                        <p className="note">
+                          {x.table.head.join(" | ")}
+                          {x.table.rows.map((r, k) => (
+                            <span key={k}>
+                              <br />
+                              {r.join(" | ")}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                      {x.question && <p>{x.question}</p>}
                       {x.options ? (
                         <ol className="cnt-opts">
                           {x.options.map((o, i) => (
-                            <li key={i} className={x.answer === i ? "key" : ""}>
+                            <li key={i} className={isKey(x, i) ? "key" : ""}>
                               <span>{LETTERS[i]}</span> {o}
+                              {x.diagnosis?.[i] && x.diagnosis[i] !== "correct" && x.diagnosis[i] !== "true" && <span className="note"> ({x.diagnosis[i]})</span>}
                             </li>
                           ))}
                         </ol>
@@ -258,6 +274,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
                         <p className="cnt-key">Key: {keyText(x)}{x.tolerance !== undefined ? ` (± ${x.tolerance})` : ""}</p>
                       )}
                       <p className="note">{x.explain}</p>
+                      {x.rubric && <p className="note">Rubric for the reason: {x.rubric}</p>}
                     </li>
                   );
                 })}

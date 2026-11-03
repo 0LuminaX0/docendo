@@ -281,10 +281,17 @@ export default function SettingsForm({
                     {k === "exercises" && (
                       <div className="study-fields grid">
                         <Toggle
+                          label="Both forms, one after the other (pilot)"
+                          hint={twoForms ? "Every new session takes both test forms after the lesson, its own form first, so the order alternates within each condition. An item marked the same in both forms (the anchor) is asked once. No follow-up test then." : "Needs a second test form in the topic pack."}
+                          value={s.test.both}
+                          onChange={(v) => twoForms && patch("test", v ? { both: true, followUp: false } : { both: false })}
+                          changed={s.test.both !== defaults.test.both}
+                        />
+                        <Toggle
                           label="Follow-up test"
-                          hint={twoForms ? "The other test form, some days later, for codes that name one person. Who is waiting, and opening it early: Follow-up." : "Needs a second test form in the topic pack."}
+                          hint={!twoForms ? "Needs a second test form in the topic pack." : s.test.both ? "Off while both forms are in the final test: no form is left for it." : "The other test form, some days later, for codes that name one person. Who is waiting, and opening it early: Follow-up."}
                           value={s.test.followUp}
-                          onChange={(v) => twoForms && patch("test", { followUp: v })}
+                          onChange={(v) => twoForms && !s.test.both && patch("test", { followUp: v })}
                           changed={s.test.followUp !== defaults.test.followUp}
                         />
                         {s.test.followUp && (

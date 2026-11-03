@@ -18,14 +18,20 @@ export function packSummary(pack: Pack, s: Settings) {
   const rounds = [...new Set(pack.practice.map((p) => p.round))].sort();
   const forms = pack.forms.map((f) => {
     const items = pack.formItems(f);
-    return { form: f, items: items.length, choice: items.filter((q) => q.kind === "choice").length, number: items.filter((q) => q.kind === "number").length };
+    return { form: f, items: items.length, choice: items.filter((q) => q.kind === "choice").length, multi: items.filter((q) => q.kind === "multi").length, number: items.filter((q) => q.kind === "number").length, reasons: items.filter((q) => q.reason).length };
   });
-  const n = { pretest: pack.pretest.length, test: forms[0]?.items ?? 0 };
+  // what one session answers: one form, or in a pilot both (an anchor once); about a minute a question, more with a
+  // written reason
+  const both = s.test.both && pack.forms.length > 1;
+  const asked = pack.forms.length ? pack.sessionItems(pack.forms[0]!, both) : [];
+  const test = { both, items: asked.length, minutes: Math.round(asked.reduce((a, q) => a + (q.reason ? 1.25 : 1), 0)) };
+  const n = { pretest: pack.pretest.length, test: test.minutes };
   const flow = flowOf(s);
   const minutes = Object.fromEntries(BLOCKS.map((b) => [b.key, minutesOf(b.key, s, { ...n, lesson: pack.lesson?.minutes })])) as Record<StepKey, number>;
   const lessonSec = s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0);
   const coverage = pack.lessonCoverage(s.watch.on ? s.watch.parts : []);
-  const testText = forms.map((f) => `form ${f.form}: ${plural(f.items, "question")} (${f.choice} to choose, ${f.number} to work out)`).join("; ");
+  const kindsOf = (f: (typeof forms)[number]) => [f.choice && `${f.choice} to choose`, f.multi && `${f.multi} select all that apply`, f.number && `${f.number} to work out`, f.reasons && `${f.reasons} with a written reason`].filter(Boolean).join(", ");
+  const testText = forms.map((f) => `form ${f.form}: ${plural(f.items, "question")} (${kindsOf(f)})`).join("; ");
   return {
     slug: pack.slug,
     title: pack.title,
@@ -37,6 +43,7 @@ export function packSummary(pack: Pack, s: Settings) {
     videos: pack.bundle.videos.length,
     practice: { problems: pack.practice.length, rounds: rounds.map((r) => pack.practice.filter((p) => p.round === r).length) },
     forms,
+    test, // what one session answers (the pilot: both forms)
     pretest: { items: pack.pretest.length, knowledge: pack.pretest.filter((q) => q.kind === "knowledge").length },
     survey: pack.survey.length,
     coverage,
@@ -49,7 +56,7 @@ export function packSummary(pack: Pack, s: Settings) {
       watch: s.watch.parts.length ? `${plural(s.watch.parts.length, "part")} from ${plural(new Set(s.watch.parts.map((p) => p.videoId)).size, "video")}, ${mmss(lessonSec)} in all` : "no parts yet",
       teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; usually about ${minutes.teach} min`,
       practice: `${plural(pack.practice.length, "problem")}${rounds.length > 1 ? ` in ${rounds.length} rounds (${rounds.map((r) => pack.practice.filter((p) => p.round === r).length).join(" + ")})` : ""}, ${s.practice.minutes} min`,
-      exercises: `${testText}, about ${minutes.exercises} min`,
+      exercises: `${test.both ? `both forms, one after the other (pilot), ${plural(test.items, "question")} in all; ` : ""}${testText}, about ${minutes.exercises} min`,
       results: `the score, every answer explained${s.practice.on ? ", the practice's worked solutions" : ""}`,
       survey: `${plural(pack.survey.length, "question")} after the test, before the score`,
     } as Record<StepKey | "survey", string>,
@@ -59,7 +66,7 @@ export function packSummary(pack: Pack, s: Settings) {
       ["Kai wraps up", `after ${CONFIG.maxTurns} learner messages (engine/tutor/policy.ts)`],
       ["Practice problems", `${plural(pack.practice.length, "problem")}, the same in both conditions (topics/${pack.slug}/practice.json)`],
       ["Final test", `${testText} (topics/${pack.slug}/exercises.json)`],
-      ["Conditions", `from the access code, balanced in blocks of 4${forms.length > 1 ? "; test forms alternate within each condition" : ""}`],
+      ["Conditions", `from the access code, balanced in blocks of 4${forms.length > 1 ? (both ? "; the test form taken first alternates within each condition" : "; test forms alternate within each condition") : ""}`],
       ["Consent", "the wording on the welcome page, versioned in app/api/session/route.ts"],
     ] as [string, string][],
   };
@@ -80,6 +87,8 @@ export function settingsProblem(s: Settings): string | null {
   if (!hasTopic(s.topic)) return `There is no topic pack "${s.topic}".`;
   const pack = packFor(s.topic);
   if (s.test.followUp && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Switch it off.`;
+  if (s.test.both && pack.forms.length < 2) return `Both test forms in the final test needs two forms, and "${pack.title}" has one. Switch it off.`;
+  if (s.test.both && s.test.followUp) return "With both test forms in the final test, nothing is left for a follow-up test. Switch one of the two off.";
   if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;
   if (s.pretest.on && !pack.pretest.length) return `"${pack.title}" has no pretest: switch that step off.`;
   return null;
