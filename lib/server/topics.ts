@@ -8,6 +8,7 @@ import banditsCoverage from "../../topics/bandits/coverage.json";
 import banditsCopy from "../../topics/bandits/copy.json";
 import banditsIntro from "../../topics/bandits/sources/chunks/mab-intro.json";
 import banditsDml from "../../topics/bandits/sources/chunks/mab-dml.json";
+import banditsLesson from "../../topics/bandits/lesson.json";
 
 // The topic packs this server can run. A pack is everything one topic brings, as the content files in
 // topics/<slug>/ define it: the bundle (pnpm content bundle <slug>: ideas, facts, Kai's questions, videos), the
@@ -27,6 +28,7 @@ export type RawPack = {
   coverage: unknown;
   copy: unknown;
   chunks: Record<string, unknown>; // transcript chunks per video source id
+  lesson?: unknown; // the text lesson (lesson.json): read instead of the videos
 };
 
 export const RAW_PACKS: Record<string, RawPack> = {
@@ -39,6 +41,7 @@ export const RAW_PACKS: Record<string, RawPack> = {
     coverage: banditsCoverage,
     copy: banditsCopy,
     chunks: { "mab-intro": banditsIntro, "mab-dml": banditsDml },
+    lesson: banditsLesson,
   },
 };
 

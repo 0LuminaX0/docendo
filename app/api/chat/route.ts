@@ -8,7 +8,10 @@ import { verifyToken } from "@/lib/server/token";
 import { MESSAGE_MAX, State } from "@/engine/tutor/state";
 import { takeTurn, type Deps } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
-import { factScore, latest } from "@/engine/tutor/state";
+import { factScore, latest, progress } from "@/engine/tutor/state";
+import { CONFIG } from "@/engine/tutor/policy";
+import { mindView } from "@/engine/tutor/mind";
+import { COPIED_RUN } from "@/lib/lesson";
 import type { LlmCall } from "@/engine/llm";
 import { record } from "@/lib/server/events";
 import { getSettings } from "@/lib/server/settings";
@@ -89,11 +92,62 @@ export async function POST(req: NextRequest) {
   const calls: LlmCall[] = [];
   const t0 = Date.now();
   const { message, state: before, elapsedMs } = body.data;
+  // a text lesson: how much of the message comes word for word from it (logged with every turn)
+  const overlap = pack.lessonOverlap ? pack.lessonOverlap(message) : null;
+  if (pack.lesson && overlap && overlap.longest >= COPIED_RUN) {
+    // copied from the text: Kai asks for the learner's own words, judges nothing and writes nothing down; the message
+    // still counts towards Kai's limit of messages
+    const state = { ...before, turn: before.turn + 1 };
+    const reply = pack.lesson.copied;
+    const score = factScore(bundle, state);
+    record({
+      t: "chat_turn",
+      sid: session.sid,
+      demo: config.demo,
+      turn: state.turn,
+      elapsedMs: elapsedMs ?? null,
+      composeMs: body.data.composeMs ?? null,
+      pastedChars: body.data.pastedChars ?? 0,
+      dictatedChars: body.data.dictatedChars ?? 0,
+      overlap,
+      copied: true,
+      message,
+      chars: message.length,
+      words: message.split(/\s+/).filter(Boolean).length,
+      kaiBefore: [...body.data.history].reverse().find((h) => h.role === "kai")?.text ?? null,
+      reply,
+      replyChars: reply.length,
+      drafts: [],
+      mood: "confused",
+      kaiHappy: false,
+      intent: "copied",
+      move: { type: "copied", node: before.focus, fact: null, closure: null, cue: null, seed: null, then: null },
+      focusBefore: before.focus,
+      focusAfter: before.focus,
+      judged: [],
+      misconceptions: [],
+      newCorrect: [],
+      dropped: [],
+      notesDropped: [],
+      leaked: [],
+      fallback: false,
+      progress: Math.min(1, progress(bundle, state) / CONFIG.ready),
+      score: { correct: score.correct, partial: score.partial, total: score.total, value: score.score },
+      done: false,
+      readyReason: null,
+      helpAvailable: false,
+      llm: [],
+      degraded: [],
+      latencyMs: Date.now() - t0,
+    });
+    return ok({ reply, mood: "confused", state, progress: Math.min(1, progress(bundle, state) / CONFIG.ready), mind: mindView(bundle, state), done: false, help: null, helpAvailable: false, demo: config.demo });
+  }
   try {
     const degraded: string[] = [];
     const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls, degraded));
-    // Kai's help card only if its moment lies in the lesson as currently set up (Settings: lesson parts)
-    const help = settings.watch.on ? pack.helpInLesson(result.help, settings.watch.parts) : null;
+    // Kai's help card: with a text lesson, the section about the idea Kai is asking about (its text only once help is
+    // open, after an attempt); with videos, the moment if it lies in the lesson as currently set up (Settings: parts)
+    const help = !settings.watch.on ? null : pack.lesson ? (result.done ? null : pack.passageFor(result.state.focus, result.helpAvailable)) : pack.helpInLesson(result.help, settings.watch.parts);
     const tr = result.trace;
     const old = latest(before);
     const score = factScore(bundle, result.state);
@@ -107,6 +161,7 @@ export async function POST(req: NextRequest) {
       composeMs: body.data.composeMs ?? null,
       pastedChars: body.data.pastedChars ?? 0,
       dictatedChars: body.data.dictatedChars ?? 0,
+      overlap, // a text lesson: the message's longest run of words from the text, and its words in shared runs of 8 or more
       message,
       chars: message.length,
       words: message.split(/\s+/).filter(Boolean).length,

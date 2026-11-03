@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, Lightbulb, Play, Timer } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Lightbulb, Play, Timer } from "lucide-react";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
 import KaiSolve from "./KaiSolve";
+import { Block } from "./lesson/LessonBody";
+import type { Passage } from "@/lib/lesson";
 import { useStudySettings } from "./SettingsContext";
 import Scratchpad from "./Scratchpad";
 import { track } from "@/lib/client/log";
@@ -28,8 +30,9 @@ const KEYS = "ABCDEF";
  * after the final test in both. When the time runs out, the test starts.
  */
 export default function Practice({ items }: { items: Item[] }) {
-  const { practiceMinutes: minutes, practiceTries: tries, flow } = useStudySettings();
-  const video = flow.includes("watch"); // Rewatch only when the study has a lesson to go back to
+  const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind } = useStudySettings();
+  const video = flow.includes("watch"); // Rewatch (or Reread, for a text lesson) only when the study has a lesson to go back to
+  const text = lessonKind === "text";
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "practice");
@@ -39,6 +42,7 @@ export default function Practice({ items }: { items: Item[] }) {
   const [kaiFailed, setKaiFailed] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [watching, setWatching] = useState<{ id: string; moments: Moment[]; k: number } | null>(null);
+  const [reading, setReading] = useState<{ id: string; passages: Required<Passage>[]; k: number } | null>(null);
   const shownAt = useRef<{ id: string; at: number } | null>(null);
 
   // the clock starts on the first visit and keeps running across reloads
@@ -231,13 +235,26 @@ export default function Practice({ items }: { items: Item[] }) {
   async function hint() {
     if (busy) return;
     setBusy(true);
-    const d = await call<{ moments: Moment[] }>({ action: "hint", id: q.id });
+    const d = await call<{ moments: Moment[]; passages?: Required<Passage>[] }>({ action: "hint", id: q.id });
     setBusy(false);
+    if (d?.passages?.length) {
+      track("practice_hint_open", { id: q.id, passages: d.passages.map((p) => p.section) });
+      set(q.id, (x) => ({ ...x, hints: (x.hints ?? 0) + 1 }));
+      setReading({ id: q.id, passages: d.passages, k: 0 });
+      return;
+    }
     if (!d || !d.moments.length) return;
     track("practice_hint_open", { id: q.id, moments: d.moments.map((m) => `${m.video}@${Math.round(m.start)}`) });
     set(q.id, (x) => ({ ...x, hints: (x.hints ?? 0) + 1 }));
     setWatching({ id: q.id, moments: d.moments, k: 0 });
   }
+
+  // help with the problem: the part of the lesson that explains it (no answer), as a video moment or a text passage
+  const rewatch = (
+    <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title={text ? "Read the part of the lesson that explains this (no answer)" : "Replay the part of the lesson that explains this (no answer)"}>
+      {text ? <BookOpen size={13} strokeWidth={2.4} /> : <Play size={13} fill="currentColor" strokeWidth={0} />} {text ? "Reread" : "Rewatch"}
+    </button>
+  );
 
   function next() {
     if (last) return goTest("done");
@@ -351,13 +368,7 @@ export default function Practice({ items }: { items: Item[] }) {
                   Round {q.round}, problem {inRound.indexOf(q) + 1} of {inRound.length}: {q.title}
                 </span>
               }
-              tools={
-                video ? (
-                  <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
-                    <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
-                  </button>
-                ) : null
-              }
+              tools={video ? rewatch : null}
               onReteach={(m) => void reteach(m)}
             />
           </>
@@ -419,11 +430,7 @@ export default function Practice({ items }: { items: Item[] }) {
                   {status}
                 </span>
                 <span className="grow" />
-                {video && (
-                  <button className="btn ghost small" onClick={() => void hint()} disabled={busy} title="Replay the part of the lesson that explains this (no answer)">
-                    <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch
-                  </button>
-                )}
+                {video && rewatch}
               </div>
             </div>
           </section>
@@ -439,6 +446,24 @@ export default function Practice({ items }: { items: Item[] }) {
           {error && <p className="error" role="alert">{error}</p>}
         </div>
       </main>
+      {reading && (
+        <Modal title={reading.passages[reading.k]!.title} onClose={() => (track("practice_hint_close", { id: reading.id }), setReading(null))}>
+          <div className="passage" onCopy={(e) => (e.preventDefault(), track("read_copy_attempt", { kind: "copy", where: "practice" }))} onCut={(e) => e.preventDefault()}>
+            {reading.passages[reading.k]!.blocks.map((b, i) => (
+              <Block key={i} b={b} />
+            ))}
+          </div>
+          {reading.passages.length > 1 && (
+            <div className="row">
+              {reading.passages.map((p, k) => (
+                <button key={k} className={`btn small${k === reading.k ? "" : " ghost"}`} onClick={() => setReading({ ...reading, k })}>
+                  <BookOpen size={12} strokeWidth={2.4} /> {p.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
       {watching && (
         <Modal title={watching.moments[watching.k]!.part || "From the lesson"} onClose={() => (track("practice_hint_close", { id: watching.id }), setWatching(null))}>
           <VideoFrame key={watching.k} videoId={watching.moments[watching.k]!.videoId} title="From the lesson" start={watching.moments[watching.k]!.start} end={watching.moments[watching.k]!.end} autoplay />

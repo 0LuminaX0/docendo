@@ -1,0 +1,131 @@
+{
+  "note": "The text lesson (the team's design, 2 November 2026): every teachable fact once, each with a figure or formula, and none of the consequences the practice and test items ask about. Paragraphs take **bold**. A figure or formula is named by id (components/lesson/). Each section names the ideas it explains (`nodes`), for the help passage that matches Kai's question or a practice problem.",
+  "title": "How greedy, ε-greedy and UCB choose",
+  "minutes": 8,
+  "minSeconds": 240,
+  "remindSeconds": 720,
+  "intro": "Reading this takes about 8 minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",
+  "copied": "That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?",
+  "sections": [
+    {
+      "id": "problem",
+      "title": "1. The problem",
+      "nodes": [
+        "n01",
+        "n03",
+        "n16",
+        "n08"
+      ],
+      "blocks": [
+        {
+          "p": "Every day for a year you have lunch at one of three food trucks on campus. Each truck's lunches vary from day to day around a true average quality, which never changes but which you do not know. This is a **multi-armed bandit**: you choose one of several options again and again, each choice gives a random reward, and you want as much reward as possible in total."
+        },
+        {
+          "p": "Two things make it hard. You only see the reward of the option you chose, so a day at truck A tells you nothing new about B or C. And all you know about a truck is the **average** of the lunches you have had there. An average from two lunches can be far from the truth; an average from fifty is much more reliable."
+        },
+        {
+          "figure": "averages",
+          "caption": "Figure 1. Averages from few and many lunches"
+        },
+        {
+          "p": "So every day you trade off **exploiting**, going where the average looks best, against **exploring**, trying an option to learn more about it. The three rules below make this trade-off in different ways. All three start by trying every option once, so that each option has an average. The option with the highest average so far is called the **favourite**."
+        }
+      ]
+    },
+    {
+      "id": "greedy",
+      "title": "2. Greedy: always the favourite",
+      "nodes": [
+        "n05",
+        "n06"
+      ],
+      "blocks": [
+        {
+          "p": "Greedy picks the favourite in every round:"
+        },
+        {
+          "formula": "greedy"
+        },
+        {
+          "p": "After each round it updates the average of the option it picked. If the favourite's average drops below another option's average, that option becomes the new favourite. Greedy never picks an option just to learn more about it."
+        },
+        {
+          "p": "This leads to **lock-in**. Suppose truck A is truly the best, but its first lunch happens to be poor. A's average starts low, greedy picks other trucks from then on, and A's average is never corrected, because greedy never goes back to find out."
+        },
+        {
+          "figure": "lockin",
+          "caption": "Figure 2. Lock-in under greedy"
+        }
+      ]
+    },
+    {
+      "id": "epsilon",
+      "title": "3. ε-greedy: the favourite, plus a lottery",
+      "nodes": [
+        "n07"
+      ],
+      "blocks": [
+        {
+          "p": "ε-greedy (say \"epsilon-greedy\") adds deliberate randomness. In every round:"
+        },
+        {
+          "formula": "epsilon"
+        },
+        {
+          "p": "Here k is the number of options. ε is a fixed number such as 0.1, so on average one round in ten is a random pick. It stays the same in every round, however long the app has run and however certain its averages are. The random pick is a pure lottery among all options, the favourite included: it ignores the averages and how often each option has been tried."
+        },
+        {
+          "figure": "lottery",
+          "caption": "Figure 3. How ε-greedy decides in each round"
+        }
+      ]
+    },
+    {
+      "id": "ucb",
+      "title": "4. UCB: the average plus a bonus",
+      "nodes": [
+        "n11",
+        "n12"
+      ],
+      "blocks": [
+        {
+          "p": "UCB (\"upper confidence bound\") explores in a targeted way. In every round it gives each option a score and picks the option with the highest score:"
+        },
+        {
+          "formula": "ucb"
+        },
+        {
+          "p": "Here the first term is option i's average, nᵢ is how often it has been picked so far, t is the round number, and c is a setting chosen in advance to match how much the rewards typically vary. The second term is the **bonus**. You will not need to calculate with the formula, but its parts matter."
+        },
+        {
+          "p": "Each pick of an option makes its bonus smaller, because nᵢ grows; picks of other options do not shrink it. As rounds pass, every bonus grows, because ln t grows: without limit, but more and more slowly. The rewards themselves do not enter the bonus, and c multiplies every bonus but not the averages."
+        },
+        {
+          "figure": "bonus",
+          "caption": "Figure 4. What the bonus depends on"
+        },
+        {
+          "p": "An option that has never been picked has an unlimited bonus, which is why UCB tries every option once first. There is no randomness: the same history always gives the same pick."
+        },
+        {
+          "p": "Why a bonus? Think of a confidence interval around each average. With few lunches the interval is wide, because the true average could be well above what you have seen so far. UCB treats each option as if it were as good as it could plausibly be, the upper end of that interval, so options tried only a few times get the benefit of the doubt."
+        },
+        {
+          "figure": "score",
+          "caption": "Figure 5. One UCB round with three options"
+        }
+      ]
+    },
+    {
+      "id": "together",
+      "title": "5. The three rules side by side",
+      "nodes": [],
+      "blocks": [
+        {
+          "p": "All three rules usually pick the favourite. What differs is what makes them pick something else. Greedy never does it on purpose. ε-greedy does it by lottery, in a fixed share of rounds. UCB does it when another option's average plus bonus beats the favourite's, which depends on how often each option has been picked and on the round number."
+        }
+      ]
+    }
+  ],
+  "end": "This is the end of the text. In the next step you will teach these three rules to Kai."
+}

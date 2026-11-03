@@ -22,7 +22,7 @@ export function packSummary(pack: Pack, s: Settings) {
   });
   const n = { pretest: pack.pretest.length, test: forms[0]?.items ?? 0 };
   const flow = flowOf(s);
-  const minutes = Object.fromEntries(BLOCKS.map((b) => [b.key, minutesOf(b.key, s, n)])) as Record<StepKey, number>;
+  const minutes = Object.fromEntries(BLOCKS.map((b) => [b.key, minutesOf(b.key, s, { ...n, lesson: pack.lesson?.minutes })])) as Record<StepKey, number>;
   const lessonSec = s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0);
   const coverage = pack.lessonCoverage(s.watch.on ? s.watch.parts : []);
   const testText = forms.map((f) => `form ${f.form}: ${plural(f.items, "question")} (${f.choice} to choose, ${f.number} to work out)`).join("; ");

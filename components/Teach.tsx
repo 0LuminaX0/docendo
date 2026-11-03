@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowRight, ArrowUp, Brain, Check, FastForward, Lock, MessageCircle, Play } from "lucide-react";
+import { ArrowRight, ArrowUp, BookOpen, Brain, Check, FastForward, Lock, MessageCircle, Play } from "lucide-react";
 import { useDictation } from "./Dictation";
 import { useStudySettings } from "./SettingsContext";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
+import { Block } from "./lesson/LessonBody";
+import type { Passage } from "@/lib/lesson";
 import { useGuard, useNext } from "./useGuard";
 import { currentStep, pathOf } from "@/lib/flow";
 import { post, save, useSaved, type Help, type Mood, type Saved } from "@/lib/client/store";
@@ -34,6 +36,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ msg: string; retry: string | null } | null>(null);
   const [video, setVideo] = useState<{ v: Video; start: number } | null>(null);
+  const [passage, setPassage] = useState<Passage | null>(null); // a text lesson's passage, shown again as help
+  const [pasteOff, setPasteOff] = useState(false); // a text lesson: pasting into the chat is off (explain it in your own words)
   const [confirmSkip, setConfirmSkip] = useState(false);
   const [view, setView] = useState<"chat" | "mind">("chat");
   const [now, setNow] = useState(() => Date.now());
@@ -164,6 +168,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   }
 
   function openHelp(h: Help, log = true) {
+    if ("section" in h) {
+      // a text lesson: the section about Kai's question, as text that can't be selected
+      if (!h.blocks) return;
+      setPassage(h);
+      track("help_open", { section: h.section, focus: chat.state?.focus ?? null, fromLog: !log });
+      if (log) update((s) => ({ ...s, chat: { ...s.chat, turns: [...s.chat.turns, { role: "learner", text: "", help: { section: h.section, title: h.title } }] } }));
+      return;
+    }
     const v = videos.find((x) => x.id === h.video);
     if (!v) return;
     setVideo({ v, start: h.start });
@@ -233,16 +245,22 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
         <main className="teach">
           <div className="log" aria-live="polite">
             {turns.map((t, k) =>
-              t.help ? (
+              t.help && "section" in t.help ? (
+                <p key={k} className="note src-read">
+                  <BookOpen size={14} aria-hidden="true" /> You reread “{t.help.title}”.
+                </p>
+              ) : t.help ? (
                 (() => {
-                  const v = videos.find((x) => x.part === t.help!.part);
+                  if (!("part" in t.help!)) return null;
+                  const h = t.help;
+                  const v = videos.find((x) => x.part === h.part);
                   return (
-                    <button key={k} className="src" onClick={() => v && openHelp({ video: v.id, start: t.help!.start, end: t.help!.start }, false)} title="Watch this moment again">
-                      {v && <VideoThumb videoId={v.videoId} start={t.help.start} duration={v.durationSec} width={112} label={mmss(t.help.start)} />}
+                    <button key={k} className="src" onClick={() => v && openHelp({ video: v.id, start: h.start, end: h.start }, false)} title="Watch this moment again">
+                      {v && <VideoThumb videoId={v.videoId} start={h.start} duration={v.durationSec} width={112} label={mmss(h.start)} />}
                       <span className="meta-t">
-                        <small>You opened part {t.help.part}{v ? `: ${videoName(v.title)}` : ""}</small>
+                        <small>You opened part {h.part}{v ? `: ${videoName(v.title)}` : ""}</small>
                         <b>
-                          <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch from <em>{mmss(t.help.start)}</em>
+                          <Play size={13} fill="currentColor" strokeWidth={0} /> Rewatch from <em>{mmss(h.start)}</em>
                         </b>
                       </span>
                     </button>
@@ -335,6 +353,13 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                   }}
                   onPaste={(e) => {
                     const n = e.clipboardData.getData("text").length;
+                    // with a text lesson, Kai learns from the learner's own words: no pasting (the attempt is logged)
+                    if (study.lessonKind === "text") {
+                      e.preventDefault();
+                      setPasteOff(true);
+                      track("paste_blocked", { chars: n });
+                      return;
+                    }
                     compose.current.pasted += n;
                     track("paste", { chars: n });
                   }}
@@ -356,13 +381,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
                       className="help"
                       disabled={!chat.helpAvailable || busy}
                       onClick={() => chat.help && openHelp(chat.help)}
-                      title={chat.helpAvailable ? "Watch the part of the lesson that covers this" : "Opens once you've had a go at answering"}
+                      title={chat.helpAvailable ? ("section" in chat.help ? "Read the part of the lesson that covers this" : "Watch the part of the lesson that covers this") : "Opens once you've had a go at answering"}
                     >
-                      {chat.helpAvailable ? <Play size={13} fill="currentColor" strokeWidth={0} /> : <Lock size={13} strokeWidth={2.4} />}
-                      {chat.helpAvailable ? `Rewatch ${mmss(chat.help.start)}` : "Where is this covered?"}
+                      {!chat.helpAvailable ? <Lock size={13} strokeWidth={2.4} /> : "section" in chat.help ? <BookOpen size={13} strokeWidth={2.4} /> : <Play size={13} fill="currentColor" strokeWidth={0} />}
+                      {!chat.helpAvailable ? "Where is this covered?" : "section" in chat.help ? "Reread this part" : `Rewatch ${mmss(chat.help.start)}`}
                     </button>
                   )}
                   <span className="grow" />
+                  {pasteOff && <span className="hint">Pasting is off: say it in your own words.</span>}
                   {text.length > MAX - 150 && <span className="hint">{MAX - text.length} left</span>}
                   {dict.button}
                   <button className="send" type="submit" disabled={busy || dict.active || !text.trim()} aria-label="Send" title="Send (Enter)">
@@ -393,6 +419,15 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
       {video && (
         <Modal title={`${video.v.title.replace(/^[^:]{2,30}:\s+/, "")} at ${mmss(video.start)}`} onClose={() => setVideo(null)}>
           <VideoFrame videoId={video.v.videoId} title={video.v.title} start={video.start} autoplay />
+        </Modal>
+      )}
+      {passage?.blocks && (
+        <Modal title={passage.title} onClose={() => (track("help_close", { section: passage.section }), setPassage(null))}>
+          <div className="passage" onCopy={(e) => (e.preventDefault(), track("read_copy_attempt", { kind: "copy", where: "help" }))} onCut={(e) => e.preventDefault()}>
+            {passage.blocks.map((b, i) => (
+              <Block key={i} b={b} />
+            ))}
+          </div>
         </Modal>
       )}
     </div>

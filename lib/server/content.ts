@@ -5,6 +5,8 @@ import { PracticeFile, checkNumber, checkPractice } from "../../content/practice
 import { BOX_H, BOX_W, layout, routePath } from "../../content/layout";
 import { DEFAULT_TOPIC, RAW_PACKS } from "./topics";
 import { makeMoments } from "./moments";
+import { LessonFile } from "../../content/pack";
+import { lessonWords, makeOverlap, type Passage } from "../lesson";
 import { TopicCopy } from "../settings";
 import { ExercisesFile, PretestFile, SurveyFile, type Exercise } from "../../content/pack";
 export type { Exercise };
@@ -35,6 +37,7 @@ function build(slug: string) {
   const practiceFile = PracticeFile.parse(raw.practice);
   const practice = practiceFile.items;
   const survey = SurveyFile.parse(raw.survey).items;
+  const lesson = raw.lesson ? LessonFile.parse(raw.lesson) : null;
   const copy = TopicCopy.parse(raw.copy);
   const formItems = (form: Form) => exercises.filter((q) => q.form === form);
   const forms = FORMS.filter((f) => formItems(f).length > 0);
@@ -75,6 +78,21 @@ function build(slug: string) {
       steps: p.steps.map((s) => s.text),
     })),
     survey,
+    /** The text lesson, read instead of the videos (lesson.json), or null. */
+    lesson,
+    /** How much of a learner's message comes word for word from the text lesson (null without one). */
+    lessonOverlap: lesson ? makeOverlap(lessonWords(lesson)) : null,
+    /** The lesson's section about an idea (Kai's focus): its title, and its text once help is open. Null without a text lesson. */
+    passageFor: (node: string | null | undefined, open: boolean): Passage | null => {
+      const s = lesson && node ? lesson.sections.find((x) => x.nodes.includes(node)) : null;
+      return s ? { section: s.id, title: s.title, ...(open ? { blocks: s.blocks } : {}) } : null;
+    },
+    /** The sections that explain these facts' ideas, in lesson order (a practice problem's help), at most `max`. */
+    passagesFor: (facts: string[], max = 2): Required<Passage>[] => {
+      if (!lesson) return [];
+      const ideas = new Set(facts.map((f) => f.split(".")[0]!));
+      return lesson.sections.filter((s) => s.nodes.some((n) => ideas.has(n))).slice(0, max).map((s) => ({ section: s.id, title: s.title, blocks: s.blocks }));
+    },
     /** Video list for the watch page and the help card. */
     videos: bundle.videos.map((v, i) => ({ ...v, part: i + 1 })),
     /** The lesson graph's shape for Kai's mind (positions, labels, prerequisites; no fact text), laid out once. */

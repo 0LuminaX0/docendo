@@ -91,8 +91,9 @@ export type PublicSettings = {
   voice: boolean;
   survey: SurveyItem[] | null; // null: no questions after the test
   copy: TopicCopy & { studyLine: string };
+  lessonKind: "video" | "text"; // the lesson step: the videos, or the pack's text lesson (lesson.json)
 };
-export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyItem[] }): PublicSettings => ({
+export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyItem[]; lesson?: unknown }): PublicSettings => ({
   flow: flowOf(s),
   practiceMinutes: s.practice.minutes,
   practiceTries: s.practice.tries,
@@ -102,4 +103,5 @@ export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyIte
   voice: s.tools.voice,
   survey: s.survey.on && pack.survey.length ? pack.survey : null,
   copy: { ...pack.copy, studyLine: s.studyLine },
+  lessonKind: pack.lesson ? "text" : "video",
 });

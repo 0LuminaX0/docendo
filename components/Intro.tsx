@@ -2,17 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
 import { Header, KaiFace } from "./ui";
 import { newSession, post, save, useSaved } from "@/lib/client/store";
 import { useStudySettings } from "./SettingsContext";
 import { count } from "@/lib/words";
-import { barsOf, blockOf, currentStep, firstStep, pathOf } from "@/lib/flow";
+import { barsOf, currentStep, firstStep, pathOf, stepName } from "@/lib/flow";
 
 const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: ListChecks } as const;
 
 const CONSENT =
-  "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
+  "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, reading time and video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
 
 type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed" };
 
@@ -32,7 +32,7 @@ export default function Intro({
   followUpOn: boolean; // the study has a follow-up test (Study setup)
 }) {
   const router = useRouter();
-  const { flow, copy } = useStudySettings();
+  const { flow, copy, lessonKind } = useStudySettings();
   const bars = barsOf(flow);
   const [saved] = useSaved();
   const [code, setCode] = useState("");
@@ -87,7 +87,7 @@ export default function Intro({
           {copy.studyLine && <span className="eyebrow">{copy.studyLine}</span>}
           <h1 className="title">{copy.headline}</h1>
           <p className="lede">
-            {flow.includes("watch") ? "You'll watch a short lesson, then explain it to Kai, a classmate who missed the lecture." : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
+            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
             {pretestItems ? `, starting with ${count(pretestItems, "quick question")}` : ""}.
           </p>
         </div>
@@ -109,10 +109,10 @@ export default function Intro({
             return (
               <li key={k} className={`card-${k}`}>
                 <div className="step-top">
-                  <span className="ico">{k === "watch" ? <Play size={19} fill="currentColor" strokeWidth={0} /> : <Icon size={19} strokeWidth={2.2} />}</span>
+                  <span className="ico">{k === "watch" ? lessonKind === "text" ? <BookOpen size={19} strokeWidth={2.2} /> : <Play size={19} fill="currentColor" strokeWidth={0} /> : <Icon size={19} strokeWidth={2.2} />}</span>
                   <div>
                     <span className="eyebrow">Step {i + 1}</span>
-                    <h3>{blockOf(k).name}</h3>
+                    <h3>{stepName(k, lessonKind)}</h3>
                   </div>
                 </div>
                 <p>{cards[k as keyof typeof cards]}</p>

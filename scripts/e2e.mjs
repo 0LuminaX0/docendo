@@ -116,14 +116,25 @@ async function start(page, welcomeShot = null) {
   await page.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
   await page.click(".submitbar .btn.primary");
   await page.waitForFunction(() => location.pathname === "/watch");
-  await page.waitForSelector(".frame iframe", { timeout: 15000 }); // YouTube's player (or the plain fallback)
+  await page.waitForSelector(".lesson, .frame iframe", { timeout: 15000 }); // the text lesson, or YouTube's player (or the plain fallback)
 }
 
-/** Leave the watch page without watching: the button asks to confirm first. */
+/** Leave the lesson step: a text lesson after its minimum reading time (moved into the past here), the videos without
+ * watching (the button asks to confirm first). */
 async function leaveWatch(p) {
-  await p.click(".aside .btn.primary");
-  await p.waitForSelector(".aside .btn.primary.small");
-  await p.click(".aside .btn.primary.small");
+  if (await p.$(".lesson")) {
+    await p.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 30 * 60_000 }));
+    });
+    await p.reload({ waitUntil: "load" });
+    await p.waitForSelector(".lesson-bar .btn.primary:not([disabled])");
+    await p.click(".lesson-bar .btn.primary");
+  } else {
+    await p.click(".aside .btn.primary");
+    await p.waitForSelector(".aside .btn.primary.small");
+    await p.click(".aside .btn.primary.small");
+  }
   await p.waitForFunction(() => location.pathname === "/teach");
 }
 
@@ -132,9 +143,22 @@ const page = await newPage();
 await start(page, "00-welcome");
 const imagesLoaded = (p) => p.waitForFunction(() => [...document.images].every((i) => i.complete && i.naturalWidth > 0), { timeout: 10000 }).catch(() => {});
 await imagesLoaded(page);
-await wait(2500); // let the YouTube player paint
-check((await page.$$(".lb-part")).length === (bundle.segments?.length || bundle.videos.length), "the lesson plays as one video with a part per segment");
-await shot(page, "01-watch");
+const textLesson = !!(await page.$(".lesson"));
+if (textLesson) {
+  const lessonFile = JSON.parse(readFileSync(join(TOPIC, "lesson.json"), "utf8"));
+  const shape = await page.evaluate(() => ({
+    sections: document.querySelectorAll(".lesson-section").length,
+    formulas: document.querySelectorAll(".lesson-formula math").length,
+    figures: document.querySelectorAll(".lesson-fig svg").length,
+    select: getComputedStyle(document.querySelector(".lesson")).userSelect,
+    waits: document.querySelector(".lesson-bar .btn.primary").disabled,
+  }));
+  check(shape.sections === lessonFile.sections.length && shape.formulas === 3 && shape.figures === 5 && shape.select === "none" && shape.waits, `the lesson is a text (${shape.sections} sections, ${shape.formulas} formulas, ${shape.figures} figures) that can't be selected, and Continue waits for the reading time`);
+} else {
+  await wait(2500); // let the YouTube player paint
+  check((await page.$$(".lb-part")).length === (bundle.segments?.length || bundle.videos.length), "the lesson plays as one video with a part per segment");
+}
+await shot(page, "01-watch", textLesson);
 await leaveWatch(page);
 await page.waitForSelector(".bubble");
 check(!!(await page.$(".skip")), "“I've taught all I can” is there from the first message");
@@ -177,7 +201,7 @@ while (turns < 32) {
   }
   if (turns === 2 && (await page.$(".help:not([disabled])"))) {
     await page.click(".help");
-    await page.waitForSelector(".modal iframe");
+    await page.waitForSelector(".modal iframe, .modal .passage");
     await wait(800);
     await shot(page, "05-help");
     await page.click(".modal header .iconbtn");
@@ -236,7 +260,7 @@ await pick((p2.answer + 1) % p2.options.length);
 await checkWhenReady();
 await page.waitForFunction(() => /One more try/.test(document.querySelector(".pq .bulb.off")?.textContent ?? ""));
 await page.$eval(".pq .pact .btn.ghost", (e) => e.click());
-await page.waitForSelector(".modal iframe");
+await page.waitForSelector(".modal iframe, .modal .passage");
 await shot(page, "07c-practice-rewatch");
 await page.click(".modal header .iconbtn");
 await page.waitForSelector(".scrim", { hidden: true });
@@ -602,7 +626,7 @@ if (existsSync(logFile)) {
   const since = runStarted.toISOString();
   const evs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.at >= since);
   const has = (t) => evs.some((e) => e.t === t);
-  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", "client_watch_continue_early", "client_skip_confirm", "client_survey"];
+  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", textLesson ? "client_read_continue" : "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);

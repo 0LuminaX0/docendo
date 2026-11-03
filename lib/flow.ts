@@ -25,6 +25,8 @@ export const BLOCKS: Block[] = [
 const ORDER = BLOCKS.map((b) => b.key);
 
 export const blockOf = (key: StepKey) => BLOCKS.find((b) => b.key === key)!;
+/** A step's name as participants see it: the lesson step is "Read" when the lesson is a text. */
+export const stepName = (key: StepKey, lessonKind?: "video" | "text") => (key === "watch" && lessonKind === "text" ? "Read" : blockOf(key).name);
 export const pathOf = (key: StepKey) => blockOf(key).path;
 
 /** The steps a study runs, in order. */
@@ -53,12 +55,13 @@ export const barsOf = (flow: StepKey[]) => flow.filter((k) => blockOf(k).bar);
 
 /** Rough minutes per step, for the welcome page and the admin panel (teaching: Kai feels ready after 8 to 12 minutes
  * for most learners). */
-export function minutesOf(key: StepKey, s: { practice: { minutes: number }; watch: { parts: { start: number; end: number }[] } }, n: { pretest: number; test: number }): number {
+export function minutesOf(key: StepKey, s: { practice: { minutes: number }; watch: { parts: { start: number; end: number }[] } }, n: { pretest: number; test: number; lesson?: number }): number {
   switch (key) {
     case "pretest":
       return Math.max(1, Math.round(n.pretest * 0.4));
     case "watch":
-      return Math.round(s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0) / 60);
+      // a text lesson: its reading time; the videos: their parts' length
+      return n.lesson ?? Math.round(s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0) / 60);
     case "teach":
       return 10;
     case "practice":

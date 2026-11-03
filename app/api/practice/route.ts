@@ -154,8 +154,10 @@ export async function POST(req: NextRequest) {
     });
     return ok({ correct });
   }
-  // the help: the lesson moments that explain the facts this problem needs, no answer
-  const moments = settings.watch.on ? pack.momentsFor([...new Set(item.steps.flatMap((s) => s.facts))], settings.watch.parts) : [];
-  record({ t: "practice_hint", sid: session.sid, id: item.id, moments: moments.map((m) => `${m.video}@${Math.round(m.start)}`) });
-  return ok({ moments });
+  // the help: the lesson moments (or, with a text lesson, the sections) that explain the facts this problem needs, no answer
+  const facts = [...new Set(item.steps.flatMap((s) => s.facts))];
+  const passages = settings.watch.on && pack.lesson ? pack.passagesFor(facts) : [];
+  const moments = settings.watch.on && !pack.lesson ? pack.momentsFor(facts, settings.watch.parts) : [];
+  record({ t: "practice_hint", sid: session.sid, id: item.id, moments: moments.map((m) => `${m.video}@${Math.round(m.start)}`), passages: passages.map((p) => p.section) });
+  return ok({ moments, passages });
 }

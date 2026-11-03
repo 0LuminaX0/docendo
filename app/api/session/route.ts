@@ -23,7 +23,7 @@ const Body = z.object({
   followUp: z.string().max(400).optional(), // a finished session's token on the same device: start its delayed test
 });
 // the wording the learner agreed to is in components/Intro.tsx (CONSENT); change this date when it changes
-const CONSENT_VERSION = "2026-10-15";
+const CONSENT_VERSION = "2026-11-02"; // the note now names reading time (the text lesson)
 
 const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Zurich" });
 

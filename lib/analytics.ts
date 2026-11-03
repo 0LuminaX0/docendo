@@ -112,6 +112,18 @@ export function tables(events: Ev[]) {
       meanWords: mean(chat.map((c) => Number(c.words))),
       meanComposeSec: mean(chat.filter((c) => c.composeMs != null).map((c) => Number(c.composeMs) / 1000)),
       pastes: of("client_paste").length,
+      pastesBlocked: of("client_paste_blocked").length, // a text lesson: pasting into the chat is off
+      // a text lesson: time on the reading page, how far down it the learner got, copy attempts, messages Kai answered
+      // as copied, and the share of the learner's words in runs of 8 or more taken from the text
+      readSec: first("client_read_continue")?.readSec ?? null,
+      readReachedPct: first("client_read_continue")?.reachedPct ?? null,
+      readCopyAttempts: of("client_read_copy_attempt").length,
+      copiedMessages: chat.filter((c) => c.copied === true).length,
+      lessonOverlapShare: (() => {
+        const ov = chat.map((c) => c.overlap as { words: number; inRuns: number } | null | undefined).filter((o): o is { words: number; inRuns: number } => !!o);
+        const words = sum(ov.map((o) => o.words));
+        return words ? Math.round((sum(ov.map((o) => o.inRuns)) / words) * 1000) / 1000 : null;
+      })(),
       pastedChars: sum(chat.map((c) => Number(c.pastedChars ?? 0))),
       dictatedChars: sum(chat.map((c) => Number(c.dictatedChars ?? 0))),
       voiceSec: Math.round(sum(of("voice").map((e) => Number(e.sec ?? 0)))),
@@ -204,6 +216,11 @@ export function tables(events: Ev[]) {
         words: c.words,
         pastedChars: c.pastedChars,
         dictatedChars: c.dictatedChars ?? 0,
+        // a text lesson: the longest run of words from the text, the message's words in shared runs of 8 or more, and
+        // whether Kai answered it as copied (nothing judged)
+        lessonRun: (c.overlap as { longest?: number } | null | undefined)?.longest ?? null,
+        lessonWordsInRuns: (c.overlap as { inRuns?: number } | null | undefined)?.inRuns ?? null,
+        copied: c.copied === true,
         intent: c.intent,
         judged: ((c.judged as { fact: string; verdict: string }[]) ?? []).map((v) => `${v.fact}:${v.verdict}`).join(" "),
         newCorrect: ((c.newCorrect as string[]) ?? []).join(" "),
