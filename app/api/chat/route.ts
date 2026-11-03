@@ -7,6 +7,7 @@ import { limitAll } from "@/lib/server/limit";
 import { verifyToken } from "@/lib/server/token";
 import { MESSAGE_MAX, State } from "@/engine/tutor/state";
 import { takeTurn, type Deps } from "@/engine/tutor/turn";
+import { takeScriptTurn } from "@/engine/tutor/script";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
 import { factScore, latest, progress } from "@/engine/tutor/state";
 import { CONFIG } from "@/engine/tutor/policy";
@@ -144,7 +145,10 @@ export async function POST(req: NextRequest) {
   }
   try {
     const degraded: string[] = [];
-    const result = await takeTurn(bundle, { message, history: body.data.history.slice(-20), state: before, elapsedMs }, depsFor(calls, degraded));
+    const input = { message, history: body.data.history.slice(-20), state: before, elapsedMs };
+    // Kai's fixed questions when the pack has them (and the session started with them); otherwise Kai chooses its own
+    const result = pack.script && before.script ? await takeScriptTurn(bundle, pack.script, input, depsFor(calls, degraded)) : await takeTurn(bundle, input, depsFor(calls, degraded));
+    const scripted = "script" in result.trace ? (result.trace as { script: { asked: string; next: string | null; sayMore: boolean } }).script : null;
     // Kai's help card: with a text lesson, the section about the idea Kai is asking about (its text only once help is
     // open, after an attempt); with videos, the moment if it lies in the lesson as currently set up (Settings: parts)
     const help = !settings.watch.on ? null : pack.lesson ? (result.done ? null : pack.passageFor(result.state.focus, result.helpAvailable)) : pack.helpInLesson(result.help, settings.watch.parts);
@@ -173,6 +177,7 @@ export async function POST(req: NextRequest) {
       kaiHappy: result.mood === "great" || result.mood === "okay",
       intent: tr.intent,
       move: { type: tr.move.type, node: tr.move.node, fact: tr.move.fact ?? null, closure: tr.move.closure ?? null, cue: tr.move.cue ?? null, seed: tr.move.seed, then: tr.move.then ? { type: tr.move.then.type, node: tr.move.then.node, fact: tr.move.then.fact ?? null } : null },
+      script: scripted, // fixed questions: the one answered, the next one (null: Kai wrapped up), and whether Kai asked to say more
       focusBefore: before.focus,
       focusAfter: result.state.focus,
       judged: tr.judged,

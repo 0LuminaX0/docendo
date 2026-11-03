@@ -61,6 +61,9 @@ export const State = z.object({
   usedTerms: z.array(z.string().max(60)).max(300), // lesson terms the learner has used
   last: z.object({ type: MoveType, node: z.string().max(12).nullable(), fact: z.string().max(12).nullable().default(null) }).nullable(),
   done: z.boolean(),
+  // Kai's fixed questions (script.json): the one it is on, whether it already asked to say more about it, and how
+  // often it re-asked it after a reply that wasn't an answer. Absent when Kai chooses its questions itself.
+  script: z.object({ at: z.number().int().min(0).max(100), more: z.boolean(), again: z.number().int().min(0).max(10) }).optional(),
 });
 export type State = z.infer<typeof State>;
 

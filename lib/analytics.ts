@@ -232,6 +232,9 @@ export function tables(events: Ev[]) {
         fact: mv?.fact,
         closure: mv?.closure,
         cue: mv?.cue,
+        // Kai's fixed questions (script.json): the question this message answered, and whether Kai asked to say more
+        scriptQuestion: (c.script as { asked?: string } | null | undefined)?.asked ?? null,
+        sayMore: (c.script as { sayMore?: boolean } | null | undefined)?.sayMore ?? null,
         leaked: ((c.leaked as string[]) ?? []).join(" "),
         // Kai's notes (notes.ts): how many verdicts got Kai's words around the learner's, and how many it refused
         notesWithAdded: [...((c.judged as { note?: string | null }[]) ?? []), ...((c.misconceptions as { note?: string | null }[]) ?? [])].filter((v) => v.note).length,

@@ -43,7 +43,8 @@ const STATE = { correct: "answered", partial: "partly", wrong: "wrong" } as cons
 export function mindView(bundle: Bundle, state: State): Mind {
   const facts = latest(state);
   const s = factScore(bundle, state);
-  const done = state.done || isReady(bundle, state);
+  // with fixed questions (state.script) Kai is ready when they end, not at a share of the facts
+  const done = state.done || (!state.script && isReady(bundle, state));
   const nodes = bundle.nodes.map((n): MindNode => {
     const need = teachableRequired(n);
     const st = nodeStatus(n, state, facts);
