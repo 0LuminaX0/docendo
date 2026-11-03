@@ -22,6 +22,7 @@ export default function Intro({
   cards,
   totalMinutes,
   pretestItems,
+  pretestMinutes,
   followUpOn,
 }: {
   accessRequired: boolean;
@@ -29,6 +30,7 @@ export default function Intro({
   cards: Record<"watch" | "teach" | "practice" | "exercises", string>; // what each step's card says (app/page.tsx)
   totalMinutes: number;
   pretestItems: number; // questions before the first step (0: none)
+  pretestMinutes: number; // their time limit
   followUpOn: boolean; // the study has a follow-up test (Study setup)
 }) {
   const router = useRouter();
@@ -87,8 +89,8 @@ export default function Intro({
           {copy.studyLine && <span className="eyebrow">{copy.studyLine}</span>}
           <h1 className="title">{copy.headline}</h1>
           <p className="lede">
-            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
-            {pretestItems ? `, starting with ${count(pretestItems, "quick question")}` : ""}.
+            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. At most {totalMinutes} minutes in all
+            {pretestItems ? `, starting with ${count(pretestItems, "quick question")} (${pretestMinutes} minutes)` : ""}. Each part has its own time limit, shown as a clock at the top of the page: when it runs out, that part ends and what you&apos;ve done so far is kept.
           </p>
         </div>
 

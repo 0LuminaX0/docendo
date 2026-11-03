@@ -22,11 +22,12 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 | Admin | `/admin` with a sidebar: a dashboard of charts (balance, funnel, scores and a preliminary comparison, pretest against test, survey and manipulation check, data quality), sessions with detail, access codes, feedback, Settings (versioned, logged per session), CSV/JSONL export |
 | Survey | Six questions after the test, before the score (effort, responsibility, judged understanding, practice, enjoyment, manipulation check); optional |
 | Research log | Every turn, try, click, video and calculator event; notebook snapshots; `pnpm events export` |
-| Checks | 182 unit tests, `pnpm e2e` (46 browser checks, incl. consent, the chapter reader, the survey, a second tab, settings, the follow-up test, the pilot's two forms, the admin panel and phone layouts), live evals 2026-11-03: `pnpm eval:judge` (48/54 facts, no false credit, all intents and misconceptions), `pnpm eval:solver` (199/200 as predicted), `pnpm eval:teach` (41 reactions, no invented ideas) |
+| Checks | 183 unit tests, `pnpm e2e` (47 browser checks, incl. consent, every step's time limit, the chapter reader, the survey, a second tab, settings, the follow-up test, the pilot's two forms, the admin panel and phone layouts), live evals 2026-11-03: `pnpm eval:judge` (48/54 facts, no false credit, all intents and misconceptions), `pnpm eval:solver` (199/200 as predicted), `pnpm eval:teach` (41 reactions, no invented ideas) |
 
 ## Next, in order
 
-00. **Before the pilot (2026-11-03):** on Study setup switch Kai's mind off (`teach.mind`), keep help from the lesson off (`tools.help`) and Kai's fixed questions on (`teach.fixed`); run one session per condition end to end on the deployed app.
+00. **Timing (2026-11-03):** every step has a hard limit with a clock (pretest 5, read 10, teach 10, practice 10, test 10 per form: 20 in the pilot), and ends itself when it runs out; the limits are on Study setup.
+000. **Before the pilot (2026-11-03):** on Study setup switch Kai's mind off (`teach.mind`), keep help from the lesson off (`tools.help`) and Kai's fixed questions on (`teach.fixed`); run one session per condition end to end on the deployed app.
 
 0. **Settings mid-study.** A session records the settings version it started under, but a change applies to sessions already running (within seconds). Change settings between participants, not during a lab slot; the dashboard's per-version session counts make any mix visible.
 

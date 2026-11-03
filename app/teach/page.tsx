@@ -13,5 +13,5 @@ export default async function Page() {
   const script = settings.teach.fixed ? pack.script : undefined;
   const state = script ? initialScriptState(bundle, script) : initialState(bundle);
   const first = script ? scriptOpening(script) : opening(bundle, state);
-  return <Teach opening={first} initial={state} initialMind={mindView(bundle, state)} videos={pack.videos} graph={pack.graphView} />;
+  return <Teach opening={first} initial={state} initialMind={mindView(bundle, state)} videos={pack.videos} graph={pack.graphView} questions={script?.questions.length ?? 0} />;
 }

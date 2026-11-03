@@ -53,21 +53,23 @@ export const reached = (flow: StepKey[], step: StepKey, here: StepKey) => flow.i
 /** The coloured bars in the header: the main steps the study runs. */
 export const barsOf = (flow: StepKey[]) => flow.filter((k) => blockOf(k).bar);
 
-/** Rough minutes per step, for the welcome page and the admin panel (teaching: Kai feels ready after 8 to 12 minutes
- * for most learners). */
-export function minutesOf(key: StepKey, s: { practice: { minutes: number }; watch: { parts: { start: number; end: number }[] } }, n: { pretest: number; test: number; lesson?: number }): number {
+/** Minutes per step: the time limit of each (the welcome page, the admin panel). The test: per form taken (`forms`). */
+export function minutesOf(
+  key: StepKey,
+  s: { pretest: { minutes: number }; watch: { minutes: number }; teach: { minutes: number }; practice: { minutes: number }; test: { minutes: number } },
+  n: { forms: number },
+): number {
   switch (key) {
     case "pretest":
-      return Math.max(1, Math.round(n.pretest * 0.4));
+      return s.pretest.minutes;
     case "watch":
-      // a text lesson: its reading time; the videos: their parts' length
-      return n.lesson ?? Math.round(s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0) / 60);
+      return s.watch.minutes;
     case "teach":
-      return 10;
+      return s.teach.minutes;
     case "practice":
       return s.practice.minutes;
     case "exercises":
-      return n.test;
+      return s.test.minutes * Math.max(1, n.forms);
     case "results":
       return 3;
   }

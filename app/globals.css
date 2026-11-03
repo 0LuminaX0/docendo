@@ -77,6 +77,9 @@ button { font: inherit; color: inherit; }
   .top.has-tools .top-right { grid-column: 2; gap: 8px; }
   .top.has-tools .count { display: none; }
   .top.has-tools .demo { font-size: 0; gap: 0; padding: 6px; }
+  /* a step's clock comes first: Kai's question count and meter make room for it */
+  .top-right:has(.clock) .count, .top-right:has(.clock) .meter { display: none; }
+  .top .clock { padding: 5px 10px; }
   .top .btn .lbl { display: none; }
 }
 
@@ -168,6 +171,10 @@ button { font: inherit; color: inherit; }
 .meter { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .meter .track { display: block; width: 90px; height: 6px; border-radius: 99px; background: #e9ecf1; overflow: hidden; }
 .meter .fill { height: 100%; background: linear-gradient(90deg, var(--yellow), var(--green)); border-radius: 99px; transition: width 0.6s ease; }
+/* with the step's clock and Kai's question count beside it, the meter keeps its bar and number on laptops */
+@media (max-width: 1500px) { .top-right:has(.clock) .meter > span:first-child { display: none; } .top-right:has(.clock) .meter .track { width: 64px; } }
+@media (max-width: 1180px) { .top:has(.top-right .clock) .phase-name .of { display: none; } }
+@media (max-width: 1100px) { .top-right:has(.clock) .count { display: none; } }
 @media (max-width: 640px) { .meter > span:first-child { display: none; } .meter .track { width: 56px; } }
 .log { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 28px 0 16px; }
 .msg { display: flex; gap: 10px; align-items: flex-end; }
@@ -1186,6 +1193,7 @@ textarea.dictating::placeholder { color: transparent; }
 .lesson-formula mtd { text-align: left; padding: 2px 0; }
 .lesson-formula mtd + mtd { padding-left: 1.4em; }
 .lesson .lesson-end { color: var(--muted); margin-top: 26px; }
+.teach-limit { text-align: center; margin: 0 auto 4px; max-width: 560px; }
 /* the text lesson as chapters, one at a time */
 .lesson .lesson-kicker { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; color: var(--muted); margin: 0 0 10px; }
 .lesson-steps { list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; margin: 0 0 26px; padding: 0; }

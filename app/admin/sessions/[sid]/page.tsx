@@ -139,13 +139,13 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
               <ol className="sd-qs">
                 {/* the items this session answered (a pilot: every set), in the order taken */}
                 {pack.pretestAll.filter((q) => (pre.answers as Record<string, number> | undefined)?.[q.id] !== undefined).sort((x, y) => ((pre.sets as string[] | undefined) ?? []).indexOf(x.set ?? "") - ((pre.sets as string[] | undefined) ?? []).indexOf(y.set ?? "")).map((q) => {
-                  const a = (pre.answers as Record<string, number> | undefined)?.[q.id];
+                  const a = (pre.answers as Record<string, number | null> | undefined)?.[q.id];
                   return (
                     <li key={q.id}>
                       <span className="sd-q">{q.prompt}</span>
                       <span className="sd-a">
-                        {a === undefined ? "–" : q.options[a] ?? a}
-                        {q.kind === "knowledge" && a !== undefined && <Verdict ok={a === q.answer} />}
+                        {a === undefined || a === null ? "– (time ran out)" : q.options[a] ?? a}
+                        {q.kind === "knowledge" && a !== undefined && a !== null && <Verdict ok={a === q.answer} />}
                         {q.exclude !== undefined && a === q.exclude && <span className="adm-pill bad">excludes</span>}
                       </span>
                     </li>

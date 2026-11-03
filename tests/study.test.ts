@@ -36,11 +36,14 @@ describe("the flow", () => {
     expect(barsOf(flowOf(on))).toEqual(["watch", "teach", "practice", "exercises"]);
     expect(barsOf(flowOf({ ...on, watch: { on: false, parts: [] } }))).toEqual(["teach", "practice", "exercises"]);
   });
-  it("estimates minutes from the settings and the pack", () => {
-    const s = { practice: { minutes: 12 }, watch: { parts: [{ start: 0, end: 300 }, { start: 60, end: 120 }] } };
-    expect(minutesOf("watch", s, { pretest: 5, test: 10 })).toBe(6);
-    expect(minutesOf("practice", s, { pretest: 5, test: 10 })).toBe(12);
-    expect(minutesOf("exercises", s, { pretest: 5, test: 10 })).toBe(10);
+  it("gives each step its time limit, the test one per form taken", () => {
+    const s = { pretest: { minutes: 5 }, watch: { minutes: 10 }, teach: { minutes: 10 }, practice: { minutes: 12 }, test: { minutes: 10 } };
+    expect(minutesOf("pretest", s, { forms: 1 })).toBe(5);
+    expect(minutesOf("watch", s, { forms: 1 })).toBe(10);
+    expect(minutesOf("teach", s, { forms: 1 })).toBe(10);
+    expect(minutesOf("practice", s, { forms: 1 })).toBe(12);
+    expect(minutesOf("exercises", s, { forms: 1 })).toBe(10);
+    expect(minutesOf("exercises", s, { forms: 2 })).toBe(20);
   });
 });
 
@@ -49,8 +52,8 @@ describe("settings", () => {
     const old = { practiceMinutes: 12, practiceTries: 3, stopAfterMessages: 6, stopAfterMinutes: 5, sessionDays: 7, delayedTestDays: 9, calculator: false, voice: true, dailyTurnLimit: 900, lesson: [{ videoId: "e3L4VocZnnQ", start: 0, end: 111, title: "Part one", channel: "x" }] };
     const m = merge(old);
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
-    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true });
-    expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false });
+    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true, minutes: 10 });
+    expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false, minutes: 10 });
     expect(m.tools).toEqual({ calculator: false, voice: true, help: false });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
@@ -158,10 +161,17 @@ describe("the dashboard's score charts", () => {
 });
 
 describe("the follow-up test", () => {
+  it("gives every timed step a limit, and the pages get them", () => {
+    const d = merge(null);
+    expect([d.pretest.minutes, d.watch.minutes, d.teach.minutes, d.practice.minutes, d.test.minutes].every((m) => m > 0)).toBe(true);
+    // a version saved before the limits keeps working, with the defaults
+    expect(merge({ teach: { stopAfterMessages: 4, stopAfterMinutes: 3 } }).teach.minutes).toBe(10);
+    expect(merge({ teach: { minutes: 12 } }).teach.minutes).toBe(12);
+  });
   it("reads an older test block (0 days meant off) into the switch and the days", () => {
     expect(merge({ test: { followUpDays: 0 } }).test.followUp).toBe(false);
-    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5, both: false });
-    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0, both: false });
+    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5, both: false, minutes: 10 });
+    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0, both: false, minutes: 10 });
   });
   it("opens on the schedule, or earlier when the admin panel opened it", async () => {
     const { followUpOpens } = await import("../lib/server/participants");

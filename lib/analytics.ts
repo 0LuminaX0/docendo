@@ -187,6 +187,12 @@ export function tables(events: Ev[]) {
       pretestScore: first("pretest")?.score ?? null, // knowledge items right, of pretestOf
       pretestOf: first("pretest")?.of ?? null,
       pretestDontKnow: first("pretest")?.dontKnow ?? null,
+      // the time limits: which steps ended because their time ran out
+      pretestTimedOut: first("pretest") ? !!first("pretest")!.timedOut : null,
+      pretestUnanswered: first("pretest")?.unanswered ?? null,
+      readTimedOut: first("client_read_continue") ? !!first("client_read_continue")!.timedOut : null,
+      teachTimedOut: of("client_teach_time_up").length > 0,
+      testTimedOut: grade ? !!grade.timedOut : null,
       // every pretest answer, by item id (any topic pack), with the pretest's version; the three after it are the bandits
       // pack's background items, kept as named columns for the analysis scripts (q1 to q3; b1 and b2 before 2026-11-02)
       pretestAnswers: first("pretest")?.answers ?? null,

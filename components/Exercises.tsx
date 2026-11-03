@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import Scratchpad from "./Scratchpad";
 import { useStudySettings } from "./SettingsContext";
 import { Header } from "./ui";
+import { StepClock, useDeadline } from "./StepClock";
 import { useGuard } from "./useGuard";
 import { Count } from "@/lib/words";
 import { post, save, useSaved, type GradeResult, type TestItem } from "@/lib/client/store";
@@ -45,7 +46,7 @@ export default function Exercises() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
-  const { calculator, copy } = useStudySettings();
+  const { calculator, copy, limits } = useStudySettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const items = useTestItems(allowed, setError);
@@ -57,6 +58,22 @@ export default function Exercises() {
     update((s) => ({ ...s, testOrder: o }));
     track("test_order", { order: o });
   }, [allowed, saved, order, items, update]);
+  // the time limit: per form taken (the pilot's two forms get twice as long), from the first visit; when it runs out,
+  // what is answered is submitted and the rest counts as unanswered
+  const forms = new Set(items?.map((q) => q.form)).size || 1;
+  const testMinutes = limits.test * forms;
+  useEffect(() => {
+    if (allowed && saved && items && !saved.testStartedAt) update((s) => ({ ...s, testStartedAt: Date.now() }));
+  }, [allowed, saved, items, update]);
+  const clock = useDeadline(saved?.testStartedAt, testMinutes);
+  const submitRef = useRef<((timedOut: boolean) => Promise<void>) | null>(null);
+  const timedOut = useRef(false);
+  // checked after every render: the page may still be loading when the time runs out
+  useEffect(() => {
+    if (!clock.over || timedOut.current || !submitRef.current) return;
+    timedOut.current = true;
+    void submitRef.current(true);
+  });
   if (!allowed || !saved || !items || !order) return <div className="center">{error ?? "Loading…"}</div>;
   const delayed = saved.phase === "delayed";
   const sections = parts(items, order);
@@ -102,14 +119,14 @@ export default function Exercises() {
     window.scrollTo({ top: 0 });
   }
 
-  async function submit() {
+  async function submit(timedOut = false) {
     if (!saved) return;
     setBusy(true);
     setError(null);
-    track("test_submit", { answered });
+    track("test_submit", { answered, timedOut });
     const work = Object.fromEntries(Object.entries(saved.testWork ?? {}).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.slice(0, 2000)]));
     const sent = answers.map((a) => (typeof a === "string" && a !== DONT_KNOW ? a.trim().slice(0, 40) || null : a));
-    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: sent, work, order, ...(delayed ? { since: saved.since } : {}) });
+    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: sent, work, order, ...(delayed ? { since: saved.since } : {}), ...(timedOut ? { timedOut: true } : {}) });
     setBusy(false);
     if (!r.ok) {
       if (r.expired) {
@@ -123,6 +140,8 @@ export default function Exercises() {
     router.push("/results");
   }
 
+  submitRef.current = submit;
+  const limit = ` You have ${testMinutes} minutes${groups > 1 ? " for both parts" : ""} (the clock is at the top); when the time is up, your answers so far are handed in.`;
   const how = reasons
     ? `For each, pick the answer you think is right${dontKnow ? " (or “I don't know”)" : ""} and explain your choice in one or two sentences.`
     : `Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}.`;
@@ -134,11 +153,11 @@ export default function Exercises() {
 
   return (
     <div className="shell">
-      <Header step="exercises" demo={saved.demo} label={delayed ? "Follow-up test" : undefined} />
+      <Header step="exercises" demo={saved.demo} label={delayed ? "Follow-up test" : undefined} right={<StepClock left={clock.left} over={clock.over} what="the test" />} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
-          <p className="lede" style={{ fontSize: 15.5 }}>{lede}</p>
+          <p className="lede" style={{ fontSize: 15.5 }}>{lede}{limit}</p>
         </div>
         {delayed && (
           <fieldset className="opts since" aria-labelledby="since-q">
@@ -174,12 +193,12 @@ export default function Exercises() {
             ))}
         </div>
         <div className="submitbar">
-          {current < groups - 1 ? (
+          {current < groups - 1 && !clock.over ? (
             <button className="btn primary" onClick={nextPart} disabled={!groupDone(current)}>
               Go on to part {current + 2} <ArrowRight size={17} strokeWidth={2.6} />
             </button>
           ) : (
-            <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < total}>
+            <button className="btn primary" onClick={() => void submit(clock.over)} disabled={busy || (answered < total && !clock.over)}>
               {busy ? "Checking…" : <><Check size={17} strokeWidth={2.6} /> Check my answers</>}
             </button>
           )}

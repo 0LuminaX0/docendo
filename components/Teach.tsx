@@ -7,6 +7,7 @@ import { useDictation } from "./Dictation";
 import { useStudySettings } from "./SettingsContext";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
+import { StepClock, useDeadline } from "./StepClock";
 import { Block } from "./lesson/LessonBody";
 import type { Passage } from "@/lib/lesson";
 import { useGuard, useNext } from "./useGuard";
@@ -25,7 +26,7 @@ const videoName = (t: string) => t.replace(/^[^:]{2,30}:\s+/, "");
 
 type TurnReply = { reply: string; mood: Mood; state: State; progress: number; mind: Mind; done: boolean; help: Help | null; helpAvailable: boolean; demo: boolean };
 
-export default function Teach({ opening, initial, initialMind, videos, graph }: { opening: string; initial: State; initialMind: Mind; videos: Video[]; graph: GraphView }) {
+export default function Teach({ opening, initial, initialMind, videos, graph, questions = 0 }: { opening: string; initial: State; initialMind: Mind; videos: Video[]; graph: GraphView; questions?: number }) {
   const router = useRouter();
   const [saved, update] = useSaved();
   const study = useStudySettings();
@@ -74,6 +75,17 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   useEffect(() => {
     if (closed && saved) router.replace(pathOf(currentStep(flow, saved.step)));
   }, [closed, saved, router, flow]);
+
+  // the time limit: from Kai's first message. When it runs out (after a reply on its way), Kai wraps up
+  const clock = useDeadline(saved?.chat.startedAt, study.limits.teach);
+  const timeUpRef = useRef<(() => void) | null>(null);
+  // checked after every render: the page may still be loading when the time runs out
+  const timedOut = useRef(false);
+  useEffect(() => {
+    if (!clock.over || busy || timedOut.current || !timeUpRef.current) return;
+    timedOut.current = true;
+    timeUpRef.current();
+  });
 
   const doneNow = !!saved?.chat.done;
   useEffect(() => {
@@ -184,8 +196,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   }
 
   function goPractice() {
-    track("teach_continue", { skipped: chat.skipped, done: chat.done, progress: chat.progress });
-    logNotebook(chat.done ? "teach_end_ready" : chat.skipped ? "teach_end_stopped" : "teach_end", chat.state);
+    track("teach_continue", { skipped: chat.skipped, done: chat.done, timeUp: !!chat.timeUp, progress: chat.progress });
+    logNotebook(chat.done ? "teach_end_ready" : chat.timeUp ? "teach_end_time" : chat.skipped ? "teach_end_stopped" : "teach_end", chat.state);
     const n = nextOf("teach");
     update((s: Saved) => ({ ...s, step: s.step === "teach" ? n.step : s.step }));
     router.push(n.path);
@@ -206,6 +218,24 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
     }));
   }
 
+  // the time limit ran out: the chat closes with Kai's closing line, whatever was being written
+  timeUpRef.current = finished
+    ? null
+    : () => {
+        track("teach_time_up", { progress: chat.progress, turns: learnerCount, question: chat.state?.script ? chat.state.script.at + 1 : null });
+        setText("");
+        update((s: Saved) => ({
+          ...s,
+          chat: {
+            ...s.chat,
+            skipped: true,
+            timeUp: true,
+            mood: "okay",
+            turns: [...s.chat.turns, { role: "kai", text: `That's our time! Thanks for teaching me. I'll go with what I've written down. Good luck with the ${flow.includes("practice") ? "practice problems" : "test"}!`, mood: "okay" }],
+          },
+        }));
+      };
+
   const pct = Math.round(mind.understanding * 100);
   const tools = study.mind && (
     <div className="seg" role="group" aria-label="View">
@@ -221,9 +251,17 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
   );
   const status = (
       <div className="row" style={{ gap: 14, flexWrap: "nowrap" }}>
-        <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
-          {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
-        </span>
+        {/* with the fixed questions: which one Kai is on; otherwise the messages left before Kai wraps up */}
+        {questions > 0 && chat.state?.script ? (
+          <span className="count" title="Kai's questions">
+            {finished ? `${Math.min(questions, chat.state.script.at + 1)} of ${questions} questions` : chat.state.script.back ? `Back to question ${chat.state.script.at + 1}` : `Question ${Math.min(questions, chat.state.script.at + 1)} of ${questions}`}
+          </span>
+        ) : (
+          <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
+            {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
+          </span>
+        )}
+        <StepClock left={clock.left} over={clock.over || !!chat.timeUp} what="teaching" />
         <button type="button" className="meter" disabled={!study.mind} onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={study.mind ? `${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.` : `${pct}% of what Kai needs to feel ready.`} style={{ border: 0, background: "none", cursor: study.mind ? "pointer" : "default", padding: 0, color: "inherit" }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
@@ -244,6 +282,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
       ) : (
         <main className="teach">
           <div className="log" aria-live="polite">
+            {/* the step's limit, said up front */}
+            <p className="note teach-limit">
+              You have {study.limits.teach} minutes to teach Kai (the clock is at the top).{" "}
+              {questions > 0 ? `Kai has ${questions} questions; teaching ends after the last one, or when the time is up.` : "Teaching ends when Kai feels ready, or when the time is up."}
+            </p>
             {turns.map((t, k) =>
               t.help && "section" in t.help ? (
                 <p key={k} className="note src-read">
@@ -300,7 +343,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph }: 
             )}
             {finished && (
               <div className="ready">
-                <h2>{chat.done ? "Kai feels ready" : "Teaching finished"}</h2>
+                <h2>{chat.done ? "Kai feels ready" : chat.timeUp ? "Time's up" : "Teaching finished"}</h2>
                 <p>
                   {chat.done
                     ? `Kai reached ${pct}% understanding. Next, practise on a few problems.`

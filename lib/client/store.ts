@@ -82,6 +82,8 @@ export type Saved = {
   pretestSets?: string[]; // the pretest's knowledge sets this session takes, in order (a pilot: every set)
   pretestAnswers?: Record<string, number>; // the pretest's answers by item id (an option's index)
   pretestPart?: number; // a pilot's pretest: how many parts are done and locked
+  pretestStartedAt?: number; // when the pretest opened (its time limit survives a reload)
+  testStartedAt?: number; // when the final (or follow-up) test opened
   practice?: PracticeState; // absent in sessions started before the practice chapter existed
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
   watchedSec?: number[]; // seconds watched per lesson part
@@ -97,6 +99,7 @@ export type Saved = {
     mind: Mind | null;
     done: boolean;
     skipped: boolean;
+    timeUp?: boolean; // teaching ended at its time limit (skipped is set too: the chat is closed)
     mood: Mood;
     help: Help | null;
     helpAvailable: boolean;

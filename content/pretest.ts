@@ -34,14 +34,16 @@ const DONT_KNOW = "I don't know";
  * answers don't fit those items. The score counts knowledge items right, in all and per set; "I don't know" answers
  * are counted; a background answer marked `exclude` flags the session as excluded from the main analysis.
  */
-export function gradePretest(items: Item[], raw: Record<string, number>, sets: string[]) {
+/** The pretest's answers, graded. `partial`: the time ran out, so questions may be unanswered (recorded as null). */
+export function gradePretest(items: Item[], raw: Record<string, number>, sets: string[], partial = false) {
   const known = pretestSets(items);
   if (!sets.length || new Set(sets).size !== sets.length || sets.some((s) => !known.includes(s))) return null;
   const asked = pretestItems(items, sets);
   const ids = new Set(asked.map((q) => q.id));
   if (Object.keys(raw).some((id) => !ids.has(id))) return null;
-  if (asked.some((q) => !Number.isInteger(raw[q.id]) || raw[q.id]! < 0 || raw[q.id]! >= q.options.length)) return null;
-  const answers = Object.fromEntries(asked.map((q) => [q.id, raw[q.id]!]));
+  const given = (q: Item) => raw[q.id] !== undefined;
+  if (asked.some((q) => (given(q) || !partial) && (!Number.isInteger(raw[q.id]) || raw[q.id]! < 0 || raw[q.id]! >= q.options.length))) return null;
+  const answers: Record<string, number | null> = Object.fromEntries(asked.map((q) => [q.id, given(q) ? raw[q.id]! : null]));
   const knowledge = asked.filter((q) => q.kind === "knowledge");
   const right = (q: Item) => q.answer !== undefined && answers[q.id] === q.answer;
   const setScores = Object.fromEntries(
@@ -56,7 +58,8 @@ export function gradePretest(items: Item[], raw: Record<string, number>, sets: s
     score: knowledge.filter(right).length,
     of: knowledge.length,
     setScores,
-    dontKnow: knowledge.filter((q) => q.options[answers[q.id]!] === DONT_KNOW).length,
+    dontKnow: knowledge.filter((q) => answers[q.id] !== null && q.options[answers[q.id]!] === DONT_KNOW).length,
+    unanswered: asked.filter((q) => answers[q.id] === null).length,
     excluded: asked.some((q) => q.exclude !== undefined && answers[q.id] === q.exclude),
   };
 }

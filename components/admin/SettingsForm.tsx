@@ -217,6 +217,7 @@ export default function SettingsForm({
 
                     {on && k === "watch" && (
                       <div className="study-fields">
+                        <Num label="Time limit (minutes): then the lesson closes and teaching starts" value={s.watch.minutes} min={2} max={40} step={1} onChange={(v) => patch("watch", { minutes: v })} changed={s.watch.minutes !== defaults.watch.minutes} />
                         <div className="set-h">
                           <span className="note">
                             {s.watch.parts.length} {s.watch.parts.length === 1 ? "part" : "parts"}, {mmss(lessonSec)} in all, played back to back as one video
@@ -264,6 +265,7 @@ export default function SettingsForm({
 
                     {on && k === "pretest" && (
                       <div className="study-fields grid">
+                        <Num label="Time limit (minutes): then what is answered is handed in" value={s.pretest.minutes} min={1} max={30} step={1} onChange={(v) => patch("pretest", { minutes: v })} changed={s.pretest.minutes !== defaults.pretest.minutes} />
                         <Toggle
                           label="Every set, one after the other (pilot)"
                           hint={summary.pretestSets.length > 1 ? `Every new session takes the background questions and then every set (${summary.pretestSets.join(", ")}) as parts, in an order that alternates with its test form. Otherwise only ${summary.pretestSets[0]}.` : "Needs a second set of knowledge items in the pack's pretest."}
@@ -276,6 +278,7 @@ export default function SettingsForm({
 
                     {k === "teach" && (
                       <div className="study-fields grid">
+                        <Num label="Time limit (minutes): then Kai wraps up" value={s.teach.minutes} min={2} max={40} step={1} onChange={(v) => patch("teach", { minutes: v })} changed={s.teach.minutes !== defaults.teach.minutes} />
                         <p className="note span">When participants may end teaching themselves (&quot;I&apos;ve taught all I can&quot;), whichever comes first. Team sessions can from the start.</p>
                         <Num label="After this many messages" value={s.teach.stopAfterMessages} min={0} max={30} step={1} onChange={(v) => patch("teach", { stopAfterMessages: v })} changed={s.teach.stopAfterMessages !== defaults.teach.stopAfterMessages} />
                         <Num label="Or after this many minutes" value={s.teach.stopAfterMinutes} min={0} max={30} step={0.5} onChange={(v) => patch("teach", { stopAfterMinutes: v })} changed={s.teach.stopAfterMinutes !== defaults.teach.stopAfterMinutes} />
@@ -306,6 +309,7 @@ export default function SettingsForm({
 
                     {k === "exercises" && (
                       <div className="study-fields grid">
+                        <Num label="Time limit per form (minutes): then the answers so far are handed in" value={s.test.minutes} min={2} max={40} step={1} onChange={(v) => patch("test", { minutes: v })} changed={s.test.minutes !== defaults.test.minutes} />
                         <Toggle
                           label="Both forms, one after the other (pilot)"
                           hint={twoForms ? "Every new session takes both test forms after the lesson, its own form first, so the order alternates within each condition. An item marked the same in both forms (the anchor) is asked once. No follow-up test then." : "Needs a second test form in the topic pack."}

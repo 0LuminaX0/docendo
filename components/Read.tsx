@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Clock } from "lucide-react";
 import { Header, mmss } from "./ui";
+import { StepClock, useDeadline } from "./StepClock";
+import { useStudySettings } from "./SettingsContext";
 import { useGuard, useNext } from "./useGuard";
 import { Block } from "./lesson/LessonBody";
 import { useSaved } from "@/lib/client/store";
@@ -25,8 +27,8 @@ const plainTitle = (t: string) => t.replace(/^\d+\.\s*/, "");
  * quick read of it (chapterSeconds); the chapters already read stay open (the bar on top, "Back"), the ones ahead
  * don't. The text arrives from the server with the page, never in the browser's code. It can't be selected or copied
  * (participants explain from memory, not by pasting: copy and drag attempts are logged), the last chapter's
- * "teach Kai" opens after `minSeconds` in all (kept with the session, so a reload doesn't restart it), and a reminder to
- * move on shows after `remindSeconds`. Logged: each chapter's time when the learner leaves it (read_chapter), and on
+ * "teach Kai" opens after `minSeconds` in all (kept with the session, so a reload doesn't restart it), and the step's
+ * time limit (Study setup, the clock in the header) closes the lesson and goes on to Kai. Logged: each chapter's time when the learner leaves it (read_chapter), and on
  * continuing the time read, the chapters reached and the copy attempts.
  */
 export default function Read({ lesson }: { lesson: Lesson }) {
@@ -36,7 +38,16 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const nextOf = useNext();
   const [now, setNow] = useState(() => Date.now());
   const copies = useRef(0);
-  const reminded = useRef(false);
+  const { limits } = useStudySettings();
+  const clock = useDeadline(saved?.readStartedAt, limits.watch);
+  const nextRef = useRef<((timedOut: boolean) => void) | null>(null);
+  const timedOut = useRef(false);
+  // checked after every render: the page may still be loading when the time runs out
+  useEffect(() => {
+    if (!clock.over || timedOut.current || !nextRef.current) return;
+    timedOut.current = true;
+    nextRef.current(true);
+  });
   const perChapter = useRef<Record<string, number>>({});
   const n = lesson.sections.length;
 
@@ -53,15 +64,11 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const max = Math.max(at, Math.min(saved?.readMax ?? 0, n - 1));
   const elapsed = Math.max(0, (now - (saved?.readStartedAt ?? now)) / 1000);
   const left = Math.max(0, lesson.minSeconds - elapsed);
-  const remind = lesson.remindSeconds > 0 && elapsed >= lesson.remindSeconds;
   const since = saved?.readChapterAt ?? saved?.readStartedAt ?? now; // when the chapter on screen opened
   const onChapter = Math.max(0, (now - since) / 1000);
   const section = lesson.sections[at]!;
   // a chapter read before opens at once; a new one after a quick read of it
   const wait = at < max ? 0 : Math.max(0, chapterSeconds(section) - onChapter);
-  useEffect(() => {
-    if (remind && !reminded.current) (reminded.current = true), track("read_reminder", { readSec: Math.round(elapsed) });
-  }, [remind, elapsed]);
 
   if (!allowed || !saved) return <div className="center">Loading…</div>;
 
@@ -98,20 +105,22 @@ export default function Read({ lesson }: { lesson: Lesson }) {
     window.scrollTo({ top: 0 });
   }
 
-  function next() {
+  function next(timedOut = false) {
     const sec = Math.round((Date.now() - since) / 1000);
     perChapter.current[section.id] = (perChapter.current[section.id] ?? 0) + sec;
-    track("read_chapter", { chapter: section.id, index: at, sec, to: null, via: "continue" });
-    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(((max + 1) / n) * 100), chapters: max + 1, chapterSec: lesson.sections.map((x) => perChapter.current[x.id] ?? 0), copyAttempts: copies.current, reminded: reminded.current });
+    track("read_chapter", { chapter: section.id, index: at, sec, to: null, via: timedOut ? "time" : "continue" });
+    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(((max + 1) / n) * 100), chapters: max + 1, chapterSec: lesson.sections.map((x) => perChapter.current[x.id] ?? 0), copyAttempts: copies.current, timedOut });
     const s = nextOf("watch");
     update((x) => ({ ...x, step: x.step === "watch" ? s.step : x.step }));
     router.push(s.path);
   }
 
+  // the step only times out while it is the session's step (team sessions looking again aren't sent on)
+  nextRef.current = saved.step === "watch" ? next : null;
   const last = at === n - 1;
   return (
     <div className="shell">
-      <Header step="watch" demo={saved.demo} />
+      <Header step="watch" demo={saved.demo} right={<StepClock left={clock.left} over={clock.over} what="the lesson" />} />
       <main className="page">
         <article className="lesson" onCopy={refuse} onCut={refuse} onDragStart={refuse}>
           <p className="lesson-kicker">{lesson.title}</p>
@@ -174,7 +183,7 @@ export default function Read({ lesson }: { lesson: Lesson }) {
                 )}
               </button>
             ) : (
-              <button className="btn primary" onClick={next} disabled={left > 0 || wait > 0}>
+              <button className="btn primary" onClick={() => next()} disabled={left > 0 || wait > 0}>
                 {left > 0 || wait > 0 ? (
                   <>
                     <Clock size={16} aria-hidden="true" /> Teach Kai in {mmss(Math.max(left, wait))}
@@ -188,7 +197,7 @@ export default function Read({ lesson }: { lesson: Lesson }) {
             )}
           </nav>
           <p className="note lesson-foot">
-            {remind ? "You've been reading for a while. Continue to Kai when you're ready." : last ? "The text closes when you go on: you'll explain it to Kai from memory." : "Take your time. You can go back to the chapters you've read."}
+            {last ? "The text closes when you go on: you'll explain it to Kai from memory." : "You can go back to the chapters you've read."} You have {limits.watch} minutes for the lesson (the clock is at the top); when the time is up, it closes and you go on to Kai.
           </p>
         </article>
       </main>

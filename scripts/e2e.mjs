@@ -159,9 +159,9 @@ async function leaveWatch(p) {
   if (await p.$(".lesson")) {
     await p.evaluate(() => {
       const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
-      // on the last chapter, opened long ago
+      // on the last chapter, past the minimum reading time and inside the time limit
       const last = document.querySelectorAll(".lesson-steps li").length - 1;
-      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 30 * 60_000, readChapterAt: Date.now() - 30 * 60_000, readAt: last, readMax: last }));
+      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 5 * 60_000, readChapterAt: Date.now() - 5 * 60_000, readAt: last, readMax: last }));
     });
     await p.reload({ waitUntil: "load" });
     await p.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
@@ -539,6 +539,79 @@ await shot(phoneHome, "10-phone-welcome", true);
   await shot(v, "03b-teach-voice");
   check(noMicInDemo && refused === 503, `voice input: no mic in demo mode, a mic beside Send otherwise; the demo server refuses to transcribe (${refused})`);
   await v.close();
+}
+
+// time limits: every timed step shows its clock, says its limit up front, and ends itself when its time is up (the
+// saved start moved into the past here): the pretest and the test are handed in as they are, the lesson closes, Kai
+// wraps up, practice goes on to the test
+{
+  const tl = await newPage(1280, 860, await browser.createBrowserContext());
+  const past = (field) =>
+    tl.evaluate((field) => {
+      const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+      const t = Date.now() - 90 * 60_000;
+      const set = (o, path) => (path.length === 1 ? (o[path[0]] = t) : set((o[path[0]] ??= {}), path.slice(1)));
+      for (const f of field.split(",")) set(s, f.split("."));
+      localStorage.setItem("docendo:session:v1", JSON.stringify(s));
+    }, field);
+  const clockOn = () => tl.$eval(".top .clock", (e) => /\d:\d\d/.test(e.textContent)).catch(() => false);
+  const said = () => tl.evaluate(() => /minutes/.test(document.querySelector("main")?.textContent ?? ""));
+  const got = {};
+  await tl.goto(BASE + "/", { waitUntil: "load" });
+  await tl.waitForSelector("button[type=submit]");
+  got.welcome = await tl.evaluate(() => /time limit/i.test(document.querySelector(".intro-head")?.textContent ?? ""));
+  if (await tl.$("#code")) await tl.type("#code", TEAM_CODE);
+  await tl.click(".consent input");
+  await tl.click("button[type=submit]");
+  await tl.waitForFunction(() => location.pathname === "/pretest");
+  await tl.waitForSelector(".q");
+  got.pretest = (await clockOn()) && (await said());
+  await past("pretestStartedAt");
+  await tl.reload({ waitUntil: "load" });
+  await tl.waitForFunction(() => location.pathname === "/watch", { timeout: 15000 });
+  await tl.waitForSelector(".lesson");
+  got.read = (await clockOn()) && (await said());
+  await past("readStartedAt,readChapterAt");
+  await tl.reload({ waitUntil: "load" });
+  await tl.waitForFunction(() => location.pathname === "/teach", { timeout: 15000 });
+  await tl.waitForSelector(".bubble");
+  got.teach = (await clockOn()) && /Question 1 of \d+/.test(await tl.$eval(".top", (e) => e.textContent)) && (await said());
+  // on a laptop the step bars in the middle and the clock, Kai's question count and meter on the right keep apart
+  const headerGap = async (w) => {
+    await tl.setViewport({ width: w, height: 860 });
+    await wait(300);
+    return tl.evaluate(() => {
+      const phase = [...document.querySelectorAll(".top .phase > *")].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+      const right = [...document.querySelectorAll(".top-right > *")].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 0);
+      return phase.length ? Math.min(...right.map((r) => r.left)) - Math.max(...phase.map((r) => r.right)) : 99;
+    });
+  };
+  const gaps = [await headerGap(1280), await headerGap(1440), await headerGap(1024)];
+  await tl.setViewport({ width: 1280, height: 860 });
+  got.header = gaps.every((g) => g >= 8);
+  if (!got.header) console.log(`  teach header gaps at 1280, 1440, 1024: ${gaps.map(Math.round).join(", ")}px`);
+  await past("chat.startedAt");
+  await tl.reload({ waitUntil: "load" });
+  await tl.waitForFunction(() => /Time's up/.test(document.querySelector(".ready h2")?.textContent ?? ""), { timeout: 15000 });
+  got.teachEnds = !(await tl.$("#msg"));
+  await tl.click(".ready .btn.primary");
+  await tl.waitForFunction(() => location.pathname === "/practice", { timeout: 15000 });
+  await past("practice.startedAt");
+  await tl.reload({ waitUntil: "load" });
+  await tl.waitForFunction(() => location.pathname === "/exercises", { timeout: 20000 });
+  await tl.waitForSelector(".q");
+  got.test = (await clockOn()) && (await said());
+  await past("testStartedAt");
+  await tl.reload({ waitUntil: "load" });
+  await tl.waitForFunction(() => location.pathname === "/results", { timeout: 20000 });
+  const st = await saved(tl);
+  got.graded = !!st.result && st.result.items.every((x) => !x.correct);
+  check(
+    Object.values(got).every(Boolean),
+    `every step is timed: a clock and its limit on the pretest, the lesson, teaching (with Kai's question count) and the test; at the limit the pretest is handed in, the lesson closes, Kai wraps up, practice and the test end (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
+  );
+  await shot(tl, "13-time-up-results");
+  await tl.close();
 }
 
 // the admin panel: the login gate, the dashboard, a code made and used, an export

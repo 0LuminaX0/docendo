@@ -100,7 +100,7 @@ export type ScriptTrace = { asked: string; next: string | null; sayMore: boolean
 export async function takeScriptTurn(
   bundle: Bundle,
   script: Script,
-  input: { message: string; history: Turn[]; state: State; elapsedMs?: number },
+  input: { message: string; history: Turn[]; state: State; elapsedMs?: number; minutes?: number }, // minutes: the study's limit
   deps: Pick<Deps, "judge" | "react">,
 ): Promise<TurnResult & { trace: TurnResult["trace"] & { script: ScriptTrace } }> {
   const kaiLast = [...input.history].reverse().find((t) => t.role === "kai")?.text ?? "";
@@ -130,7 +130,7 @@ export async function takeScriptTurn(
   const unanswered = !stay && !pos.back && q.sayMore && (j.intent === "unsure" || notAnswer);
   const skipped = unanswered ? [...pos.skipped, at] : pos.skipped;
 
-  const timeUp = (input.elapsedMs ?? 0) >= script.minutes * 60_000;
+  const timeUp = (input.elapsedMs ?? 0) >= (input.minutes ?? script.minutes) * 60_000;
   const nextPos = stay ? null : following(script, pos, skipped);
   const end = timeUp || state.turn >= CONFIG.maxTurns || (!stay && !nextPos);
   const why: ReadyReason | null = end ? (timeUp ? "time" : state.turn >= CONFIG.maxTurns ? "maxTurns" : "script") : null;

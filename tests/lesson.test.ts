@@ -54,12 +54,14 @@ describe("the text lesson", () => {
 describe("the lesson step with a text lesson", () => {
   const pack = packFor("bandits");
 
-  it("is called Read and takes the text's reading time", () => {
+  it("is called Read, with its own time limit", () => {
     const d = defaults();
     expect(publicOf(d, pack).lessonKind).toBe("text");
     expect(stepName("watch", "text")).toBe("Read");
     expect(stepName("watch", "video")).toBe("Watch");
-    expect(minutesOf("watch", d, { pretest: 0, test: 0, lesson: pack.lesson!.minutes })).toBe(lesson.minutes);
+    expect(minutesOf("watch", d, { forms: 1 })).toBe(d.watch.minutes);
+    // long enough to read the text and the minimum before going on
+    expect(d.watch.minutes * 60).toBeGreaterThan(Math.max(lesson.minutes * 60, lesson.minSeconds));
   });
 
   it("finds the passage about the idea Kai is asking about, and its text only once help is open", () => {

@@ -30,10 +30,11 @@ const Body = z.union([
     work: z.record(z.string().max(10), z.string().max(2_000)).optional(), // per question: the reason it asked for, or the learner's working
     order: z.array(z.string().max(10)).max(ITEMS).optional(), // the order the learner saw the items in
     since: z.enum(SINCE).optional(), // delayed test: studied the topic since the session?
+    timedOut: z.boolean().optional(), // handed in by the time limit (unanswered questions count as unanswered)
   }),
   // the pretest by item id, with the sets the page showed, in order (the pilot takes every set; the array form above
   // is the first set's items in file order, from pages loaded before the sets)
-  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.record(z.string().max(20), z.number().int().min(0).max(9)), sets: z.array(z.string().max(20)).min(1).max(4) }),
+  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.record(z.string().max(20), z.number().int().min(0).max(9)), sets: z.array(z.string().max(20)).min(1).max(4), timedOut: z.boolean().optional() }),
 ]);
 
 /**
@@ -67,10 +68,12 @@ export async function POST(req: NextRequest) {
     const b = body.data;
     // by item id with its sets, or (older pages) one answer per item of the first set, in file order
     const raw = Array.isArray(b.answers) ? (b.answers.length === pack.pretest.length ? Object.fromEntries(pack.pretest.map((q, i) => [q.id, (b.answers as number[])[i]!])) : null) : b.answers;
-    const g = raw ? gradePretest(pack.pretestAll, raw, "sets" in b ? b.sets : pack.pretestSets.slice(0, 1)) : null;
+    // timedOut: the time limit ran out, so some questions may be unanswered
+    const timedOut = "timedOut" in b && !!b.timedOut;
+    const g = raw ? gradePretest(pack.pretestAll, raw, "sets" in b ? b.sets : pack.pretestSets.slice(0, 1), timedOut) : null;
     if (!g) return fail(400, "Bad request.");
     // sets: the knowledge sets in the order taken (a pilot: every set); setScores: right of asked, per set
-    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, version: pack.pretestVersion, answers: g.answers, sets: g.sets, score: g.score, of: g.of, setScores: g.setScores, dontKnow: g.dontKnow, excluded: g.excluded });
+    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, version: pack.pretestVersion, answers: g.answers, sets: g.sets, score: g.score, of: g.of, setScores: g.setScores, dontKnow: g.dontKnow, excluded: g.excluded, unanswered: g.unanswered, timedOut });
     return ok({ ok: true });
   }
 
@@ -97,6 +100,7 @@ export async function POST(req: NextRequest) {
     version: pack.testVersion(session.form),
     versions, // each form's version (an item's answers count for the version of its own form)
     ...(session.phase === "delayed" ? { since } : {}),
+    timedOut: "timedOut" in body.data && !!body.data.timedOut,
     score: g.score, // over the items it answered (an anchor once)
     of: g.of,
     formScores: g.perForm, // per form, each complete: an anchor answered once counts in both

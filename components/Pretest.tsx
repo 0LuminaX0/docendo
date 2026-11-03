@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Header } from "./ui";
+import { StepClock, useDeadline } from "./StepClock";
+import { useStudySettings } from "./SettingsContext";
 import { useGuard, useNext } from "./useGuard";
 import { post, save, useSaved } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
@@ -38,6 +40,20 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fixed = saved?.pretestSets;
+  const { limits } = useStudySettings();
+  // the time limit: from the first visit; when it runs out, what is answered is submitted
+  useEffect(() => {
+    if (allowed && saved && !saved.pretestStartedAt) update((s) => ({ ...s, pretestStartedAt: Date.now() }));
+  }, [allowed, saved, update]);
+  const clock = useDeadline(saved?.pretestStartedAt, limits.pretest);
+  const submitRef = useRef<((timedOut: boolean) => Promise<void>) | null>(null);
+  const timedOut = useRef(false);
+  // checked after every render: the page may still be loading when the time runs out
+  useEffect(() => {
+    if (!clock.over || timedOut.current || !submitRef.current) return;
+    timedOut.current = true;
+    void submitRef.current(true);
+  });
   useEffect(() => {
     if (!allowed || !saved || fixed) return;
     const sets = setsFor(items, both, formOf(saved.token));
@@ -67,13 +83,13 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
     window.scrollTo({ top: 0 });
   }
 
-  async function submit() {
-    if (!saved || answered < shown.length) return;
+  async function submit(timedOut = false) {
+    if (!saved || (!timedOut && answered < shown.length)) return;
     setBusy(true);
     setError(null);
-    track("pretest_submit");
-    const mine = Object.fromEntries(shown.map((q) => [q.id, answers[q.id]!]));
-    const r = await post<{ ok: true }>("/api/grade", { token: saved.token, kind: "pretest", answers: mine, sets });
+    track("pretest_submit", { timedOut, answered, of: shown.length });
+    const mine = Object.fromEntries(shown.filter((q) => answers[q.id] !== undefined).map((q) => [q.id, answers[q.id]!]));
+    const r = await post<{ ok: true }>("/api/grade", { token: saved.token, kind: "pretest", answers: mine, sets, ...(timedOut ? { timedOut: true } : {}) });
     setBusy(false);
     if (!r.ok) {
       if (r.expired) {
@@ -88,17 +104,18 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
     router.push(n.path);
   }
 
+  submitRef.current = submit;
   const start = shown.filter((q) => partOf(q) < current).length;
   return (
     <div className="shell">
-      <Header step="pretest" label="Before you start" demo={saved.demo} />
+      <Header step="pretest" label="Before you start" demo={saved.demo} right={<StepClock left={clock.left} over={clock.over} what="these questions" />} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <span className="eyebrow">Before you start</span>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>{Count(shown.length, "quick question")}</h1>
           <p className="lede" style={{ fontSize: 16 }}>
             So we know where you&apos;re starting from. It&apos;s fine not to know: pick &quot;I don&apos;t know&quot; rather than guess. This isn&apos;t graded, and you won&apos;t see the answers.
-            {parts > 1 && ` ${Count(parts, "part")}, one after the other: once you go on, you can't change the part before.`}
+            {parts > 1 && ` ${Count(parts, "part")}, one after the other: once you go on, you can't change the part before.`} You have {limits.pretest} minutes (the clock is at the top); when the time is up, your answers so far are saved and the lesson starts.
           </p>
         </div>
         <div className="quiz">
@@ -130,12 +147,12 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
           </section>
         </div>
         <div className="submitbar">
-          {current < parts - 1 ? (
+          {current < parts - 1 && !clock.over ? (
             <button className="btn primary" onClick={nextPart} disabled={!partDone(current)}>
               Go on to part {current + 2} <ArrowRight size={17} />
             </button>
           ) : (
-            <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < shown.length}>
+            <button className="btn primary" onClick={() => void submit(clock.over)} disabled={busy || (answered < shown.length && !clock.over)}>
               {busy ? "Saving…" : <>On to the lesson <ArrowRight size={17} /></>}
             </button>
           )}
