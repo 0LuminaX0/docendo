@@ -575,7 +575,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await tl.reload({ waitUntil: "load" });
   await tl.waitForFunction(() => location.pathname === "/teach", { timeout: 15000 });
   await tl.waitForSelector(".bubble");
-  got.teach = (await clockOn()) && /Question 1 of \d+/.test(await tl.$eval(".top", (e) => e.textContent)) && (await said());
+  got.teach = (await clockOn()) && /^0 \/ \d+$/.test(await tl.$eval(".top .count", (e) => e.textContent.trim())) && !/question/i.test(await tl.$eval(".top", (e) => e.textContent)) && (await said());
   // on a laptop the step bars in the middle and the clock, Kai's question count and meter on the right keep apart
   const headerGap = async (w) => {
     await tl.setViewport({ width: w, height: 860 });

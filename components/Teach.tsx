@@ -251,10 +251,11 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
   );
   const status = (
       <div className="row" style={{ gap: 14, flexWrap: "nowrap" }}>
-        {/* with the fixed questions: which one Kai is on; otherwise the messages left before Kai wraps up */}
+        {/* with the fixed questions: how far Kai has got, as a plain count (nothing that says it is a fixed list);
+            otherwise the messages before Kai wraps up */}
         {questions > 0 && chat.state?.script ? (
-          <span className="count" title="Kai's questions">
-            {finished ? `${Math.min(questions, chat.state.script.at + 1)} of ${questions} questions` : chat.state.script.back ? `Back to question ${chat.state.script.at + 1}` : `Question ${Math.min(questions, chat.state.script.at + 1)} of ${questions}`}
+          <span className="count" title="How far Kai has got">
+            {finished ? `${learnerCount} messages` : `${chat.state.script.back ? questions : Math.min(questions, chat.state.script.at)} / ${questions}`}
           </span>
         ) : (
           <span className={`count${left <= 5 && !finished ? " low" : ""}`} title="Kai wraps up after this many messages">
@@ -285,7 +286,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
             {/* the step's limit, said up front */}
             <p className="note teach-limit">
               You have {study.limits.teach} minutes to teach Kai (the clock is at the top).{" "}
-              {questions > 0 ? `Kai has ${questions} questions; teaching ends after the last one, or when the time is up.` : "Teaching ends when Kai feels ready, or when the time is up."}
+              Teaching ends when Kai feels ready, or when the time is up.
             </p>
             {turns.map((t, k) =>
               t.help && "section" in t.help ? (

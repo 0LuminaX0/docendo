@@ -13,7 +13,7 @@ export default async function Page() {
     watch: pack.lesson
       ? `A short text lesson on ${pack.copy.subject}, with figures, one chapter at a time. ${sum.minutes.watch} minutes.`
       : `A short video lesson on ${pack.copy.subject}${settings.watch.parts.length > 1 ? `, in ${settings.watch.parts.length} parts that play one after another` : ""}. ${sum.minutes.watch} minutes.`,
-    teach: `Explain the ideas in your own words: Kai asks ${sum.scriptQuestions && settings.teach.fixed ? `its ${sum.scriptQuestions} questions` : "questions until it feels it understands"}. ${sum.minutes.teach} minutes.`,
+    teach: `Explain the ideas in your own words. Kai asks questions until it feels it understands. ${sum.minutes.teach} minutes.`,
     practice: `${sum.practice.rounds.length > 1 ? `${Count(sum.practice.rounds.length, "short round")} of problems` : Count(sum.practice.problems, "short problem")}${settings.practice.tries > 1 ? `, with ${count(settings.practice.tries, "try", "tries")} each` : ""}. ${settings.practice.minutes} minutes.`,
     exercises: (() => {
       const f = sum.forms[0];
