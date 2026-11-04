@@ -1,3 +1,7 @@
+// STASHED (2026-11-05): written for the ten fixed questions of 2026-11-03, one scripted answer per question in that
+// order. Kai's questions now skip what is already taught and follow up on what is missing, so these answers no longer
+// line up; `pnpm eval:sim` (scripts/eval-sim.ts) replaces it, with simulated learners that answer what Kai asks.
+// Run it as is with: pnpm tsx scripts/stash/eval-teach.ts (against a script.json of that shape).
 // Evaluate teaching with Kai's fixed questions (script.json) on four scripted learners, with the live judge and writer.
 //   pnpm eval:teach                              the configured judge model
 //   pnpm eval:teach --models a/b,c/d --reps 2    compare judge models, 2 runs per learner
@@ -16,13 +20,13 @@ for (const f of [".env", ".env.local"]) {
     // no file
   }
 }
-const { Bundle } = await import("../content/schema");
-const { ScriptFile } = await import("../content/pack");
-const { initialScriptState, scriptOpening, takeScriptTurn } = await import("../engine/tutor/script");
-const { latest } = await import("../engine/tutor/state");
-const { llmJudge } = await import("../engine/tutor/judge");
-const { llmReact } = await import("../engine/tutor/writer");
-const { MODELS } = await import("../engine/llm");
+const { Bundle } = await import("../../content/schema");
+const { ScriptFile } = await import("../../content/pack");
+const { initialScriptState, scriptOpening, takeScriptTurn } = await import("../../engine/tutor/script");
+const { latest } = await import("../../engine/tutor/state");
+const { llmJudge } = await import("../../engine/tutor/judge");
+const { llmReact } = await import("../../engine/tutor/writer");
+const { MODELS } = await import("../../engine/llm");
 
 const args = process.argv.slice(2);
 const models = (args.includes("--models") ? args[args.indexOf("--models") + 1]! : MODELS.judge).split(",");

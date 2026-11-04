@@ -46,6 +46,7 @@ export type Solution = {
 };
 
 const LETTERS = "ABCDEF";
+const lowerFirst = (t: string) => (/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/u, "");
 
 export { notesOf };
 
@@ -72,11 +73,13 @@ export function gate(item: PracticeItem, state: State): Gate {
   const needs = item.needs ?? [...new Set(item.steps.flatMap((s) => s.facts))];
   const facts = latest(state);
   const missing = needs.filter((n) => !alts(n).some((f) => facts.get(f)?.verdict === "correct"));
-  const ideas = new Set(needs.flatMap(alts).map(ideaOf));
-  const believed = activeMisconceptions(state).filter((m) => ideas.has(m.node));
+  // a wrong belief blocks the fact it contradicts (one that contradicts none of them blocks nothing; older notebooks,
+  // without the fact, block by idea)
+  const hits = (m: { node: string; fact?: string | null }, n: string) => alts(n).some((f) => (m.fact === undefined ? ideaOf(f) === m.node : f === m.fact));
+  const believed = activeMisconceptions(state).filter((m) => needs.some((n) => hits(m, n)));
   const misled = believed.map((m) => m.words);
-  // a misconception is what Kai was told about its idea: those needs it reasons from, they get no guess
-  const open = missing.filter((n) => !believed.some((m) => alts(n).some((f) => ideaOf(f) === m.node)));
+  // a misconception is what Kai was told about its fact: those needs it reasons from, they get no guess
+  const open = missing.filter((n) => !believed.some((m) => hits(m, n)));
   const absent = open.filter((n) => !alts(n).some((f) => facts.has(f))); // told nothing about it
   const vague = open.filter((n) => alts(n).some((f) => facts.has(f))); // told only vaguely (or wrongly) about it
   // a vague explanation whose reading still gets there is enough for this problem
@@ -128,7 +131,7 @@ Solve the problem using ONLY your notes, thinking aloud like a student:
 - Never use knowledge from outside your notes, even if you think you know better: no formulas, rules or technical words that are not in your notes or in the problem.
 - The answer options are not notes. Never take a rule from an option's wording: an option only says what someone might answer.
 - Do the arithmetic the problem needs, as your notes suggest it.
-- When you compare two totals made of parts, compare part by part: if one is larger in every part, its total is larger, whatever the exact sizes.
+- When you compare two totals made of parts, say for each part which of the two is ahead. If the same one is ahead in every part, its total is larger, whatever the exact sizes: say so, and don't call it undecided. Only when different parts favour different ones can the exact sizes matter.
 - In the last step, say your conclusion in words (not as an option number).
 - answer: for a question with options, the number of the option you choose (1, 2, 3 or 4); for a number question, just the number.`;
 
@@ -157,7 +160,10 @@ export function hunchFor(bundle: Bundle, guess: Guess): string | undefined {
 // what the guess leads to, in words (option numbers stay out of Kai's steps)
 const conclusion = (item: PracticeItem, answer: number) => (item.kind === "choice" ? `"${item.options![answer]}" (option ${answer + 1})` : `about ${Math.round(answer)}${item.unit ? ` ${item.unit}` : ""}`);
 
-const STRICTER = `\n\nImportant: a previous try didn't follow these rules. Use only your notes and do exactly what is asked above.`;
+/** The longest one try at solving can take (llmSolve: two attempts of 18 s). */
+export const SOLVE_TRY_MS = 37_000;
+
+const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes, do exactly what is asked above, and check each comparison and calculation before you conclude.`;
 
 // signs that the model argued its way to the key and then turned around
 const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
@@ -274,7 +280,9 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
   const notes = notesOf(state);
   const facts = latest(state);
   const g = gate(item, state);
-  const misledIdeas = new Set(activeMisconceptions(state).map((m) => m.node));
+  // as in the gate: a wrong belief blocks the fact it contradicts (none: nothing; older notebooks: its idea)
+  const blocking = activeMisconceptions(state).filter((m) => m.fact !== null);
+  const misledOn = (f: string) => blocking.some((m) => (m.fact === undefined ? m.node === ideaOf(f) : m.fact === f));
   const seed = `${item.id}|${notes.join("|")}`;
   const guess = g.canBeRight ? null : chooseGuess(item, g, seed);
   const steps: Step[] = [];
@@ -282,7 +290,7 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
   let followed: Guess | null = null;
   const inNeed = (list: string[], f: string) => list.some((n) => alts(n).includes(f));
   // where Kai goes wrong: the first step that uses the fact it is guessing about, or an idea it was told wrongly about
-  const fails = (f: string) => inNeed(g.needs, f) && (guess ? f === guess.replaces || misledIdeas.has(ideaOf(f)) : inNeed(g.missing, f) || misledIdeas.has(ideaOf(f)));
+  const fails = (f: string) => inNeed(g.needs, f) && (guess ? f === guess.replaces || misledOn(f) : inNeed(g.missing, f) || misledOn(f));
   for (const s of item.steps) {
     const gap = s.facts.find(fails);
     if (!gap || g.canBeRight) {
@@ -291,11 +299,11 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
       continue;
     }
     const told = facts.get(gap);
-    const belief = activeMisconceptions(state).filter((m) => m.node === gap.split(".")[0]).at(-1);
+    const belief = blocking.filter((m) => (m.fact === undefined ? m.node === ideaOf(gap) : m.fact === gap)).at(-1);
     // what Kai was told wins (a misconception, or a wrong statement of the fact); otherwise its own guess
     const words = belief?.words ?? (told && told.verdict === "wrong" ? told.words : undefined);
     if (words) {
-      steps.push({ text: `You told me: "${words}". So I go with that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
+      steps.push({ text: `My notes say “${words.replace(/[.!\s]+$/u, "")}”, so I'll go by that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
       // the answer must be the one that follows from what Kai was told: the wrong rule closest in wording to it
       const match = closestBelief(item, words);
       if (match) followed = match;
@@ -311,7 +319,9 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): 
   }
   const value = g.canBeRight ? item.answer : (followed?.answer ?? guess?.answer ?? wrongAnswer(item, seed));
   const answer = item.kind === "choice" ? LETTERS[value]! : String(Math.round(value * 100) / 100);
-  if (broken) steps.push({ text: `So I'll go with ${answerText(item, value)}.`, notes: [] });
+  // guessing: "my best guess"; going by what Kai was told: "I'd say"
+  const lead = followed ? "So I'd say" : "So my best guess is";
+  if (broken) steps.push({ text: item.kind === "choice" ? `${lead} ${LETTERS[value]}: ${lowerFirst(item.options![value]!)}.` : `${lead} ${answerText(item, value)}.`, notes: [] });
   return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess };
 }
 
@@ -323,18 +333,26 @@ export async function solve(
   bundle: Bundle,
   item: PracticeItem,
   state: State,
-  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean) => Promise<Solution> },
+  // deadline: when the caller must have its answer (the practice route: 55 s after the request came in)
+  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean) => Promise<Solution> },
 ): Promise<Solution> {
   if (opts.demo) return offlineSolve(bundle, item, state);
   const model = opts.model ?? llmSolve;
   const t0 = Date.now();
   let lastError: unknown = null;
-  // a try that breaks the rules gets one more, with a reminder, while there's time (the learner is waiting)
-  for (let tryNo = 0; tryNo < 2; tryNo++) {
-    if (tryNo === 1 && Date.now() - t0 > 15_000) break;
+  // a try that breaks the rules gets another, with a reminder, while there's time (the learner is waiting; the route
+  // has 60 s for a correction's judge and these tries). Breaking the rules: right without the facts it needs, or
+  // wrong with them (the gate open: the notebook holds every needed fact and no wrong belief about them, so a wrong
+  // answer is the model's slip, not the learner's teaching, and the learner mustn't be marked down for it). When the
+  // tries run out the offline attempt answers, which follows the worked solution exactly that far.
+  // a retry starts only when a whole try still fits before the deadline (a try: two model attempts of 18 s at most)
+  const deadline = opts.deadline ?? t0 + 55_000;
+  for (let tryNo = 0; tryNo < 3; tryNo++) {
+    if (tryNo > 0 && deadline - Date.now() < SOLVE_TRY_MS) break;
     try {
-      const s = await model(bundle, item, state, opts.onCall, tryNo === 1);
+      const s = await model(bundle, item, state, opts.onCall, tryNo > 0);
       if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
+      if (!s.correct && s.gate.canBeRight) throw new Error(`wrong with every fact it needs (answered ${s.answer}): a slip`);
       return s;
     } catch (e) {
       lastError = e;

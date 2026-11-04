@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Header } from "./ui";
+import { withLn } from "./lesson/Ln";
 import { StepClock, stepTime, useDeadline } from "./StepClock";
 import DebugSkip from "./DebugSkip";
 import { useStudySettings } from "./SettingsContext";
@@ -149,13 +150,13 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
                 .filter((q) => partOf(q) === current)
                 .map((q) => (
                   <li className="q" key={q.id} data-q={q.id}>
-                    <p className="qt" id={`${q.id}-q`}>{q.prompt}</p>
+                    <p className="qt" id={`${q.id}-q`}>{withLn(q.prompt)}</p>
                     <fieldset className="opts" aria-labelledby={`${q.id}-q`}>
                       {q.options.map((o, k) => (
                         <label className="opt" key={k}>
                           <input type="radio" name={q.id} checked={answers[q.id] === k} onChange={() => choose(q.id, k)} />
                           <span className="key" aria-hidden="true">{KEYS[k]}</span>
-                          <span>{o}</span>
+                          <span>{withLn(o)}</span>
                         </label>
                       ))}
                     </fieldset>

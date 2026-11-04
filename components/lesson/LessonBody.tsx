@@ -1,5 +1,6 @@
 import { Formula } from "./Formula";
 import { FIGURE } from "./Figures";
+import { withLn } from "./Ln";
 import type { LessonBlock, LessonSection } from "@/lib/lesson";
 
 // The text lesson as participants read it: sections of paragraphs (**bold** for the terms it introduces), formulas and
@@ -8,7 +9,7 @@ import type { LessonBlock, LessonSection } from "@/lib/lesson";
 /** A paragraph's text with its **bold** terms. */
 function Para({ text }: { text: string }) {
   const parts = text.split(/\*\*(.+?)\*\*/g);
-  return <p>{parts.map((t, i) => (i % 2 ? <strong key={i}>{t}</strong> : t))}</p>;
+  return <p>{parts.map((t, i) => (i % 2 ? <strong key={i}>{withLn(t)}</strong> : <span key={i}>{withLn(t)}</span>))}</p>;
 }
 
 export function Block({ b }: { b: LessonBlock }) {

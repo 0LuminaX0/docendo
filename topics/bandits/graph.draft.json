@@ -202,7 +202,8 @@
           "ask": "Once I have those numbers, what's the simplest rule for choosing?",
           "text": "Greedy picks the option with the highest average in every round. It keeps updating the averages, and when another option's average overtakes the favourite's, greedy switches to that option.",
           "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
-          "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it."
+          "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it.",
+          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial."
         },
         {
           "id": "n05.f2",
@@ -243,7 +244,8 @@
           "ask": "What could go wrong with greedy if the best option happens to give a bad result the first time?",
           "text": "Lock-in: once an option's average is too low, greedy never picks it again, so its average is never corrected, even if it is truly the best option (for example after one unlucky first try).",
           "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end.",
-          "hunch": "My hunch is that it sorts itself out: if greedy keeps going, the averages even out and it ends up on the best one."
+          "hunch": "My hunch is that it sorts itself out: if greedy keeps going, the averages even out and it ends up on the best one.",
+          "key": "the best option can look worse after an unlucky start, greedy then never picks it again, so its average is never corrected."
         },
         {
           "id": "n06.f2",
@@ -291,7 +293,9 @@
           "ask": "Is there a way to mostly pick the best one but still try the others now and then? How would that work?",
           "text": "ε-greedy makes a random pick with a fixed probability ε (for example 0.1) in every round, early and late, however reliable its averages are; otherwise it picks the option with the highest average.",
           "assume": "ε-greedy explores less and less once its averages become reliable.",
-          "hunch": "I'd imagine it explores less as it goes, once it's more sure of its averages."
+          "hunch": "I'd imagine it explores less as it goes, once it's more sure of its averages.",
+          "key": "the random pick happens with a fixed probability (ε) in every round, and that probability does not shrink over time. \"It sometimes picks at random\" without the fixed rate is partial.",
+          "evidence": "\\bfixed\\b|\\bconstant\\b|\\bthe same\\b|\\bnever (?:chang|decreas|shrink|go(?:es)? down|drop)\\w*|\\b(?:doesn'?t|does not|won'?t|will not) (?:chang|decreas|shrink|go down|drop)\\w*|\\bstays?\\b|\\b(?:every|each) (?:single )?(?:round|time|day|step|turn|visit|visitor|pick|week|night|go)\\b|\\bper (?:round|day|step|turn)\\b|\\balways\\b|\\bforever\\b|whole time|all the time|\\bthroughout\\b|still explores|keeps? exploring|no matter|\\bregardless\\b|even after|early and late|\\bunchanged\\b|(?:%|percent) of (?:the )?(?:time|rounds|days|picks|visits)\\b|of the (?:time|rounds)\\b|\\b(?:probability|chance|rate) (?:of )?(?:0?[.,]\\d+|\\d+ ?%|\\d+ percent)|\\b0?[.,]\\d+ (?:chance|probability)\\b|\\b\\d+ ?% (?:chance|probability)\\b"
         },
         {
           "id": "n07.f2",
@@ -299,7 +303,8 @@
           "ask": "When it does try something else, how does it decide which one to try?",
           "text": "The random pick chooses every option with equal chance (1 in k for k options), the favourite included, whatever their averages or how often they were tried.",
           "assume": "When ε-greedy picks at random, it chooses among the options other than the favourite.",
-          "hunch": "When it picks at random, I'd guess it skips the favourite, since that one gets picked anyway."
+          "hunch": "When it picks at random, I'd guess it skips the favourite, since that one gets picked anyway.",
+          "key": "the random pick can land on any option, the current favourite included, each equally likely."
         },
         {
           "id": "n07.f3",
@@ -481,7 +486,8 @@
           "ask": "Is there a smarter way to score each option, instead of picking at random? How is the score made?",
           "text": "UCB gives each option a score, its average plus a bonus, and picks the option with the highest score. There is no randomness: the same history always gives the same pick.",
           "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
-          "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times."
+          "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times.",
+          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial."
         },
         {
           "id": "n11.f2",
@@ -489,7 +495,8 @@
           "ask": "What decides how much that extra part of the score counts?",
           "text": "The size of every bonus is set by c, a setting chosen in advance to match how much the rewards are expected to vary. The bonus does not adapt to the rewards actually observed, and c does not change the averages.",
           "assume": "The bonus adapts to how much an option's observed rewards vary.",
-          "hunch": "My guess is that the bonus depends on how much an option's rewards jump around."
+          "hunch": "My guess is that the bonus depends on how much an option's rewards jump around.",
+          "key": "the size of the bonuses is set in advance by a setting (c), not by the rewards an option has given."
         },
         {
           "id": "n11.f3",
@@ -542,7 +549,8 @@
           "ask": "What happens to an option's bonus each time I try it?",
           "text": "Each time an option is picked, its bonus shrinks (its n grows); picks of other options do not shrink it.",
           "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
-          "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not."
+          "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not.",
+          "key": "picking an option shrinks that option's own bonus (and picking others doesn't)."
         },
         {
           "id": "n12.f2",
@@ -552,7 +560,9 @@
           "assume": "An option's bonus stays the same while it is not picked.",
           "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
           "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
-          "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often."
+          "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often.",
+          "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial.",
+          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarithm\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*"
         }
       ],
       "lexicon": [

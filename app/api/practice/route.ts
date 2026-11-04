@@ -92,12 +92,17 @@ export async function POST(req: NextRequest) {
     let judged: unknown = null;
     if (body.data.action === "reteach") {
       const msg = body.data.message;
-      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, body.data.step, onCall, { timeoutMs: 15_000, retries: 0 }).catch(() => mockJudge(bundle, msg)); // one try, so with the solver's two (18 s each) a reteach stays under 60 s
+      // the judge reads the correction knowing the problem and what Kai did ("the random pick includes A too" is about
+      // the favourite only if it knows A is the favourite)
+      const options = item.kind === "choice" ? ` Options: ${item.options!.map((o, i) => `${"ABCDEF"[i]}) ${o}`).join(" ")}` : "";
+      const context = `${body.data.step} (That was Kai's attempt at this problem: ${item.prompt}${options})`;
+      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, context, onCall, { timeoutMs: 15_000, retries: 0 }).catch(() => mockJudge(bundle, msg)); // one try: the solver's tries get the rest of the route's 60 s (solve's deadline)
       state = applyJudgement(state, j);
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [] };
     }
-    let error: string | null = null;
-    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, onError: (e) => (error = e instanceof Error ? e.message.slice(0, 300) : String(e)) });
+    const errors: string[] = []; // every failed try, in order (a slip, a right answer without the facts, a timeout)
+    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
+    const error = errors.at(-1) ?? null;
     const attempt = body.data.action === "solve" ? 1 : 2;
     record({
       t: body.data.action === "solve" ? "practice_kai_solve" : "practice_kai_reteach",
@@ -116,7 +121,8 @@ export async function POST(req: NextRequest) {
       gate: sol.gate, // the facts this problem needs, which were missing, misconceptions still believed: Kai can only be right with all of them
 
       by: sol.by, // model, or offline (demo mode, or the model failed)
-      error,
+      error, // the last failed try
+      errors, // every failed try, in order
       msOnProblem: body.data.msOnProblem ?? null,
       llm: calls,
       latencyMs: Date.now() - t0,

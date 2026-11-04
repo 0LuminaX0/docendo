@@ -1,19 +1,57 @@
 {
-  "note": "Kai's fixed teaching questions, the same for everyone and in this order: the lesson's ideas as the graph orders them (the problem, then each rule: how it chooses, and how it plays out over many rounds), then a choice between the rules and anything else. They are a novice's questions, written down while looking at the slides (so Kai knows the rules' names and nothing about them): none says what a rule does, what goes wrong or what to compare, and the three rules get the same questions. Before each question Kai reacts to the answer in its own words (a model writes that line from the notebook, term-checked; the question itself is never rewritten). A short answer to a question marked sayMore gets one \"Can you say more about that?\"; a question left unanswered comes back once after the last one. Kai wraps up after the last question, or at the first message after `minutes`.",
-  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits, so I looked at the slides and wrote down some questions. Could you help me with them?",
+  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. One question per idea in the graph's order (greedy, where greedy ends up, ε-greedy, UCB, what sets the bonus, UCB over many rounds), then anything else. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again), and after an answer each target still missing gets its own follow-up (`follow`), once; a complete short answer gets none. Follow-ups are open questions that name no answer (no yes/no between the right rule and its wrong reading, no scenario that gives the point away): lock-in has none, since every prompt for it hands the learner the unlucky start. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question left unanswered comes back once at the end, if its facts are still missing.",
+  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits. I get the setup: each round you pick one of a few options, and you only find out how the one you picked did. What I don't get is how the three rules on the slides decide, so I wrote down some questions.",
   "minutes": 15,
   "shortWords": 15,
+  "known": ["multi-armed bandit", "multi-armed bandits", "bandit", "bandits", "greedy", "ε", "epsilon", "ε-greedy", "epsilon-greedy", "epsilon greedy", "UCB", "UCB1"],
   "questions": [
-    { "id": "problem", "node": "n01", "sayMore": true, "text": "First, could you explain what problem all this is about, with an example of your own rather than the one from the lesson?" },
-    { "id": "greedy", "node": "n05", "sayMore": true, "text": "The first rule on the slides is called greedy. How does it choose what to pick each round?" },
-    { "id": "greedy-long", "node": "n06", "sayMore": true, "text": "If greedy keeps going for many rounds, how does that play out?" },
-    { "id": "epsilon", "node": "n07", "sayMore": true, "text": "Then there's ε-greedy. How does that one choose, round by round?" },
-    { "id": "epsilon-long", "node": "n07", "sayMore": true, "text": "And if ε-greedy keeps going for many rounds, how does that play out?" },
-    { "id": "ucb", "node": "n11", "sayMore": true, "text": "The last one is UCB. How does it decide which option to pick?" },
-    { "id": "ucb-example", "node": "n11", "sayMore": true, "text": "Could you make up a small example with a few options and show me which one UCB would pick, and why?" },
-    { "id": "ucb-long", "node": "n12", "sayMore": true, "text": "And if UCB keeps going for many rounds, how does that play out?" },
-    { "id": "choose", "node": null, "sayMore": true, "text": "If you had to use one of the three rules on a real problem, which would you pick, and why?" },
-    { "id": "anything", "node": null, "sayMore": false, "text": "Is there anything else I should know before I try some problems on my own?" }
+    {
+      "id": "greedy",
+      "node": "n05",
+      "text": "The first rule is called greedy. How does it decide what to pick each round?",
+      "targets": ["n05.f1"],
+      "follow": [{ "fact": "n05.f1", "text": "And in later rounds, once it has seen more results, how does greedy choose then?" }]
+    },
+    {
+      "id": "greedy-long",
+      "node": "n06",
+      "text": "If greedy keeps going like that for many rounds, where does it end up?",
+      "targets": ["n06.f1"]
+    },
+    {
+      "id": "epsilon",
+      "node": "n07",
+      "text": "Then there's ε-greedy. How does that one decide each round?",
+      "targets": ["n07.f1", "n07.f2"],
+      "follow": [
+        { "fact": "n07.f2", "text": "When it picks at random, which options can it land on?" },
+        { "fact": "n07.f1", "text": "How often does it do that, at the start and after thousands of rounds?" }
+      ]
+    },
+    {
+      "id": "ucb",
+      "node": "n11",
+      "text": "The last one is UCB. How does it decide which option to pick?",
+      "targets": ["n11.f1"],
+      "follow": [{ "fact": "n11.f1", "text": "So in the end, which option does UCB actually go for?" }]
+    },
+    {
+      "id": "ucb-size",
+      "node": "n11",
+      "text": "What decides how big that bonus is?",
+      "targets": ["n11.f2"]
+    },
+    {
+      "id": "ucb-long",
+      "node": "n12",
+      "text": "And if UCB keeps going for many rounds, how does that play out?",
+      "targets": ["n12.f1", "n12.f2"],
+      "follow": [
+        { "fact": "n12.f1", "text": "What happens to an option's bonus each time it gets picked?" },
+        { "fact": "n12.f2", "text": "And what happens to the bonus of an option that isn't picked for a long time?" }
+      ]
+    },
+    { "id": "anything", "node": null, "text": "Is there anything else I should know before I try some problems on my own?" }
   ],
   "lines": {
     "wrote": "Okay, I wrote down: {notes}.",

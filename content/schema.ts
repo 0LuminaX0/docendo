@@ -106,6 +106,12 @@ export const Fact = z.object({
   // solver's voice for a guess; `assume` stays the exact belief the practice items and the analysis refer to)
   hunch: z.string().min(10).optional(),
   hunchVague: z.string().min(10).optional(),
+  // what makes an explanation of it correct rather than partial, for the judge: the point that tells it apart from
+  // its beginner's reading (wording, examples and notation are free)
+  key: z.string().min(10).optional(),
+  // a check in code around the judge: a pattern (case-insensitive) a message must match for the fact to count as
+  // correct (else partial), for a key the judge tends to overlook (the bonus's slowing growth, ε's fixed rate)
+  evidence: z.string().min(3).optional(),
 });
 export type Fact = z.infer<typeof Fact>;
 
@@ -221,7 +227,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), evidence: z.string().optional() });
 export const BundleNode = z.object({
   inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),

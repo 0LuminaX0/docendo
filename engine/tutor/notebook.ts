@@ -16,7 +16,9 @@ export function latest(state: State): Map<string, Entry> {
  * fact. (All stay in `state.misconceptions` for the log.)
  */
 export function activeMisconceptions(state: State): Belief[] {
-  const corrected = (m: Belief) => state.notebook.some((e) => e.verdict === "correct" && e.turn > m.turn && e.fact.split(".")[0] === m.node);
+  // a later correct statement of the fact it contradicts retires it (older beliefs, without the fact: of their idea).
+  // One message that does both is settled by the judge's code (judge.ts: partial, the belief set aside)
+  const corrected = (m: Belief) => state.notebook.some((e) => e.verdict === "correct" && e.turn > m.turn && (m.fact ? e.fact === m.fact : e.fact.split(".")[0] === m.node));
   return (state.misconceptions ?? []).filter((m) => !corrected(m));
 }
 

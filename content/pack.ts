@@ -96,13 +96,20 @@ export const ScriptFile = z.object({
   opening: z.string().min(10), // Kai's first words, before the first question
   minutes: z.number().positive().default(10), // Kai wraps up at the first message after this long
   shortWords: z.number().int().positive().default(15), // an answer shorter than this gets "Can you say more about that?"
+  // lesson terms Kai knows before anyone teaches it (the topic's and the rules' names, from the slides): its questions
+  // and reactions may use them
+  known: z.array(z.string()).default([]),
   questions: z
     .array(
       z.object({
         id: z.string().regex(/^[a-z0-9-]+$/),
         node: z.string().nullable().default(null), // the idea it is about: Kai's focus (Kai's mind, the help card)
-        sayMore: z.boolean().default(true), // a short answer gets one "say more"; not for "anything else?" questions
+        sayMore: z.boolean().default(false), // a short answer gets one "say more" (questions without targets only)
         text: z.string().min(10),
+        // the teachable facts it is there to elicit: once all are credited it is skipped, and after an answer each one
+        // still missing gets its follow-up (once). Kai never asks a question naming a lesson term the learner hasn't used
+        targets: z.array(z.string()).default([]),
+        follow: z.array(z.object({ fact: z.string(), text: z.string().min(10) })).default([]),
       }),
     )
     .min(1),
@@ -156,6 +163,15 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   // practice: what Kai's gate needs must be real facts
   for (const p of practice?.items ?? [])
     for (const need of p.needs ?? []) for (const f of need.split("|")) if (bundle && !facts.has(f)) err("practice.json", `${p.id} needs ${f}, which isn't a fact in the bundle`);
+  // the judge's evidence patterns must compile (an invalid one would be skipped at run time)
+  for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
+    if (!f.evidence) continue;
+    try {
+      new RegExp(f.evidence, "iu");
+    } catch (e) {
+      err("graph", `${f.id}: its evidence pattern doesn't compile (${String(e).slice(0, 80)})`);
+    }
+  }
   // how Kai says each assumption when it guesses: a hunch for every assume (and assumeVague)
   for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
     if (f.assume && !f.hunch) warn("graph", `${f.id} has an assumption but no hunch: Kai would recite the assumption as a rule`);
@@ -203,14 +219,32 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     const ids = script.questions.map((q) => q.id);
     for (const id of ids.filter((x, i) => ids.indexOf(x) !== i)) err("script.json", `question ${id} appears twice`);
     for (const q of script.questions) if (q.node && !bundle.nodes.some((n) => n.id === q.node)) err("script.json", `${q.id} is about ${q.node}, which isn't an idea in the bundle`);
-    // the topic's and the rules' names are fine; anything else could hand the learner a fact
-    const names = /^(multi-armed bandits?|multi-arm bandits?|bandits?|greedy|ε|epsilon|ε-greedy|epsilon-greedy|epsilon greedy|ucb|ucb1)$/i;
-    for (const q of [{ id: "opening", text: script.opening }, ...script.questions])
-      for (const n of bundle.nodes) for (const t of n.lexicon) if (!names.test(t) && hasTerm(q.text, t)) warn("script.json", `${q.id} uses "${t}" (${n.id}): Kai's questions should name no lesson term but the rules' names`);
     // the graph's order: no question about an idea before a question about an idea it builds on
     const nodeOf = new Map(bundle.nodes.map((n) => [n.id, n]));
     const builds = (id: string, on: string, seen = new Set<string>()): boolean =>
       (nodeOf.get(id)?.needs ?? []).some((p) => p === on || (!seen.has(p) && (seen.add(p), builds(p, on, seen))));
+    // terms: the names Kai knows from the slides anywhere; a question may also name terms of its own idea and the ideas
+    // it builds on (Kai asks it only once the learner has used them: engine/tutor/script.ts); nothing else
+    const known = new Set(script.known.map((t) => t.toLowerCase()));
+    const own = (node: string | null) => new Set(bundle.nodes.filter((n) => node && (n.id === node || builds(node, n.id))).flatMap((n) => n.lexicon.map((t) => t.toLowerCase())));
+    const texts = [{ id: "opening", node: null as string | null, text: script.opening }, ...script.questions.flatMap((q) => [{ id: q.id, node: q.node, text: q.text }, ...q.follow.map((f) => ({ id: `${q.id} (${f.fact})`, node: q.node, text: f.text }))])];
+    for (const q of texts)
+      for (const n of bundle.nodes)
+        for (const t of n.lexicon)
+          if (!known.has(t.toLowerCase()) && !own(q.node).has(t.toLowerCase()) && hasTerm(q.text, t)) warn("script.json", `${q.id} uses "${t}" (${n.id}): Kai's questions may name only the rules' names and terms of their own idea`);
+    // a question naming a term of its own idea waits until the learner has used it: say so (put the rules' names, which
+    // Kai knows from the slides, in `known`, or Kai never asks about the rules)
+    for (const q of script.questions)
+      for (const n of bundle.nodes)
+        for (const t of n.lexicon)
+          if (!known.has(t.toLowerCase()) && own(q.node).has(t.toLowerCase()) && hasTerm(q.text, t)) warn("script.json", `${q.id} is asked only once the learner has used "${t}" (fine if meant; if Kai knows it from the slides, add it to known)`);
+    // targets: teachable facts, every one asked about; follow-ups for a question's own targets
+    const teachable = new Set(bundle.nodes.flatMap((n) => n.facts.filter((f) => f.required && f.teachable && f.assume).map((f) => f.id)));
+    for (const q of script.questions) {
+      for (const f of q.targets) if (!facts.has(f)) err("script.json", `${q.id} targets ${f}, which isn't a fact in the bundle`);
+      for (const f of q.follow) if (!q.targets.includes(f.fact)) err("script.json", `${q.id}: a follow-up for ${f.fact}, which isn't one of its targets`);
+    }
+    for (const f of teachable) if (!script.questions.some((q) => q.targets.includes(f))) warn("script.json", `no question asks about ${f}: a learner who doesn't bring it up leaves it out of Kai's notebook`);
     script.questions.forEach((q, i) => {
       for (const later of script.questions.slice(i + 1)) if (q.node && later.node && builds(q.node, later.node)) warn("script.json", `${q.id} (${q.node}) comes before ${later.id} (${later.node}), which it builds on`);
     });

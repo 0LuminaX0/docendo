@@ -303,6 +303,14 @@ export function tables(events: Ev[]) {
         sayMore: (c.script as { sayMore?: boolean } | null | undefined)?.sayMore ?? null,
         scriptBack: (c.script as { back?: boolean } | null | undefined)?.back ?? null, // the next question is one left unanswered, asked again
         reaction: (c.script as { reaction?: string } | null | undefined)?.reaction ?? null, // what Kai reacted to: answered, more, again, askedKai, unsure, moveOn, end
+        scriptProbe: (c.script as { probe?: string | null } | null | undefined)?.probe ?? null, // the fact Kai's next follow-up asks about
+        scriptCovered: ((c.script as { covered?: string[] } | null | undefined)?.covered ?? []).join(" ") || null, // questions skipped: their facts already taught
+        scriptGated: ((c.script as { gated?: string[] } | null | undefined)?.gated ?? []).join(" ") || null, // questions waiting: they name a term the learner hasn't used
+        scriptRestart: (c.script as { restart?: boolean } | null | undefined)?.restart ?? null, // the session was saved under an earlier version of the questions
+        // the wrong beliefs this message stated, as the fact each contradicts (or its idea, when none)
+        misconceptionFacts: ((c.misconceptions as { node?: string; fact?: string | null }[]) ?? []).map((m) => m.fact ?? `${m.node}:none`).join(" ") || null,
+        // the checks around the judge this turn: verdicts dropped, downgraded or un-pinned (the dropped list says which)
+        judgeChecks: ((c.dropped as { fact?: string }[]) ?? []).map((d) => d.fact).join("; ") || null,
         leaked: ((c.leaked as string[]) ?? []).join(" "),
         // Kai's notes (notes.ts): how many verdicts got Kai's words around the learner's, and how many it refused
         notesWithAdded: [...((c.judged as { note?: string | null }[]) ?? []), ...((c.misconceptions as { note?: string | null }[]) ?? [])].filter((v) => v.note).length,

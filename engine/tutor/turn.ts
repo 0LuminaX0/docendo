@@ -62,7 +62,7 @@ export function applyJudgement(state: State, j: Judgement): State {
     next.notebook.push({ fact: v.fact, verdict: v.verdict, words: v.quote.slice(0, 400), note: v.note?.slice(0, 400) ?? null, turn: next.turn });
   }
   if (next.notebook.length > 300) next.notebook = next.notebook.slice(-300);
-  next.misconceptions = [...(state.misconceptions ?? []), ...(j.misconceptions ?? []).map((m) => ({ node: m.node, words: m.quote.slice(0, 400), note: m.note?.slice(0, 400) ?? null, turn: next.turn }))].slice(-100);
+  next.misconceptions = [...(state.misconceptions ?? []), ...(j.misconceptions ?? []).map((m) => ({ node: m.node, words: m.quote.slice(0, 400), note: m.note?.slice(0, 400) ?? null, turn: next.turn, fact: m.fact ?? null }))].slice(-100);
   for (const t of j.termsUsed) if (!next.usedTerms.includes(t)) next.usedTerms.push(t);
   // only a real answer counts as having a go (it unlocks the help card); chit-chat doesn't
   if (next.focus && ["explain", "answer", "unsure"].includes(j.intent)) next.memo[next.focus] = { ...memo(next, next.focus), attempts: memo(next, next.focus).attempts + 1 };

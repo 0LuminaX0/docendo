@@ -1192,6 +1192,9 @@ textarea.dictating::placeholder { color: transparent; }
 .lesson-fig svg { display: block; width: 100%; height: auto; }
 .lesson-fig figcaption { font-size: 13.5px; color: var(--muted); margin-top: 6px; }
 .lesson-formula { overflow-x: auto; padding: 8px 0 14px; font-size: 19px; }
+/* "ln" as in print maths: in the body font its l reads as an I */
+.ln { font-family: "STIX Two Text", "Cambria", "Times New Roman", Georgia, serif; font-size: 1.05em; letter-spacing: 0.02em; }
+.lesson-formula math { font-family: "STIX Two Math", "Cambria Math", "Latin Modern Math", "Times New Roman", serif; }
 .lesson-formula mtd { text-align: left; padding: 2px 0; }
 .lesson-formula mtd + mtd { padding-left: 1.4em; }
 .lesson .lesson-end { color: var(--muted); margin-top: 26px; }

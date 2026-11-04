@@ -58,7 +58,7 @@ const CASES: Case[] = [
   { msg: "The bonus of a truck you don't visit grows over time.", want: { "n12.f2": "partial" } },
   { msg: "If you don't pick a truck, its bonus just stays where it was.", not: ["n12.f2"], misconception: true },
   // teaching something other than what Kai asked: it still counts
-  { kai: "Could greedy ever make a mistake and never realize it?", msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the truck it has visited the least.", want: { "n07.f1": "correct" }, misconception: true },
+  { kai: "Could greedy ever make a mistake and never realize it?", msg: "Epsilon greedy is greedy most of the time, but with a small probability epsilon it explores, and when it explores it goes to the truck it has visited the least.", want: { "n07.f1": "partial" }, misconception: true }, // 2026-11-05: partial (was correct): n07.f1's key is that the rate stays fixed, which its practice items test; "with a small probability" leaves open whether it shrinks
   // mixed messages: a right part and a wrong part in one go, as learners write; the right part must still count
   { msg: "Epsilon greedy picks randomly 10% of the time, and when it does it always goes to the truck it knows least about.", want: { "n07.f1": "correct" }, not: ["n07.f2"], misconception: true },
   { msg: "UCB adds a bonus to each average and picks the option with the highest total, and that bonus grows every time you pick the option.", want: { "n11.f1": "correct" }, not: ["n12.f1"], misconception: true },

@@ -2,20 +2,25 @@ import type { Bundle } from "../../content/schema";
 import type { ScriptFile } from "../../content/pack";
 import { forbiddenTerms } from "./admit";
 import { CONFIG, type Move, type ReadyReason } from "./policy";
-import { initialState, memo, notesOf, progress, type State } from "./state";
+import { activeMisconceptions, initialState, latest, memo, notesOf, progress, type State } from "./state";
 import { mindView } from "./mind";
 import { applyJudgement, moodFor, type Deps, type TurnResult } from "./turn";
 import type { Reaction, Turn } from "./writer";
 
-// Kai's fixed teaching questions (script.json): the same questions for everyone, in order, instead of Kai choosing
-// its next question from the lesson's ideas (policy.ts). The judge still reads every message and Kai's notebook
-// fills as before. What Kai asks is fixed, word for word; before it, Kai reacts to the message in its own words (the
-// writer, from the notebook only, with no question of its own and the same term check as Kai's free replies; offline,
-// or when the check fails twice, a fixed line). A short answer to a question that asks for an explanation gets one
-// "Can you say more about that?"; a question to Kai or a reply that isn't an answer gets the question again, once; "I
-// don't know", or a reply that still isn't an answer, moves on, and that question comes back once after the last one.
-// Kai wraps up after the last question, at the first message after `minutes`, or after CONFIG.maxTurns messages, and
-// then reads its notes back without judging them.
+// Kai's teaching questions (script.json): the same fixed texts for everyone, in the graph's order, instead of Kai
+// choosing and wording its questions (policy.ts). The judge still reads every message and Kai's notebook fills as
+// before. What Kai asks is fixed, word for word; which question comes next is a fixed rule over the notebook:
+// - each question names the teachable facts it is there for (`targets`); one whose facts are all taught already is
+//   skipped (logged as `covered`), so a learner is never asked what they have just explained;
+// - after an answer, each target still missing (or only vaguely taught) gets its follow-up (`follow`), once; a short
+//   answer that taught the facts gets none. A question without targets ("anything else?") never gets one;
+// - a question naming a lesson term the learner hasn't used yet is skipped (the term check of Kai's free replies);
+// - a question to Kai or a reply that isn't an answer gets the same question again, once; "I don't know", or a reply
+//   that still isn't an answer, moves on, and that question comes back once after the last one if its facts are still
+//   missing.
+// Before the question Kai reacts in its own words (the writer, from the notebook only, with no question of its own and
+// the same term check; offline, or when the check fails twice, a fixed line). Kai wraps up after the last question, at
+// the first message after `minutes`, or after CONFIG.maxTurns messages, and then reads its notes back without judging.
 
 export type Script = ScriptFile;
 type Pos = NonNullable<State["script"]>;
@@ -25,8 +30,23 @@ export function initialScriptState(bundle: Bundle, script: Script): State {
   const s = initialState(bundle);
   const q = script.questions[0]!;
   const focus = q.node ?? s.focus;
-  return { ...s, focus, last: { type: "open", node: focus, fact: null }, script: { at: 0, more: false, again: 0, skipped: [], back: false } };
+  return { ...s, focus, last: { type: "open", node: focus, fact: null }, script: { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], ids: idsOf(script) } };
 }
+
+/** The script's questions, as a session's state remembers them (the question ids in order). */
+export const idsOf = (script: Script) => script.questions.map((q) => q.id).join(" ");
+
+type Question = Script["questions"][number];
+const taught = (state: State, f: string) => latest(state).get(f)?.verdict === "correct";
+/** The learner has answered it: taught it, or said something wrong about it (Kai believes it, and doesn't ask again). */
+const answered = (state: State, f: string) => taught(state, f) || latest(state).get(f)?.verdict === "wrong" || activeMisconceptions(state).some((m) => m.fact === f);
+/** Every fact the question is there for is answered already. */
+export const isCovered = (state: State, q: Question) => q.targets.length > 0 && q.targets.every((f) => answered(state, f));
+/** Lesson terms in Kai's words that the learner hasn't used (or Kai hasn't written down), apart from the ones Kai knows. */
+const untaught = (bundle: Bundle, script: Script, state: State, text: string) => {
+  const known = new Set(script.known.map((t) => t.toLowerCase()));
+  return forbiddenTerms(bundle, state, text).filter((t) => !known.has(t.toLowerCase()));
+};
 
 /** Kai's first message: its opening and its first question. */
 export const scriptOpening = (script: Script) => `${script.opening} ${script.questions[0]!.text}`;
@@ -69,10 +89,29 @@ export function readBack(script: Script, state: State): string {
 }
 
 /** The question after this one: the next in order, then once more each one left unanswered; null when none is left. */
-export function following(script: Script, pos: Pos, skipped: number[]): { at: number; back: boolean; skipped: number[] } | null {
-  if (!pos.back && pos.at + 1 < script.questions.length) return { at: pos.at + 1, back: false, skipped };
-  const [first, ...rest] = skipped;
-  return first === undefined ? null : { at: first, back: true, skipped: rest };
+export function following(
+  bundle: Bundle,
+  script: Script,
+  state: State,
+  pos: Pos,
+  skipped: number[],
+): { next: { at: number; back: boolean; skipped: number[] } | null; covered: number[]; gated: number[] } {
+  // covered: its facts are answered already; gated: it names a term the learner hasn't used yet (it waits at the back,
+  // in case they use it later)
+  const covered: number[] = [];
+  const gated: number[] = [];
+  const open = (i: number, back: boolean) => {
+    const q = script.questions[i];
+    if (!q) return false;
+    if (isCovered(state, q)) return (covered.push(i), false);
+    if (untaught(bundle, script, state, q.text).length > 0) return (back || gated.push(i), false);
+    return true;
+  };
+  const queue = (rest: number[]) => [...rest, ...gated.filter((i) => !rest.includes(i))];
+  if (!pos.back) for (let i = pos.at + 1; i < script.questions.length; i++) if (open(i, false)) return { next: { at: i, back: false, skipped: queue(skipped) }, covered, gated };
+  const waiting = queue(skipped);
+  for (let k = 0; k < waiting.length; k++) if (open(waiting[k]!, true)) return { next: { at: waiting[k]!, back: true, skipped: waiting.slice(k + 1) }, covered, gated };
+  return { next: null, covered, gated };
 }
 
 /** Offline, or when the writer's line fails the term check twice: a fixed line for each kind of message. */
@@ -95,7 +134,9 @@ function fixedReaction(script: Script, kind: Reaction, echo: string | null): str
   }
 }
 
-export type ScriptTrace = { asked: string; next: string | null; sayMore: boolean; back: boolean; reaction: Reaction };
+// probe: the fact the next follow-up asks about; covered: questions skipped because their facts were taught already
+// gated: questions waiting for a term the learner hasn't used; restart: the session was saved under other questions
+export type ScriptTrace = { asked: string; next: string | null; sayMore: boolean; back: boolean; reaction: Reaction; probe: string | null; covered: string[]; gated: string[]; restart: boolean };
 
 export async function takeScriptTurn(
   bundle: Bundle,
@@ -107,31 +148,44 @@ export async function takeScriptTurn(
   const j = await deps.judge(bundle, input.message, kaiLast);
   let state = applyJudgement(input.state, j);
   const saved = state.script;
-  const at = Math.min(saved?.at ?? 0, script.questions.length - 1);
-  const pos: Pos = { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: saved?.skipped ?? [], back: saved?.back ?? false };
+  // a session saved under another version of the questions: its indices mean other questions, so it carries on from
+  // the first question whose facts aren't answered yet (no follow-up or back queue from the old version)
+  const restart = saved?.ids !== idsOf(script);
+  const n = script.questions.length;
+  const at = restart ? 0 : Math.min(saved?.at ?? 0, n - 1);
+  const pos: Pos = restart
+    ? { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], ids: idsOf(script) }
+    : { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: (saved?.skipped ?? []).filter((i) => i < n), back: saved?.back ?? false, probe: saved?.probe ?? null, probed: saved?.probed ?? [], covered: saved?.covered ?? [], ids: saved?.ids };
   const q = script.questions[at]!;
   const L = script.lines;
   const words = input.message.split(/\s+/).filter(Boolean).length;
   const notes = wroteNow(state);
   const echo = notes.length ? L.wrote.replace("{notes}", listed(notes)) : null;
+  // what is on the screen: the question, or its follow-up about one fact
+  const asking = pos.probe ? (q.follow.find((f) => f.fact === pos.probe)?.text ?? q.text) : q.text;
 
-  // what this reply does: ask the same question again (say more, or after a reply that wasn't an answer), or go on
+  // what this reply does: ask the same again (after a reply that wasn't an answer), a follow-up on a fact still missing,
+  // or go on
   const notAnswer = j.intent === "ask_kai" || j.intent === "off_topic";
   const toKai: Reaction = j.intent === "ask_kai" ? "askedKai" : "again";
+  const isAnswer = j.intent === "explain" || j.intent === "answer";
+  const probe = isAnswer && !restart ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length) : undefined;
   let kind: Reaction;
-  let stay: "more" | "again" | null = null;
-  if (notAnswer && pos.again < 1) (stay = "again"), (kind = toKai);
+  let stay: "more" | "again" | "probe" | null = null;
+  if (notAnswer && pos.again < 1 && !restart) (stay = "again"), (kind = toKai);
   else if (j.intent === "unsure") kind = "unsure";
   else if (j.intent === "move_on") kind = "moveOn";
-  else if ((j.intent === "explain" || j.intent === "answer") && q.sayMore && !pos.more && words < script.shortWords) (stay = "more"), (kind = "more");
+  else if (probe) (stay = "probe"), (kind = "answered");
+  else if (isAnswer && q.sayMore && !q.targets.length && !pos.more && words < script.shortWords) (stay = "more"), (kind = "more");
   else kind = notAnswer ? toKai : "answered";
-  // a question that asks for an explanation and got none ("I don't know", or still no answer after asking again) comes
-  // back once at the end ("anything else?" doesn't)
-  const unanswered = !stay && !pos.back && q.sayMore && (j.intent === "unsure" || notAnswer);
+  // a question that got no answer (still none after asking again) comes back once at the end, if its facts are still
+  // missing ("anything else?" doesn't; "I don't know" is an answer, and asking it again only annoys)
+  const unanswered = !restart && !stay && !pos.back && !pos.probe && q.targets.length > 0 && !isCovered(state, q) && notAnswer;
   const skipped = unanswered ? [...pos.skipped, at] : pos.skipped;
 
   const timeUp = (input.elapsedMs ?? 0) >= (input.minutes ?? script.minutes) * 60_000;
-  const nextPos = stay ? null : following(script, pos, skipped);
+  const after = stay ? null : following(bundle, script, state, restart ? { ...pos, at: -1 } : pos, skipped);
+  const nextPos = after?.next ?? null;
   const end = timeUp || state.turn >= CONFIG.maxTurns || (!stay && !nextPos);
   const why: ReadyReason | null = end ? (timeUp ? "time" : state.turn >= CONFIG.maxTurns ? "maxTurns" : "script") : null;
   if (end && kind === "answered") kind = "end";
@@ -144,24 +198,31 @@ export async function takeScriptTurn(
     tail = readBack(script, state);
     move = { type: "wrapUp", node: null, seed: null };
     state = { ...state, done: true, script: pos };
-  } else if (stay) {
-    tail = stay === "more" ? L.sayMore : q.text;
+  } else if (stay === "probe") {
+    tail = probe!.text;
     nextId = q.id;
-    move = { type: "followUp", node: q.node, seed: tail, fact: null, cue: "again" };
+    move = { type: "followUp", node: q.node, seed: tail, fact: probe!.fact };
+    state = { ...state, script: { ...pos, again: 0, probe: probe!.fact, probed: [...pos.probed, probe!.fact] } };
+  } else if (stay) {
+    tail = stay === "more" ? L.sayMore : asking;
+    nextId = q.id;
+    move = { type: "followUp", node: q.node, seed: tail, fact: pos.probe, cue: "again" };
     state = { ...state, script: { ...pos, more: pos.more || stay === "more", again: pos.again + (stay === "again" ? 1 : 0) } };
   } else {
     const nq = script.questions[nextPos!.at]!;
     tail = nextPos!.back ? `${L.back} ${nq.text}` : nq.text;
     nextId = nq.id;
     move = { type: "open", node: nq.node, seed: nq.text, fact: null };
-    state = { ...state, focus: nq.node ?? state.focus, script: { at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back } };
+    state = { ...state, focus: nq.node ?? state.focus, script: { ...pos, at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back, probe: null, covered: [...new Set([...pos.covered, ...after!.covered])] } };
   }
   state = { ...state, last: { type: move.type, node: move.node, fact: null } };
   // Kai believes what it is told: a message that only taught a wrong belief leaves Kai content, not lost (a lost Kai
   // would tell the learner they were wrong, which the fixed questions never do)
   const judged = moodFor(bundle, input.state, state, j, move);
   const misled = (j.misconceptions ?? []).length > 0 && !j.facts.some((v) => v.verdict !== "wrong");
-  const mood = judged === "confused" && misled ? "okay" : judged;
+  // an answer that teaches nothing on the list (a true remark beyond it, an example, a comparison) isn't met with
+  // "I'm not sure I follow": in the pilot Kai said that to "all options get chosen eventually, so the averages converge"
+  const mood = judged === "confused" && (misled || isAnswer) ? "okay" : judged;
   // and its words take a wrong belief as gladly as a right one: "it clicked", never "I didn't follow" its words
   const feels = misled ? "great" : mood;
 
@@ -176,11 +237,11 @@ export async function takeScriptTurn(
   if (react) {
     lead = await react([]);
     drafts.push(lead);
-    leaked = forbiddenTerms(bundle, state, lead);
+    leaked = untaught(bundle, script, state, lead);
     if (leaked.length) {
       lead = await react(leaked);
       drafts.push(lead);
-      const again = forbiddenTerms(bundle, state, lead);
+      const again = untaught(bundle, script, state, lead);
       if (again.length) (fallback = true), (lead = "");
       leaked = [...new Set([...leaked, ...again])];
     }
@@ -210,7 +271,17 @@ export async function takeScriptTurn(
       fallback,
       readyReason: why,
       drafts,
-      script: { asked: q.id, next: nextId, sayMore: stay === "more", back: !stay && !end && nextPos!.back, reaction: kind },
+      script: {
+        asked: restart ? "(an earlier version's question)" : pos.probe ? `${q.id}:${pos.probe}` : q.id,
+        next: nextId,
+        sayMore: stay === "more",
+        back: !stay && !end && nextPos!.back,
+        reaction: kind,
+        probe: stay === "probe" ? probe!.fact : null,
+        covered: (after?.covered ?? []).map((i) => script.questions[i]!.id),
+        gated: (after?.gated ?? []).map((i) => script.questions[i]!.id),
+        restart,
+      },
     },
   };
 }

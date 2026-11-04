@@ -110,7 +110,7 @@ const REACT: Record<Reaction, string> = {
   more: `Their answer was short. React in one short sentence: the gist in their words if there is one, or that you'd like a bit more. Your request to say more comes right after your line.`,
   again: `Their message didn't answer your question: it may be a joke, gibberish, small talk or about something else. React lightly and kindly in one short sentence, the way a classmate would, without judging. Your question comes again right after your line.`,
   askedKai: `They asked YOU something. Answer only from your notebook. If your notebook doesn't hold the answer, say honestly that you don't know, that's why you're asking them.`,
-  unsure: `They weren't sure or don't know. Say kindly, in one short sentence, that that's fine.`,
+  unsure: `They weren't sure or don't know. Say kindly, in a few words of your own, that it's fine, and not with the words of any earlier line of yours (not "that's fine" again: "no worries", "fair enough, we can skip that", "okay, let's leave it" and the like). Don't say you're lost.`,
   moveOn: `They want to move on. Say okay, in a few words.`,
   end: `This was their last answer. React to it the same way (the gist in their words, or what you didn't quite follow), then thank them for teaching you. Your notes are read back after your line.`,
 };
@@ -157,12 +157,13 @@ export function tidyReaction(text: string): string {
     .replace(/^"|"$/g, "")
     .replace(/(\*\*|\*|__|_)(\S(?:.*?\S)?)\1/g, "$2")
     .replace(/\s+/g, " ");
-  const sentences = plain.match(/[^.!?…]+(?:[.!?…]+|$)["”']?/g)?.map((x) => x.trim()).filter(Boolean) ?? [];
-  const out = sentences
-    .filter((x) => !x.includes("?"))
-    .slice(0, 2)
-    .join(" ")
-    .trim();
+  // a decimal point ("0.1") isn't a sentence end
+  const DOT = "\u2024";
+  const sentences = plain.replace(/(\d)\.(\d)/g, `$1${DOT}$2`).match(/[^.!?…]+(?:[.!?…]+|$)["”']?/g)?.map((x) => x.trim().replaceAll(DOT, ".")).filter(Boolean) ?? [];
+  const kept = sentences.filter((x) => !x.includes("?")).slice(0, 2);
+  // a long echo of the learner's message: its first sentence only
+  const wordsIn = (x: string[]) => x.join(" ").split(/\s+/).length;
+  const out = (wordsIn(kept) > 32 ? kept.slice(0, 1) : kept).join(" ").trim();
   if (!out) return "";
   // a sentence of its own before the question: capitalised, with its full stop
   return `${out.charAt(0).toUpperCase()}${out.slice(1)}${/[.!…]["”']?$/.test(out) ? "" : "."}`;

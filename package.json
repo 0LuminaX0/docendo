@@ -19,7 +19,7 @@
     "eval:solver": "tsx scripts/eval-solver.ts",
     "eval:chat": "tsx scripts/eval-chat.ts",
     "eval:judge": "tsx scripts/eval-judge.ts",
-    "eval:teach": "tsx scripts/eval-teach.ts"
+    "eval:sim": "tsx scripts/eval-sim.ts"
   },
   "packageManager": "pnpm@10.20.0",
   "dependencies": {

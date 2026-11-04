@@ -32,6 +32,9 @@ export const Belief = z.object({
   words: z.string().max(400), // the learner's own words
   note: z.string().max(400).nullable().optional(), // as a whole sentence (see Entry)
   turn: z.number().int().min(0).max(1000),
+  // the lesson fact it contradicts (null: none of them, so it blocks nothing in practice); absent in older states,
+  // which block by idea
+  fact: z.string().max(12).nullable().optional(),
 });
 export type Belief = z.infer<typeof Belief>;
 
@@ -71,6 +74,13 @@ export const State = z.object({
       again: z.number().int().min(0).max(10),
       skipped: z.array(z.number().int().min(0).max(100)).max(100).default([]),
       back: z.boolean().default(false),
+      probe: z.string().max(12).nullable().default(null), // the fact Kai's follow-up on the screen asks about
+      probed: z.array(z.string().max(12)).max(60).default([]), // facts Kai has asked its follow-up about
+      covered: z.array(z.number().int().min(0).max(100)).max(100).default([]), // questions skipped: their facts already taught
+      // the script's question ids when the session started on it: indices saved under another version of script.json
+      // (e.g. before a deploy) mean other questions, so a session whose script changed starts again from the first
+      // question not yet answered
+      ids: z.string().max(2000).optional(),
     })
     .optional(),
 });
