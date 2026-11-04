@@ -1,6 +1,6 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
-  "minutes": 10,
+  "minutes": 20,
   "note": "Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
   "items": [
     {

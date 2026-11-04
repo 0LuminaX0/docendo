@@ -36,6 +36,43 @@ export const inScope = (s: Record<string, unknown>, scope: Scope) => {
   return scope === "all" || (scope === "participants" ? participant : !participant);
 };
 
+/** The parts of a session that each have a time (Study setup), as the export's column names: time<Part>Min. */
+export const TIME_PARTS = [
+  ["Pretest1", "Pretest, part 1"],
+  ["Pretest2", "Pretest, part 2"],
+  ["Watch", "Lesson"],
+  ["Teach", "Teaching Kai"],
+  ["Practice", "Practice"],
+  ["Test1", "Test, part 1"],
+  ["Test2", "Test, part 2"],
+] as const;
+type Timed = { step?: unknown; part?: unknown; ms?: unknown; limitMs?: unknown };
+const partKey = (t: Timed) => {
+  const step = String(t.step ?? "");
+  const n = typeof t.part === "number" ? t.part : 1;
+  return step === "pretest" ? `Pretest${n}` : step === "test" || step === "followup" ? `Test${n}` : step === "watch" ? "Watch" : step === "teach" ? "Teach" : step === "practice" ? "Practice" : null;
+};
+const round2 = (x: number) => Math.round(x * 100) / 100;
+
+/**
+ * How long each step and part took against its time (components/StepClock.tsx): the pretest's and the test's from
+ * their graded records (sent with the answers), the others from the browser's step_time events; the first of each.
+ * <part>Min spent, <part>RecMin the time it had, <part>DiffMin spent minus it (negative: under it).
+ */
+function timeColumns(evs: Ev[]): Record<string, number | null> {
+  const server = evs.filter((e) => e.t === "pretest" || e.t === "grade").flatMap((e) => (Array.isArray(e.times) ? (e.times as Timed[]) : []));
+  const client = evs.filter((e) => e.t === "client_step_time") as Timed[];
+  const out: Record<string, number | null> = {};
+  for (const t of [...server, ...client]) {
+    const k = partKey(t);
+    if (!k || out[`time${k}Min`] !== undefined || typeof t.ms !== "number" || typeof t.limitMs !== "number") continue;
+    out[`time${k}Min`] = round2(t.ms / 60_000);
+    out[`time${k}RecMin`] = round2(t.limitMs / 60_000);
+    out[`time${k}DiffMin`] = round2((t.ms - t.limitMs) / 60_000);
+  }
+  return out;
+}
+
 export function tables(events: Ev[]) {
   events.sort((a, b) => a.at.localeCompare(b.at) || Number(a.seq ?? 0) - Number(b.seq ?? 0));
   const bySid = new Map<string, Ev[]>();
@@ -193,6 +230,10 @@ export function tables(events: Ev[]) {
       readTimedOut: first("client_read_continue") ? !!first("client_read_continue")!.timedOut : null,
       teachTimedOut: of("client_teach_time_up").length > 0,
       testTimedOut: grade ? !!grade.timedOut : null,
+      // the shared code's debug skip: steps skipped without waiting (team sessions only)
+      debugSkips: of("client_debug_skip").length,
+      // each step's and part's time against its recommended time (the pilot's soft timing; hard limits too)
+      ...timeColumns(evs),
       // every pretest answer, by item id (any topic pack), with the pretest's version; the three after it are the bandits
       // pack's background items, kept as named columns for the analysis scripts (q1 to q3; b1 and b2 before 2026-11-02)
       pretestAnswers: first("pretest")?.answers ?? null,
@@ -409,6 +450,13 @@ export function summarize(t: Pick<Tables, "sessions" | "practice" | "test">, opt
       return { id, n: rows.length, all: pct(rows.filter((r) => r.correct === true).length, rows.length), direct: pct(by("direct").filter((r) => r.correct === true).length, by("direct").length), recursive: pct(by("recursive").filter((r) => r.correct === true).length, by("recursive").length) };
     }),
     testOtherVersions: testAll.filter((r) => r.phase !== "delayed").length - test.length,
+    // each part's time against its recommended time: how many took it, the median spent, the time, the median
+    // difference and how many went over
+    timing: TIME_PARTS.map(([k, label]) => {
+      const done = sessions.filter((s) => num(s[`time${k}Min`]) !== null);
+      const diffs = done.map((s) => num(s[`time${k}DiffMin`])).filter((x): x is number => x !== null);
+      return { key: k, label, n: done.length, spent: median(done.map((s) => num(s[`time${k}Min`]))), rec: median(done.map((s) => num(s[`time${k}RecMin`]))), diff: median(diffs), over: diffs.filter((d) => d > 0).length };
+    }).filter((x) => x.n > 0),
     delayed: {
       n: followUps.length,
       finished: followUps.filter((s) => s.testScore !== null && s.testScore !== undefined).length,

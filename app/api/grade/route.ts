@@ -16,6 +16,11 @@ export const dynamic = "force-dynamic";
 const ITEMS = 40; // at most, per session (both forms in a pilot; the session's own length is checked below)
 // the delayed test asks first whether the learner has looked at the topic since: a confound for a delayed measure
 const SINCE = ["no", "a little", "a lot"] as const;
+// how long each part took against its time (components/StepClock.tsx), sent with the answers: recorded as they come
+const Times = z
+  .array(z.object({ step: z.string().max(20), part: z.number().int().min(1).max(8).nullable(), ms: z.number().min(0).max(864e5), limitMs: z.number().min(0).max(864e5), diffMs: z.number().min(-864e5).max(864e5), over: z.boolean() }))
+  .max(8)
+  .optional();
 
 const Body = z.union([
   z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.array(z.number().int().min(0).max(9)).max(ITEMS) }),
@@ -31,10 +36,12 @@ const Body = z.union([
     order: z.array(z.string().max(10)).max(ITEMS).optional(), // the order the learner saw the items in
     since: z.enum(SINCE).optional(), // delayed test: studied the topic since the session?
     timedOut: z.boolean().optional(), // handed in by the time limit (unanswered questions count as unanswered)
+    skipped: z.boolean().optional(), // handed in by the shared code's debug skip (unanswered count as unanswered)
+    times: Times,
   }),
   // the pretest by item id, with the sets the page showed, in order (the pilot takes every set; the array form above
   // is the first set's items in file order, from pages loaded before the sets)
-  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.record(z.string().max(20), z.number().int().min(0).max(9)), sets: z.array(z.string().max(20)).min(1).max(4), timedOut: z.boolean().optional() }),
+  z.object({ token: z.string().max(400), kind: z.literal("pretest"), answers: z.record(z.string().max(20), z.number().int().min(0).max(9)), sets: z.array(z.string().max(20)).min(1).max(4), timedOut: z.boolean().optional(), skipped: z.boolean().optional(), times: Times }),
 ]);
 
 /**
@@ -70,10 +77,11 @@ export async function POST(req: NextRequest) {
     const raw = Array.isArray(b.answers) ? (b.answers.length === pack.pretest.length ? Object.fromEntries(pack.pretest.map((q, i) => [q.id, (b.answers as number[])[i]!])) : null) : b.answers;
     // timedOut: the time limit ran out, so some questions may be unanswered
     const timedOut = "timedOut" in b && !!b.timedOut;
-    const g = raw ? gradePretest(pack.pretestAll, raw, "sets" in b ? b.sets : pack.pretestSets.slice(0, 1), timedOut) : null;
+    const skipped = "skipped" in b && !!b.skipped; // the shared code's debug skip
+    const g = raw ? gradePretest(pack.pretestAll, raw, "sets" in b ? b.sets : pack.pretestSets.slice(0, 1), timedOut || skipped) : null;
     if (!g) return fail(400, "Bad request.");
     // sets: the knowledge sets in the order taken (a pilot: every set); setScores: right of asked, per set
-    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, version: pack.pretestVersion, answers: g.answers, sets: g.sets, score: g.score, of: g.of, setScores: g.setScores, dontKnow: g.dontKnow, excluded: g.excluded, unanswered: g.unanswered, timedOut });
+    record({ t: "pretest", sid: session.sid, condition: session.cond, pid: session.pid, version: pack.pretestVersion, answers: g.answers, sets: g.sets, score: g.score, of: g.of, setScores: g.setScores, dontKnow: g.dontKnow, excluded: g.excluded, unanswered: g.unanswered, timedOut, ...(skipped ? { skipped } : {}), times: ("times" in b && b.times) || null });
     return ok({ ok: true });
   }
 
@@ -101,6 +109,8 @@ export async function POST(req: NextRequest) {
     versions, // each form's version (an item's answers count for the version of its own form)
     ...(session.phase === "delayed" ? { since } : {}),
     timedOut: "timedOut" in body.data && !!body.data.timedOut,
+    ...("skipped" in body.data && body.data.skipped ? { skipped: true } : {}),
+    times: ("times" in body.data && body.data.times) || null, // per part (a pilot: per form): time taken against its time
     score: g.score, // over the items it answered (an anchor once)
     of: g.of,
     formScores: g.perForm, // per form, each complete: an anchor answered once counts in both

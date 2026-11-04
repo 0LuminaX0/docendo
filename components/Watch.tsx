@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, CircleCheck, Eye, History, MessagesSquare, Play } from "lucide-react";
 import { Header, VideoFrame, mmss } from "./ui";
+import DebugSkip from "./DebugSkip";
 import { useGuard, useNext } from "./useGuard";
 import { useStudySettings } from "./SettingsContext";
 import { useSaved } from "@/lib/client/store";
@@ -199,6 +200,7 @@ export default function Watch({ segments }: { segments: Segment[] }) {
   return (
     <div className="shell">
       <Header step="watch" demo={saved.demo} />
+      {saved.step === "watch" && <DebugSkip onSkip={next} what="Skip to teaching Kai" />}
       <main className="page">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="title" style={{ fontSize: "clamp(26px, 4vw, 36px)" }}>{s.title}</h1>

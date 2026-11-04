@@ -26,7 +26,8 @@ export function packSummary(pack: Pack, s: Settings) {
   const asked = pack.forms.length ? pack.sessionItems(pack.forms[0]!, both) : [];
   const test = { both, items: asked.length, minutes: Math.round(asked.reduce((a, q) => a + (q.reason ? 1.25 : 1), 0)) };
   const flow = flowOf(s);
-  const minutes = Object.fromEntries(BLOCKS.map((b) => [b.key, minutesOf(b.key, s, { forms: both ? 2 : 1 })])) as Record<StepKey, number>;
+  const sets = s.pretest.both ? Math.max(1, pack.pretestSets.filter(Boolean).length) : 1; // the pilot: every pretest set, each with its own time
+  const minutes = Object.fromEntries(BLOCKS.map((b) => [b.key, minutesOf(b.key, s, { forms: both ? 2 : 1, sets })])) as Record<StepKey, number>;
   const lessonSec = s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0);
   const coverage = pack.lessonCoverage(s.watch.on ? s.watch.parts : []);
   const kindsOf = (f: (typeof forms)[number]) => [f.choice && `${f.choice} to choose`, f.multi && `${f.multi} select all that apply`, f.number && `${f.number} to work out`, f.reasons && `${f.reasons} with a written reason`].filter(Boolean).join(", ");
@@ -59,12 +60,12 @@ export function packSummary(pack: Pack, s: Settings) {
         const n = both ? pack.pretestAll.length : pack.pretest.length;
         const knowledge = (both ? pack.pretestAll : pack.pretest).filter((q) => q.kind === "knowledge").length;
         const sets = pack.pretestSets.filter(Boolean);
-        return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: set ${sets[0]}`) : ""}), about ${Math.max(1, Math.round(n * 0.4))} min`;
+        return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: set ${sets[0]}`) : ""}), ${minutes.pretest} min${both ? ` (${s.pretest.minutes} per set)` : ""}`;
       })(),
       watch: s.watch.parts.length ? `${plural(s.watch.parts.length, "part")} from ${plural(new Set(s.watch.parts.map((p) => p.videoId)).size, "video")}, ${mmss(lessonSec)} in all` : "no parts yet",
-      teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; ${s.teach.fixed && pack.script ? `${plural(pack.script.questions.length, "fixed question")}, wrapping up after the last or at ${s.teach.minutes} min` : `Kai chooses its questions; usually about ${minutes.teach} min`}${s.teach.mind ? "" : "; Kai's mind hidden"}`,
+      teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; ${s.teach.fixed && pack.script ? `${plural(pack.script.questions.length, "fixed question")}, wrapping up after the last${s.timing.soft ? `; ${s.teach.minutes} min recommended` : ` or at ${s.teach.minutes} min`}` : `Kai chooses its questions; ${s.teach.minutes} min${s.timing.soft ? " recommended" : ""}`}${s.teach.mind ? "" : "; Kai's mind hidden"}`,
       practice: `${plural(pack.practice.length, "problem")}${rounds.length > 1 ? ` in ${rounds.length} rounds (${rounds.map((r) => pack.practice.filter((p) => p.round === r).length).join(" + ")})` : ""}, ${s.practice.minutes} min`,
-      exercises: `${test.both ? `both forms, one after the other (pilot), ${plural(test.items, "question")} in all; ` : ""}${testText}, about ${minutes.exercises} min`,
+      exercises: `${test.both ? `both forms, one after the other (pilot), ${plural(test.items, "question")} in all; ` : ""}${testText}, ${minutes.exercises} min${test.both ? ` (${s.test.minutes} per form)` : ""}`,
       results: `the score, every answer explained${s.practice.on ? ", the practice's worked solutions" : ""}`,
       survey: `${plural(pack.survey.length, "question")} after the test, before the score`,
     } as Record<StepKey | "survey", string>,
@@ -72,7 +73,7 @@ export function packSummary(pack: Pack, s: Settings) {
     fixed: [
       ...(pack.script ? ([["Kai's fixed questions", `${plural(pack.script.questions.length, "question")}, the same for everyone, in order; one \"can you say more?\" after a short answer, the question again once after a reply that isn't an answer (topics/${pack.slug}/script.json)`]] as [string, string][]) : []),
       ["Kai feels ready", `${s.teach.fixed && pack.script ? "with the fixed questions: after the last one; otherwise " : ""}at ${CONFIG.ready * 100}% of the ${facts.length} facts it waits for, or ${CONFIG.readyLate * 100}% after ${CONFIG.lateAfterMin} minutes of teaching (engine/tutor/policy.ts)`],
-      ["Kai wraps up", `at the teaching time limit (${s.teach.minutes} min, set above), or after ${CONFIG.maxTurns} learner messages (engine/tutor/policy.ts)`],
+      ["Kai wraps up", `${s.timing.soft ? "" : `at the teaching time limit (${s.teach.minutes} min, set above), or `}after ${CONFIG.maxTurns} learner messages (engine/tutor/policy.ts)`],
       ["Practice problems", `${plural(pack.practice.length, "problem")}, the same in both conditions (topics/${pack.slug}/practice.json)`],
       ["Final test", `${testText} (topics/${pack.slug}/exercises.json)`],
       ["Conditions", `from the access code, balanced in blocks of 4${forms.length > 1 ? (both ? "; the test form taken first alternates within each condition" : "; test forms alternate within each condition") : ""}`],

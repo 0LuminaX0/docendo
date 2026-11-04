@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
   const stored = given ? await findCode(given).catch(() => null) : null;
   const participant = !stored && config.codeSecret && given ? readCode(config.codeSecret, given) : null;
   let who: { cond: Condition; entry: Entry; pid: string | null };
+  let debug = false; // the shared code (ACCESS_CODE) only: a skip button on every step, for trying the flow without the clocks
   if (stored && !stored.active) return fail(401, "That access code is no longer active.");
   let code: { id: string; label: string; use: number } | null = null;
   // a code that names one person (a one-use code, or a participant code) keeps a record, for the delayed test
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     code = { id: stored.id, label: stored.label, use };
     who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: stored.id };
   } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
-  else if (config.accessCode && codeMatches(given, config.accessCode)) who = { cond: "direct", entry: "team", pid: body.data.pid ?? null };
+  else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true);
   else if (!config.accessCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
   else {
     // wrong codes: 10 per 15 minutes per network, then a pause (a lab room's typos fit; guessing doesn't)
@@ -118,12 +119,13 @@ export async function POST(req: NextRequest) {
       entry: who.entry, // participant (own code), trial (a dry run's code), team (shared or team code) or open
       code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
       demo: config.demo,
+      ...(debug ? { debug: true } : {}), // the shared code: steps may be skipped (logged as debug_skip)
       device: deviceOf(req.headers.get("user-agent")),
       config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings) },
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
     // trial codes get a participant's experience: no shortcuts, no condition switch
-    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond });
+    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond, ...(debug ? { debug: true } : {}) });
   } catch (e) {
     if (e instanceof ConfigError) return fail(500, "The server isn't fully configured yet.");
     throw e;

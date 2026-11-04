@@ -133,6 +133,29 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             <p className="note">Medians (direct / recursive). Practice is timed at the same length in both.</p>
             <MinutesBars minutes={c.minutes.filter((m) => !skipped(m.chapter.toLowerCase()) || m.direct !== null || m.recursive !== null)} />
           </section>
+          {s.timing.length > 0 && (
+            <section className="adm-card">
+              <h2>Time against the recommended time</h2>
+              <p className="note">Per part, from the sessions that finished it: the median time taken, the time set on Study setup, the median difference (over +, under −) and how many went over. With soft timing (the pilot) nothing ends at the time, so this is how long each part really takes.</p>
+              <table className="adm-table">
+                <thead>
+                  <tr><th>Part</th><th>n</th><th>Took</th><th>Recommended</th><th>Difference</th><th>Over</th></tr>
+                </thead>
+                <tbody>
+                  {s.timing.map((t) => (
+                    <tr key={t.key}>
+                      <td><b>{t.label}</b></td>
+                      <td>{t.n}</td>
+                      <td>{minText(t.spent)}</td>
+                      <td>{minText(t.rec)}</td>
+                      <td>{t.diff === null ? "–" : `${t.diff > 0 ? "+" : t.diff < 0 ? "−" : ""}${minText(Math.abs(t.diff))}`}</td>
+                      <td>{t.over} of {t.n}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
           <section className="adm-card">
             <h2>Final test items</h2>
             <p className="note">

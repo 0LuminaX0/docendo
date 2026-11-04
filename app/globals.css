@@ -484,6 +484,8 @@ button { font: inherit; color: inherit; }
 .clock { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--ink-2); background: var(--sunk); padding: 6px 12px; border-radius: 99px; white-space: nowrap; }
 .clock.low { color: #b54708; background: #fff4dc; }
 .clock.over { color: #b42318; background: var(--red-soft); }
+/* soft timing (the pilot): past the suggested time, the clock counts on in amber; nothing ends */
+.clock.past { color: #b54708; background: #fff4dc; }
 
 /* ---------- results ---------- */
 .score { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
@@ -1218,3 +1220,14 @@ textarea.dictating::placeholder { color: transparent; }
 .passage { -webkit-user-select: none; user-select: none; max-height: min(70vh, 640px); overflow-y: auto; }
 .passage p { font-size: 15.5px; line-height: 1.6; margin: 0 0 12px; }
 .passage .lesson-section h3 { margin-top: 4px; font-size: 18px; }
+
+/* the shared code's debug skip (components/DebugSkip.tsx): a corner button, never for participants */
+.debug-skip { position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: inline-flex; align-items: center; gap: 7px; font: inherit; font-size: 13.5px; font-weight: 700; color: var(--ink); background: #fff; border: 1.5px dashed var(--ink-2); border-radius: 99px; padding: 7px 12px 7px 11px; cursor: pointer; box-shadow: 0 2px 10px rgba(20, 24, 31, 0.12); }
+.debug-skip:hover { background: var(--sunk); }
+.debug-skip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.debug-skip .debug-tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #6b717b; }
+
+/* a session's page: each part's time against its recommended time */
+.sd-times { margin-top: 14px; }
+.sd-times caption { text-align: left; caption-side: top; padding-bottom: 6px; }
+.sd-times .sd-over { color: #b54708; font-weight: 700; }

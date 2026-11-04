@@ -7,7 +7,8 @@ import { useDictation } from "./Dictation";
 import { useStudySettings } from "./SettingsContext";
 import { Header, KaiFace, Modal, VideoFrame, VideoThumb, mmss } from "./ui";
 import MindView from "./MindView";
-import { StepClock, useDeadline } from "./StepClock";
+import { StepClock, stepTime, useDeadline } from "./StepClock";
+import DebugSkip from "./DebugSkip";
 import { Block } from "./lesson/LessonBody";
 import type { Passage } from "@/lib/lesson";
 import { useGuard, useNext } from "./useGuard";
@@ -76,13 +77,14 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
     if (closed && saved) router.replace(pathOf(currentStep(flow, saved.step)));
   }, [closed, saved, router, flow]);
 
-  // the time limit: from Kai's first message. When it runs out (after a reply on its way), Kai wraps up
+  // the time: from Kai's first message. Hard limits: when it runs out (after a reply on its way), Kai wraps up. Soft
+  // (the pilot): the clock counts on past it, and teaching ends when Kai feels ready or the learner stops
   const clock = useDeadline(saved?.chat.startedAt, study.limits.teach);
   const timeUpRef = useRef<(() => void) | null>(null);
   // checked after every render: the page may still be loading when the time runs out
   const timedOut = useRef(false);
   useEffect(() => {
-    if (!clock.over || busy || timedOut.current || !timeUpRef.current) return;
+    if (study.limits.soft || !clock.over || busy || timedOut.current || !timeUpRef.current) return;
     timedOut.current = true;
     timeUpRef.current();
   });
@@ -195,9 +197,10 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
     if (log) update((s) => ({ ...s, chat: { ...s.chat, turns: [...s.chat.turns, { role: "learner", text: "", help: { part: v.part, start: h.start } }] } }));
   }
 
-  function goPractice() {
-    track("teach_continue", { skipped: chat.skipped, done: chat.done, timeUp: !!chat.timeUp, progress: chat.progress });
-    logNotebook(chat.done ? "teach_end_ready" : chat.timeUp ? "teach_end_time" : chat.skipped ? "teach_end_stopped" : "teach_end", chat.state);
+  function goPractice(debugSkip = false) {
+    track("teach_continue", { skipped: chat.skipped, done: chat.done, timeUp: !!chat.timeUp, progress: chat.progress, ...(debugSkip ? { debugSkip } : {}) });
+    logNotebook(chat.done ? "teach_end_ready" : chat.timeUp ? "teach_end_time" : chat.skipped ? "teach_end_stopped" : debugSkip ? "teach_end_debug" : "teach_end", chat.state);
+    if (saved?.step === "teach") stepTime("teach", null, chat.startedAt ?? saved.startedAt, study.limits.teach, { done: chat.done, stopped: chat.skipped && !chat.timeUp, turns: learnerCount });
     const n = nextOf("teach");
     update((s: Saved) => ({ ...s, step: s.step === "teach" ? n.step : s.step }));
     router.push(n.path);
@@ -262,7 +265,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
             {finished ? `${learnerCount} messages` : `${learnerCount} / ${mind.maxTurns}`}
           </span>
         )}
-        <StepClock left={clock.left} over={clock.over || !!chat.timeUp} what="teaching" />
+        <StepClock left={clock.left} over={clock.over || !!chat.timeUp} overMs={clock.overMs} soft={study.limits.soft} what="teaching" />
         <button type="button" className="meter" disabled={!study.mind} onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={study.mind ? `${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.` : `${pct}% of what Kai needs to feel ready.`} style={{ border: 0, background: "none", cursor: study.mind ? "pointer" : "default", padding: 0, color: "inherit" }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
@@ -276,6 +279,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
   return (
     <div className="shell">
       <Header step="teach" demo={saved.demo} left={tools} right={status} />
+      {saved.step === "teach" && <DebugSkip onSkip={() => goPractice(true)} what={flow.includes("practice") ? "Skip to practice" : "Skip to the test"} />}
       {view === "mind" && study.mind ? (
         <main className="teach-mind">
           <MindView graph={graph} mind={mind} popout />
@@ -285,8 +289,9 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
           <div className="log" aria-live="polite">
             {/* the step's limit, said up front */}
             <p className="note teach-limit">
-              You have {study.limits.teach} minutes to teach Kai (the clock is at the top).{" "}
-              Teaching ends when Kai feels ready, or when the time is up.
+              {study.limits.soft
+                ? `Plan on about ${study.limits.teach} minutes to teach Kai (the clock is at the top, and keeps counting if you need longer). Teaching ends when Kai feels ready.`
+                : `You have ${study.limits.teach} minutes to teach Kai (the clock is at the top). Teaching ends when Kai feels ready, or when the time is up.`}
             </p>
             {turns.map((t, k) =>
               t.help && "section" in t.help ? (
@@ -351,7 +356,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
                     : `You stopped at ${pct}% of what Kai needed. Next, practise on a few problems.`}
                 </p>
                 <div className="row">
-                  <button className="btn primary" onClick={goPractice}>
+                  <button className="btn primary" onClick={() => goPractice()}>
                     {flow.includes("practice") ? "Go to practice" : "Go to the test"} <ArrowRight size={17} />
                   </button>
                   {study.mind && (

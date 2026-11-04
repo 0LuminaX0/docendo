@@ -32,11 +32,15 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
   return {
     topic: pack.slug,
     studyLine: "A learning-by-teaching study for CS-411 Digital Education, EPFL",
-    pretest: { on: true, both: false, minutes: 5 },
-    watch: { on: true, parts: defaultLesson(pack), minutes: 10 },
-    teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true, minutes: pack.script?.minutes ?? 10 },
+    // the pilot: both pretest sets and both test forms, each part with its own clock (no follow-up test then: no form
+    // is left for it); switch both off for the study. Times after the first try-out (2026-11-04): 8 per pretest set,
+    // 12 for the lesson, 15 teaching, 20 practice (practice.json), 20 per test form
+    pretest: { on: true, both: true, minutes: 8 },
+    watch: { on: true, parts: defaultLesson(pack), minutes: 12 },
+    teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true, minutes: pack.script?.minutes ?? 15 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
-    test: { followUp: config.delayedTestDays !== undefined, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 10 },
+    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: true, minutes: 20 },
+    timing: { soft: true },
     survey: { on: true },
     sessionDays: Math.round(config.sessionHours / 24),
     tools: { calculator: true, voice: true, help: false },

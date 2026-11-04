@@ -6,6 +6,9 @@ import type { State } from "@/engine/tutor/state";
 import type { Mind } from "@/engine/tutor/mind";
 import type { TestAnswer } from "@/lib/answers";
 
+/** How long a step, or a part of it, took against its time (components/StepClock.tsx): diffMs = ms − limitMs. */
+export type StepTime = { step: string; part: number | null; ms: number; limitMs: number; diffMs: number; over: boolean };
+
 // Progress lives in this browser only (localStorage), so a reload or a closed
 // tab doesn't lose the session. Nothing here is secret: the token is useless
 // without the server's secret, and answers are graded on the server.
@@ -74,6 +77,7 @@ export type Saved = {
   demo: boolean;
   team?: boolean; // started with the shared code (or no code): test shortcuts are on. Participants' own codes: false
   condition?: Condition; // from the participant's code (team sessions: direct, with a switch on the practice page)
+  debug?: boolean; // started with the shared code (ACCESS_CODE): a skip button on every step (components/DebugSkip.tsx)
   startedAt: number;
   step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
   phase?: "main" | "delayed"; // delayed: the follow-up test only (a session of its own, days after the main one)
@@ -82,8 +86,12 @@ export type Saved = {
   pretestSets?: string[]; // the pretest's knowledge sets this session takes, in order (a pilot: every set)
   pretestAnswers?: Record<string, number>; // the pretest's answers by item id (an option's index)
   pretestPart?: number; // a pilot's pretest: how many parts are done and locked
-  pretestStartedAt?: number; // when the pretest opened (its time limit survives a reload)
+  pretestStartedAt?: number; // when the pretest opened (its time survives a reload)
+  pretestPartAt?: number; // when the pretest's current part opened (each part has a clock of its own)
+  pretestTimes?: StepTime[]; // each part done: how long it took against its time (sent with the answers)
   testStartedAt?: number; // when the final (or follow-up) test opened
+  testPartAt?: number; // when the test's current part (a pilot's second form) opened
+  testTimes?: StepTime[]; // each part done: how long it took against its time (sent with the answers)
   practice?: PracticeState; // absent in sessions started before the practice chapter existed
   watched: string[]; // lesson parts watched (≥ 90%), as "s0", "s1", …
   watchedSec?: number[]; // seconds watched per lesson part
@@ -171,7 +179,7 @@ export function useSaved(): [Saved | null | undefined, (f: (s: Saved) => Saved) 
   return [value, update];
 }
 
-export function newSession(token: string, expiresAt: number, demo: boolean, team = true, condition: Condition = "direct"): Saved {
+export function newSession(token: string, expiresAt: number, demo: boolean, team = true, condition: Condition = "direct", debug = false): Saved {
   return {
     v: 1,
     token,
@@ -179,6 +187,7 @@ export function newSession(token: string, expiresAt: number, demo: boolean, team
     demo,
     team,
     condition,
+    ...(debug ? { debug: true } : {}),
     startedAt: Date.now(),
     step: "pretest",
     watched: [],

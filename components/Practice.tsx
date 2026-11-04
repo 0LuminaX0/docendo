@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, BookOpen, Check, Lightbulb, Play, Timer } from "lucide-react";
+import { ArrowRight, BookOpen, Check, Lightbulb, Play } from "lucide-react";
+import { StepClock, stepTime } from "./StepClock";
+import DebugSkip from "./DebugSkip";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
 import KaiSolve from "./KaiSolve";
 import { Block } from "./lesson/LessonBody";
@@ -30,7 +32,8 @@ const KEYS = "ABCDEF";
  * after the final test in both. When the time runs out, the test starts.
  */
 export default function Practice({ items }: { items: Item[] }) {
-  const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind, help } = useStudySettings();
+  const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind, help, limits } = useStudySettings();
+  const soft = limits.soft; // the pilot: the practice time is a recommendation, and the clock counts on past it
   const video = help && flow.includes("watch"); // Rewatch (or Reread, for a text lesson): switched on, and the study has a lesson to go back to
   const text = lessonKind === "text";
   const router = useRouter();
@@ -62,7 +65,9 @@ export default function Practice({ items }: { items: Item[] }) {
   const q = items[index]!;
   const total = minutes * 60_000;
   const left = Math.min(total, Math.max(0, total - (now - (state.startedAt ?? now))));
-  const over = !!state.startedAt && left === 0;
+  const past = !!state.startedAt && left === 0; // the time has run out
+  const overMs = state.startedAt ? Math.max(0, now - state.startedAt - total) : 0;
+  const over = past && !soft; // hard limits: practice ends (soft: it goes on)
 
   // time on each problem: from when it is shown until the learner moves on (or the time runs out)
   const leaveProblem = useCallback(
@@ -94,8 +99,9 @@ export default function Practice({ items }: { items: Item[] }) {
   }, []);
 
   const goTest = useCallback(
-    (why: "done" | "time_up" | "early") => {
+    (why: "done" | "time_up" | "early" | "skip") => {
       leaveProblem(why);
+      if (saved?.step === "practice") stepTime("practice", null, saved.practice?.startedAt, minutes, { why, mode });
       const p = saved?.practice;
       const es = items.map((x) => p?.items[x.id] ?? blankEntry());
       const ks = items.map((x) => p?.kai?.[x.id]?.attempts ?? []);
@@ -114,7 +120,7 @@ export default function Practice({ items }: { items: Item[] }) {
       update((s: Saved) => ({ ...s, step: s.step === "practice" ? n.step : s.step }));
       router.push(n.path);
     },
-    [items, left, leaveProblem, router, saved?.practice, update, mode],
+    [items, left, leaveProblem, router, saved?.practice, saved?.step, update, mode, minutes],
   );
 
   // time's up: straight on to the test
@@ -280,12 +286,7 @@ export default function Practice({ items }: { items: Item[] }) {
             ? `${more}.`
             : `You have ${tries} tries.`;
 
-  const clock = (
-    <span className={`clock${left < 60_000 ? " low" : ""}${over ? " over" : ""}`} title="Time left for practice" role="timer" aria-live="off">
-      <Timer size={15} strokeWidth={2.4} />
-      {over ? "Time's up" : mmssMs(left)}
-    </span>
-  );
+  const clock = <StepClock left={left} over={past} overMs={overMs} soft={soft} what="practice" />;
 
   return (
     <div className="shell">
@@ -306,17 +307,18 @@ export default function Practice({ items }: { items: Item[] }) {
           ) : undefined
         }
       />
+      {saved.step === "practice" && <DebugSkip onSkip={() => goTest("skip")} what="Skip to the test" />}
       <main className={`page narrow${mode === "recursive" ? " wide" : ""}`}>
         <div className="prac-head">
           <div className="prac-title">
             <h1 className="title">Practice problems</h1>
             {mode === "recursive" ? (
               <p className="lede">
-                Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {minutes} minutes; solutions after the final test.
+                Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {soft ? `About ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}; solutions after the final test.
               </p>
             ) : (
               <p className="lede">
-                {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {minutes} minutes.{" "}
+                {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}
                 {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right. Solutions after the final test.
               </p>
             )}
@@ -481,8 +483,3 @@ export default function Practice({ items }: { items: Item[] }) {
     </div>
   );
 }
-
-const mmssMs = (ms: number) => {
-  const s = Math.ceil(ms / 1000);
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-};

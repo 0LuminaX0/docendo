@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/server/admin";
 import { loadTables } from "@/lib/server/admindata";
+import { TIME_PARTS } from "@/lib/analytics";
 import { eventStore } from "@/lib/server/events";
 import { keyText, packFor } from "@/lib/server/content";
 import AdminShell from "@/components/admin/AdminShell";
@@ -80,6 +81,8 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
     ["Test", s.minTest],
   ] as const;
   const longest = Math.max(1, ...steps.map(([, m]) => (typeof m === "number" ? m : 0)));
+  // each step's and part's time against its recommended time (lib/analytics.ts, timeColumns)
+  const timed = TIME_PARTS.filter(([k]) => typeof s[`time${k}Min`] === "number");
 
   return (
     <AdminShell store={eventStore}>
@@ -128,7 +131,29 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
                 </li>
               ))}
             </ol>
+            {timed.length > 0 && (
+              <table className="adm-table sd-times">
+                <caption className="note">Against the recommended time (min:s; the difference: over +, under −)</caption>
+                <thead>
+                  <tr><th scope="col">Part</th><th scope="col">Took</th><th scope="col">Recommended</th><th scope="col">Difference</th></tr>
+                </thead>
+                <tbody>
+                  {timed.map(([k, label]) => {
+                    const d = s[`time${k}DiffMin`];
+                    return (
+                      <tr key={k}>
+                        <th scope="row">{label}</th>
+                        <td>{mmss(s[`time${k}Min`])}</td>
+                        <td>{mmss(s[`time${k}RecMin`])}</td>
+                        <td className={typeof d === "number" && d > 0 ? "sd-over" : undefined}>{typeof d === "number" ? `${d > 0 ? "+" : d < 0 ? "−" : ""}${mmss(Math.abs(d))}` : "–"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
             <p className="note" style={{ marginTop: 10 }}>
+              {Number(s.debugSkips) > 0 && <>Debug skips: {str(s.debugSkips)}. </>}
               Video watched {s.watchedSec === null || s.watchedSec === undefined ? "–" : `${Math.round(Number(s.watchedSec))} of ${str(s.lessonSec)} s`}; {str(s.tabHidden)} tab switches, {str(s.tabAwaySec)} s away; {str(s.helpOpens)} help cards opened.
             </p>
           </section>

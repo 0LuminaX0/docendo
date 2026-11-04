@@ -100,8 +100,10 @@ export async function POST(req: NextRequest) {
   const calls: LlmCall[] = [];
   const t0 = Date.now();
   const { message, state: before, elapsedMs } = body.data;
-  // teaching's time limit (Study setup): the page closes the chat when it runs out; a message long after it is refused
-  if ((elapsedMs ?? 0) > settings.teach.minutes * 60_000 + 90_000 && session.entry !== "team") return fail(409, "Time's up for teaching. Go on to the next step.");
+  // teaching's time (Study setup). Hard limits: the page closes the chat when it runs out, and a message long after it is
+  // refused. Soft (the pilot): a recommendation only, so teaching goes on as long as the learner needs
+  const soft = settings.timing.soft;
+  if (!soft && (elapsedMs ?? 0) > settings.teach.minutes * 60_000 + 90_000 && session.entry !== "team") return fail(409, "Time's up for teaching. Go on to the next step.");
   // a text lesson: how much of the message comes word for word from it (logged with every turn)
   const overlap = pack.lessonOverlap ? pack.lessonOverlap(message) : null;
   if (pack.lesson && overlap && overlap.longest >= COPIED_RUN) {
@@ -154,7 +156,8 @@ export async function POST(req: NextRequest) {
   }
   try {
     const degraded: string[] = [];
-    const input = { message, history: body.data.history.slice(-20), state: before, elapsedMs, minutes: settings.teach.minutes };
+    // soft timing: Kai's fixed questions don't wrap up at the time (only after the last question or the message limit)
+    const input = { message, history: body.data.history.slice(-20), state: before, elapsedMs, minutes: soft ? Number.POSITIVE_INFINITY : settings.teach.minutes };
     // Kai's fixed questions when the pack has them (and the session started with them); otherwise Kai chooses its own
     const result = pack.script && before.script ? await takeScriptTurn(bundle, pack.script, input, depsFor(calls, degraded)) : await takeTurn(bundle, input, depsFor(calls, degraded));
     const scripted = "script" in result.trace ? (result.trace as { script: ScriptTrace }).script : null;

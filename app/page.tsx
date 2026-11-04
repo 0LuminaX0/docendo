@@ -14,7 +14,7 @@ export default async function Page() {
       ? `A short text lesson on ${pack.copy.subject}, with figures, one chapter at a time. ${sum.minutes.watch} minutes.`
       : `A short video lesson on ${pack.copy.subject}${settings.watch.parts.length > 1 ? `, in ${settings.watch.parts.length} parts that play one after another` : ""}. ${sum.minutes.watch} minutes.`,
     teach: `Explain the ideas in your own words. Kai asks questions until it feels it understands. ${sum.minutes.teach} minutes.`,
-    practice: `${sum.practice.rounds.length > 1 ? `${Count(sum.practice.rounds.length, "short round")} of problems` : Count(sum.practice.problems, "short problem")}${settings.practice.tries > 1 ? `, with ${count(settings.practice.tries, "try", "tries")} each` : ""}. ${settings.practice.minutes} minutes.`,
+    practice: `${sum.practice.rounds.length > 1 ? `${Count(sum.practice.rounds.length, "short round")} of problems` : Count(sum.practice.problems, "short problem")}${settings.practice.tries > 1 ? `, with ${count(settings.practice.tries, "try", "tries")} each` : ""}. ${sum.minutes.practice} minutes.`,
     exercises: (() => {
       const f = sum.forms[0];
       if (!f) return "Questions to see what stuck.";
@@ -30,7 +30,7 @@ export default async function Page() {
       demo={config.demo}
       cards={cards}
       totalMinutes={Math.ceil(sum.total / 5) * 5}
-      pretestMinutes={settings.pretest.on ? settings.pretest.minutes : 0}
+      pretestMinutes={settings.pretest.on ? sum.minutes.pretest : 0}
       pretestItems={settings.pretest.on ? (settings.pretest.both && pack.pretestSets.length > 1 ? pack.pretestAll.length : pack.pretest.length) : 0}
       followUpOn={settings.test.followUp}
     />

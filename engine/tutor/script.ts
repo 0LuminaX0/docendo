@@ -100,7 +100,7 @@ export type ScriptTrace = { asked: string; next: string | null; sayMore: boolean
 export async function takeScriptTurn(
   bundle: Bundle,
   script: Script,
-  input: { message: string; history: Turn[]; state: State; elapsedMs?: number; minutes?: number }, // minutes: the study's limit
+  input: { message: string; history: Turn[]; state: State; elapsedMs?: number; minutes?: number }, // minutes: the study's limit (Infinity: none, the pilot's soft timing)
   deps: Pick<Deps, "judge" | "react">,
 ): Promise<TurnResult & { trace: TurnResult["trace"] & { script: ScriptTrace } }> {
   const kaiLast = [...input.history].reverse().find((t) => t.role === "kai")?.text ?? "";

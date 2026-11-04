@@ -53,15 +53,16 @@ export const reached = (flow: StepKey[], step: StepKey, here: StepKey) => flow.i
 /** The coloured bars in the header: the main steps the study runs. */
 export const barsOf = (flow: StepKey[]) => flow.filter((k) => blockOf(k).bar);
 
-/** Minutes per step: the time limit of each (the welcome page, the admin panel). The test: per form taken (`forms`). */
+/** Minutes per step: the time of each (the welcome page, the admin panel). The pretest: per set taken (`sets`); the
+ * test: per form taken (`forms`). */
 export function minutesOf(
   key: StepKey,
   s: { pretest: { minutes: number }; watch: { minutes: number }; teach: { minutes: number }; practice: { minutes: number }; test: { minutes: number } },
-  n: { forms: number },
+  n: { forms: number; sets?: number },
 ): number {
   switch (key) {
     case "pretest":
-      return s.pretest.minutes;
+      return s.pretest.minutes * Math.max(1, n.sets ?? 1);
     case "watch":
       return s.watch.minutes;
     case "teach":

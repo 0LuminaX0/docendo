@@ -52,8 +52,8 @@ describe("settings", () => {
     const old = { practiceMinutes: 12, practiceTries: 3, stopAfterMessages: 6, stopAfterMinutes: 5, sessionDays: 7, delayedTestDays: 9, calculator: false, voice: true, dailyTurnLimit: 900, lesson: [{ videoId: "e3L4VocZnnQ", start: 0, end: 111, title: "Part one", channel: "x" }] };
     const m = merge(old);
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
-    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true, minutes: 10 });
-    expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false, minutes: 10 });
+    expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true, minutes: 15 });
+    expect(m.test).toEqual({ followUp: true, followUpDays: 9, both: false, minutes: 20 }); // its follow-up kept: no pilot
     expect(m.tools).toEqual({ calculator: false, voice: true, help: false });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
@@ -165,13 +165,22 @@ describe("the follow-up test", () => {
     const d = merge(null);
     expect([d.pretest.minutes, d.watch.minutes, d.teach.minutes, d.practice.minutes, d.test.minutes].every((m) => m > 0)).toBe(true);
     // a version saved before the limits keeps working, with the defaults
-    expect(merge({ teach: { stopAfterMessages: 4, stopAfterMinutes: 3 } }).teach.minutes).toBe(10);
+    expect(merge({ teach: { stopAfterMessages: 4, stopAfterMinutes: 3 } }).teach.minutes).toBe(15);
     expect(merge({ teach: { minutes: 12 } }).teach.minutes).toBe(12);
+  });
+  it("runs the pilot by default: both pretest sets and test forms, each part with its own time, soft timing", async () => {
+    const d = merge(null);
+    expect([d.pretest.both, d.test.both, d.test.followUp, d.timing.soft]).toEqual([true, true, false, true]);
+    expect([d.pretest.minutes, d.watch.minutes, d.teach.minutes, d.practice.minutes, d.test.minutes]).toEqual([8, 12, 15, 20, 20]);
+    const { minutesOf } = await import("../lib/flow");
+    expect(minutesOf("pretest", d, { forms: 2, sets: 2 })).toBe(16); // per set
+    expect(minutesOf("exercises", d, { forms: 2, sets: 2 })).toBe(40); // per form
+    expect(merge({ timing: { soft: false } }).timing.soft).toBe(false);
   });
   it("reads an older test block (0 days meant off) into the switch and the days", () => {
     expect(merge({ test: { followUpDays: 0 } }).test.followUp).toBe(false);
-    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5, both: false, minutes: 10 });
-    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0, both: false, minutes: 10 });
+    expect(merge({ test: { followUpDays: 5 } }).test).toEqual({ followUp: true, followUpDays: 5, both: false, minutes: 20 });
+    expect(merge({ test: { followUp: true, followUpDays: 0 } }).test).toEqual({ followUp: true, followUpDays: 0, both: false, minutes: 20 });
   });
   it("opens on the schedule, or earlier when the admin panel opened it", async () => {
     const { followUpOpens } = await import("../lib/server/participants");

@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Clock } from "lucide-react";
 import { Header, mmss } from "./ui";
-import { StepClock, useDeadline } from "./StepClock";
+import { StepClock, stepTime, useDeadline } from "./StepClock";
+import DebugSkip from "./DebugSkip";
 import { useStudySettings } from "./SettingsContext";
 import { useGuard, useNext } from "./useGuard";
 import { Block } from "./lesson/LessonBody";
@@ -42,9 +43,9 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const clock = useDeadline(saved?.readStartedAt, limits.watch);
   const nextRef = useRef<((timedOut: boolean) => void) | null>(null);
   const timedOut = useRef(false);
-  // checked after every render: the page may still be loading when the time runs out
+  // checked after every render: the page may still be loading when the time runs out (soft timing: never)
   useEffect(() => {
-    if (!clock.over || timedOut.current || !nextRef.current) return;
+    if (limits.soft || !clock.over || timedOut.current || !nextRef.current) return;
     timedOut.current = true;
     nextRef.current(true);
   });
@@ -105,11 +106,12 @@ export default function Read({ lesson }: { lesson: Lesson }) {
     window.scrollTo({ top: 0 });
   }
 
-  function next(timedOut = false) {
+  function next(timedOut = false, skipped = false) {
     const sec = Math.round((Date.now() - since) / 1000);
     perChapter.current[section.id] = (perChapter.current[section.id] ?? 0) + sec;
-    track("read_chapter", { chapter: section.id, index: at, sec, to: null, via: timedOut ? "time" : "continue" });
-    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(((max + 1) / n) * 100), chapters: max + 1, chapterSec: lesson.sections.map((x) => perChapter.current[x.id] ?? 0), copyAttempts: copies.current, timedOut });
+    track("read_chapter", { chapter: section.id, index: at, sec, to: null, via: timedOut ? "time" : skipped ? "skip" : "continue" });
+    track("read_continue", { readSec: Math.round(elapsed), reachedPct: Math.round(((max + 1) / n) * 100), chapters: max + 1, chapterSec: lesson.sections.map((x) => perChapter.current[x.id] ?? 0), copyAttempts: copies.current, timedOut, ...(skipped ? { skipped } : {}) });
+    if (saved?.step === "watch") stepTime("watch", null, saved.readStartedAt, limits.watch, { chapters: max + 1, of: n });
     const s = nextOf("watch");
     update((x) => ({ ...x, step: x.step === "watch" ? s.step : x.step }));
     router.push(s.path);
@@ -120,7 +122,8 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const last = at === n - 1;
   return (
     <div className="shell">
-      <Header step="watch" demo={saved.demo} right={<StepClock left={clock.left} over={clock.over} what="the lesson" />} />
+      <Header step="watch" demo={saved.demo} right={<StepClock left={clock.left} over={clock.over} overMs={clock.overMs} soft={limits.soft} what="the lesson" />} />
+      {saved.step === "watch" && <DebugSkip onSkip={() => next(false, true)} what="Skip to teaching Kai" />}
       <main className="page">
         <article className="lesson" onCopy={refuse} onCut={refuse} onDragStart={refuse}>
           <p className="lesson-kicker">{lesson.title}</p>
@@ -197,7 +200,9 @@ export default function Read({ lesson }: { lesson: Lesson }) {
             )}
           </nav>
           <p className="note lesson-foot">
-            {last ? "The text closes when you go on: you'll explain it to Kai from memory." : "You can go back to the chapters you've read."} You have {limits.watch} minutes for the lesson (the clock is at the top); when the time is up, it closes and you go on to Kai.
+            {last ? "The text closes when you go on: you'll explain it to Kai from memory." : "You can go back to the chapters you've read."} {limits.soft
+              ? `Plan on about ${limits.watch} minutes for the lesson. The clock at the top shows it, and keeps counting if you need longer.`
+              : `You have ${limits.watch} minutes for the lesson (the clock is at the top); when the time is up, it closes and you go on to Kai.`}
           </p>
         </article>
       </main>

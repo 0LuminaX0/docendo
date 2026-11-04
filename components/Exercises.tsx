@@ -6,7 +6,8 @@ import { ArrowRight, Check } from "lucide-react";
 import Scratchpad from "./Scratchpad";
 import { useStudySettings } from "./SettingsContext";
 import { Header } from "./ui";
-import { StepClock, useDeadline } from "./StepClock";
+import { StepClock, stepTime, useDeadline } from "./StepClock";
+import DebugSkip from "./DebugSkip";
 import { useGuard } from "./useGuard";
 import { Count } from "@/lib/words";
 import { post, save, useSaved, type GradeResult, type TestItem } from "@/lib/client/store";
@@ -58,21 +59,23 @@ export default function Exercises() {
     update((s) => ({ ...s, testOrder: o }));
     track("test_order", { order: o });
   }, [allowed, saved, order, items, update]);
-  // the time limit: per form taken (the pilot's two forms get twice as long), from the first visit; when it runs out,
-  // what is answered is submitted and the rest counts as unanswered
-  const forms = new Set(items?.map((q) => q.form)).size || 1;
-  const testMinutes = limits.test * forms;
+  // the time: per part (a pilot's two forms each get the full time), from the first visit, a later part from when it
+  // opened. Hard limits: when it runs out, the part ends with what is answered (the next part opens, or the answers are
+  // handed in and the rest counts as unanswered). Soft (the pilot): the clock counts on and nothing ends
+  const soft = limits.soft;
+  const testMinutes = limits.test;
   useEffect(() => {
     if (allowed && saved && items && !saved.testStartedAt) update((s) => ({ ...s, testStartedAt: Date.now() }));
   }, [allowed, saved, items, update]);
-  const clock = useDeadline(saved?.testStartedAt, testMinutes);
-  const submitRef = useRef<((timedOut: boolean) => Promise<void>) | null>(null);
-  const timedOut = useRef(false);
+  const partStart = saved?.testPart ? (saved.testPartAt ?? saved.testStartedAt) : saved?.testStartedAt;
+  const clock = useDeadline(partStart, testMinutes);
+  const timeUpRef = useRef<(() => void) | null>(null);
+  const timedOut = useRef<number | null>(null); // the part whose time ran out (hard limits)
   // checked after every render: the page may still be loading when the time runs out
   useEffect(() => {
-    if (!clock.over || timedOut.current || !submitRef.current) return;
-    timedOut.current = true;
-    void submitRef.current(true);
+    if (soft || !clock.over || timedOut.current === (saved?.testPart ?? 0) || !timeUpRef.current) return;
+    timedOut.current = saved?.testPart ?? 0;
+    timeUpRef.current();
   });
   if (!allowed || !saved || !items || !order) return <div className="center">{error ?? "Loading…"}</div>;
   const delayed = saved.phase === "delayed";
@@ -112,21 +115,30 @@ export default function Exercises() {
   };
   const setWork = (id: string, v: string) => update((s) => ({ ...s, testWork: { ...s.testWork, [id]: v } }));
 
-  function nextPart() {
-    if (!groupDone(current)) return;
-    track("test_part", { part: current + 1, of: groups, answered });
-    update((s) => ({ ...s, testPart: current + 1 }));
+  /** The part's time, against its own (logged, and kept to send with the answers). */
+  const partTime = () => stepTime(delayed ? "followup" : "test", current + 1, partStart, testMinutes, { form: inGroup(current)[0]?.q.form ?? null, of: groups });
+
+  /** On to the next part: when this one is complete, or (`how`) at a hard limit or a debug skip with what is answered. */
+  function nextPart(how: "done" | "time" | "skip" = "done") {
+    if (how === "done" && !groupDone(current)) return;
+    track("test_part", { part: current + 1, of: groups, answered, ...(how !== "done" ? { [how === "time" ? "timedOut" : "skipped"]: true } : {}) });
+    const t = partTime();
+    update((s) => ({ ...s, testPart: current + 1, testPartAt: Date.now(), testTimes: [...(s.testTimes ?? []), t] }));
     window.scrollTo({ top: 0 });
   }
 
-  async function submit(timedOut = false) {
-    if (!saved) return;
+  /** Hand in the answers: all answered, or (`how`) at a hard limit or a debug skip with what is answered. */
+  async function submit(how: "done" | "time" | "skip" = "done") {
+    if (!saved || busy || (how === "done" && answered < total)) return;
+    const timedOut = how === "time";
+    const skipped = how === "skip";
     setBusy(true);
     setError(null);
-    track("test_submit", { answered, timedOut });
+    track("test_submit", { answered, timedOut, skipped });
+    const times = [...(saved.testTimes ?? []).filter((t) => t.part !== current + 1), partTime()];
     const work = Object.fromEntries(Object.entries(saved.testWork ?? {}).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.slice(0, 2000)]));
     const sent = answers.map((a) => (typeof a === "string" && a !== DONT_KNOW ? a.trim().slice(0, 40) || null : a));
-    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: sent, work, order, ...(delayed ? { since: saved.since } : {}), ...(timedOut ? { timedOut: true } : {}) });
+    const r = await post<GradeResult>("/api/grade", { token: saved.token, answers: sent, work, order, times, ...(delayed ? { since: saved.since } : {}), ...(timedOut ? { timedOut: true } : {}), ...(skipped ? { skipped: true } : {}) });
     setBusy(false);
     if (!r.ok) {
       if (r.expired) {
@@ -140,8 +152,11 @@ export default function Exercises() {
     router.push("/results");
   }
 
-  submitRef.current = submit;
-  const limit = ` You have ${testMinutes} minutes${groups > 1 ? " for both parts" : ""} (the clock is at the top); when the time is up, your answers so far are handed in.`;
+  timeUpRef.current = () => (current < groups - 1 ? nextPart("time") : void submit("time"));
+  const each = groups > 1 ? " for each part" : "";
+  const limit = soft
+    ? ` Plan on about ${testMinutes} minutes${each}. The clock at the top shows it, and keeps counting if you need longer: take the time you need.`
+    : ` You have ${testMinutes} minutes${each} (the clock is at the top); when the time is up, your answers so far are handed in${groups > 1 ? " and the next part opens" : ""}.`;
   const how = reasons
     ? `For each, pick the answer you think is right${dontKnow ? " (or “I don't know”)" : ""} and explain your choice in one or two sentences.`
     : `Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}.`;
@@ -153,7 +168,8 @@ export default function Exercises() {
 
   return (
     <div className="shell">
-      <Header step="exercises" demo={saved.demo} label={delayed ? "Follow-up test" : undefined} right={<StepClock left={clock.left} over={clock.over} what="the test" />} />
+      <Header step="exercises" demo={saved.demo} label={delayed ? "Follow-up test" : undefined} right={<StepClock left={clock.left} over={clock.over} overMs={clock.overMs} soft={soft} what={groups > 1 ? "this part" : "the test"} />} />
+      <DebugSkip onSkip={() => (current < groups - 1 ? nextPart("skip") : void submit("skip"))} what={current < groups - 1 ? `Skip to part ${current + 2}` : "Skip to the results"} />
       <main className="page narrow">
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <h1 className="title" style={{ fontSize: "clamp(24px, 3vw, 30px)" }}>{delayed ? "Follow-up test" : "Final test"}</h1>
@@ -193,12 +209,12 @@ export default function Exercises() {
             ))}
         </div>
         <div className="submitbar">
-          {current < groups - 1 && !clock.over ? (
-            <button className="btn primary" onClick={nextPart} disabled={!groupDone(current)}>
+          {current < groups - 1 ? (
+            <button className="btn primary" onClick={() => nextPart()} disabled={!groupDone(current)}>
               Go on to part {current + 2} <ArrowRight size={17} strokeWidth={2.6} />
             </button>
           ) : (
-            <button className="btn primary" onClick={() => void submit(clock.over)} disabled={busy || (answered < total && !clock.over)}>
+            <button className="btn primary" onClick={() => void submit()} disabled={busy || answered < total}>
               {busy ? "Checking…" : <><Check size={17} strokeWidth={2.6} /> Check my answers</>}
             </button>
           )}

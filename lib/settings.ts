@@ -40,9 +40,9 @@ export const Settings = z
     topic: z.string().min(1).max(40), // a topic pack's slug
     studyLine: z.string().trim().max(120), // the small line above the welcome page's title
     // both: the pilot's pretest, every set of knowledge items one after the other (content/pretest.ts)
-    // minutes: every step a session runs has a hard time limit, shown as a clock on its page; when it runs out the step
-    // ends with what the learner has done so far (the pretest and the test are submitted, the lesson closes, Kai wraps up)
-    pretest: z.object({ on: z.boolean(), both: z.boolean().default(false), minutes: z.number().min(1).max(30).default(5) }),
+    // minutes: every step a session runs has a time, shown as a clock on its page (see timing below); the pretest's and
+    // the test's are per part (a set of knowledge items, a test form), each part with a clock of its own
+    pretest: z.object({ on: z.boolean(), both: z.boolean().default(false), minutes: z.number().min(1).max(30).default(8) }),
     // the lesson, played back to back as one video
     watch: z.object({ on: z.boolean(), parts: z.array(LessonPart).max(8), minutes: z.number().min(2).max(40).default(10) }),
     // teaching is always on (it is what the platform is about); when participants may end it themselves, whichever first.
@@ -54,7 +54,13 @@ export const Settings = z
     // it opens on its own (0: right away); the admin panel can also open it early for one person or everyone. both: the
     // pilot's final test, both forms one after the other (each session's own form first), with no follow-up then
     // minutes: per test form (the pilot's two forms get twice as long)
-    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false), minutes: z.number().min(2).max(40).default(10) }),
+    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false), minutes: z.number().min(2).max(40).default(20) }),
+    // soft (the pilot): each step's minutes are a recommended time. The clock counts down, then keeps counting past it
+    // ("+2:10"), and nothing ends on its own: the learner takes as long as they need, and the time spent against the
+    // recommended time is logged per step and part (step_time; the pretest's and test's also with their answers).
+    // Off: a hard limit, and the step ends itself when it runs out (the pretest and the test are handed in, the lesson
+    // closes, Kai wraps up, practice goes on to the test)
+    timing: z.object({ soft: z.boolean().default(true) }),
     survey: z.object({ on: z.boolean() }),
     sessionDays: z.number().int().min(1).max(30),
     // the same in every condition. help: the part of the lesson about the idea in question, while teaching (Kai's card)
@@ -74,13 +80,17 @@ export function migrateSettings(raw: Record<string, unknown>): Record<string, un
   // a test block saved before the follow-up had its own switch: "0 days" meant off
   const t = raw.test as { followUp?: unknown; followUpDays?: unknown } | undefined;
   if (t && typeof t === "object" && t.followUp === undefined && typeof t.followUpDays === "number") raw = { ...raw, test: { ...t, followUp: t.followUpDays > 0 } };
+  // a test block saved with the follow-up on, before the pilot's both-forms switch: it keeps the follow-up (the
+  // default, both forms, would leave no form for it)
+  const t2 = raw.test as { followUp?: unknown; both?: unknown } | undefined;
+  if (t2 && typeof t2 === "object" && t2.followUp === true && t2.both === undefined) raw = { ...raw, test: { ...t2, both: false } };
   if (!("practiceMinutes" in raw) && !("lesson" in raw) && !("calculator" in raw)) return raw;
   const r = raw as Record<string, never>;
   const out: Record<string, unknown> = {};
   if (r.practiceMinutes !== undefined || r.practiceTries !== undefined) out.practice = { on: true, minutes: r.practiceMinutes, tries: r.practiceTries };
   if (r.stopAfterMessages !== undefined || r.stopAfterMinutes !== undefined) out.teach = { stopAfterMessages: r.stopAfterMessages, stopAfterMinutes: r.stopAfterMinutes };
   if (r.lesson !== undefined) out.watch = { on: true, parts: r.lesson };
-  if (r.delayedTestDays !== undefined) out.test = { followUp: Number(r.delayedTestDays) > 0, followUpDays: r.delayedTestDays };
+  if (r.delayedTestDays !== undefined) out.test = { followUp: Number(r.delayedTestDays) > 0, followUpDays: r.delayedTestDays, ...(Number(r.delayedTestDays) > 0 ? { both: false } : {}) };
   if (r.calculator !== undefined || r.voice !== undefined) out.tools = { calculator: r.calculator, voice: r.voice };
   if (r.sessionDays !== undefined) out.sessionDays = r.sessionDays;
   if (r.dailyTurnLimit !== undefined) out.dailyTurnLimit = r.dailyTurnLimit;
@@ -98,7 +108,7 @@ export type PublicSettings = {
   calculator: boolean;
   voice: boolean;
   help: boolean; // the lesson's passage or video moment as help, while teaching and in practice
-  limits: { pretest: number; watch: number; teach: number; test: number }; // minutes per step (the test: per form)
+  limits: { pretest: number; watch: number; teach: number; test: number; soft: boolean }; // minutes per step (the pretest: per set, the test: per form); soft: recommended, nothing ends at 0
   mind: boolean; // Kai's mind (the graph) while teaching and after the results
   survey: SurveyItem[] | null; // null: no questions after the test
   copy: TopicCopy & { studyLine: string };
@@ -114,7 +124,7 @@ export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyIte
   voice: s.tools.voice,
   help: s.tools.help,
   mind: s.teach.mind,
-  limits: { pretest: s.pretest.minutes, watch: s.watch.minutes, teach: s.teach.minutes, test: s.test.minutes },
+  limits: { pretest: s.pretest.minutes, watch: s.watch.minutes, teach: s.teach.minutes, test: s.test.minutes, soft: s.timing.soft },
   survey: s.survey.on && pack.survey.length ? pack.survey : null,
   copy: { ...pack.copy, studyLine: s.studyLine },
   lessonKind: pack.lesson ? "text" : "video",

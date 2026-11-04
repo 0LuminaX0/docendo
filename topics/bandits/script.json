@@ -1,7 +1,7 @@
 {
   "note": "Kai's fixed teaching questions, the same for everyone and in this order: the lesson's ideas as the graph orders them (the problem, then each rule: how it chooses, and how it plays out over many rounds), then a choice between the rules and anything else. They are a novice's questions, written down while looking at the slides (so Kai knows the rules' names and nothing about them): none says what a rule does, what goes wrong or what to compare, and the three rules get the same questions. Before each question Kai reacts to the answer in its own words (a model writes that line from the notebook, term-checked; the question itself is never rewritten). A short answer to a question marked sayMore gets one \"Can you say more about that?\"; a question left unanswered comes back once after the last one. Kai wraps up after the last question, or at the first message after `minutes`.",
   "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits, so I looked at the slides and wrote down some questions. Could you help me with them?",
-  "minutes": 10,
+  "minutes": 15,
   "shortWords": 15,
   "questions": [
     { "id": "problem", "node": "n01", "sayMore": true, "text": "First, could you explain what problem all this is about, with an example of your own rather than the one from the lesson?" },

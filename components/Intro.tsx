@@ -14,7 +14,7 @@ const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: List
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, reading time and video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
 
-type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed" };
+type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean };
 
 export default function Intro({
   accessRequired,
@@ -30,11 +30,11 @@ export default function Intro({
   cards: Record<"watch" | "teach" | "practice" | "exercises", string>; // what each step's card says (app/page.tsx)
   totalMinutes: number;
   pretestItems: number; // questions before the first step (0: none)
-  pretestMinutes: number; // their time limit
+  pretestMinutes: number; // their time (every set together in a pilot)
   followUpOn: boolean; // the study has a follow-up test (Study setup)
 }) {
   const router = useRouter();
-  const { flow, copy, lessonKind } = useStudySettings();
+  const { flow, copy, lessonKind, limits } = useStudySettings();
   const bars = barsOf(flow);
   const [saved] = useSaved();
   const [code, setCode] = useState("");
@@ -64,7 +64,7 @@ export default function Intro({
     setBusy(false);
     // 409: the code is known and its tests are done, or the follow-up isn't open yet: a message, not an error
     if (!r.ok) return r.status === 409 ? setInfo(r.error) : setError(r.error);
-    const s = newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition);
+    const s = newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition, !!r.data.debug);
     if (r.data.phase === "delayed") {
       save({ ...s, phase: "delayed", step: "exercises" });
       router.push("/exercises");
@@ -89,8 +89,11 @@ export default function Intro({
           {copy.studyLine && <span className="eyebrow">{copy.studyLine}</span>}
           <h1 className="title">{copy.headline}</h1>
           <p className="lede">
-            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. At most {totalMinutes} minutes in all
-            {pretestItems ? `, starting with ${count(pretestItems, "quick question")} (${pretestMinutes} minutes)` : ""}. Each part has its own time limit, shown as a clock at the top of the page: when it runs out, that part ends and what you&apos;ve done so far is kept.
+            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. {limits.soft ? "About" : "At most"} {totalMinutes} minutes in all
+            {pretestItems ? `, starting with ${count(pretestItems, "quick question")} (${pretestMinutes} minutes)` : ""}.{" "}
+            {limits.soft
+              ? "Each part has a suggested time, shown as a clock at the top of the page. If you need longer, keep going: the clock just counts on."
+              : <>Each part has its own time limit, shown as a clock at the top of the page: when it runs out, that part ends and what you&apos;ve done so far is kept.</>}
           </p>
         </div>
 

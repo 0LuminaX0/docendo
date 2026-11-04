@@ -46,6 +46,8 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const p = await browser.newPage();
 await p.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
+// the shared code's debug skip (components/DebugSkip.tsx) is for the team, not for the README's pictures
+await p.evaluateOnNewDocument(() => document.addEventListener("DOMContentLoaded", () => document.head.append(Object.assign(document.createElement("style"), { textContent: ".debug-skip { display: none !important; }" }))));
 const images = () => p.waitForFunction(() => [...document.images].every((i) => i.complete), { timeout: 10000 }).catch(() => {});
 const shot = async (name) => (await images(), await wait(500), await p.screenshot({ path: join(OUT, `${name}.png`) }), console.log(`docs/${name}.png`));
 

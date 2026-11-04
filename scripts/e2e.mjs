@@ -99,8 +99,11 @@ const CHROME =
 const runStarted = new Date();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-first-run", "--disable-gpu"] });
 
+// The defaults are the pilot's (both pretest sets and test forms, soft timing: nothing ends at its time). Most of the
+// walkthrough checks the study's own shape, so it runs under that: one set, one form, hard limits, the follow-up test
+// (the pilot gets its own part below; the admin part resets the settings later)
+const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: true }, timing: { soft: false } });
 // the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
-// (the admin part resets the settings later)
 {
   const ctx = await browser.createBrowserContext();
   const a = await ctx.newPage();
@@ -111,7 +114,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
   const status = await a.evaluate(async () => {
     const post = (body) => fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
     const base = await post({ action: "reset" });
-    return (await post({ action: "save", settings: { ...base.j.settings, tools: { ...base.j.settings.tools, help: true } } })).status;
+    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp: true }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
   });
   if (status !== 200) throw new Error(`could not switch the lesson's help on for the walkthrough (${status})`);
   await ctx.close();
@@ -129,6 +132,30 @@ async function newPage(width = 1366, height = 900, context = null) {
   return page;
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/** Move a saved session's start times (dot paths, comma-separated) 90 minutes into the past, as if the time had run. */
+const movePast = (page, fields) =>
+  page.evaluate((fields) => {
+    const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+    const t = Date.now() - 90 * 60_000;
+    const set = (o, path) => (path.length === 1 ? (o[path[0]] = t) : set((o[path[0]] ??= {}), path.slice(1)));
+    for (const f of fields.split(",")) set(s, f.split("."));
+    localStorage.setItem("docendo:session:v1", JSON.stringify(s));
+  }, fields);
+/** Log in to the admin panel in a context of its own, and save the settings `f` makes of the defaults. */
+async function settingsFrom(f) {
+  const ctx = await browser.createBrowserContext();
+  const a = await ctx.newPage();
+  await a.goto(BASE + "/admin/login", { waitUntil: "load" });
+  await a.type("#pw", ADMIN_PW);
+  await a.$eval("form button", (e) => e.click());
+  await a.waitForSelector(".adm-main", { timeout: 15000 });
+  const post = (body) => a.evaluate(async (body) => { const r = await fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); return { status: r.status, j: await r.json() }; }, body);
+  const base = await post({ action: "reset" });
+  const r = await post({ action: "save", settings: f(base.j.settings) });
+  await ctx.close();
+  await wait(10_500); // each route keeps the settings for up to 10 s
+  return r.status;
+}
 const saved = (page) => page.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1") || "null"));
 const shot = (page, name, fullPage = false) => page.screenshot({ path: join(OUT, `${name}.png`), fullPage });
 
@@ -614,6 +641,83 @@ await shot(phoneHome, "10-phone-welcome", true);
   await tl.close();
 }
 
+// the pilot (the defaults): both pretest sets and both test forms, each part with a clock of its own; soft timing: past
+// its time the clock counts on ("+…") and nothing ends; each part's time against it is logged and sent with the
+// answers; the shared code gets a debug skip, part by part
+{
+  const ok = await settingsFrom((s) => ({ ...s, tools: { ...s.tools, help: true } }));
+  const pl = await newPage(1280, 860, await browser.createBrowserContext());
+  const clock = () => pl.$eval(".top .clock", (e) => e.textContent.trim()).catch(() => "");
+  const counting = async () => /^\+\d+:\d\d$/.test(await clock());
+  const skip = async (path) => (await pl.$eval(".debug-skip", (b) => b.click()), pl.waitForFunction((p) => location.pathname === p, { timeout: 15000 }, path));
+  const got = { settings: ok === 200 };
+  await pl.goto(BASE + "/", { waitUntil: "load" });
+  await pl.waitForSelector("button[type=submit]");
+  got.welcome = await pl.evaluate(() => /suggested time/i.test(document.querySelector(".intro-head")?.textContent ?? ""));
+  if (await pl.$("#code")) await pl.type("#code", TEAM_CODE);
+  await pl.click(".consent input");
+  await pl.click("button[type=submit]");
+  await pl.waitForFunction(() => location.pathname === "/pretest");
+  await pl.waitForSelector(".q");
+  got.pretestParts = /Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
+  got.skipShown = !!(await pl.$(".debug-skip"));
+  await movePast(pl, "pretestStartedAt");
+  await pl.reload({ waitUntil: "load" });
+  await pl.waitForSelector(".q");
+  await wait(1200);
+  got.pretestOn = (await pl.evaluate(() => location.pathname)) === "/pretest" && (await counting());
+  await shot(pl, "14-pilot-pretest-overtime");
+  await answerPretest(pl);
+  await pl.click(".submitbar .btn.primary");
+  await pl.waitForSelector(".pre-done");
+  await wait(1200);
+  const st1 = await saved(pl);
+  got.ownClock = /^\d+:\d\d$/.test(await clock()) && st1.pretestTimes?.length === 1 && st1.pretestTimes[0].over === true && st1.pretestTimes[0].limitMs === 8 * 60_000;
+  await answerPretest(pl); // every question answered, then the skip hands them in
+  await skip("/watch");
+  await pl.waitForSelector(".lesson");
+  await movePast(pl, "readStartedAt,readChapterAt");
+  await pl.reload({ waitUntil: "load" });
+  await pl.waitForSelector(".lesson");
+  await wait(1200);
+  got.readOn = (await pl.evaluate(() => location.pathname)) === "/watch" && (await counting());
+  await skip("/teach");
+  await pl.waitForSelector(".bubble");
+  await movePast(pl, "chat.startedAt");
+  await pl.reload({ waitUntil: "load" });
+  await pl.waitForSelector(".bubble");
+  await wait(1500);
+  got.teachOn = !!(await pl.$("#msg")) && (await counting()) && !(await pl.$(".ready"));
+  await skip("/practice");
+  await movePast(pl, "practice.startedAt");
+  await pl.reload({ waitUntil: "load" });
+  await wait(2000);
+  got.practiceOn = (await pl.evaluate(() => location.pathname)) === "/practice" && (await counting());
+  await skip("/exercises");
+  await pl.waitForSelector(".q");
+  got.testParts = /Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
+  await movePast(pl, "testStartedAt");
+  await pl.reload({ waitUntil: "load" });
+  await pl.waitForSelector(".q");
+  await wait(1200);
+  got.testOn = (await pl.evaluate(() => location.pathname)) === "/exercises" && (await counting());
+  await shot(pl, "14-pilot-test-overtime");
+  await answerTest(pl);
+  await pl.click(".submitbar .btn.primary");
+  await pl.waitForSelector(".quiz-done");
+  got.testOwnClock = /^\d+:\d\d$/.test(await clock());
+  await skip("/results");
+  const st2 = await saved(pl);
+  got.graded = !!st2.result && st2.result.parts?.length === 2;
+  check(
+    Object.values(got).every(Boolean),
+    `the pilot: two pretest parts and two test parts, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
+  );
+  await pl.close();
+  // back to the study's shape for the parts that follow
+  await settingsFrom((s) => ({ ...studyShape(s), tools: { ...s.tools, help: true } }));
+}
+
 // the admin panel: the login gate, the dashboard, a code made and used, an export
 {
   // a plain page: the deliberate 401 (a one-use code used twice) must not count as a page error
@@ -784,7 +888,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const trialCode = (await post("/api/admin/codes", { action: "create", count: 1, prefix: "TRY", label: "e2e trial", condition: "direct", trial: true, maxUses: null })).json.codes?.[0]?.code;
   const trial = await post("/api/session", { accessCode: trialCode, consent: true });
   await post("/api/admin/codes", { action: "delete", code: trialCode });
-  check(trial.status === 200 && trial.json.team === false, "a trial code gives a participant's session (no shortcuts)");
+  check(trial.status === 200 && trial.json.team === false && !trial.json.debug, "a trial code gives a participant's session (no shortcuts, no debug skip)");
   // the other admin pages render
   const pages = [];
   for (const [path, sel] of [["/admin/live", ".adm-live"], ["/admin/content", ".cnt-ideas"], ["/admin/health", ".adm-kpis"], ["/admin/sessions?scope=team", ".adm-sessions"], ["/admin/feedback", ".adm-view"]]) {
@@ -822,6 +926,14 @@ if (existsSync(logFile)) {
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
   const pilot = evs.find((e) => e.t === "grade" && Array.isArray(e.forms) && e.forms.length === 2);
   check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 1, "the pilot's test logs each part, each form's score (the anchor in both) and every reason");
+  // the pilot's timing: each part's time against its own, with the answers; every other step's from the browser
+  const timedPre = evs.find((e) => e.t === "pretest" && e.times?.length === 2);
+  const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
+  const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
+  check(
+    timedPre && timedPre.times.every((t) => t.limitMs === 8 * 60_000) && timedPre.times[0].over && timedTest && timedTest.times.every((t) => t.limitMs === 20 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
+    "the pilot logs every part's time against its own (pretest 8 and test 20 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
+  );
 } else check(false, "research log written to .data/events.jsonl");
 
 // nothing secret in what the browser downloads (client scripts and prerendered pages):
