@@ -133,7 +133,7 @@ function Bonus() {
       <text x="46" y="172" transform="rotate(-90 46 172)" textAnchor="middle" fontSize="11.5" fill={quiet}>bonus</text>
       <text x="200" y="268" textAnchor="middle" fontSize="11.5" fill={quiet}>times this option was picked (n)</text>
       <text x="430" y="68" fontWeight="600" fill={ink}>Passing rounds grow it, ever more slowly</text>
-      <text x="430" y="86" fontSize="11.5" fill={quiet}>because ln t grows, for every option</text>
+      <text x="430" y="86" fontSize="11.5" fill={quiet}>because ln(t) grows, for every option</text>
       <line x1="430" y1="100" x2="430" y2={base} stroke={edge} strokeWidth="1.25" />
       <line x1="430" y1={base} x2="710" y2={base} stroke={edge} strokeWidth="1.25" />
       <path d={curve} fill="none" stroke={accent} strokeWidth="2" markerEnd="url(#lf4-arrow)" />

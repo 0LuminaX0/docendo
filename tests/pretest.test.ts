@@ -44,7 +44,7 @@ describe("the pretest items", () => {
     // K1: the width shrinks with √n; H1: a quarter of the width needs 16 times the readings
     expect(Math.sqrt(1000 / 10)).toBe(10);
     expect(25 * (2.0 / 0.5) ** 2).toBe(400);
-    // K2: each equal rise of ln t needs t to grow tenfold
+    // K2: each equal rise of ln(t) needs t to grow tenfold
     expect(Math.log(1000) - Math.log(100)).toBeCloseTo(Math.log(100) - Math.log(10));
     // H2: the harmonic sum keeps growing (past 7 after 1,000 terms), the sum of 1/n² stays below π²/6
     const sum = (f: (n: number) => number, n: number) => Array.from({ length: n }, (_, k) => f(k + 1)).reduce((a, b) => a + b, 0);

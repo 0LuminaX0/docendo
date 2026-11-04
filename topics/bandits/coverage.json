@@ -1,7 +1,8 @@
 {
   "decidedBy": "manual: Claude (claude-opus-5-5), from reading both transcripts in full (ritvikmath e3L4VocZnnQ + DataMListic 8CquWcViBfg); lesson facts re-decided 2026-11-02 for the F1 to F15 fact list",
   "decidedAt": "2026-11-02",
-  "graphHash": "37567c56e2b2d415",
+  "recheckedAt": "2026-11-04: only notation changed (ln t written ln(t)), every decision stands",
+  "graphHash": "d62c48d51247be52",
   "facts": {
     "n01.f1": {
       "status": "covered",

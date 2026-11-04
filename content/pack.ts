@@ -57,7 +57,7 @@ export const LessonBlock = z.union([z.object({ p: z.string().min(1) }), z.object
 export const LessonFile = z.object({
   note: z.string().optional(),
   title: z.string(),
-  minutes: z.number().positive(), // reading time, for the welcome page and the step cards
+  minutes: z.number().positive(), // the text's own reading estimate (the pages show the study's time instead, Study setup's watch.minutes; "{minutes}" in the intro is replaced by it)
   minSeconds: z.number().int().min(0).default(0), // "Continue" opens after this long on the page
   remindSeconds: z.number().int().min(0).default(0), // a gentle reminder to move on after this long (0: none)
   intro: z.string(),

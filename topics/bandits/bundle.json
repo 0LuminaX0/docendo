@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "37567c56e2b2d415",
-  "builtAt": "2026-11-03T16:32:26.822Z",
+  "hash": "d62c48d51247be52",
+  "builtAt": "2026-11-04T21:26:28.573Z",
   "goals": [
     {
       "id": "G",
@@ -703,6 +703,7 @@
         "confidence bound",
         "bonus",
         "benefit of the doubt",
+        "ln(t)",
         "ln t",
         "hoeffding"
       ],
@@ -715,7 +716,7 @@
         "open": "Is there a smarter way to pick which place to try than rolling a die?",
         "why": "Why add something to the average instead of just using the average?",
         "whatIf": "What if two arms have the same average but one was tried 100 times and the other once?",
-        "compute": "After 10 rounds, arm A was tried 5 times with average 0.6 and arm B 3 times with average 0.7. Which does UCB1 pick? (ln 10 ≈ 2.3)"
+        "compute": "After 10 rounds, arm A was tried 5 times with average 0.6 and arm B 3 times with average 0.7. Which does UCB1 pick? (ln(10) ≈ 2.3)"
       },
       "help": [
         {
@@ -753,7 +754,7 @@
         },
         {
           "id": "n12.f2",
-          "text": "Every bonus grows with the round number (ln t), without limit but more and more slowly, so the bonus of an option that is not picked keeps growing. Only how often an option was picked matters, not when.",
+          "text": "Every bonus grows with the round number t (as ln(t) does), without limit but more and more slowly, so the bonus of an option that is not picked keeps growing. Only how often an option was picked matters, not when.",
           "required": true,
           "teachable": true,
           "ask": "Does an option's bonus change while I'm not picking it?",
@@ -772,7 +773,7 @@
         "open": "What happens to an arm's chances right after I finally try it again?",
         "why": "Why does trying an arm make it less likely to be chosen the next day?",
         "whatIf": "What if I had tried an option only once so far, how much should its bonus count then?",
-        "compute": "An arm tried 4 times at a round where ln t = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
+        "compute": "An arm tried 4 times at a round where ln(t) = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
       },
       "help": [
         {
@@ -824,7 +825,7 @@
         "open": "So which of the two rules ends up costing me less if I live in this town for years?",
         "why": "Why does UCB's extra cost stop piling up the way ε-greedy's does?",
         "whatIf": "What if I only had 20 days, would UCB still come out ahead?",
-        "compute": "If regret grows like 10 × ln T, how much regret is there at T = 100 and at T = 10,000? (ln 100 ≈ 4.6, ln 10,000 ≈ 9.2)"
+        "compute": "If regret grows like 10 × ln(T), how much regret is there at T = 100 and at T = 10,000? (ln(100) ≈ 4.6, ln(10,000) ≈ 9.2)"
       },
       "help": []
     },
