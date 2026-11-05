@@ -4,7 +4,7 @@
   "minutes": 8,
   "minSeconds": 240,
   "remindSeconds": 720,
-  "intro": "Reading this takes about 8 minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",
+  "intro": "Reading this takes about {minutes} minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",
   "copied": "That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?",
   "sections": [
     {
@@ -98,7 +98,7 @@
           "p": "Here the first term is option i's average, nᵢ is how often it has been picked so far, t is the round number, and c is a setting chosen in advance to match how much the rewards typically vary. The second term is the **bonus**. You will not need to calculate with the formula, but its parts matter."
         },
         {
-          "p": "Each pick of an option makes its bonus smaller, because nᵢ grows; picks of other options do not shrink it. As rounds pass, every bonus grows, because ln t grows: without limit, but more and more slowly. The rewards themselves do not enter the bonus, and c multiplies every bonus but not the averages."
+          "p": "Each pick of an option makes its bonus smaller, because nᵢ grows; picks of other options do not shrink it. As rounds pass, every bonus grows, because ln(t) grows: without limit, but more and more slowly. The rewards themselves do not enter the bonus, and c multiplies every bonus but not the averages."
         },
         {
           "figure": "bonus",

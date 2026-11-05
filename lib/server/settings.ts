@@ -50,9 +50,22 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
 
 /** Saved values over the defaults, block by block. A topic other than the default's brings its own lesson. */
 export function merge(stored: Record<string, unknown> | null): Settings {
-  const saved = migrateSettings(stored ?? {}) as Partial<Record<keyof Settings, unknown>>;
+  let saved = migrateSettings(stored ?? {}) as Partial<Record<keyof Settings, unknown>>;
   const topic = typeof saved.topic === "string" && hasTopic(saved.topic) ? saved.topic : undefined;
   const base = defaults(topic);
+  // a version saved before the pilot's timing (2026-11-04: it has no timing block) takes the pilot's tests and times
+  // from the defaults (both pretest sets and test forms, no follow-up, the new minutes); everything else it set stays
+  if (stored && Object.keys(stored).length && !("timing" in stored)) {
+    const block = (k: "pretest" | "watch" | "teach" | "practice" | "test") => (typeof saved[k] === "object" && saved[k] !== null ? (saved[k] as Record<string, unknown>) : {});
+    saved = {
+      ...saved,
+      pretest: { ...block("pretest"), both: base.pretest.both, minutes: base.pretest.minutes },
+      watch: { ...block("watch"), minutes: base.watch.minutes },
+      teach: { ...block("teach"), minutes: base.teach.minutes },
+      practice: { ...block("practice"), minutes: base.practice.minutes },
+      test: { ...block("test"), both: base.test.both, followUp: base.test.followUp, minutes: base.test.minutes },
+    };
+  }
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base) as (keyof Settings)[]) {
     if (k === "topic") continue; // resolved above: a pack this server has

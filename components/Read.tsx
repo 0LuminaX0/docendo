@@ -147,7 +147,7 @@ export default function Read({ lesson }: { lesson: Lesson }) {
 
           {at === 0 && (
             <p className="lesson-intro">
-              <strong>Before you start.</strong> {lesson.intro}
+              <strong>Before you start.</strong> {lesson.intro.replace("{minutes}", String(limits.watch))}
             </p>
           )}
           <section className="lesson-section lesson-slide" key={section.id} data-section={section.id} aria-live="polite">

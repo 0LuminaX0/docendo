@@ -13,8 +13,8 @@ const MATHML: Record<string, { label: string; ml: string }> = {
     ml: `<math display="block"><mtext>pick</mtext><mo>=</mo><mrow><mo stretchy="true">{</mo><mtable columnalign="left left" columnspacing="1.4em"><mtr><mtd><mtext>a random one of all&#xA0;</mtext><mi>k</mi><mtext>&#xA0;options, each&#xA0;</mtext><mn>1</mn><mo>/</mo><mi>k</mi></mtd><mtd><mtext>with probability&#xA0;</mtext><mi>ε</mi></mtd></mtr><mtr><mtd><mtext>the favourite</mtext></mtd><mtd><mtext>otherwise</mtext></mtd></mtr></mtable></mrow></math>`,
   },
   ucb: {
-    label: "score i equals x bar i plus c times the square root of ln t over n i",
-    ml: `<math display="block"><msub><mtext>score</mtext><mi>i</mi></msub><mo>=</mo>${XBAR_I}<mo>+</mo><mi>c</mi><mspace width="0.17em"></mspace><msqrt><mfrac><mrow><mi>ln</mi><mspace width="0.17em"></mspace><mi>t</mi></mrow><msub><mi>n</mi><mi>i</mi></msub></mfrac></msqrt></math>`,
+    label: "score i equals x bar i plus c times the square root of ln of t over n i",
+    ml: `<math display="block"><msub><mtext>score</mtext><mi>i</mi></msub><mo>=</mo>${XBAR_I}<mo>+</mo><mi>c</mi><mspace width="0.17em"></mspace><msqrt><mfrac><mrow><mi>ln</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow><msub><mi>n</mi><mi>i</mi></msub></mfrac></msqrt></math>`,
   },
 };
 

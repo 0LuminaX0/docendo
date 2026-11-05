@@ -80,17 +80,13 @@ export function migrateSettings(raw: Record<string, unknown>): Record<string, un
   // a test block saved before the follow-up had its own switch: "0 days" meant off
   const t = raw.test as { followUp?: unknown; followUpDays?: unknown } | undefined;
   if (t && typeof t === "object" && t.followUp === undefined && typeof t.followUpDays === "number") raw = { ...raw, test: { ...t, followUp: t.followUpDays > 0 } };
-  // a test block saved with the follow-up on, before the pilot's both-forms switch: it keeps the follow-up (the
-  // default, both forms, would leave no form for it)
-  const t2 = raw.test as { followUp?: unknown; both?: unknown } | undefined;
-  if (t2 && typeof t2 === "object" && t2.followUp === true && t2.both === undefined) raw = { ...raw, test: { ...t2, both: false } };
   if (!("practiceMinutes" in raw) && !("lesson" in raw) && !("calculator" in raw)) return raw;
   const r = raw as Record<string, never>;
   const out: Record<string, unknown> = {};
   if (r.practiceMinutes !== undefined || r.practiceTries !== undefined) out.practice = { on: true, minutes: r.practiceMinutes, tries: r.practiceTries };
   if (r.stopAfterMessages !== undefined || r.stopAfterMinutes !== undefined) out.teach = { stopAfterMessages: r.stopAfterMessages, stopAfterMinutes: r.stopAfterMinutes };
   if (r.lesson !== undefined) out.watch = { on: true, parts: r.lesson };
-  if (r.delayedTestDays !== undefined) out.test = { followUp: Number(r.delayedTestDays) > 0, followUpDays: r.delayedTestDays, ...(Number(r.delayedTestDays) > 0 ? { both: false } : {}) };
+  if (r.delayedTestDays !== undefined) out.test = { followUp: Number(r.delayedTestDays) > 0, followUpDays: r.delayedTestDays };
   if (r.calculator !== undefined || r.voice !== undefined) out.tools = { calculator: r.calculator, voice: r.voice };
   if (r.sessionDays !== undefined) out.sessionDays = r.sessionDays;
   if (r.dailyTurnLimit !== undefined) out.dailyTurnLimit = r.dailyTurnLimit;

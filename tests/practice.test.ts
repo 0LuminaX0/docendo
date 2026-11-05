@@ -37,7 +37,7 @@ describe("practice problems", () => {
     expect(item("p1").options![item("p1").answer]).toMatch(/^About 850 to A; B and C about equally/);
     // p2: the stem's scores (average plus bonus) make UCB pick Dialogues
     expect(argmax([6.3 + 1.0, 5.0 + 2.5, 4.0 + 1.5])).toBe(1);
-    // p4: B wins in the same round whatever the bonus scale c and the round t (bonus c √(ln t / n))
+    // p4: B wins in the same round whatever the bonus scale c and the round t (bonus c √(ln(t) / n))
     const score = (avg: number, n: number, c: number, t: number) => avg + c * Math.sqrt(Math.log(t) / n);
     for (const c of [0.01, 0.1, 0.5, 1, 3]) for (const t of [110, 1000, 1e6]) expect(argmax([score(6.0, 50, c, t), score(6.4, 10, c, t), score(5.0, 10, c, t), score(6.4, 40, c, t)])).toBe(1);
     // p5: UCB picks A or B depending on c, never C or D
