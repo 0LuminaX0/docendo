@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Docendo: M4 research plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; }
+  :root {
+    --ink: #1b1f27; --ink2: #464d5b; --muted: #7a818d; --rule: #e1e4ea; --sunk: #f5f6f8;
+    --red: #f25c54; --yellow: #f2ad1f; --green: #3bb273; --blue: #2d7dd2;
+    --red-soft: #fdeceb; --yellow-soft: #fef5df; --green-soft: #e8f6ee; --blue-soft: #eaf2fb;
+  }
+  * { box-sizing: border-box; }
+  html { background: #fff; }
+  body { margin: 0; color: var(--ink); font: 400 9.6pt/1.48 "Source Serif 4", Georgia, serif; font-optical-sizing: auto; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sans, h1, h2, h3, table, figcaption, .masthead, .facts { font-family: "Figtree", system-ui, sans-serif; }
+  p { margin: 0 0 5pt; text-align: justify; hyphens: auto; orphans: 3; widows: 3; }
+  em { font-style: italic; }
+  a { color: var(--blue); text-decoration: none; }
+
+  .masthead { padding-bottom: 9pt; margin-bottom: 8pt; border-bottom: 1.2pt solid var(--ink); }
+  .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8.2pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+  .bars { display: inline-flex; gap: 3pt; }
+  .bars i { width: 15pt; height: 5pt; border-radius: 3pt; display: block; }
+  .masthead h1 { font: 800 25pt/1 "Bricolage Grotesque", sans-serif; letter-spacing: -0.035em; margin: 8pt 0 3pt; }
+  .masthead .sub { font: 500 11.5pt/1.3 "Bricolage Grotesque", sans-serif; letter-spacing: -0.01em; color: var(--ink2); margin: 0 0 9pt; }
+  .facts { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 2.5pt 14pt; font-size: 8.5pt; line-height: 1.42; }
+  .facts dt { color: var(--muted); font-weight: 500; }
+  .facts dd { margin: 0; font-weight: 600; }
+  .facts .code-line { font-weight: 500; color: var(--ink2); }
+  .facts code { font: 600 8.5pt "Figtree", sans-serif; background: var(--sunk); padding: 0.5pt 4pt; border-radius: 3pt; }
+
+  h2 { font: 700 13pt/1.2 "Bricolage Grotesque", sans-serif; letter-spacing: -0.02em; margin: 9pt 0 4pt; break-after: avoid; }
+  h2 .n { display: inline-block; min-width: 19pt; font: inherit; color: #b3b8c1; font-variant-numeric: tabular-nums; }
+  .masthead + h2 { margin-top: 2pt; }
+
+  .goal { margin: 5pt 0 6pt; padding: 7pt 12pt; background: var(--sunk); border-radius: 6pt; }
+  .goal .label { font: 700 7.6pt "Figtree", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 2pt; }
+  .goal p { margin: 0 0 3pt; font-size: 10pt; line-height: 1.4; text-align: left; }
+  .goal p:last-child { margin: 0; }
+
+  table { width: 100%; margin: 5pt 0 7pt; border-collapse: collapse; font-size: 8.4pt; line-height: 1.36; break-inside: avoid; }
+  th { text-align: left; font-weight: 600; font-size: 7.4pt; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0 7pt 4pt; border-bottom: 1pt solid var(--ink); }
+  td { padding: 3.6pt 7pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; background: #fff; }
+  td.k { font-weight: 600; white-space: nowrap; }
+  .num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .lab { display: inline-flex; align-items: center; gap: 6pt; }
+  .chip { flex: none; width: 7pt; height: 7pt; border-radius: 2pt; }
+  tr.diff td { background: var(--green-soft); }
+
+  figure { margin: 7pt 0 8pt; break-inside: avoid; }
+  figcaption { font-size: 8pt; line-height: 1.4; color: var(--ink2); margin-top: 5pt; }
+  figcaption b { color: var(--ink); font-weight: 700; }
+  .shot img { width: 88%; margin: 0 auto; display: block; border: 0.6pt solid var(--rule); border-radius: 5pt; }
+
+  .refs { font-size: 7.3pt; line-height: 1.38; columns: 2; column-gap: 16pt; }
+  .refs p { text-align: left; padding-left: 11pt; text-indent: -11pt; margin: 0 0 3pt; hyphens: manual; break-inside: avoid; }
+  .note { font-family: "Figtree", sans-serif; font-size: 7.6pt; line-height: 1.4; color: var(--ink2); border-top: 0.6pt solid var(--rule); padding-top: 5pt; margin-top: 6pt; }
+  .keep { break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker"><span class="bars"><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>EPFL CS-411 Digital Education, Milestone 4</div>
+  <h1>Docendo</h1>
+  <p class="sub">Research plan: learning by teaching an AI classmate, with and without watching it use what you taught</p>
+  <dl class="facts">
+    <dt>Team</dt><dd>Andrii Negrub, Phil Gustke, Rafael Cruz</dd>
+    <dt>Study</dt><dd><a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a><br><span class="code-line">Team code <code>bandits2026</code>: both conditions, with a skip button</span></dd>
+    <dt>Date</dt><dd>5 November 2026</dd>
+    <dt>Code</dt><dd><a href="https://github.com/0LuminaX0/docendo">github.com/0LuminaX0/docendo</a></dd>
+  </dl>
+</header>
+
+<h2><span class="n">1</span>Research questions</h2>
+<p>Okita and Schwartz (2013, Experiment 2) found that students who taught a computer agent and then <em>watched it solve problems</em> with what they had taught learned more than students who solved the same problems themselves with the same right and wrong marks (d = 0.75): <em>recursive feedback</em>, feedback on one's own teaching seen through the pupil's actions. We test whether it holds with university students and a large language model as the pupil.</p>
+<div class="goal">
+  <div class="label">Main question (learning outcome)</div>
+  <p>Do students who watch an AI classmate solve practice problems from what they taught it, and correct it, score higher on a final test than students who solve the same problems themselves with right and wrong feedback? <b>Hypothesis:</b> yes.</p>
+  <div class="label" style="margin-top:5pt">Secondary question (learning process)</div>
+  <p>How do learners teach and correct the AI classmate, and how do the two groups experience practice: how well they spot mistakes, what they say when correcting, and where they struggle?</p>
+</div>
+<p>The topic is multi-armed bandits: repeated choices between options with unknown average payoffs. The <b>learning goal</b> is to predict which option two decision rules, greedy and UCB, pick next and explain why: greedy can lock onto a worse option after one unlucky try, while UCB's bonus keeps it trying options it knows little about.</p>
+
+<h2><span class="n">2</span>Participants and recruitment</h2>
+<p><b>Target population.</b> EPFL and RWTH students of computer science or another engineering field, 18 or older, who have passed a course on probability or statistics and have <em>not</em> learned about bandits or reinforcement learning. Two screening questions at the start flag anyone who has; they are left out of the analysis.</p>
+<p><b>Recruitment.</b> We aim for 20 participants, 10 per condition, from our own networks. We ask people directly (in person, by phone or message), check the criteria orally, and add those who agree to a WhatsApp group that receives the information sheet (attached). Each then gets a personal one-use access code and does the study online on their own within a three-day window. We tell them nothing about the conditions; the two pilot participants, and anyone who heard about the design, are not recruited. So far two pilots have run and two further people have agreed, from the first two asked.</p>
+
+<h2><span class="n">3</span>Study conditions and procedure</h2>
+<p>One website session of about an hour, the same for everyone except practice, the manipulated variable: the <b>AI group</b> practises with the AI classmate (recursive feedback), the <b>control group</b> without AI (direct feedback). Both groups teach the AI classmate first, as in the original study, so a difference in the final test can be put down to recursive feedback rather than to teaching an AI at all.</p>
+<table>
+  <tr><th style="width:19%">Step</th><th class="num" style="width:9%">Time</th><th>What the participant does</th></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--muted)"></span>0 Pretest</span></td><td class="num">8 min</td><td>Two screening questions and five items on the maths and statistical reasoning the lesson builds on, with "I don't know". Used as a covariate, not for a learning gain.</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--red)"></span>1 Read</span></td><td class="num">12 min</td><td>A text lesson in three short chapters (the setup, greedy, UCB) with worked figures, one chapter at a time. It closes before teaching and cannot be copied.</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--yellow)"></span>2 Teach Kai</span></td><td class="num">16 min</td><td>Chat (typed or spoken) with Kai, an AI classmate who missed the lesson. Kai asks the same nine questions in the same words for everyone and writes down what it understood in its notebook, in the learner's words.</td></tr>
+  <tr class="diff"><td class="k"><span class="lab"><span class="chip" style="background:var(--green)"></span>3 Practice</span></td><td class="num">12 min</td><td>Three problems. <b>AI group:</b> Kai solves each problem step by step using only its notebook; the learner says whether Kai is right, sees the answer marked, and after a wrong answer writes one correction, which Kai adds to its notes before trying again. <b>Control group:</b> the learner solves each problem, writing down the working, with a right or wrong mark and one retry.</td></tr>
+  <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--blue)"></span>4 Final test</span></td><td class="num">12 min</td><td>Five multiple choice questions in new situations, each with a short written reason.</td></tr>
+  <tr><td class="k">5 Questions</td><td class="num">≈ 5 min</td><td>Six ratings (effort, responsibility for Kai, perceived understanding, how much practice helped, enjoyment, and what the practice marks were about) and three open questions; then the score and worked solutions.</td></tr>
+</table>
+
+<figure class="keep">
+  <div class="shot"><img src="img4/practice-kai.png" alt="Practice in the AI group: Kai's attempt beside its notebook, and the learner's correction"></div>
+  <figcaption><b>Figure 1.</b> Practice in the AI group, with the live model. The learner had taught that greedy "goes with whichever one scored best in the first round". Kai follows that note (step 2), misses that greedy switches when another option's average overtakes the favourite, and answers wrongly. The learner called it wrong and now writes the correction. The notebook on the right holds only the learner's words.</figcaption>
+</figure>
+
+<p><b>How Kai solves.</b> A model told to "use only your notes" still uses what it knows (Do, Sonkar &amp; Sachan, 2026), so code decides when Kai can be right: only when its notebook holds every fact the problem needs, correctly. A missing or wrong fact makes Kai reason from that gap, so its mistake comes from what it was taught. If Kai would solve every problem, it misreads one point its notes leave open (never one they state), defined in advance per problem and logged, so every learner gets to correct Kai at least once.</p>
+<p><b>Assignment.</b> Each participant's access code sets their condition, in balanced blocks of four. Two versions of the final test (A and B, different questions on the same ideas) and of the pretest are balanced within each condition, so every combination is equally frequent. All times are strict: a step ends at its limit.</p>
+
+<h2><span class="n">4</span>Measures and analysis</h2>
+<table>
+  <tr><th style="width:24%">Question</th><th style="width:38%">Data</th><th>Analysis</th></tr>
+  <tr><td class="k">Main: outcome</td><td>Final test score (0 to 5). Every wrong option is a known misconception; "I don't know" counts as wrong</td><td>AI vs control: difference in means with Welch's <em>t</em>, Cohen's <em>d</em> with 95% CI; ANCOVA with the pretest as covariate</td></tr>
+  <tr><td class="k">Main: depth</td><td>The written reasons, scored 0 to 2 against a rubric</td><td>Scored blind to condition by two of us; same comparison as above</td></tr>
+  <tr><td class="k">Secondary: process</td><td>Facts Kai understood after teaching; time per step; in the AI group, whether learners judged Kai's answers right and whether one correction fixed Kai</td><td>Descriptive, by condition; Kai's understanding checks that both groups taught equally well</td></tr>
+  <tr><td class="k">Secondary: experience</td><td>Six ratings, including the manipulation check (whose understanding the marks were about)</td><td>Means by condition; perceived learning compared with measured scores</td></tr>
+  <tr><td class="k">Qualitative</td><td>Three open questions: what helped (a specific moment), where it was difficult and what came next, how they decided what to do after a wrong answer; plus the AI group's corrections</td><td>Codebook built from the pilot (for example: explains the mechanism, mixes up greedy and UCB, checks Kai's notes, repeats the lesson's words), applied by two of us independently with Cohen's κ; code frequencies by condition, with examples and exceptions</td></tr>
+</table>
+<p><b>Power and uncertainty.</b> With 10 per group, a test of the original effect (d = 0.75) has a power of about 0.36, so we report effect sizes with confidence intervals and show the data, rather than relying on significance. Sessions flagged by the screening questions, or broken off, are excluded before the analysis; all exclusions are reported.</p>
+
+<h2><span class="n">5</span>Refinements since M3, and what the pilot changed</h2>
+<p>Besides the changes decided with the team (our own text instead of videos, fixed questions for Kai), pilot sessions with two participants and several team runs found both test forms near 50% correct, the calibration we wanted, and found these problems:</p>
+<table>
+  <tr><th style="width:36%">Found</th><th>Change</th></tr>
+  <tr><td>A session took 70 to 100 minutes</td><td>ε-greedy dropped from the lesson; three practice problems (from six) and five test questions (from ten); times set from the pilot</td></tr>
+  <tr><td>The text lesson read as thin, its figures as too simple</td><td>Rewritten with worked numbers in every figure and a passage for each of Kai's questions</td></tr>
+  <tr><td>Kai's questions did not match the facts practice needs, and repeated what had been said</td><td>Nine fixed questions built on the lesson's facts, the same for everyone, skipping what was already taught</td></tr>
+  <tr><td>Kai solved everything for a learner who taught well, so practice taught nothing</td><td>A problem on the misconception both pilots showed (greedy keeps its first winner), and Kai's misreading of one open point (Section 3)</td></tr>
+  <tr><td>Test form B was mostly a copy of form A</td><td>Form B has its own questions, so the pilot tries ten items to choose from</td></tr>
+</table>
+<p><b>Next.</b> A second short pilot with two new people checks the times under strict limits; then the main study runs over three days.</p>
+
+
+<h2><span class="n">&nbsp;</span>References</h2>
+<div class="refs">
+<p>Do, H., Sonkar, S., &amp; Sachan, M. (2026). Simulating students or sycophantic problem solving? On misconception faithfulness of LLM simulators. arXiv:2605.12748.</p>
+<p>Okita, S. Y., &amp; Schwartz, D. L. (2013). Learning by teaching human pupils and teachable agents: The importance of recursive feedback. <em>J. of the Learning Sciences, 22</em>(3), 375 to 412.</p>
+</div>
+<p class="note"><b>Use of AI.</b> Kai runs on Gemini 3.5 Flash Lite (questions and notes) and Claude Haiku 5.5 (solving). Claude Code helped build the website and draft this plan; the design decisions are ours. Each member's AI logs are in the submission.</p>
+
+</body>
+</html>

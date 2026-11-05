@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Docendo: participant information</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; }
+  :root { --ink: #1b1f27; --ink2: #464d5b; --muted: #7a818d; --rule: #e1e4ea; --sunk: #f5f6f8; --red: #f25c54; --yellow: #f2ad1f; --green: #3bb273; --blue: #2d7dd2; --fill: #fff4d6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 400 9pt/1.38 "Figtree", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+  .bars { display: inline-flex; gap: 3pt; } .bars i { width: 15pt; height: 5pt; border-radius: 3pt; display: block; }
+  h1 { font: 800 19pt/1.05 "Bricolage Grotesque", sans-serif; letter-spacing: -0.03em; margin: 7pt 0 3pt; }
+  .lede { color: var(--ink2); margin: 0 0 6pt; font-size: 9.4pt; }
+  h2 { font: 600 10.8pt/1.2 "Bricolage Grotesque", sans-serif; margin: 7pt 0 2pt; letter-spacing: -0.01em; }
+  p { margin: 0 0 4pt; }
+  ul { margin: 0 0 4pt; padding-left: 14pt; } li { margin: 0 0 2pt; }
+  .box { background: var(--sunk); border-radius: 6pt; padding: 6pt 10pt; margin: 5pt 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.6pt; margin: 3pt 0 4pt; }
+  td { padding: 2pt 6pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; }
+  td.t { white-space: nowrap; color: var(--ink2); width: 14%; }
+  td.s { font-weight: 600; white-space: nowrap; width: 22%; }
+  .fill { background: var(--fill); padding: 0 3pt; border-radius: 2pt; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16pt; }
+  .small { font-size: 8.4pt; color: var(--ink2); }
+</style>
+</head>
+<body>
+<div class="kicker"><span class="bars"><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>Docendo study, EPFL CS-411 Digital Education</div>
+<h1>Participant information</h1>
+<p class="lede">Thank you for considering taking part. We are a student team in EPFL's course CS-411 Digital Education: Andrii Negrub, Phil Gustke and Rafael Cruz. We study how people learn by explaining a topic to an AI classmate. Please read this page before you start; it takes three minutes.</p>
+
+<div class="box">
+<b>Can you take part?</b> Yes, if all of these hold:
+<ul style="margin-top:3pt">
+  <li>you are 18 or older and study computer science or another engineering field at EPFL or RWTH;</li>
+  <li>you have passed a course on probability or statistics;</li>
+  <li>you have <b>not</b> taken a course on multi-armed bandits or reinforcement learning, or learned about them another way.</li>
+</ul>
+If one does not hold, please tell us before you start: your answers could not be used.
+</div>
+
+<h2>What you will do</h2>
+<p>You take part online at <b>docendo-jade.vercel.app</b>, with a personal access code we send you. The code works once. You can start at any time during <span class="fill">[dates of the three-day window]</span>. The session takes about <b>an hour</b>, plus about five minutes of questions at the end that are not timed.</p>
+<table>
+  <tr><td class="s">1 Short quiz</td><td class="t">8 min</td><td>A few questions about your background and some maths and statistics.</td></tr>
+  <tr><td class="s">2 Read a lesson</td><td class="t">12 min</td><td>A short text on multi-armed bandits, in three chapters.</td></tr>
+  <tr><td class="s">3 Teach Kai</td><td class="t">16 min</td><td>Explain the lesson to Kai, an AI classmate who missed it, by typing or speaking.</td></tr>
+  <tr><td class="s">4 Practice</td><td class="t">12 min</td><td>Three practice problems.</td></tr>
+  <tr><td class="s">5 Final test</td><td class="t">12 min</td><td>Five multiple choice questions, each with a short reason in your own words.</td></tr>
+  <tr><td class="s">6 Your view</td><td class="t">≈ 5 min</td><td>A few questions about how it went, then your score and the worked solutions.</td></tr>
+</table>
+<p><b>Please plan an uninterrupted hour</b> somewhere you can concentrate. Every step has a time limit and moves on by itself when the time is up, so a long break would cut a step short. Use only the website: no search engines, chatbots, notes or copying. A dictionary for English words is fine.</p>
+
+<div class="cols">
+<div>
+<h2>Your rights</h2>
+<ul>
+  <li>Taking part is voluntary and unpaid. You can stop at any time, without giving a reason.</li>
+  <li>There are no known risks beyond an hour at a screen.</li>
+  <li>You can have your data deleted until <b>25 November 2026</b>: send us your access code. After that, results are shared with the course staff in anonymous form, and may be used in a course report or a scientific paper.</li>
+</ul>
+</div>
+<div>
+<h2>What we record</h2>
+<ul>
+  <li>Your answers in the quiz, the practice and the test, your messages to Kai, and your answers at the end.</li>
+  <li>How you use the site: pages, clicks, time per step and per chapter, switching tabs, typing and pasting, attempts to copy the lesson.</li>
+  <li>If you speak to Kai, only the written transcript is kept, not the audio.</li>
+</ul>
+</div>
+</div>
+<p class="small">Everything is stored under a random session number, never your name, email or IP address, and your access code is not stored with your answers. Your messages to Kai are processed by AI models through OpenRouter, only by providers that do not store them.</p>
+
+<h2>Questions?</h2>
+<p>Write in the study's WhatsApp group, or to any of us: Andrii Negrub <span class="fill">[email]</span>, Phil Gustke <span class="fill">[email]</span>, Rafael Cruz <span class="fill">[email]</span>. By starting the session and ticking the consent box on the first page, you confirm that you have read this page and agree to take part.</p>
+<p class="small">You help us understand how teaching others helps people learn, and how AI can support it. Thank you.</p>
+</body>
+</html>

@@ -22,9 +22,8 @@ const exercises = JSON.parse(readFileSync(join(ROOT, "topics/bandits/exercises.j
 // what a learner might write as the reason, by the rule an item is about
 const REASON = {
   Greedy: "Greedy keeps trying the option whose average is too high until it falls, so it ends up on the best one.",
-  "ε-greedy": "The random picks happen at the same rate all the time and land on every option equally often.",
   UCB: "The bonus shrinks each time an option is picked and grows again slowly while it isn't.",
-  Comparison: "ε-greedy keeps exploring at random, while UCB's bonus decides and its exploration fades.",
+  Comparison: "Both go by the averages, but UCB adds a bonus that depends only on the tries and the round.",
 };
 const env = { ...process.env, ACCESS_CODE: CODE, UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ADMIN_PASSWORD: "", CODE_SECRET: "", SESSION_TURNS_PER_MIN: "200" };
 const server = spawn("pnpm", ["exec", "next", "start", "-p", String(PORT)], { env, stdio: "ignore", detached: true });
@@ -47,7 +46,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const p = await browser.newPage();
 await p.setViewport({ width: 1440, height: 900, deviceScaleFactor: 2 });
 // the shared code's debug skip (components/DebugSkip.tsx) is for the team, not for the README's pictures
-await p.evaluateOnNewDocument(() => document.addEventListener("DOMContentLoaded", () => document.head.append(Object.assign(document.createElement("style"), { textContent: ".debug-skip { display: none !important; }" }))));
+await p.evaluateOnNewDocument(() => document.addEventListener("DOMContentLoaded", () => document.head.append(Object.assign(document.createElement("style"), { textContent: ".debug-skip, .debug-mind, .voice-intro-back { display: none !important; }" }))));
 const images = () => p.waitForFunction(() => [...document.images].every((i) => i.complete), { timeout: 10000 }).catch(() => {});
 const shot = async (name) => (await images(), await wait(500), await p.screenshot({ path: join(OUT, `${name}.png`) }), console.log(`docs/${name}.png`));
 
@@ -66,22 +65,29 @@ const n = (await p.$$(".q")).length;
 for (let i = 0; i < n; i++) await p.$eval(`.q:nth-child(${i + 1}) .opt:last-child input`, (el) => el.click());
 await p.click(".submitbar .btn.primary");
 
-// 2. watch
-await p.waitForFunction(() => location.pathname === "/watch");
-await wait(2500);
-await shot("watch");
-await p.click(".aside .btn.primary");
-await p.waitForSelector(".aside .btn.primary.small");
-await p.click(".aside .btn.primary.small");
+// the team's skip (hidden in the pictures): on to the next step
+const skip = async (path) => (await p.$eval(".debug-skip", (b) => b.click()), p.waitForFunction((x) => location.pathname === x, { timeout: 20000 }, path));
 
-// 3. teach Kai: a learner explaining in their own words
+// 2. read: the greedy chapter, with its day-by-day figure
+await p.waitForFunction(() => location.pathname === "/watch");
+await p.waitForSelector(".lesson");
+await p.$eval(".debug-skip", (b) => b.click()); // to chapter 2
+await wait(1200);
+await p.$eval(".lesson-fig", (e) => (e.scrollIntoView({ block: "center" })));
+await wait(400);
+await shot("read");
+await p.$eval(".debug-skip", (b) => b.click()); // to chapter 3
+await wait(800);
+await skip("/teach");
+
+// 3. teach Kai: answers to its questions in a learner's own words (greedy taught the way a pilot learner did)
 await p.waitForSelector("#msg");
 const say = [
-  "Imagine you eat out every night and there are three restaurants. You don't know which one is best, and each visit is a bit random, so you only find out how good a place is by eating there.",
-  "For each restaurant you keep the average of how good your meals there were. That average is your guess of how good the place really is.",
-  "Greedy simply goes to the restaurant with the best average so far, every night. It never tries the others again just to learn more about them.",
-  "That's the catch: if the best place gives you one bad meal at the start, its average looks bad, greedy never goes back, and you can be stuck at a worse place for good.",
-  "Epsilon-greedy fixes that. Most nights it takes the best average, but with a small probability, say 10%, it picks a restaurant at random, any of them, even ones it already knows are bad.",
+  "Each round you pick one of a few options, like a food truck for lunch. Each one gives a random result around its own average, which you don't know, and you only see the result of the one you picked.",
+  "Greedy tries every option once and then goes with whichever one scored best in that first round.",
+  "If the best truck has one unlucky first lunch, its average looks bad and greedy never goes back to it, so that average never gets corrected.",
+  "Yes: you might learn that an option is better than it looked. Picking the best-looking one collects reward now, trying another one is how you find out.",
+  "UCB gives each option a score, its average plus a bonus, and always picks the option with the highest score.",
 ];
 for (let t = 0; t < say.length; t++) {
   await p.focus("#msg");
@@ -98,29 +104,21 @@ await p.waitForSelector(".mind svg");
 await wait(800);
 await shot("mind");
 await p.click(".seg button:nth-child(1)");
-await p.waitForSelector(".skip");
-await p.click(".skip");
-await p.waitForSelector(".composer-foot .row .btn.small");
-await p.click(".composer-foot .row .btn.small");
-await p.waitForSelector(".ready .btn.primary");
-await p.click(".ready .btn.primary");
+await wait(500);
+await skip("/practice");
 
-// 5. practice, direct feedback: the learner's own try, with working
-await p.waitForFunction(() => location.pathname === "/practice");
+// 5. practice, direct feedback: the learner's own try at problem 1, with working
 await p.waitForSelector(".pq");
-await p.$eval(".submitbar .btn", (e) => e.click()); // to problem 2 (an explore day)
-await p.waitForFunction(() => document.querySelectorAll(".prog li")[1]?.classList.contains("now"));
 await p.focus(".pq textarea");
-await p.keyboard.type("Explore day: the pick is random over all three trucks, so A, B and C each have 1 in 3.");
-await p.$eval(".opt:nth-child(3) input", (e) => e.click());
+await p.keyboard.type("B's average after day 4: (9 + 5) / 2 = 7, below A's 7.5, so greedy switches to A.");
+await p.$eval(".opt:nth-child(2) input", (e) => e.click());
 await p.click(".pact .btn");
 await p.waitForSelector(".bulb.on, .bulb.off");
 await wait(400);
 await shot("practice");
 
-// 6. practice, recursive feedback: Kai solves the UCB problem it wasn't taught, is corrected, tries again
-await p.$eval(".submitbar .btn", (e) => e.click()); // to problem 3 (UCB)
-await p.waitForFunction(() => document.querySelectorAll(".prog li")[2]?.classList.contains("now"));
+// 6. practice, recursive feedback: Kai solves problem 1 from what it was taught (greedy "goes with the first round's
+// winner"), the learner calls it, corrects it, and Kai tries again
 await p.click(".seg button:nth-child(2)");
 await p.waitForSelector(".kcall button", { timeout: 90000 });
 await p.$eval(".kcall button:last-of-type", (e) => e.click());
@@ -129,7 +127,7 @@ const kaiRight = await p.$eval(".kattempt .light", (e) => e.classList.contains("
 if (!kaiRight) {
   await p.waitForSelector(".ks-fix textarea");
   await p.focus(".ks-fix textarea");
-  await p.keyboard.type("UCB adds a bonus to each truck's average, bigger for trucks you've tried less, and picks the truck with the highest average plus bonus.");
+  await p.keyboard.type("Greedy doesn't stay with the first winner: it updates the average of the option it picks, and as soon as another option's average is higher it switches to that one.");
   await wait(600);
   await shot("practice-kai-correct");
   await p.$eval(".ks-fix .btn.primary", (e) => e.click());
@@ -138,44 +136,10 @@ if (!kaiRight) {
   await p.$eval(".kcall button:first-of-type", (e) => e.click());
   await wait(1500);
 }
-// point at a step of Kai's (last) try: the notebook scrolls to the lines it used and highlights them
 const tries = await p.$$(".kattempt");
 const steps = tries.length ? await tries.at(-1).$$(".ksteps li") : [];
 if (steps.length) await steps[0].hover();
 await wait(900);
 await shot("practice-kai");
 
-// 7. final test (back to "You solve", so Kai doesn't start on the problems skipped on the way)
-await p.click(".seg button:nth-child(1)");
-for (let k = 3; k < 6; k++) {
-  await p.$eval(".submitbar .btn", (e) => e.click());
-  await p.waitForFunction((i) => document.querySelectorAll(".prog li")[i]?.classList.contains("now"), {}, k);
-}
-await p.$eval(".submitbar .btn", (e) => e.click());
-await p.waitForFunction(() => location.pathname === "/exercises", { timeout: 20000 });
-await p.waitForSelector(".q");
-const shown = await p.$$eval(".q", (els) => els.map((e) => e.dataset.q));
-// every item: its key (the true statements of a multi-select one) and a reason in the learner's words
-for (const id of shown) {
-  const t = exercises.find((x) => x.id === id);
-  const c = await p.$(`.q[data-q="${id}"]`);
-  if (t.kind === "number") await c.$eval(".qans input", (el) => el.focus()), await p.keyboard.type(String(t.answer));
-  else for (const k of Array.isArray(t.answer) ? t.answer : [t.answer]) await c.$eval(`.opts .opt:nth-child(${k + 1}) input`, (el) => el.click());
-  if (t.reason) await c.$eval(".qwork textarea", (el) => el.focus()), await p.keyboard.type(REASON[t.section] ?? "That is how the rule picks.");
-}
-await p.$eval(`.q[data-q="${shown[0]}"]`, (e) => (e.scrollIntoView({ block: "start" }), scrollBy(0, -90)));
-await wait(500);
-await shot("test");
-await p.click(".submitbar .btn.primary");
-
-// 8. results (after the questions about the session)
-await p.waitForFunction(() => location.pathname === "/results");
-await p.waitForSelector(".survey");
-await p.$eval(".survey-skip", (b) => b.click());
-await p.waitForSelector(".big");
-// the review: each answer with its explanation, then the practice's worked solutions
-await p.$eval(".review-head", (e) => (e.scrollIntoView({ block: "start" }), scrollBy(0, -84)));
-await shot("results");
-
 await browser.close();
-stop();
