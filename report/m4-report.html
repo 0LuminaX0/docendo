@@ -41,7 +41,8 @@
   .goal p { margin: 0 0 3pt; font-size: 10pt; line-height: 1.4; text-align: left; }
   .goal p:last-child { margin: 0; }
 
-  table { width: 100%; margin: 5pt 0 7pt; border-collapse: collapse; font-size: 8.4pt; line-height: 1.36; break-inside: avoid; }
+  table { width: 100%; margin: 5pt 0 7pt; border-collapse: collapse; font-size: 8.4pt; line-height: 1.36; }
+  tr { break-inside: avoid; }
   th { text-align: left; font-weight: 600; font-size: 7.4pt; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); padding: 0 7pt 4pt; border-bottom: 1pt solid var(--ink); }
   td { padding: 3.6pt 7pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; background: #fff; }
   td.k { font-weight: 600; white-space: nowrap; }
@@ -92,7 +93,7 @@
 <h2><span class="n">3</span>Study conditions and procedure</h2>
 <p>One website session of about an hour, the same for everyone except practice, the manipulated variable: the <b>AI group</b> practises with the AI classmate (recursive feedback), the <b>control group</b> without AI (direct feedback). Both groups teach the AI classmate first, as in the original study, so a difference in the final test can be put down to recursive feedback rather than to teaching an AI at all.</p>
 <table>
-  <tr><th style="width:19%">Step</th><th class="num" style="width:9%">Time</th><th>What the participant does</th></tr>
+  <thead><tr><th style="width:19%">Step</th><th class="num" style="width:9%">Time</th><th>What the participant does</th></tr></thead>
   <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--muted)"></span>0 Pretest</span></td><td class="num">8 min</td><td>Two screening questions and five items on the maths and statistical reasoning the lesson builds on, with "I don't know".</td></tr>
   <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--red)"></span>1 Read</span></td><td class="num">12 min</td><td>A text lesson in three short chapters (the setup, greedy, UCB) with worked figures, one chapter at a time. It closes before teaching and cannot be copied.</td></tr>
   <tr><td class="k"><span class="lab"><span class="chip" style="background:var(--yellow)"></span>2 Teach Kai</span></td><td class="num">16 min</td><td>Chat (typed or spoken) with Kai, an AI classmate who missed the lesson. Kai asks the same nine questions in the same words for everyone and writes down what it understood in its notebook, in the learner's words.</td></tr>
@@ -106,12 +107,13 @@
   <figcaption><b>Figure 1.</b> Practice in the AI group, with the live model. The learner had taught that greedy "goes with whichever one scored best in the first round". Kai follows that note (step 2), misses that greedy switches when another option's average overtakes the favourite, and answers wrongly. The learner called it wrong and now writes the correction. The notebook on the right holds only the learner's words.</figcaption>
 </figure>
 
+<p><b>How Kai records what it is taught.</b> The lesson is broken into a fixed list of facts (nine that Kai waits for). After each message a judge model checks it against that list: which facts it explains correctly, partly or wrongly, and any wrong belief, each with a quote of the learner's words. Code checks every verdict: one whose quote is not in the message is dropped; a fact credited without its key point (e.g. that the bonus grows ever more slowly) counts as partial; a wrong belief is kept only if it is about the fact it is said to contradict. Kai's notebook stores only the quoted words. With simulated learners of fixed knowledge, the judge credited 98 of 98 facts they knew, none they did not, and caught 15 of 16 wrong beliefs.</p>
 <p><b>How Kai solves.</b> A model told to "use only your notes" still uses what it knows (Do, Sonkar &amp; Sachan, 2026), so code decides when Kai can be right: only when its notebook holds every fact the problem needs, correctly. A missing or wrong fact makes Kai reason from that gap, so its mistake comes from what it was taught. If Kai would solve every problem, it misreads one point its notes leave open (never one they state), defined in advance per problem and logged, so every learner gets to correct Kai at least once.</p>
 <p><b>Assignment.</b> Each participant's access code sets their condition, in balanced blocks of four. Two versions of the final test (A and B, different questions on the same ideas) and of the pretest are balanced within each condition, so every combination is equally frequent. All times are strict: a step ends at its limit.</p>
 
 <h2><span class="n">4</span>Measures and analysis</h2>
 <table>
-  <tr><th style="width:24%">Question</th><th style="width:38%">Data</th><th>Analysis</th></tr>
+  <thead><tr><th style="width:24%">Question</th><th style="width:38%">Data</th><th>Analysis</th></tr></thead>
   <tr><td class="k">Main: outcome</td><td>Final test score (0 to 5). Every wrong option is a known misconception; "I don't know" counts as wrong</td><td>AI vs control: Welch's <em>t</em>, Cohen's <em>d</em> with 95% CI; ANCOVA with the pretest as covariate; learning gain (pretest to final test, as share correct; the pretest covers the prerequisites)</td></tr>
   <tr><td class="k">Main: depth</td><td>The written reasons, scored 0 to 2 against a rubric</td><td>Scored blind to condition by two of us; same comparison as above</td></tr>
   <tr><td class="k">Secondary: process</td><td>Facts Kai understood after teaching; time per step; in the AI group, whether learners judged Kai's answers right and whether one correction fixed Kai</td><td>Descriptive, by condition; Kai's understanding checks that both groups taught equally well</td></tr>
@@ -123,7 +125,7 @@
 <h2><span class="n">5</span>Refinements since M3, and what the pilot changed</h2>
 <p>Besides the team's own changes (a text instead of videos, fixed questions for Kai), two pilot participants and several team runs found both test forms near 50% correct, as intended, and these problems:</p>
 <table>
-  <tr><th style="width:36%">Found</th><th>Change</th></tr>
+  <thead><tr><th style="width:36%">Found</th><th>Change</th></tr></thead>
   <tr><td>A session took 70 to 100 minutes</td><td>ε-greedy dropped from the lesson; three practice problems (from six) and five test questions (from ten); times set from the pilot</td></tr>
   <tr><td>The text lesson read as thin, its figures as too simple</td><td>Rewritten with worked numbers in every figure and a passage for each of Kai's questions</td></tr>
   <tr><td>Kai's questions did not match the facts practice needs, and repeated what had been said</td><td>Nine fixed questions built on the lesson's facts, the same for everyone, skipping what was already taught</td></tr>
