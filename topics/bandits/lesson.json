@@ -1,7 +1,7 @@
 {
   "note": "The text lesson (the team's design, 2 November 2026; rewritten 2026-11-05 after the pilot, where the text read as thin and its figures as too simple: worked numbers in the figures, a passage for each of Kai's questions in the order Kai asks them): every teachable fact once, each with a figure or formula, and none of the consequences the practice and test items ask about. Paragraphs take **bold**. A figure or formula is named by id (components/lesson/). Each section names the ideas it explains (`nodes`), for the help passage that matches Kai's question or a practice problem.",
   "title": "How greedy, ε-greedy and UCB choose",
-  "minutes": 11,
+  "minutes": 9,
   "minSeconds": 240,
   "remindSeconds": 720,
   "intro": "Reading this takes about {minutes} minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",

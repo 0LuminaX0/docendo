@@ -46,11 +46,13 @@ describe("practice problems", () => {
     expect([...winners].sort()).toEqual([0, 1]);
   });
 
-  it("come in two rounds that practise the same ideas", () => {
-    const r1 = practice.items.filter((p) => p.round === 1).map((p) => p.idea);
-    const r2 = practice.items.filter((p) => p.round === 2).map((p) => p.idea);
-    expect(r1).toHaveLength(3);
-    expect([...r2].sort()).toEqual([...r1].sort());
+  it("are three in use, in one round (the others switched off, kept)", () => {
+    const used = practice.items.filter((p) => !p.off);
+    expect(used.map((p) => p.id)).toEqual(["p1", "p3", "p5"]);
+    expect(new Set(used.map((p) => p.round))).toEqual(new Set([1]));
+    // between them they need every fact a problem needs
+    const need = (ps: typeof practice.items) => new Set(ps.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))));
+    for (const f of need(practice.items)) expect(need(used).has(f), f).toBe(true);
   });
 
   it("only use ideas the lesson teaches, and don't put every answer in the same place", () => {

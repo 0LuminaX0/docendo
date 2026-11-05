@@ -20,6 +20,8 @@ export default function Results() {
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "results");
   const study = useStudySettings();
+  // Kai's mind: Study setup's switch for the study runs; the team's debug session (the shared code) always has it
+  const showMind = study.mind || !!saved?.debug;
   const { survey } = study;
   // the review starts with the questions the learner missed (their explanations matter most); "All" shows every one
   const [show, setShow] = useState<"missed" | "all" | null>(null);
@@ -75,7 +77,7 @@ export default function Results() {
             <div className="bubble">
               Thanks for teaching me! You sent me {taught} explanation{taught === 1 ? "" : "s"}
               {saved.chat.done ? " and I ended up feeling ready" : ""}, at {Math.round((saved.chat.mind?.understanding ?? saved.chat.progress) * 100)}% understanding. The whole session took about {minutes} minute{minutes === 1 ? "" : "s"}.{" "}
-              {study.mind && <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
+              {showMind && <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
                 <Brain size={15} /> See what I learned
               </Link>}
             </div>
@@ -204,7 +206,7 @@ export default function Results() {
                 <article className="pq" key={p.id}>
                   <div className="qt">
                     <span className="ptitle">
-                      Round {p.round}, problem {i + 1}: {p.title}
+                      {new Set((r.practice ?? []).map((x) => x.round)).size > 1 ? `Round ${p.round}, problem` : "Problem"} {i + 1}: {p.title}
                     </span>
                     <p>{p.prompt}</p>
                   </div>

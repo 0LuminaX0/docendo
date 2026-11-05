@@ -22,8 +22,9 @@ export default function MindPage({ graph }: { graph: GraphView }) {
   const [saved] = useSaved();
   const allowed = useGuard(saved, "teach");
   const { flow, mind } = useStudySettings();
-  // switched off (the study runs), or practice and the test under way: back to where the session stands
-  const closed = !!saved && (!mind || saved.step === "practice" || saved.step === "exercises");
+  // switched off (the study runs), or practice and the test under way: back to where the session stands; the team's
+  // debug session (the shared code) may always look
+  const closed = !!saved && !saved.debug && (!mind || saved.step === "practice" || saved.step === "exercises");
   useEffect(() => {
     if (closed && saved) router.replace(pathOf(currentStep(flow, saved.step)));
   }, [closed, saved, router, flow]);

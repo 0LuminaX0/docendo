@@ -14,6 +14,9 @@ import { hasTerm } from "./terms";
 export const Exercise = z
   .object({
     id: z.string(),
+    // left out of the test, kept with its key and notes (2026-11-05: the session cut to about 40 minutes, five items a
+    // form); the app never serves or grades it, and the parallel-form checks count only the items in use
+    off: z.boolean().optional(),
     goal: z.string(),
     type: z.string(), // what it asks of the learner (near or far transfer, a changed rule, …)
     section: z.string(), // the rule it is about
@@ -198,8 +201,8 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   if (tests) {
     const ids = tests.items.map((q) => q.id);
     for (const id of ids.filter((x, i) => ids.indexOf(x) !== i)) err("exercises.json", `item ${id} appears twice`);
-    const a = tests.items.filter((q) => q.form === "A");
-    const b = tests.items.filter((q) => q.form === "B");
+    const a = tests.items.filter((q) => q.form === "A" && !q.off);
+    const b = tests.items.filter((q) => q.form === "B" && !q.off);
     if (b.length && a.length !== b.length) err("exercises.json", `form A has ${a.length} items and form B ${b.length}: parallel forms must match`);
     for (const q of b) if (q.pair && !a.some((x) => x.id === q.pair)) err("exercises.json", `${q.id} is the twin of ${q.pair}, which isn't in form A`);
     if (!b.length) warn("exercises.json", "one test form only: the follow-up test can't be switched on");

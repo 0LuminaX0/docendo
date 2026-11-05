@@ -155,6 +155,8 @@ export default function Practice({ items }: { items: Item[] }) {
   const last = index === items.length - 1;
   const inRound = items.filter((x) => x.round === q.round);
   const rounds = [...new Set(items.map((x) => x.round))];
+  // one round: no round in the labels
+  const place = `${rounds.length > 1 ? `Round ${q.round}, problem` : "Problem"} ${inRound.indexOf(q) + 1} of ${inRound.length}: ${q.title}`;
 
   const set = (id: string, f: (e: PracticeEntry) => PracticeEntry) =>
     update((s: Saved) => {
@@ -327,7 +329,7 @@ export default function Practice({ items }: { items: Item[] }) {
         <nav className="prog" aria-label="Problems">
           {rounds.map((r) => (
             <div className="prog-round" key={r}>
-              <span>Round {r}</span>
+              {rounds.length > 1 && <span>Round {r}</span>}
               <ol>
                 {items.map((x, i) => {
                   if (x.round !== r) return null;
@@ -367,7 +369,7 @@ export default function Practice({ items }: { items: Item[] }) {
               disabled={over || !saved.chat.state}
               head={
                 <span className="ptitle">
-                  Round {q.round}, problem {inRound.indexOf(q) + 1} of {inRound.length}: {q.title}
+                  {place}
                 </span>
               }
               tools={video ? rewatch : null}
@@ -378,7 +380,7 @@ export default function Practice({ items }: { items: Item[] }) {
           <section className="pq" key={q.id} aria-labelledby={`${q.id}-q`}>
             <div className="qt">
               <span className="ptitle">
-                Round {q.round}, problem {inRound.indexOf(q) + 1} of {inRound.length}: {q.title}
+                {place}
               </span>
               <p id={`${q.id}-q`}>{q.prompt}</p>
             </div>

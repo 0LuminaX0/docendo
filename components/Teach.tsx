@@ -31,6 +31,8 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
   const router = useRouter();
   const [saved, update] = useSaved();
   const study = useStudySettings();
+  // Kai's mind: Study setup's switch for the study runs; the team's debug session (the shared code) always has it
+  const showMind = study.mind || !!saved?.debug;
   const allowed = useGuard(saved, "teach");
   const nextOf = useNext();
   const { flow } = study;
@@ -240,7 +242,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
       };
 
   const pct = Math.round(mind.understanding * 100);
-  const tools = study.mind && (
+  const tools = showMind && (
     <div className="seg" role="group" aria-label="View">
         <button type="button" aria-pressed={view === "chat"} onClick={() => (setView("chat"), track("view_toggle", { to: "chat" }))} aria-label="Chat">
           <MessageCircle size={16} strokeWidth={2.2} />
@@ -266,7 +268,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
           </span>
         )}
         <StepClock left={clock.left} over={clock.over || !!chat.timeUp} overMs={clock.overMs} soft={study.limits.soft} what="teaching" />
-        <button type="button" className="meter" disabled={!study.mind} onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={study.mind ? `${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.` : `${pct}% of what Kai needs to feel ready.`} style={{ border: 0, background: "none", cursor: study.mind ? "pointer" : "default", padding: 0, color: "inherit" }}>
+        <button type="button" className="meter" disabled={!showMind} onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "meter" }))} title={showMind ? `${pct}% of what Kai needs to feel ready. Open Kai's mind to see how it's scored.` : `${pct}% of what Kai needs to feel ready.`} style={{ border: 0, background: "none", cursor: showMind ? "pointer" : "default", padding: 0, color: "inherit" }}>
           <span>Kai&apos;s understanding</span>
           <span className="track" role="progressbar" aria-label="Kai's understanding" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
             <span className="fill" style={{ display: "block", width: `${Math.max(4, pct)}%` }} />
@@ -280,7 +282,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
     <div className="shell">
       <Header step="teach" demo={saved.demo} left={tools} right={status} />
       {saved.step === "teach" && <DebugSkip onSkip={() => goPractice(true)} what={flow.includes("practice") ? "Skip to practice" : "Skip to the test"} />}
-      {view === "mind" && study.mind ? (
+      {view === "mind" && showMind ? (
         <main className="teach-mind">
           <MindView graph={graph} mind={mind} popout />
         </main>
@@ -359,7 +361,7 @@ export default function Teach({ opening, initial, initialMind, videos, graph, qu
                   <button className="btn primary" onClick={() => goPractice()}>
                     {flow.includes("practice") ? "Go to practice" : "Go to the test"} <ArrowRight size={17} />
                   </button>
-                  {study.mind && (
+                  {showMind && (
                     <button className="btn ghost" onClick={() => (setView("mind"), track("view_toggle", { to: "mind", via: "ready" }))}>
                       <Brain size={17} /> See Kai&apos;s mind
                     </button>

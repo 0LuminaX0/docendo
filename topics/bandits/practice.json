@@ -1,7 +1,7 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
-  "minutes": 20,
-  "note": "Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
+  "minutes": 8,
+  "note": "Three problems since 2026-11-05 (P1, P3 and P5, one round; the session cut to about 40 minutes): between them they need every teachable fact a problem uses (ε-greedy's fixed rate and random pick, lock-in, UCB's pick, c, the bonus shrinking and growing). P2, P4 and P6 are marked off: kept, never served. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
   "items": [
     {
       "id": "p1",
@@ -60,6 +60,7 @@
     },
     {
       "id": "p2",
+      "off": true,
       "needs": [
         "n12.f1",
         "n12.f2"
@@ -207,6 +208,7 @@
     },
     {
       "id": "p4",
+      "off": true,
       "needs": [
         "n11.f1",
         "n12.f1"
@@ -267,7 +269,7 @@
         "n11.f1",
         "n11.f2"
       ],
-      "round": 2,
+      "round": 1,
       "idea": "epsilon",
       "title": "Page layouts",
       "kind": "choice",
@@ -327,6 +329,7 @@
     },
     {
       "id": "p6",
+      "off": true,
       "needs": [
         "n07.f1",
         "n11.f1",

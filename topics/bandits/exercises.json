@@ -1,6 +1,6 @@
 {
   "title": "Multi-armed bandits: post-test",
-  "note": "The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
+  "note": "Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
   "items": [
     {
       "id": "t01",
@@ -61,6 +61,7 @@
     },
     {
       "id": "t03",
+      "off": true,
       "goal": "G",
       "type": "far",
       "section": "ε-greedy",
@@ -117,6 +118,7 @@
     },
     {
       "id": "t05",
+      "off": true,
       "goal": "G",
       "type": "far",
       "section": "UCB",
@@ -174,6 +176,7 @@
     },
     {
       "id": "t07",
+      "off": true,
       "goal": "G",
       "type": "far",
       "section": "UCB",
@@ -203,6 +206,7 @@
     },
     {
       "id": "t08",
+      "off": true,
       "goal": "G",
       "type": "near",
       "section": "Comparison",
@@ -231,6 +235,7 @@
     },
     {
       "id": "t09",
+      "off": true,
       "goal": "G",
       "type": "near",
       "section": "Comparison",
@@ -372,6 +377,7 @@
     },
     {
       "id": "v03",
+      "off": true,
       "goal": "G",
       "type": "changed rule",
       "section": "ε-greedy",
@@ -457,6 +463,7 @@
     },
     {
       "id": "v06",
+      "off": true,
       "goal": "G",
       "type": "changed rule",
       "section": "UCB",
@@ -485,6 +492,7 @@
     },
     {
       "id": "v07",
+      "off": true,
       "goal": "G",
       "type": "harder",
       "section": "UCB",
@@ -514,6 +522,7 @@
     },
     {
       "id": "v08",
+      "off": true,
       "goal": "G",
       "type": "multi-select",
       "section": "Comparison",
@@ -575,6 +584,7 @@
     },
     {
       "id": "v10",
+      "off": true,
       "goal": "G",
       "type": "multi-select",
       "section": "Comparison",

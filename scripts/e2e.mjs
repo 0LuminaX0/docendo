@@ -48,7 +48,8 @@ const OUT = join(process.cwd(), ".e2e");
 mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
-const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
+const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.filter((q) => !q.off); // the items in use
+const FORM_N = testItems.filter((q) => q.form === "A").length; // items a form
 /** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
 async function passSurvey(page, answer = true) {
   await page.waitForSelector(".survey");
@@ -80,7 +81,7 @@ async function answerTest(page, wrong = [], idk = [], noReason = []) {
   }
   return shown;
 }
-const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
+const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items.filter((p) => !p.off);
 /** Answer the pretest questions on screen: "I don't know" where offered, else the second option. Returns their ids. */
 async function answerPretest(page) {
   const ids = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
@@ -99,9 +100,9 @@ const CHROME =
 const runStarted = new Date();
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ["--no-first-run", "--disable-gpu"] });
 
-// The defaults are the pilot's (both pretest sets and test forms, soft timing: nothing ends at its time). Most of the
-// walkthrough checks the study's own shape, so it runs under that: one set, one form, hard limits, the follow-up test
-// (the pilot gets its own part below; the admin part resets the settings later)
+// The defaults: one pretest set and one test form, soft timing (nothing ends at its time). Most of the walkthrough
+// checks the study's shape with hard limits and the follow-up test (the pilot's setup, both sets and both forms, gets
+// its own part below; the admin part resets the settings later)
 const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: true }, timing: { soft: false } });
 // the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
 {
@@ -339,7 +340,7 @@ try {
   await shot(page, "07b-practice-FAILED", true);
   throw e;
 }
-check((await page.$$(".prog li")).length === practiceItems.length, `practice shows ${practiceItems.length} problems in two rounds`);
+check((await page.$$(".prog li")).length === practiceItems.length, `practice shows ${practiceItems.length} problems`);
 await nextProblem(1);
 // p2: a wrong option twice; between the tries, rewatch the lesson moment
 const p2 = practiceItems[1];
@@ -358,11 +359,13 @@ const noMore = !(await page.$(".pq .pact .btn.small:not(.ghost)")) && !(await pa
 const clock = await page.$eval(".clock", (e) => e.textContent);
 check(noMore && /\d:\d\d/.test(clock), `practice shows a countdown (${clock}), allows two tries, replays the lesson and keeps solutions for later`);
 await shot(page, "07b-practice", true);
-// Kai's mind stays closed during practice
+// Kai's mind during practice: closed to the study's sessions, open to the team's debug session (the shared code), which
+// has a link to it in the corner
+const mindLink = !!(await page.$(".debug-mind"));
 const peek = await newPage(1200, 800);
 await peek.goto(BASE + "/mind", { waitUntil: "load" });
-await peek.waitForFunction(() => location.pathname === "/practice", { timeout: 8000 }).catch(() => {});
-check((await peek.evaluate(() => location.pathname)) === "/practice", "Kai's mind is closed during practice");
+await peek.waitForSelector(".mind-page", { timeout: 8000 }).catch(() => {});
+check(mindLink && (await peek.evaluate(() => location.pathname)) === "/mind", "the debug session (shared code) keeps Kai's mind open during practice, with a link in the corner");
 await peek.close();
 for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
 await page.$eval(".submitbar .btn", (e) => e.click());
@@ -374,7 +377,7 @@ const shownItems = shownIds.map((id) => testItems.find((t) => t.id === id));
 const mainForm = shownItems[0].form;
 const idks = (await page.$$(".q .opt.idk")).length;
 const reasonFields = (await page.$$(".q .qreason textarea")).length;
-check(shownIds.length === 10 && shownItems.every((t) => t.form === mainForm) && idks === 10 && reasonFields === 10, `the final test shows one form (${mainForm}), each question with “I don't know” and a field for the reason (${shownIds.join(" ")})`);
+check(shownIds.length === FORM_N && shownItems.every((t) => t.form === mainForm) && idks === FORM_N && reasonFields === FORM_N, `the final test shows one form (${mainForm}), each question with “I don't know” and a field for the reason (${shownIds.join(" ")})`);
 // one choice item wrong, one "I don't know", and one answered without its reason at first
 const wrongId = shownItems.find((t) => t.kind === "choice").id;
 const idkId = shownItems.find((t) => t.id !== wrongId).id;
@@ -395,7 +398,7 @@ const scoreHidden = await passSurvey(page);
 check(scoreHidden, "six questions come after the test, before the score");
 const score = (await page.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
 const reasonShown = await page.$$eval(".your-reason", (els) => els.length);
-check(score === "8/10" && reasonShown > 0, `graded on the server: ${score} (one wrong, one “I don't know”), the learner's reasons shown with the explanations`);
+check(score === `${FORM_N - 2}/${FORM_N}` && reasonShown > 0, `graded on the server: ${score} (one wrong, one “I don't know”), the learner's reasons shown with the explanations`);
 check((await page.$$(".review .pq")).length === practiceItems.length, "results show the practice solutions after the test");
 await shot(page, "08-results", true);
 
@@ -642,11 +645,11 @@ await shot(phoneHome, "10-phone-welcome", true);
   await tl.close();
 }
 
-// the pilot (the defaults): both pretest sets and both test forms, each part with a clock of its own; soft timing: past
-// its time the clock counts on ("+…") and nothing ends; each part's time against it is logged and sent with the
-// answers; the shared code gets a debug skip, part by part
+// the pilot's setup: both pretest sets and both test forms, each part with a clock of its own; soft timing: past its
+// time the clock counts on ("+…") and nothing ends; each part's time against it is logged and sent with the answers;
+// the shared code gets a debug skip, part by part
 {
-  const ok = await settingsFrom((s) => ({ ...s, tools: { ...s.tools, help: true } }));
+  const ok = await settingsFrom((s) => ({ ...s, pretest: { ...s.pretest, both: true }, test: { ...s.test, both: true, followUp: false }, tools: { ...s.tools, help: true } }));
   const pl = await newPage(1280, 860, await browser.createBrowserContext());
   const clock = () => pl.$eval(".top .clock", (e) => e.textContent.trim()).catch(() => "");
   const counting = async () => /^\+\d+:\d\d$/.test(await clock());
@@ -673,7 +676,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await pl.waitForSelector(".pre-done");
   await wait(1200);
   const st1 = await saved(pl);
-  got.ownClock = /^\d+:\d\d$/.test(await clock()) && st1.pretestTimes?.length === 1 && st1.pretestTimes[0].over === true && st1.pretestTimes[0].limitMs === 8 * 60_000;
+  got.ownClock = /^\d+:\d\d$/.test(await clock()) && st1.pretestTimes?.length === 1 && st1.pretestTimes[0].over === true && st1.pretestTimes[0].limitMs === 4 * 60_000;
   await answerPretest(pl); // every question answered, then the skip hands them in
   await skip("/watch");
   await pl.waitForSelector(".lesson");
@@ -744,7 +747,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
   // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first
   const firstForm = (await post("/api/grade", { token: used.json.token, kind: "items" })).json.form;
-  const graded = await post("/api/grade", { token: used.json.token, answers: Array(10).fill(null) });
+  const graded = await post("/api/grade", { token: used.json.token, answers: Array(FORM_N).fill(null) });
   const early = await post("/api/session", { accessCode: code, consent: true });
   await wait(2500);
   const fu = await (await browser.createBrowserContext()).newPage();
@@ -758,7 +761,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await fu.waitForFunction(() => location.pathname === "/exercises", { timeout: 15000 });
   await fu.waitForSelector(".since");
   const fuIds = await fu.$$eval(".q", (els) => els.map((e) => e.dataset.q));
-  const otherForm = fuIds.every((id) => testItems.find((t) => t.id === id).form !== firstForm) && fuIds.length === 10;
+  const otherForm = fuIds.every((id) => testItems.find((t) => t.id === id).form !== firstForm) && fuIds.length === FORM_N;
   await fu.click(".since .opt input");
   await answerTest(fu);
   await shot(fu, "12-follow-up");
@@ -770,7 +773,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await shot(fu, "12b-follow-up-results", true);
   const again = await post("/api/session", { accessCode: code, consent: true });
   check(
-    typeof graded.json.followUp?.opensAt === "number" && early.status === 409 && /opens on/.test(early.json.error) && otherForm && fuScore === "10/10" && again.status === 409 && /both tests/.test(again.json.error),
+    typeof graded.json.followUp?.opensAt === "number" && early.status === 409 && /opens on/.test(early.json.error) && otherForm && fuScore === `${FORM_N}/${FORM_N}` && again.status === 409 && /both tests/.test(again.json.error),
     `delayed test: the graded test says when it opens; not before; then the same code gives the other form (${firstForm} first), graded ${fuScore}; then "done both"`,
   );
   await fu.close();
@@ -781,7 +784,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await wait(10_500); // each route keeps the settings for up to 10 s
   const made2 = (await post("/api/admin/codes", { action: "create", count: 1, prefix: "FU", label: "e2e follow-up", condition: "direct", trial: true, maxUses: 1 })).json.codes?.[0];
   const s2 = await post("/api/session", { accessCode: made2.code, consent: true });
-  const g2 = await post("/api/grade", { token: s2.json.token, answers: Array(10).fill(null) });
+  const g2 = await post("/api/grade", { token: s2.json.token, answers: Array(FORM_N).fill(null) });
   const tooSoon = await post("/api/session", { accessCode: made2.code, consent: true });
   await adm.goto(BASE + "/admin/follow-up", { waitUntil: "load" });
   const waiting = await adm.$$eval("tbody tr", (rows) => rows.filter((r) => r.textContent.includes("waiting")).length);
@@ -876,8 +879,10 @@ await shot(phoneHome, "10-phone-welcome", true);
   await short.close();
   const formOf = (id) => testItems.find((t) => t.id === id).form;
   const asked = [...part1, ...part2];
+  // each form's items in use; the anchor is asked once, and the first of part 2 is answered wrongly
+  const n = testItems.filter((t) => t.form === "A").length;
   check(
-    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === 10 && part2.length === 9 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === "18/19" && /Part 1: 10 of 10, Part 2: 8 of 9/.test(perPart),
+    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n - 1 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === `${2 * n - 2}/${2 * n - 1}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 2} of ${n - 1}`).test(perPart),
     `the pilot's test: both forms in two parts (${formOf(part1[0])} first), part 2 after part 1 is complete, the anchor once, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
   const back = await post("/api/admin/settings", { action: "reset" });
@@ -932,8 +937,8 @@ if (existsSync(logFile)) {
   const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
   const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
   check(
-    timedPre && timedPre.times.every((t) => t.limitMs === 8 * 60_000) && timedPre.times[0].over && timedTest && timedTest.times.every((t) => t.limitMs === 20 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
-    "the pilot logs every part's time against its own (pretest 8 and test 20 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
+    timedPre && timedPre.times.every((t) => t.limitMs === 4 * 60_000) && timedPre.times[0].over && timedTest && timedTest.times.every((t) => t.limitMs === 10 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
+    "the pilot logs every part's time against its own (pretest 4 and test 10 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
   );
 } else check(false, "research log written to .data/events.jsonl");
 
