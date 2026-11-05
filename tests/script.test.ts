@@ -168,6 +168,25 @@ describe("Kai's teaching questions", () => {
     expect(r[0]!.state.script!.skipped).toEqual([]);
   });
 
+  it("asks \"anything else?\" again while the answers give Kai something new, at most twice, and ends on a no", async () => {
+    const last = at(Q.length - 1);
+    const again = byId("anything").again!.text;
+    const r = await talk(
+      [
+        { message: "oh and greedy switches when another average overtakes the favourite", say: ok("n05.f1") },
+        { message: "and every pick shrinks its own bonus", say: ok("n12.f1") },
+        { message: "and the bonus grows each round, ever more slowly", say: ok("n12.f2") },
+      ],
+      last,
+    );
+    expect(asks(r[0]!, again)).toBe(true);
+    expect(asks(r[1]!, again)).toBe(true);
+    expect(r[2]!.done).toBe(true); // twice at most
+    const no = await talk([{ message: "oh and greedy switches when another average overtakes the favourite", say: ok("n05.f1") }, { message: "no, that's all", say: { intent: "answer" } }], last);
+    expect(asks(no[0]!, again)).toBe(true);
+    expect(no[1]!.done).toBe(true); // nothing new: done
+  });
+
   it("comes back once to a question that got no answer, after the last one, if its facts are still missing", async () => {
     const start: State = { ...at(Q.length - 1), script: { ...at(Q.length - 1).script!, skipped: [0] } };
     const r = await talk([{ message: "no, that's all", say: { intent: "answer" } }, { message: "still nothing", say: { intent: "unsure" } }], start);
@@ -228,7 +247,7 @@ describe("Kai's teaching questions", () => {
 
   it("carries on from a state saved under an earlier version of the questions, from the first question not yet answered", async () => {
     // the 2026-11-03 script had ten questions: a session at its ninth, with its eighth waiting at the back
-    const old: State = { ...initialScriptState(bundle, script), script: { at: 9, more: false, again: 0, skipped: [8], back: false, probe: null, probed: [], covered: [] } };
+    const old: State = { ...initialScriptState(bundle, script), script: { at: 9, more: false, again: 0, skipped: [8], back: false, probe: null, probed: [], covered: [], repeats: 0 } };
     const r = await talk([{ message: msg, say: ok("n05.f1") }], old);
     // the setup isn't answered yet: it comes first
     expect(asks(r[0]!, byId("setup").text)).toBe(true);

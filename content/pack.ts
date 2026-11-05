@@ -112,6 +112,9 @@ export const ScriptFile = z.object({
         // still missing gets its follow-up (once). Kai never asks a question naming a lesson term the learner hasn't used
         targets: z.array(z.string()).default([]),
         follow: z.array(z.object({ fact: z.string(), text: z.string().min(10) })).default([]),
+        // asked again (up to `max` times) while the answers give Kai something new to write down: "anything else?"
+        // keeps going until the learner has nothing more, a natural way to say again what Kai seems to have missed
+        again: z.object({ text: z.string().min(10), max: z.number().int().min(1).max(5) }).optional(),
       }),
     )
     .min(1),

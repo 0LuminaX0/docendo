@@ -77,6 +77,7 @@ export const State = z.object({
       probe: z.string().max(12).nullable().default(null), // the fact Kai's follow-up on the screen asks about
       probed: z.array(z.string().max(12)).max(60).default([]), // facts Kai has asked its follow-up about
       covered: z.array(z.number().int().min(0).max(100)).max(100).default([]), // questions skipped: their facts already taught
+      repeats: z.number().int().min(0).max(10).default(0), // times the question on the screen was asked again ("anything else?")
       // the script's question ids when the session started on it: indices saved under another version of script.json
       // (e.g. before a deploy) mean other questions, so a session whose script changed starts again from the first
       // question not yet answered

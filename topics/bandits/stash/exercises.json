@@ -3,6 +3,126 @@
   "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
   "items": [
     {
+      "id": "v15",
+      "goal": "G",
+      "type": "near",
+      "section": "Greedy",
+      "form": "B",
+      "pair": "t12",
+      "title": "Coffee shops",
+      "kind": "choice",
+      "prompt": "A commuter picks one of two coffee shops each morning with greedy and rates each coffee out of 10. Shop A is truly better: its coffees usually score between 8 and 9. Shop B's coffees always score between 6.5 and 7.5. On the two trial mornings, A scores 6, a bit below its usual, and B scores 7. What does greedy do for the rest of the year?",
+      "options": [
+        "It never picks A again, all year",
+        "It switches between A and B for a while, since their averages are close",
+        "It goes back to A once B's average drops a little",
+        "It goes back to A after a while, once A's average has corrected itself"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "After the trials B leads, 7 to 6, so greedy picks B. Every morning at B scores at least 6.5, so B's average never drops below 6.5, which stays above A's 6. A is never picked again, so its 6 is never corrected: a first try only a little below its usual is enough to lock greedy out of the better shop.",
+      "rubric": "B's average can't fall below A's 6 (B never scores below 6.5); A isn't picked again, so its average is never corrected.",
+      "diagnosis": [
+        "correct",
+        "learner: greedy alternates when averages are close",
+        "learner: overlooks that B never scores below 6.5, so B's average can't fall below 6",
+        "Kai: F5 (averages correct themselves, so greedy finds the best in the end)"
+      ],
+      "estimate": 0.55,
+      "note": "The twin of T12 (Phil's lock-in from a small dip, 2026-11-05) in another setting."
+    },
+    {
+      "id": "v11",
+      "goal": "G",
+      "type": "far",
+      "section": "Greedy",
+      "form": "B",
+      "pair": "t01",
+      "title": "Commute routes",
+      "kind": "choice",
+      "prompt": "A commuter chooses among three routes to work with greedy and rates each trip out of 10. The true averages, unknown to the commuter, are A 6, B 8 and C 5, and most trips score within 1 point of their route's true average. On the three trial days each route is tried once: A has an exceptionally good trip and scores 9, B scores 7.5, and C scores 5. Which route does the commuter take on most days of the year?",
+      "options": [
+        "Route A",
+        "Routes A and B, about equally often",
+        "Route B",
+        "It depends on whether A has more exceptional trips"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy first picks A, which has the highest average. A keeps being tried, and its trips of about 5 to 7 pull its average down. After two or three trips it falls below B's 7.5, and greedy switches to B. B's average settles near 8, above A's, which no longer changes.",
+      "rubric": "A keeps being tried, so its too-high average falls below B's; B then stays ahead.",
+      "diagnosis": [
+        "Kai: F4 (greedy commits after the first tries)",
+        "learner: greedy alternates when averages are close",
+        "correct",
+        "learner: the outcome is down to luck"
+      ],
+      "estimate": 0.4,
+      "note": "The twin of T1 (2026-11-05): a lucky start on a worse route and a slightly low start on the best one, in another setting."
+    },
+    {
+      "id": "v14",
+      "goal": "G",
+      "type": "near",
+      "section": "UCB",
+      "form": "B",
+      "pair": "t04",
+      "title": "Episodes",
+      "kind": "choice",
+      "prompt": "A podcast app recommends one of four episodes with UCB. All of the following is for the same round. The bonus formula and its setting are not given: compare the episodes by their averages and how often each was recommended. Episode A averages 4.6 (200 times), B 4.1 (15 times), C 4.6 (90 times) and D 3.5 (15 times). Which episodes could UCB recommend next?",
+      "options": [
+        "A or C",
+        "B or D",
+        "Any of the four",
+        "B or C"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "UCB picks the highest average plus bonus, and within one round fewer tries means a larger bonus. C beats A: the same average, fewer tries. B beats D: the same tries, a higher average. C against B depends on the sizes of the bonuses, which are not given.",
+      "rubric": "Rules out A and D by these comparisons; B against C cannot be decided.",
+      "diagnosis": [
+        "learner: the best average wins, as with greedy (ties broken by the averages alone)",
+        "Kai: F9 (picks the fewest tries)",
+        "learner: without the bonus values any option could win",
+        "correct"
+      ],
+      "estimate": 0.45,
+      "note": "The twin of T4 (2026-11-05)."
+    },
+    {
+      "id": "v13",
+      "goal": "G",
+      "type": "inverse",
+      "section": "UCB",
+      "form": "B",
+      "pair": "t16",
+      "title": "Inverse, round 500",
+      "kind": "choice",
+      "prompt": "In round 500, UCB picks D, although C has a higher average than D. Which must be true?",
+      "options": [
+        "D was last picked longer ago than C",
+        "D has been tried fewer times than C",
+        "D's last reward was above its average",
+        "D's rewards have varied more than C's"
+      ],
+      "answer": 1,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "UCB picks the highest average plus bonus, so D's score was at least as high as C's. D's average is lower, so D's bonus must be larger. Both bonuses belong to round 500, so they differ only through the tries: a larger bonus means fewer tries.",
+      "rubric": "D's bonus must exceed C's; in the same round that means fewer tries.",
+      "diagnosis": [
+        "learner: the bonus depends on how long ago an option was picked",
+        "correct",
+        "learner: the bonus reacts to recent results",
+        "Kai: F14 (the bonus adapts to the observed rewards)"
+      ],
+      "estimate": 0.4,
+      "note": "The twin of T16 (V5's inverse, 2026-11-05)."
+    },
+    {
       "id": "t15",
       "goal": "G",
       "type": "changed rule",
@@ -394,33 +514,6 @@
       "note": "The numbers are our simulation means."
     },
     {
-      "id": "v01",
-      "goal": "G",
-      "type": "changed rule",
-      "section": "Greedy",
-      "form": "B",
-      "title": "Optimistic start",
-      "kind": "choice",
-      "prompt": "A developer changes greedy: before the first round, every option's average is set to 10, the highest possible score, as if each option had already been tried once and scored 10. The three options truly average 7, 6 and 4, and their daily scores vary by up to 3 points either way. Compared with ordinary greedy, how often does it end up mostly on the best option?",
-      "options": [
-        "About as often",
-        "More often",
-        "Less often"
-      ],
-      "answer": 1,
-      "dontKnow": true,
-      "reason": true,
-      "explain": "Whichever option is picked first gets a real score below 10, so its average falls below the others' 10. Greedy then picks an option still at 10, so every option gets tried, and too-high averages keep being tried until they fall. No option starts too low, which is what causes lock-in, so it ends up on the best option more often.",
-      "rubric": "Averages start too high, so each option keeps being tried until its average falls; nothing starts too low, so lock-in is rarer.",
-      "diagnosis": [
-        "Kai: F5 (averages correct themselves, so the start does not matter)",
-        "correct",
-        "learner: the made-up starting values mislead it"
-      ],
-      "estimate": 0.35,
-      "note": "In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
-    },
-    {
       "id": "v02",
       "goal": "G",
       "type": "multi-select",
@@ -535,35 +628,6 @@
         "learner: a bigger penalty for rarely tried options means trying them more"
       ],
       "estimate": 0.35
-    },
-    {
-      "id": "v07",
-      "goal": "G",
-      "type": "harder",
-      "section": "UCB",
-      "form": "B",
-      "title": "Close or far apart",
-      "kind": "choice",
-      "prompt": "Two shops use UCB with two banners each for 10,000 visitors. In shop 1 the banners' true click rates are 90% and 10%; in shop 2 they are 51% and 49%. In which shop does UCB show the worse banner more often?",
-      "options": [
-        "About equally often in both shops",
-        "In shop 2",
-        "In shop 1",
-        "In neither shop, after the first few visitors"
-      ],
-      "answer": 1,
-      "dontKnow": true,
-      "reason": true,
-      "explain": "UCB shows the worse banner whenever its average plus bonus beats the better banner's score. The worse banner's bonus shrinks with each show in the same way in both shops. In shop 1 the averages are 80 points apart, so the worse banner loses once its bonus falls below that, after few shows; in shop 2 they are 2 points apart, so it keeps winning until its bonus is tiny, which takes thousands of shows.",
-      "rubric": "Whether the bonus wins depends on the gap between averages; a small gap is overcome only by a tiny bonus, which needs many shows.",
-      "diagnosis": [
-        "learner: the bonus is set by c, not the rewards, so the gap does not matter",
-        "correct",
-        "learner: a very bad option needs more checking",
-        "Kai: F11 (an unpicked bonus stays the same)"
-      ],
-      "estimate": 0.4,
-      "note": "In simulation (50 runs) UCB showed the worse banner 26 times in shop 1 and 3,553 times in shop 2."
     },
     {
       "id": "v08",

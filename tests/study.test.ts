@@ -141,7 +141,7 @@ describe("checking a topic pack before it ships", () => {
     practice.items[0].needs = ["n99.f9"];
     writeFileSync(join(dir, "practice.json"), JSON.stringify(practice));
     const tests = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
-    tests.items = tests.items.filter((q: { id: string }) => q.id !== "v11");
+    tests.items = tests.items.filter((q: { id: string }) => q.id !== "v01");
     writeFileSync(join(dir, "exercises.json"), JSON.stringify(tests));
     const errors = checkPack("broken", root).filter((i) => i.level === "error").map((i) => `${i.where}: ${i.msg}`);
     expect(errors.some((e) => e.startsWith("copy.json"))).toBe(true);

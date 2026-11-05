@@ -30,7 +30,7 @@ export function initialScriptState(bundle: Bundle, script: Script): State {
   const s = initialState(bundle);
   const q = script.questions[0]!;
   const focus = q.node ?? s.focus;
-  return { ...s, focus, last: { type: "open", node: focus, fact: null }, script: { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], ids: idsOf(script) } };
+  return { ...s, focus, last: { type: "open", node: focus, fact: null }, script: { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], repeats: 0, ids: idsOf(script) } };
 }
 
 /** The script's questions, as a session's state remembers them (the question ids in order). */
@@ -162,8 +162,8 @@ export async function takeScriptTurn(
   const n = script.questions.length;
   const at = restart ? 0 : Math.min(saved?.at ?? 0, n - 1);
   const pos: Pos = restart
-    ? { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], ids: idsOf(script) }
-    : { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: (saved?.skipped ?? []).filter((i) => i < n), back: saved?.back ?? false, probe: saved?.probe ?? null, probed: saved?.probed ?? [], covered: saved?.covered ?? [], ids: saved?.ids };
+    ? { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], repeats: 0, ids: idsOf(script) }
+    : { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: (saved?.skipped ?? []).filter((i) => i < n), back: saved?.back ?? false, probe: saved?.probe ?? null, probed: saved?.probed ?? [], covered: saved?.covered ?? [], repeats: saved?.repeats ?? 0, ids: saved?.ids };
   const q = script.questions[at]!;
   const L = script.lines;
   const words = input.message.split(/\s+/).filter(Boolean).length;
@@ -179,12 +179,14 @@ export async function takeScriptTurn(
   const isAnswer = j.intent === "explain" || j.intent === "answer";
   const probe = isAnswer && !restart ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length) : undefined;
   let kind: Reaction;
-  let stay: "more" | "again" | "probe" | null = null;
+  let stay: "more" | "again" | "probe" | "repeat" | null = null;
   if (notAnswer && pos.again < 1 && !restart) (stay = "again"), (kind = toKai);
   else if (j.intent === "unsure") kind = "unsure";
   else if (j.intent === "move_on") kind = "moveOn";
   else if (probe) (stay = "probe"), (kind = "answered");
   else if (isAnswer && q.sayMore && !q.targets.length && !pos.more && words < script.shortWords) (stay = "more"), (kind = "more");
+  // "anything else?" again, while the answers give Kai something new to write down and no other question is waiting
+  else if (isAnswer && !restart && q.again && notes.length > 0 && (pos.repeats ?? 0) < q.again.max && !following(bundle, script, state, pos, pos.skipped).next) (stay = "repeat"), (kind = "answered");
   else kind = notAnswer ? toKai : "answered";
   // a question that got no answer (still none after asking again) comes back once at the end, if its facts are still
   // missing ("anything else?" doesn't; "I don't know" is an answer, and asking it again only annoys)
@@ -212,6 +214,11 @@ export async function takeScriptTurn(
     nextId = q.id;
     move = { type: "followUp", node: q.node, seed: tail, fact: probe!.fact };
     state = { ...state, script: { ...pos, again: 0, probe: probe!.fact, probed: [...pos.probed, probe!.fact] } };
+  } else if (stay === "repeat") {
+    tail = q.again!.text;
+    nextId = q.id;
+    move = { type: "followUp", node: q.node, seed: tail, fact: null };
+    state = { ...state, script: { ...pos, again: 0, repeats: (pos.repeats ?? 0) + 1 } };
   } else if (stay) {
     tail = stay === "more" ? L.sayMore : asking;
     nextId = q.id;
@@ -226,7 +233,7 @@ export async function takeScriptTurn(
     nextId = nq.id;
     started = begun?.fact ?? null;
     move = begun ? { type: "followUp", node: nq.node, seed: text, fact: begun.fact } : { type: "open", node: nq.node, seed: nq.text, fact: null };
-    state = { ...state, focus: nq.node ?? state.focus, script: { ...pos, at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back, probe: started, probed: started ? [...pos.probed, started] : pos.probed, covered: [...new Set([...pos.covered, ...after!.covered])] } };
+    state = { ...state, focus: nq.node ?? state.focus, script: { ...pos, at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back, probe: started, probed: started ? [...pos.probed, started] : pos.probed, repeats: 0, covered: [...new Set([...pos.covered, ...after!.covered])] } };
   }
   state = { ...state, last: { type: move.type, node: move.node, fact: null } };
   // Kai believes what it is told: a message that only taught a wrong belief leaves Kai content, not lost (a lost Kai
