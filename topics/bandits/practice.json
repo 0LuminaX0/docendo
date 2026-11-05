@@ -1,7 +1,7 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
   "minutes": 12,
-  "note": "Three problems (2026-11-05, after two pilot sessions where both learners missed the test's lucky-start greedy items, T1 and V11): P7 (greedy after a lucky start: the favourite's average falls with a poor day and greedy switches; needs greedy's own rule, n05.f1, which no problem needed before, so a learner who taught \"greedy sticks with the trial winner\" sees Kai go wrong), P3 (greedy against UCB after an unlucky start) and P2 (what one pick does to every score). P2 carries the planted slip: when Kai would solve every problem, its first try overlooks that the unpicked options' bonuses grow. P4 (audio tours) and the ε-greedy problems are in stash/practice.json. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
+  "note": "Three problems (2026-11-05, after two pilot sessions where both learners missed the test's lucky-start greedy items, T1 and V11): P7 (greedy after a lucky start: the favourite's average falls with a poor day and greedy switches; needs greedy's own rule, n05.f1, which no problem needed before, so a learner who taught \"greedy sticks with the trial winner\" sees Kai go wrong), P3 (greedy against UCB after an unlucky start) and P2 (what one pick does to every score). Each problem has a caveat, a nuance learners rarely put into words: when Kai would otherwise solve every problem, it reads the first one its notes leave open the plausible wrong way (never against the notes). P4 (audio tours) and the ε-greedy problems are in stash/practice.json. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
   "items": [
     {
       "id": "p7",
@@ -46,7 +46,13 @@
             "n05.f1"
           ]
         }
-      ]
+      ],
+      "caveat": {
+        "about": "Greedy updates only the average of the option it features; the others' averages stay exactly as they were until they are featured again.",
+        "misreading": "While A is featured, B's average keeps drifting back towards B's usual days, so after a while B's average climbs above A's again and greedy goes back to B.",
+        "answer": 2,
+        "covered": "\\bonly (?:the |its )?(?:one|option|flavou?r|truck|arm|choice)s? (?:it|you|greedy|that'?s?) (?:pick|choose|feature|tr(?:y|ie)|select)|(?:other|rest|others'?)\\b[^.]{0,60}\\b(?:stay|don'?t change|unchanged|frozen|not updated|never (?:gets? )?(?:updated|corrected|changed))|\\bupdate[sd]? (?:only|just)\\b|\\bonly (?:gets? |is )?updated|never (?:gets? )?(?:updated|corrected)|isn'?t (?:updated|corrected)"
+      }
     },
     {
       "id": "p3",
@@ -129,7 +135,13 @@
           "belief": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
           "answer": 1
         }
-      ]
+      ],
+      "caveat": {
+        "about": "Cake B's days never score below 5, so its average can never fall to A's 3: once A is behind, greedy never picks it again.",
+        "misreading": "Sooner or later B will have a run of bad days that pulls its average below A's 3, and then greedy goes back to A and finds out A is better, so café 1 ends up mostly on A too.",
+        "answer": 0,
+        "covered": "\\bnever (?:again|tries|picks|goes back|returns|switches)|(?:can'?t|cannot|won'?t|never) (?:fall|drop|go|get|sink)s? (?:below|under|lower)|\\bstuck\\b|lock(?:ed|s)?[- ]?(?:in|out)\\b|for good|\\bforever\\b|never (?:corrected|updated)"
+      }
     },
     {
       "id": "p2",
@@ -194,10 +206,11 @@
           "when": "vague"
         }
       ],
-      "slip": {
-        "need": "n12.f2",
-        "says": "Flashcards and Listening weren't picked, so nothing about them changes this round: their averages and their bonuses stay as they were.",
-        "answer": 2
+      "caveat": {
+        "about": "Every round that passes makes the bonus of each option that isn't picked grow a little, even after a single round.",
+        "misreading": "My notes say a bonus grows when its option isn't picked for a long time; Flashcards and Listening were only left out for this one round, which isn't long, so their bonuses stay as they were.",
+        "answer": 2,
+        "covered": "(?:every|each|any|per) (?:single )?(?:round|day|step|turn|time\\b)[^.]{0,60}(?:grow|rise|increase|go(?:es)? up|bigger)|(?:grow|rise|increase|go(?:es)? up|bigger)s?[^.]{0,60}(?:every|each|per) (?:round|day|step|turn)|with (?:the |every |each )?(?:round|day|step)s?\\b|as (?:the )?(?:rounds|days|steps|time) (?:pass|go)|\\bln ?\\(?t|\\blog(?:arithm\\w*)?\\b|round number"
       }
     }
   ]

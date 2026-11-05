@@ -19,10 +19,11 @@ export const PracticeItem = z
     // vaguely ("vague", the fact's `assumeVague`); unset, both. A vague reading may lead to the key: then a vague
     // explanation is enough for this problem.
     beliefs: z.array(z.object({ replaces: z.string(), belief: z.string(), answer: z.number(), when: z.enum(["absent", "vague"]).optional() })).optional(),
-    // recursive feedback: the one planted slip (2026-11-05). When the learner taught well enough that Kai would solve
-    // every problem, Kai's first try here overlooks what one of its notes says (`need`), reasons as `says` (in its own
-    // voice, sure of itself) and answers `answer`; after the learner's correction it gets it right. Kai is a student.
-    slip: z.object({ need: z.string(), says: z.string().min(10), answer: z.number() }).optional(),
+    // recursive feedback: the problem's caveat (2026-11-05), a nuance learners rarely put into words (`about`). When Kai
+    // would otherwise solve every problem, its first try at the first problem whose caveat its notes leave open reads
+    // the gap the plausible wrong way (`misreading`, leading to `answer`); never against what the notes say. `covered`:
+    // a pattern for notes that say it (screened in code; the solver model makes the final call and then follows them).
+    caveat: z.object({ about: z.string().min(10), misreading: z.string().min(10), answer: z.number(), covered: z.string().min(3) }).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),
     prompt: z.string(),

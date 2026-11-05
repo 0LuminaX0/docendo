@@ -165,11 +165,14 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   // practice: what Kai's gate needs must be real facts
   for (const p of practice?.items ?? []) {
     for (const need of p.needs ?? []) for (const f of need.split("|")) if (bundle && !facts.has(f)) err("practice.json", `${p.id} needs ${f}, which isn't a fact in the bundle`);
-    // the planted slip: about a note the problem needs, leading to a wrong option, and in a step that uses that note
-    if (p.slip) {
-      if (!(p.needs ?? []).some((n) => n.split("|").includes(p.slip!.need))) err("practice.json", `${p.id}: its slip is about ${p.slip.need}, which the problem doesn't need`);
-      if (p.kind === "choice" && !(p.slip.answer >= 0 && p.slip.answer < (p.options?.length ?? 0) && p.slip.answer !== p.answer)) err("practice.json", `${p.id}: its slip must lead to a wrong option`);
-      if (!p.steps.some((s) => s.facts.includes(p.slip!.need))) err("practice.json", `${p.id}: no step uses ${p.slip.need}, where the slip would happen`);
+    // the caveat: leading to a wrong option, with a pattern that compiles
+    if (p.caveat) {
+      if (p.kind === "choice" && !(p.caveat.answer >= 0 && p.caveat.answer < (p.options?.length ?? 0) && p.caveat.answer !== p.answer)) err("practice.json", `${p.id}: its caveat's misreading must lead to a wrong option`);
+      try {
+        new RegExp(p.caveat.covered, "iu");
+      } catch {
+        err("practice.json", `${p.id}: its caveat's covered pattern isn't a valid regular expression`);
+      }
     }
   }
   // the judge's evidence patterns must compile (an invalid one would be skipped at run time)

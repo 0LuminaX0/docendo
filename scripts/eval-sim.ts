@@ -33,7 +33,7 @@ const { CONFIG } = await import("../engine/tutor/config");
 const { applyJudgement } = await import("../engine/tutor/turn");
 const { llmJudge } = await import("../engine/tutor/judge");
 const { llmReact } = await import("../engine/tutor/writer");
-const { gate, solve, alts, beliefFor } = await import("../engine/tutor/solve");
+const { gate, solve, alts, beliefFor, caveatFor } = await import("../engine/tutor/solve");
 const { checkPractice } = await import("../content/practice");
 const { chatJson, MODELS } = await import("../engine/llm");
 
@@ -127,6 +127,8 @@ async function learnerSays(p: Persona, history: { role: "kai" | "learner"; text:
 }
 
 type Run = {
+  failedOnce?: boolean; // Kai was wrong at least once on a first try (the aim: every learner corrects Kai at least once)
+  caveats?: string[]; // the problems where a caveat came into play, and how (misread / covered)
   understanding: number; // Kai's understanding at the end, as the meter shows it (the teachable facts, given ones left out)
   persona: string;
   turns: number;
@@ -216,9 +218,14 @@ async function simulate(p: Persona): Promise<Run> {
     let openRight = 0;
     let openTried = 0;
     let s = state;
+    let wrongSoFar = 0;
     for (const it of items) {
-      const first = await solve(bundle, it, s, { demo: false, onCall });
-      if (first.gate.canBeRight) (openTried++, first.correct ? openRight++ : log.push(`[practice ${it.id}] gate open but Kai wrong (${first.by}), answered ${first.answer}: ${first.steps.map((x) => x.text).join(" | ")}`));
+      // as the practice route does: a caveat comes into play when Kai would otherwise solve every problem
+      const caveat = caveatFor(items, it, s, wrongSoFar);
+      const first = await solve(bundle, it, s, { demo: false, onCall, caveat });
+      if (first.caveat) (run.caveats ??= []).push(`${it.id}:${first.caveat}`);
+      if (!first.correct) wrongSoFar++;
+      if (first.gate.canBeRight && !first.caveat) (openTried++, first.correct ? openRight++ : log.push(`[practice ${it.id}] gate open but Kai wrong (${first.by}), answered ${first.answer}: ${first.steps.map((x) => x.text).join(" | ")}`));
       if (first.correct) {
         solved++;
         continue;
@@ -233,9 +240,10 @@ async function simulate(p: Persona): Promise<Run> {
       s = applyJudgement(s, j);
       const second = await solve(bundle, it, s, { demo: false, onCall });
       if (second.correct) afterFix++;
-      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; guess ${first.guess?.replaces ?? "-"}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}`);
+      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}`);
     }
     run.solved = solved;
+    run.failedOnce = solved < items.length;
     run.openRight = openRight;
     run.openTried = openTried;
     run.solvedAfterFix = afterFix;
@@ -260,11 +268,12 @@ for (const r of ok)
   console.log(
     `  ${r.persona.padEnd(8)} recall ${r.recall}/${r.known}  false credit ${r.falseCredit.join(" ") || "-"}  vague→correct ${r.vagueAsCorrect.join(" ") || "-"}  wrong caught ${r.caught}/${r.wrongHeld}  ` +
       `repeats ${r.repeated}  confusing ${r.confusing}  messages ${r.turns}  words ${r.words}  gate ${r.gateRight}/${items.length}  understood ${Math.round(r.understanding * 100)}%${r.gateFalseShut.length ? ` shut:${r.gateFalseShut.join(",")}` : ""}${r.gateFalseOpen.length ? ` open:${r.gateFalseOpen.join(",")}` : ""}` +
-      (r.solved !== undefined ? `  Kai solved ${r.solved}+${r.solvedAfterFix}/6 (should ${r.shouldSolve})` : "") +
+      (r.solved !== undefined ? `  Kai solved ${r.solved}+${r.solvedAfterFix}/${items.length} (should ${r.shouldSolve})${r.caveats?.length ? ` caveat ${r.caveats.join(",")}` : ""}${r.failedOnce ? "" : "  NEVER WRONG"}` : "") +
       `${r.done ? "" : "  NOT DONE"}  $${r.usd.toFixed(3)}`,
   );
 console.log(
   `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * items.length}, understood ${Math.round((100 * sum((r) => r.understanding)) / Math.max(1, ok.length))}% on average` +
+    (withSolve ? `, Kai wrong at least once in ${ok.filter((r) => r.failedOnce).length}/${ok.length} sessions` : "") +
     (withSolve ? `, Kai solved ${sum((r) => r.solved ?? 0)} first try + ${sum((r) => r.solvedAfterFix ?? 0)} after a fix (should ${sum((r) => r.shouldSolve ?? 0)}), right when the gate was open ${sum((r) => r.openRight ?? 0)}/${sum((r) => r.openTried ?? 0)}` : "") +
     `, $${sum((r) => r.usd).toFixed(3)}`,
 );

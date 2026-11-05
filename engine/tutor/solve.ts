@@ -43,9 +43,11 @@ export type Solution = {
   by: "model" | "offline";
   gate: Gate;
   guess: Guess | null; // the beginner's rule Kai reasoned from, when a needed fact was missing
-  planted?: boolean; // the planted slip: Kai overlooked one of its notes on purpose (the gate was open)
+  // the problem's caveat was in play (Kai would otherwise have solved every problem): "misread", Kai read the gap
+  // in its notes the plausible wrong way; "covered", its notes said it after all and Kai followed them
+  caveat?: "misread" | "covered";
 };
-export type Slip = NonNullable<PracticeItem["slip"]>;
+export type Caveat = NonNullable<PracticeItem["caveat"]>;
 
 const LETTERS = "ABCDEF";
 const lowerFirst = (t: string) => (/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/u, "");
@@ -170,11 +172,12 @@ const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes,
 // signs that the model argued its way to the key and then turned around
 const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
 
-// the planted slip: one honest mistake with the notes in hand, said with confidence (never "I'm guessing")
-const SLIP = (slip: Slip, item: PracticeItem) =>
-  `\n\nIn this attempt you make one honest slip, the way a student does: at the step that compares the options you overlook what one of your notes says, and you reason like this: "${slip.says}" Don't say you're guessing or that your notes are silent: you believe you're right. Cite your notes for the other steps as usual. Your answer is the one this slip leads to: ${conclusion(item, slip.answer)}.`;
+// the caveat: a nuance the notes may leave open. Kai follows its notes where they say it, in any words; where they
+// don't, it reads the gap this way, as its own understanding (never "I'm guessing", never against a note)
+const CAVEAT = (c: Caveat, item: PracticeItem) =>
+  `\n\nOne point matters here: ${c.about} Read your notes carefully for it. If they say it, in any words, follow them. If they leave it open, you understand it this way, as a student naturally would from your notes: "${c.misreading}" Then your answer is ${conclusion(item, c.answer)}. Never go against what a note says, and don't call it a guess: it is simply how you read your notes.`;
 
-export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false, slip?: Slip): Promise<Solution> {
+export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false, caveat?: Caveat): Promise<Solution> {
   const notes = notesOf(state);
   const g = gate(item, state);
   // a fact Kai was told nothing or only vaguely about: it reasons from a beginner's reading of it. (A misconception
@@ -198,7 +201,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     timeoutMs: 18_000,
     retries: 1,
     messages: [
-      { role: "system", content: SYSTEM + (slip ? SLIP(slip, item) : guess ? fromGuess(guess, item, vagueGuess) + HUNCH(hunchFor(bundle, guess), thin) : g.canBeRight ? "" : UNSURE) + (stricter && !slip ? STRICTER : "") },
+      { role: "system", content: SYSTEM + (guess ? fromGuess(guess, item, vagueGuess) + HUNCH(hunchFor(bundle, guess), thin) : g.canBeRight ? (caveat ? CAVEAT(caveat, item) : "") : UNSURE) + (stricter ? STRICTER : "") },
       { role: "user", content: `YOUR NOTES:\n${notes.length ? notes.map((n, i) => `[${i + 1}] "${n}"`).join("\n") : "(empty: you were told nothing)"}\n\nPROBLEM:\n${problem}` },
     ],
   });
@@ -217,11 +220,12 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     if (!(k >= 0 && k < item.options!.length)) throw new Error(`the solver's answer is not an option (${answer})`);
     answer = LETTERS[k]!;
   }
-  if (slip) {
-    const lands = item.kind === "choice" ? LETTERS.indexOf(answer) === slip.answer : sameNumber(answer, slip.answer);
-    if (!lands) throw new Error(`the solver didn't make its planted slip (answered ${answer})`);
+  if (caveat && g.canBeRight) {
+    // the key (the notes said it) or the caveat's misreading (they left it open): nothing else
+    const misread = item.kind === "choice" ? LETTERS.indexOf(answer) === caveat.answer : sameNumber(answer, caveat.answer);
+    if (!misread && !isRight(item, answer)) throw new Error(`the solver's answer is neither the key nor the caveat's misreading (answered ${answer})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
-    return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, planted: true };
+    return { steps, answer, correct: !misread, notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, caveat: misread ? "misread" : "covered" };
   }
   if (guess) {
     // the conclusion must be the guess's own, reached without a turnaround
@@ -288,22 +292,21 @@ function wrongAnswer(item: PracticeItem, seed: string): number {
  * contradicted it goes with what it was told (a misconception) or with its own
  * guess, which decides its answer.
  */
-export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, slip?: Slip): Solution {
+export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, caveat?: Caveat): Solution {
   const notes = notesOf(state);
   const facts = latest(state);
   const g = gate(item, state);
-  if (slip) {
-    // the planted slip: the worked solution up to the step that needs the overlooked note, then the slip, sure of itself
-    const steps: Step[] = [];
-    for (const s of item.steps) {
-      if (s.facts.includes(slip.need)) break;
-      const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
-      steps.push({ text: s.text, notes: [...new Set(cite)] });
-    }
-    steps.push({ text: slip.says, notes: [] });
-    steps.push({ text: item.kind === "choice" ? `So I'd say ${LETTERS[slip.answer]}: ${lowerFirst(item.options![slip.answer]!)}.` : `So I'd say ${answerText(item, slip.answer)}.`, notes: [] });
-    const answer = item.kind === "choice" ? LETTERS[slip.answer]! : String(slip.answer);
-    return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess: null, planted: true };
+  if (caveat && g.canBeRight) {
+    // the caveat (offered only when the notes leave it open): the worked solution's first step, then the misreading
+    const s = item.steps[0]!;
+    const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
+    const steps: Step[] = [
+      { text: s.text, notes: [...new Set(cite)] },
+      { text: caveat.misreading, notes: [] },
+      { text: item.kind === "choice" ? `So I'd say ${LETTERS[caveat.answer]}: ${lowerFirst(item.options![caveat.answer]!)}.` : `So I'd say ${answerText(item, caveat.answer)}.`, notes: [] },
+    ];
+    const answer = item.kind === "choice" ? LETTERS[caveat.answer]! : String(caveat.answer);
+    return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess: null, caveat: "misread" };
   }
   // as in the gate: a wrong belief blocks the fact it contradicts (none: nothing; older notebooks: its idea)
   const blocking = activeMisconceptions(state).filter((m) => m.fact !== null);
@@ -359,10 +362,10 @@ export async function solve(
   item: PracticeItem,
   state: State,
   // deadline: when the caller must have its answer (the practice route: 55 s after the request came in)
-  // slip: the planted slip, for this attempt (the caller decides: app/api/practice/route.ts)
-  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; slip?: Slip; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, slip?: Slip) => Promise<Solution> },
+  // caveat: the problem's caveat is in play for this attempt (the caller decides: app/api/practice/route.ts)
+  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; caveat?: Caveat; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, caveat?: Caveat) => Promise<Solution> },
 ): Promise<Solution> {
-  if (opts.demo) return offlineSolve(bundle, item, state, opts.slip);
+  if (opts.demo) return offlineSolve(bundle, item, state, opts.caveat);
   const model = opts.model ?? llmSolve;
   const t0 = Date.now();
   let lastError: unknown = null;
@@ -376,8 +379,8 @@ export async function solve(
   for (let tryNo = 0; tryNo < 3; tryNo++) {
     if (tryNo > 0 && deadline - Date.now() < SOLVE_TRY_MS) break;
     try {
-      const s = await model(bundle, item, state, opts.onCall, tryNo > 0, opts.slip);
-      if (opts.slip) return s; // checked in llmSolve: it lands on the slip's answer
+      const s = await model(bundle, item, state, opts.onCall, tryNo > 0, opts.caveat);
+      if (s.caveat) return s; // checked in llmSolve: the key, or the caveat's misreading
       if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
       if (!s.correct && s.gate.canBeRight) throw new Error(`wrong with every fact it needs (answered ${s.answer}): a slip`);
       return s;
@@ -389,15 +392,29 @@ export async function solve(
     }
   }
   void lastError;
-  return offlineSolve(bundle, item, state, opts.slip);
+  return offlineSolve(bundle, item, state, opts.caveat);
 }
 
 /**
- * The planted slip (2026-11-05): Kai's first try on the problem that carries one, when the learner taught well enough
- * that Kai would solve every problem (the gate open for each, its notebook as it stands) and Kai hasn't been wrong yet
- * in practice. Kai is a student: with good notes it can still overlook one, and the learner is told so before practice.
+ * The caveat in play (2026-11-05), the same rule for everyone: Kai fails at least once in practice. A learner whose
+ * teaching leaves a needed fact out or wrong sees Kai fail there, and nothing more is added. When Kai would solve this
+ * problem and every one after it (the gate open for each) and hasn't been wrong yet, the first problem whose caveat its
+ * notes leave open (the caveat's `covered` pattern finds nothing) puts it in play: Kai reads the gap the plausible
+ * wrong way, never against a note (the solver model makes the final call and follows notes that say it).
  */
-export function plantSlip(items: PracticeItem[], item: PracticeItem, state: State, wrongSoFar: number): Slip | undefined {
-  if (!item.slip || wrongSoFar > 0) return undefined;
-  return items.every((p) => gate(p, state).canBeRight) ? item.slip : undefined;
+export function caveatFor(items: PracticeItem[], item: PracticeItem, state: State, wrongSoFar: number): Caveat | undefined {
+  if (!item.caveat || wrongSoFar > 0) return undefined;
+  const at = items.findIndex((p) => p.id === item.id);
+  if (!items.slice(Math.max(0, at)).every((p) => gate(p, state).canBeRight)) return undefined;
+  return caveatOpen(item.caveat, state) ? item.caveat : undefined;
+}
+
+/** Do Kai's notes leave the caveat open (no note matches its pattern)? */
+export function caveatOpen(c: Caveat, state: State): boolean {
+  try {
+    const re = new RegExp(c.covered, "iu");
+    return !notesOf(state).some((n) => re.test(n));
+  } catch {
+    return false; // a broken pattern never puts a caveat in play (pnpm content validate catches it)
+  }
 }

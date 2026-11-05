@@ -102,7 +102,7 @@ describe("pretest", () => {
 });
 
 import { initialState, type State } from "../engine/tutor/state";
-import { beliefFor, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, plantSlip, solve, type Solution } from "../engine/tutor/solve";
+import { beliefFor, caveatFor, caveatOpen, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
 
 // a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
 const taughtState = (facts: string[], vague: string[] = []): State => ({
@@ -406,24 +406,36 @@ describe("the dashboard's comparison of the conditions", () => {
   });
 });
 
-describe("the planted slip (Kai is a student: with good notes it can still overlook one)", () => {
-  const p2 = item("p2");
-  const everything = taughtState([...new Set(practice.items.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))))]);
-  it("comes only when Kai would solve every problem and hasn't been wrong yet, on the problem that carries it", () => {
-    expect(plantSlip(practice.items, p2, everything, 0)).toEqual(p2.slip);
-    expect(plantSlip(practice.items, p2, everything, 1)).toBeUndefined(); // Kai already failed one: no slip
-    expect(plantSlip(practice.items, item("p7"), everything, 0)).toBeUndefined(); // P7 carries none
-    // a notebook that misses greedy's rule: P7 will fail anyway, so no slip
-    const thin = taughtState((p2.needs ?? []).concat(["n06.f1", "n11.f1"]));
-    expect(plantSlip(practice.items, p2, thin, 0)).toBeUndefined();
+describe("the caveats (Kai fails at least once, never against its notes)", () => {
+  const [p7, p3, p2] = ["p7", "p3", "p2"].map(item) as [ReturnType<typeof item>, ReturnType<typeof item>, ReturnType<typeof item>];
+  const needed = [...new Set(practice.items.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))))];
+  const everything = taughtState(needed);
+  const withNotes = (words: Record<string, string>) => ({ ...everything, notebook: everything.notebook.map((e) => (words[e.fact] ? { ...e, words: words[e.fact]! } : e)) });
+  it("come into play only when Kai would solve this problem and every one after it, and hasn't been wrong yet", () => {
+    expect(caveatFor(practice.items, p7, everything, 0)).toEqual(p7.caveat);
+    expect(caveatFor(practice.items, p7, everything, 1)).toBeUndefined(); // Kai already failed one: nothing added
+    // a later problem will fail anyway (its fact missing): nothing added here
+    const thin = taughtState(needed.filter((f) => f !== "n12.f2"));
+    expect(caveatFor(practice.items, p7, thin, 0)).toBeUndefined();
   });
-  it("makes Kai sure of itself and wrong, with the note it overlooked in its notebook", async () => {
-    const off = offlineSolve(bundle, p2, everything, p2.slip);
-    expect([off.correct, off.planted, off.answer]).toEqual([false, true, "C"]);
-    expect(off.steps.map((s) => s.text).join(" ")).toContain(p2.slip!.says);
+  it("are left alone where the notes say them, in the learner's words, and the next open one comes into play", () => {
+    // lock-in explained as "its average is never corrected" says that only the featured option's average changes
+    const said = withNotes({ "n06.f1": "if the best one has an unlucky first try greedy never picks it again, so its average is never corrected" });
+    expect(caveatOpen(p7.caveat!, said)).toBe(false);
+    expect(caveatOpen(p3.caveat!, said)).toBe(false);
+    expect(caveatFor(practice.items, p7, said, 0)).toBeUndefined();
+    expect(caveatFor(practice.items, p3, said, 0)).toBeUndefined();
+    // "grows when not picked for a long time" leaves one round open; "grows every round" doesn't
+    const long = withNotes({ "n12.f2": "the bonus of an option that isn't picked for a long time keeps growing, more and more slowly" });
+    expect(caveatOpen(p2.caveat!, long)).toBe(true);
+    expect(caveatOpen(p2.caveat!, withNotes({ "n12.f2": "every round the bonus of an unpicked option grows a little, ever more slowly" }))).toBe(false);
+  });
+  it("make Kai read the gap the wrong way, as its own understanding, and be right without one", async () => {
+    const off = offlineSolve(bundle, p2, everything, p2.caveat);
+    expect([off.correct, off.caveat, off.answer]).toEqual([false, "misread", "C"]);
+    expect(off.steps.map((s) => s.text).join(" ")).toContain(p2.caveat!.misreading);
     expect(off.steps.map((s) => s.text).join(" ")).not.toMatch(/guess|don't cover/i);
-    // through solve (demo mode answers offline); without the slip Kai is right
-    expect((await solve(bundle, p2, everything, { demo: true, slip: p2.slip })).planted).toBe(true);
+    expect((await solve(bundle, p2, everything, { demo: true, caveat: p2.caveat })).caveat).toBe("misread");
     expect((await solve(bundle, p2, everything, { demo: true })).correct).toBe(true);
   });
 });
