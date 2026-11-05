@@ -3,14 +3,19 @@ import type { Node } from "./schema";
 // Layered ("Sugiyama") layout for the lesson graph, shared by the review page
 // and the web app. It keeps a strict grid:
 //
-// 1. Columns: a node sits one column right of its furthest prerequisite.
+// 1. Columns: a node sits one column right of its furthest prerequisite; then a
+//    node with more links to the right than to the left moves right, up to one
+//    column before its nearest follower, so links span as few columns as they can.
 // 2. Long edges (spanning several columns) get a waypoint in every column they
 //    cross, so they run through the gaps between boxes instead of behind them.
 // 3. Row order inside each column: barycenter sweeps plus adjacent swaps,
 //    keeping whichever ordering has the fewest crossings.
-// 4. Rows: nodes snap to whole grid rows; waypoints may sit on the half rows
-//    between boxes. Nodes are pulled level with their neighbours so edges run
-//    as straight as the grid allows.
+// 4. Rows: nodes snap to whole grid rows. Nodes are pulled level with their
+//    neighbours so edges run as straight as the grid allows. Then each long edge
+//    gets one lane (a whole or half row free of boxes and other lanes in every
+//    column it crosses) and keeps it: it changes height only right after its
+//    source and right before its target, never on the way (2026-11-05: waypoints
+//    placed column by column made long edges step up and down like a ladder).
 // 5. Routes: each edge is a list of points (source → waypoints → target).
 
 export const BOX_W = 144;
@@ -38,6 +43,30 @@ export function layout(nodes: Pick<Node, "id" | "needs">[]) {
     return v;
   };
   ids.forEach(visit);
+  // pull a node towards the side with more links: between one column after its last prerequisite and one before its
+  // first follower (a few passes; each move only shortens the links in all)
+  const followers = new Map<string, string[]>(ids.map((id) => [id, []]));
+  for (const n of nodes) for (const need of n.needs) if (byId.has(need)) followers.get(need)!.push(n.id);
+  for (let pass = 0; pass < 8; pass++) {
+    let moved = false;
+    for (const id of [...ids].reverse()) {
+      const parents = byId.get(id)!.needs.filter((x) => byId.has(x));
+      const kids = followers.get(id)!;
+      if (!kids.length || kids.length <= parents.length) continue;
+      const hi = Math.min(...kids.map((k) => layerOf.get(k)!)) - 1;
+      if (hi > layerOf.get(id)!) (layerOf.set(id, hi), (moved = true));
+    }
+    for (const id of ids) {
+      const parents = byId.get(id)!.needs.filter((x) => byId.has(x));
+      if (!parents.length) continue;
+      const lo = 1 + Math.max(...parents.map((x) => layerOf.get(x)!));
+      const kids = followers.get(id)!;
+      // a node with fewer followers than prerequisites goes as far left as its prerequisites allow
+      if (kids.length < parents.length && lo < layerOf.get(id)!) (layerOf.set(id, lo), (moved = true));
+      if (lo > layerOf.get(id)!) (layerOf.set(id, lo), (moved = true));
+    }
+    if (!moved) break;
+  }
   const layers = Math.max(0, ...layerOf.values()) + 1;
 
   // 2. waypoints ("dummy" items) for edges that skip columns
@@ -177,6 +206,54 @@ export function layout(nodes: Pick<Node, "id" | "needs">[]) {
       }
       place(col, want);
     }
+  }
+  // one lane per long edge: the free half-row closest to its two ends, the same in every column it crosses (longest
+  // edges first: they have the fewest free lanes)
+  const half = (v: number) => Math.round(v * 2);
+  const blocked = new Map<number, Set<number>>(); // column -> half rows taken by a box
+  for (const it of items.values()) if (it.real) (blocked.get(it.layer) ?? blocked.set(it.layer, new Set()).get(it.layer)!).add(half(y.get(it.id)!));
+  const lanes: { h: number; from: number; to: number }[] = [];
+  const long = [...chains.values()].filter((c) => c.length > 2).sort((a, b) => b.length - a.length);
+  // where every edge runs in each gap between columns (gap l: from column l to l + 1), in half rows: [start, end]
+  const inGap = (skip: string[], l: number) => {
+    const out: [number, number][] = [];
+    for (const chain of chains.values()) {
+      if (chain === skip) continue;
+      for (let i = 0; i + 1 < chain.length; i++) if (items.get(chain[i]!)!.layer === l) out.push([half(y.get(chain[i]!)!), half(y.get(chain[i + 1]!)!)]);
+    }
+    return out;
+  };
+  // how many other edges a lane at h would cross, over the gaps from its source's column to its target's
+  const crossingsAt = (chain: string[], h: number, hs: number, ht: number, from: number, to: number) => {
+    let c = 0;
+    for (let l = from - 1; l <= to; l++) {
+      const a: [number, number] = [l === from - 1 ? hs : h, l === to ? ht : h];
+      for (const [b1, b2] of inGap(chain, l)) if ((a[0] - b1) * (a[1] - b2) < 0 || (a[0] === b1 && a[1] !== b2 && (a[1] - b2) * (a[0] - b1 || 1) < 0)) c++;
+    }
+    return c;
+  };
+  for (const chain of long) {
+    const mid = chain.slice(1, -1);
+    const from = items.get(mid[0]!)!.layer;
+    const to = items.get(mid[mid.length - 1]!)!.layer;
+    const hs = half(y.get(chain[0]!)!);
+    const ht = half(y.get(chain[chain.length - 1]!)!);
+    const all = [...y.values()].map(half);
+    let best: number | null = null;
+    let bestCost = Infinity;
+    for (let h = Math.min(...all) - 2; h <= Math.max(...all) + 2; h++) {
+      let free = true;
+      for (let l = from; l <= to && free; l++) if (blocked.get(l)?.has(h)) free = false;
+      // another lane at this height, over these columns or right next to them (their curves would touch)
+      if (free && lanes.some((o) => o.h === h && o.from <= to + 1 && from <= o.to + 1)) free = false;
+      if (!free) continue;
+      // a crossing costs as much as a detour of two half rows
+      const cost = Math.abs(h - hs) + Math.abs(h - ht) + 2 * crossingsAt(chain, h, hs, ht, from, to) + 0.01 * Math.abs(h - hs);
+      if (cost < bestCost) (bestCost = cost), (best = h);
+    }
+    const h = best ?? half(y.get(mid[0]!)!);
+    lanes.push({ h, from, to });
+    for (const d of mid) y.set(d, h / 2);
   }
   // shift by whole rows only, so boxes stay on the grid even when a waypoint is topmost
   const minY = Math.floor(Math.min(...y.values()));

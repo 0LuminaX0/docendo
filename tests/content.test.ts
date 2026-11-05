@@ -280,6 +280,18 @@ describe("layout of the bandits graph", () => {
     }
   });
 
+  it("runs a long edge at one height: it changes height only next to its source and its target, never on the way", () => {
+    // 2026-11-05: waypoints placed column by column made long edges step up and down like a ladder
+    let long = 0;
+    for (const [key, pts] of Object.entries(L.routes)) {
+      const way = pts.slice(1, -1);
+      if (!way.length) continue;
+      long++;
+      expect(new Set(way.map((p) => p.y)).size, key).toBe(1);
+    }
+    expect(long).toBeGreaterThan(2);
+  });
+
   it("keeps boxes on whole grid rows and never overlapping", () => {
     const seen = new Set<string>();
     for (const n of g.nodes) {
