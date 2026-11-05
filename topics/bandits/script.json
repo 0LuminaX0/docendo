@@ -1,57 +1,136 @@
 {
-  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. One question per idea in the graph's order (greedy, where greedy ends up, ε-greedy, UCB, what sets the bonus, UCB over many rounds), then anything else. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again), and after an answer each target still missing gets its own follow-up (`follow`), once; a complete short answer gets none. Follow-ups are open questions that name no answer (no yes/no between the right rule and its wrong reading, no scenario that gives the point away): lock-in has none, since every prompt for it hands the learner the unlucky start. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question left unanswered comes back once at the end, if its facts are still missing.",
+  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. One question per idea in the lesson's order, which is the text's (greedy, where greedy ends up, why ever pick what doesn't look best, ε-greedy, UCB, why a bonus, what sets the bonus, UCB over many rounds), then how ε-greedy and UCB differ (skipped when the learner has already taught how each of them explores), then anything else. The two why-questions (2026-11-05) ask for the reason behind a rule rather than the rule, and the comparison asks the learner to put two rules side by side: both are where explaining builds understanding. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again), and after an answer each target still missing gets its own follow-up (`follow`), once; a complete short answer gets none. Follow-ups name their rule, since one can open a question the learner has already started on, and are open questions that name no answer (no yes/no between the right rule and its wrong reading, no scenario that gives the point away): lock-in has none, since every prompt for it hands the learner the unlucky start. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question the learner has already started on, in an answer to an earlier one, opens with its follow-up on what is still missing instead of the whole question. A question left unanswered comes back once at the end, if its facts are still missing.",
   "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits. I get the setup: each round you pick one of a few options, and you only find out how the one you picked did. What I don't get is how the three rules on the slides decide, so I wrote down some questions.",
   "minutes": 15,
   "shortWords": 15,
-  "known": ["multi-armed bandit", "multi-armed bandits", "bandit", "bandits", "greedy", "ε", "epsilon", "ε-greedy", "epsilon-greedy", "epsilon greedy", "UCB", "UCB1"],
+  "known": [
+    "multi-armed bandit",
+    "multi-armed bandits",
+    "bandit",
+    "bandits",
+    "greedy",
+    "ε",
+    "epsilon",
+    "ε-greedy",
+    "epsilon-greedy",
+    "epsilon greedy",
+    "UCB",
+    "UCB1"
+  ],
   "questions": [
     {
       "id": "greedy",
       "node": "n05",
       "text": "The first rule is called greedy. How does it decide what to pick each round?",
-      "targets": ["n05.f1"],
-      "follow": [{ "fact": "n05.f1", "text": "And in later rounds, once it has seen more results, how does greedy choose then?" }]
+      "targets": [
+        "n05.f1"
+      ],
+      "follow": [
+        {
+          "fact": "n05.f1",
+          "text": "And in later rounds, once it has seen more results, how does greedy choose then?"
+        }
+      ]
     },
     {
       "id": "greedy-long",
       "node": "n06",
       "text": "If greedy keeps going like that for many rounds, where does it end up?",
-      "targets": ["n06.f1"]
+      "targets": [
+        "n06.f1"
+      ]
+    },
+    {
+      "id": "explore",
+      "node": "n08",
+      "text": "Is there ever a good reason to pick an option that doesn't look best right now?",
+      "targets": [
+        "n08.f1"
+      ]
     },
     {
       "id": "epsilon",
       "node": "n07",
       "text": "Then there's ε-greedy. How does that one decide each round?",
-      "targets": ["n07.f1", "n07.f2"],
+      "targets": [
+        "n07.f1",
+        "n07.f2"
+      ],
       "follow": [
-        { "fact": "n07.f2", "text": "When it picks at random, which options can it land on?" },
-        { "fact": "n07.f1", "text": "How often does it do that, at the start and after thousands of rounds?" }
+        {
+          "fact": "n07.f2",
+          "text": "When ε-greedy picks at random, which options can it land on?"
+        },
+        {
+          "fact": "n07.f1",
+          "text": "How often does ε-greedy pick at random, at the start and after thousands of rounds?"
+        }
       ]
     },
     {
       "id": "ucb",
       "node": "n11",
       "text": "The last one is UCB. How does it decide which option to pick?",
-      "targets": ["n11.f1"],
-      "follow": [{ "fact": "n11.f1", "text": "So in the end, which option does UCB actually go for?" }]
+      "targets": [
+        "n11.f1"
+      ],
+      "follow": [
+        {
+          "fact": "n11.f1",
+          "text": "So in the end, which option does UCB actually go for?"
+        }
+      ]
+    },
+    {
+      "id": "ucb-why",
+      "node": "n11",
+      "text": "Why does UCB need that bonus at all?",
+      "targets": [
+        "n11.f4"
+      ]
     },
     {
       "id": "ucb-size",
       "node": "n11",
       "text": "What decides how big that bonus is?",
-      "targets": ["n11.f2"]
+      "targets": [
+        "n11.f2"
+      ]
     },
     {
       "id": "ucb-long",
       "node": "n12",
       "text": "And if UCB keeps going for many rounds, how does that play out?",
-      "targets": ["n12.f1", "n12.f2"],
+      "targets": [
+        "n12.f1",
+        "n12.f2"
+      ],
       "follow": [
-        { "fact": "n12.f1", "text": "What happens to an option's bonus each time it gets picked?" },
-        { "fact": "n12.f2", "text": "And what happens to the bonus of an option that isn't picked for a long time?" }
+        {
+          "fact": "n12.f1",
+          "text": "What happens to an option's bonus each time it gets picked?"
+        },
+        {
+          "fact": "n12.f2",
+          "text": "And what happens to the bonus of an option that isn't picked for a long time?"
+        }
       ]
     },
-    { "id": "anything", "node": null, "text": "Is there anything else I should know before I try some problems on my own?" }
+    {
+      "id": "compare",
+      "node": null,
+      "text": "When ε-greedy and UCB don't go with the option that looks best, what makes each of them do it?",
+      "targets": [
+        "n07.f1",
+        "n07.f2",
+        "n11.f1"
+      ]
+    },
+    {
+      "id": "anything",
+      "node": null,
+      "text": "Is there anything else I should know before I try some problems on my own?"
+    }
   ],
   "lines": {
     "wrote": "Okay, I wrote down: {notes}.",

@@ -42,6 +42,14 @@ const taught = (state: State, f: string) => latest(state).get(f)?.verdict === "c
 const answered = (state: State, f: string) => taught(state, f) || latest(state).get(f)?.verdict === "wrong" || activeMisconceptions(state).some((m) => m.fact === f);
 /** Every fact the question is there for is answered already. */
 export const isCovered = (state: State, q: Question) => q.targets.length > 0 && q.targets.every((f) => answered(state, f));
+/** A question the learner has already started on (said something about one of its facts, vaguely or in part, before Kai
+ * got to it): Kai goes straight to the follow-up on what is still missing, instead of asking the whole question again
+ * (2026-11-05: learners answered "is there ever a reason to pick what doesn't look best?" with ε-greedy's random picks,
+ * and then "How does ε-greedy decide?" read as a repeat). */
+const begunOn = (bundle: Bundle, script: Script, state: State, q: Question) =>
+  q.targets.some((f) => latest(state).has(f) || activeMisconceptions(state).some((m) => m.fact === f))
+    ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact) && !untaught(bundle, script, state, f.text).length)
+    : undefined;
 /** Lesson terms in Kai's words that the learner hasn't used (or Kai hasn't written down), apart from the ones Kai knows. */
 const untaught = (bundle: Bundle, script: Script, state: State, text: string) => {
   const known = new Set(script.known.map((t) => t.toLowerCase()));
@@ -194,6 +202,7 @@ export async function takeScriptTurn(
   let tail: string;
   let move: Move;
   let nextId: string | null = null;
+  let started: string | null = null;
   if (end) {
     tail = readBack(script, state);
     move = { type: "wrapUp", node: null, seed: null };
@@ -210,10 +219,14 @@ export async function takeScriptTurn(
     state = { ...state, script: { ...pos, more: pos.more || stay === "more", again: pos.again + (stay === "again" ? 1 : 0) } };
   } else {
     const nq = script.questions[nextPos!.at]!;
-    tail = nextPos!.back ? `${L.back} ${nq.text}` : nq.text;
+    // already started on: straight to the follow-up on what is still missing
+    const begun = begunOn(bundle, script, state, nq);
+    const text = begun?.text ?? nq.text;
+    tail = nextPos!.back ? `${L.back} ${text}` : text;
     nextId = nq.id;
-    move = { type: "open", node: nq.node, seed: nq.text, fact: null };
-    state = { ...state, focus: nq.node ?? state.focus, script: { ...pos, at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back, probe: null, covered: [...new Set([...pos.covered, ...after!.covered])] } };
+    started = begun?.fact ?? null;
+    move = begun ? { type: "followUp", node: nq.node, seed: text, fact: begun.fact } : { type: "open", node: nq.node, seed: nq.text, fact: null };
+    state = { ...state, focus: nq.node ?? state.focus, script: { ...pos, at: nextPos!.at, more: false, again: 0, skipped: nextPos!.skipped, back: nextPos!.back, probe: started, probed: started ? [...pos.probed, started] : pos.probed, covered: [...new Set([...pos.covered, ...after!.covered])] } };
   }
   state = { ...state, last: { type: move.type, node: move.node, fact: null } };
   // Kai believes what it is told: a message that only taught a wrong belief leaves Kai content, not lost (a lost Kai
@@ -277,7 +290,7 @@ export async function takeScriptTurn(
         sayMore: stay === "more",
         back: !stay && !end && nextPos!.back,
         reaction: kind,
-        probe: stay === "probe" ? probe!.fact : null,
+        probe: stay === "probe" ? probe!.fact : started,
         covered: (after?.covered ?? []).map((i) => script.questions[i]!.id),
         gated: (after?.gated ?? []).map((i) => script.questions[i]!.id),
         restart,

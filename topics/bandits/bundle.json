@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "204a343b2f16f9fd",
-  "builtAt": "2026-11-05T08:29:33.718Z",
+  "hash": "89b19c6a55646dbe",
+  "builtAt": "2026-11-05T09:11:51.586Z",
   "goals": [
     {
       "id": "G",
@@ -409,7 +409,7 @@
       "label": "ε-greedy",
       "kind": "core",
       "needs": [
-        "n05"
+        "n08"
       ],
       "goals": [
         "G"
@@ -490,8 +490,7 @@
       "label": "Trade-off",
       "kind": "core",
       "needs": [
-        "n06",
-        "n07"
+        "n06"
       ],
       "goals": [
         "G"
@@ -663,6 +662,7 @@
       "label": "UCB1 index",
       "kind": "core",
       "needs": [
+        "n08",
         "n16"
       ],
       "goals": [

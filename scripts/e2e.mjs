@@ -231,13 +231,14 @@ if (textLesson) {
     await page.click(".lesson-nav .btn.primary");
     await page.waitForFunction((id) => document.querySelector(".lesson-section")?.dataset.section === id, {}, lessonFile.sections[k].id);
     const now = await look();
+    await shot(page, `01-read-${k + 1}`, true);
     seen.formulas += now.formulas;
     seen.figures += now.figures;
     seen.shown.push(...now.shown);
   }
   const lastWaits = (await look()).waits;
   check(
-    first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === 3 && seen.figures === 5 && first.select === "none" && lastWaits,
+    first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.formula).length && seen.figures === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.figure).length && first.select === "none" && lastWaits,
     `the lesson is a text read one chapter at a time (${seen.shown.length} chapters, ${seen.formulas} formulas, ${seen.figures} figures), the chapters ahead closed, that can't be selected; Next waits for a quick read and the last step for the reading time`,
   );
 } else {

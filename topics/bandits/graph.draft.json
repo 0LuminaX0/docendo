@@ -280,7 +280,7 @@
       "label": "ε-greedy",
       "kind": "core",
       "needs": [
-        "n05"
+        "n08"
       ],
       "goals": [
         "LG1",
@@ -336,8 +336,7 @@
       "label": "Trade-off",
       "kind": "core",
       "needs": [
-        "n06",
-        "n07"
+        "n06"
       ],
       "goals": [
         "LG3"
@@ -474,6 +473,7 @@
       "label": "UCB1 index",
       "kind": "core",
       "needs": [
+        "n08",
         "n16"
       ],
       "goals": [

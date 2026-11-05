@@ -230,7 +230,7 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
     model: MODELS.judge,
     name: "judgement",
     schema: replySchema(bundle),
-    maxTokens: 1200,
+    maxTokens: 2400, // a learner who explains everything at once gets a verdict per fact, each with its quote (2026-11-05: 1200 ran out)
     timeoutMs: limits.timeoutMs ?? 15_000, // two tries of 15 s plus the writer's 25 s stay under the chat route's 60 s
     retries: limits.retries ?? 1,
     messages: [

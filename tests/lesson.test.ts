@@ -12,13 +12,13 @@ const blocks = lesson.sections.flatMap((s) => s.blocks);
 const text = lessonWords(lesson);
 
 describe("the text lesson", () => {
-  it("is the team's text: five sections, three formulas and five figures, about 750 words", () => {
+  it("is the team's text: five sections, three formulas and seven figures, about 1,200 words (rewritten after the pilot)", () => {
     expect(lesson.sections.map((s) => s.id)).toEqual(["problem", "greedy", "epsilon", "ucb", "together"]);
     expect(blocks.filter((b) => "formula" in b).map((b) => ("formula" in b ? b.formula : ""))).toEqual([...FORMULAS]);
     expect(blocks.filter((b) => "figure" in b).map((b) => ("figure" in b ? b.figure : ""))).toEqual([...FIGURES]);
     const n = wordsOf(text).length;
-    expect(n).toBeGreaterThan(650);
-    expect(n).toBeLessThan(900);
+    expect(n).toBeGreaterThan(1050);
+    expect(n).toBeLessThan(1350);
   });
 
   it("passes the pack check: real figures, formulas and ideas, each lesson idea in a section", () => {
@@ -42,7 +42,7 @@ describe("the text lesson", () => {
     ])
       expect(overlap(m).longest, m).toBeLessThan(COPIED_RUN);
     // a sentence read out from the text is a long run
-    const copied = "It stays the same in every round, however long the app has run and however certain its averages are.";
+    const copied = "ε stays the same in every round, however long the app has run and however certain its averages are.";
     expect(overlap(copied).longest).toBeGreaterThanOrEqual(COPIED_RUN);
     expect(overlap(copied).inRuns).toBe(overlap(copied).words);
     // case, punctuation and ε don't hide a copy

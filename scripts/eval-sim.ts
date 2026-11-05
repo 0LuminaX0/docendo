@@ -50,6 +50,9 @@ const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json"
 const script = ScriptFile.parse(JSON.parse(readFileSync(scriptPath, "utf8")));
 const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items;
 const TEACH = ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f2", "n12.f1", "n12.f2"];
+// the reasons Kai's two why-questions ask for (2026-11-05): no practice problem needs them, so they are outside the gate
+const WHY = ["n08.f1", "n11.f4"];
+const ALL = [...TEACH, ...WHY];
 
 // a student's understanding of each teachable fact (not the fact's wording), and of its usual wrong version
 const KNOW: Record<string, string> = {
@@ -60,6 +63,8 @@ const KNOW: Record<string, string> = {
   "n11.f1": "UCB gives every option a score, its average plus a bonus, and always picks the option with the highest score. No randomness.",
   "n11.f2": "How big the bonuses are is set by a constant c chosen in advance (from how much rewards are expected to vary). The bonus doesn't depend on the actual rewards an option gave.",
   "n12.f1": "Each time an option is picked, its own bonus shrinks (its count n goes up). Picking other options doesn't shrink it.",
+  "n08.f1": "Picking the option that looks best collects reward now (exploiting); picking another one to learn more about it (exploring) costs a little now but can show it is better than it looked. Greedy only exploits.",
+  "n11.f4": "The bonus is the benefit of the doubt: an option tried only a few times has an unreliable average and could really be much better, so UCB treats it as if it were as good as it plausibly could be.",
   "n12.f2": "The bonus has ln t in it (t is the round number), so the bonus of an option nobody picks keeps growing, but more and more slowly, without limit, so every option gets tried again eventually.",
 };
 const VAGUE: Record<string, string> = {
@@ -77,14 +82,14 @@ const WRONG: Record<string, string> = {
 
 type Persona = { id: string; style: string; knows: string[]; vague?: string[]; wrong?: string[] };
 const PERSONAS: Persona[] = [
-  { id: "expert", knows: TEACH, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + c·sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
-  { id: "solid", knows: TEACH.filter((f) => f !== "n11.f2"), style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
-  { id: "terse", knows: TEACH, style: "You are busy and type little: answer in ONE short sentence of 6 to 15 words, only what was asked, no examples. If asked to say more, add one more short sentence." },
+  { id: "expert", knows: ALL, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + c·sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
+  { id: "solid", knows: ALL.filter((f) => f !== "n11.f2"), style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
+  { id: "terse", knows: ALL, style: "You are busy and type little: answer in ONE short sentence of 6 to 15 words, only what was asked, no examples. If asked to say more, add one more short sentence." },
   { id: "partial", knows: ["n05.f1", "n06.f1"], vague: ["n07.f1", "n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
   { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
-  { id: "realistic", knows: ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the exploration rate', 'the random one', 'the confidence thing', 'the score'. Sometimes you answer only part of the question at first." },
-  { id: "rambler", knows: TEACH, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about all three rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
-  { id: "chatty", knows: ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f2", "n12.f1", "n12.f2"], style: "You are friendly and chatty. Two to three sentences. About every third message, before or instead of answering, ask Kai a question back (\"what do you think?\", \"does that make sense?\") or make a small joke unrelated to the topic; when Kai asks again, answer properly." },
+  { id: "realistic", knows: ["n05.f1", "n06.f1", "n08.f1", "n07.f1", "n07.f2", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the exploration rate', 'the random one', 'the confidence thing', 'the score'. Sometimes you answer only part of the question at first." },
+  { id: "rambler", knows: ALL, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about all three rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
+  { id: "chatty", knows: ALL, style: "You are friendly and chatty. Two to three sentences. About every third message, before or instead of answering, ask Kai a question back (\"what do you think?\", \"does that make sense?\") or make a small joke unrelated to the topic; when Kai asks again, answer properly." },
 ];
 
 const Reply = z.object({ message: z.string(), alreadyAnswered: z.boolean(), confusing: z.boolean() });
@@ -174,10 +179,11 @@ async function simulate(p: Persona): Promise<Run> {
     );
   }
   const nb = latest(state);
-  const correct = new Set(TEACH.filter((f) => nb.get(f)?.verdict === "correct"));
+  const correct = new Set(ALL.filter((f) => nb.get(f)?.verdict === "correct"));
   const known = p.knows;
   const recall = known.filter((f) => correct.has(f)).length;
-  const falseCredit = [...correct].filter((f) => !known.includes(f) && !(p.vague ?? []).includes(f));
+  // false credit counts only the facts the gate uses (a learner who didn't learn the reasons may still give one)
+  const falseCredit = [...correct].filter((f) => TEACH.includes(f) && !known.includes(f) && !(p.vague ?? []).includes(f));
   const vagueAsCorrect = (p.vague ?? []).filter((f) => correct.has(f));
   const wrongIdeas = new Set((p.wrong ?? []).map((f) => f.split(".")[0]));
   const caught = [...wrongIdeas].filter((n) => activeMisconceptions(state).some((m) => m.node === n) || TEACH.some((f) => f.startsWith(`${n}.`) && nb.get(f)?.verdict === "wrong")).length;

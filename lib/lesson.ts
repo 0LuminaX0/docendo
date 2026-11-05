@@ -2,7 +2,7 @@
 // file (content/pack.ts, LessonFile) and hands the pages what they show; the figures and formulas are components
 // (components/lesson/), named here by id so `pnpm content validate` can check a pack names only ones that exist.
 
-export const FIGURES = ["averages", "lockin", "lottery", "bonus", "score"] as const;
+export const FIGURES = ["averages", "greedy", "lockin", "lottery", "score", "bonus", "compare"] as const;
 export const FORMULAS = ["greedy", "epsilon", "ucb"] as const;
 export type FigureId = (typeof FIGURES)[number];
 export type FormulaId = (typeof FORMULAS)[number];
