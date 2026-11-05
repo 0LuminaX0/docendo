@@ -128,6 +128,10 @@ export function tables(events: Ev[]) {
       surveyPractice: first("client_survey")?.practice ?? null,
       surveyEnjoy: first("client_survey")?.enjoy ?? null,
       surveyLights: first("client_survey")?.lights ?? null,
+      // the open questions (qualitative analysis): the learner's own words
+      surveyHelped: first("client_survey")?.helped ?? null,
+      surveyDifficulty: first("client_survey")?.difficulty ?? null,
+      surveyDecided: first("client_survey")?.decided ?? null,
       // the practice the learner actually did: their condition, or the view a team session switched to
       practiceView: of("practice_kai_solve").length ? "recursive" : of("practice_check").length ? "direct" : null,
       demo: start?.demo ?? null,

@@ -952,6 +952,9 @@ textarea.dictating::placeholder { color: transparent; }
 .survey-end { font-size: 13px; color: var(--muted); }
 .survey-end:first-child { text-align: right; }
 .survey-dots { display: flex; gap: 8px; }
+.survey-text { margin-top: 6px; }
+.survey-text textarea { width: 100%; resize: vertical; min-height: 72px; }
+.survey-hint { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
 .survey-dots button, .survey-choices button { border: 1px solid var(--rule); background: #fff; color: var(--ink-2); cursor: pointer; font: 600 14px var(--font-body), sans-serif; transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.15s; }
 .survey-dots button { width: 40px; height: 40px; border-radius: 50%; }
 .survey-dots button:hover, .survey-choices button:hover { border-color: #c9d0da; transform: translateY(-1px); }

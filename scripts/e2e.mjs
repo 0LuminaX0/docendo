@@ -57,6 +57,9 @@ async function passSurvey(page, answer = true) {
   if (answer) {
     for (const g of await page.$$(".survey-dots")) await g.$eval("button:nth-child(5)", (b) => b.click());
     for (const g of await page.$$(".survey-choices")) await g.$eval("button:nth-child(2)", (b) => b.click());
+    // the open questions are optional: answer the first
+    const open = await page.$(".survey-text textarea");
+    if (open) await open.type("The day by day table made the switch clear.");
     await page.$eval(".survey .btn.primary", (b) => b.click());
   } else await page.$eval(".survey-skip", (b) => b.click());
   await page.waitForSelector(".big");
@@ -964,6 +967,8 @@ if (existsSync(logFile)) {
   const has = (t) => evs.some((e) => e.t === t);
   const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", textLesson ? "client_read_continue" : "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
+  // the open questions after the test reach the log in the learner's words
+  check(evs.some((e) => e.t === "client_survey" && /day by day table/.test(e.helped ?? "")), "the open questions after the test are logged in the learner's words");
   const pilotPre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 2);
   const onePre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 1);
   const starts = evs.filter((e) => e.t === "session_start" && e.phase === "main" && e.pretestSet);

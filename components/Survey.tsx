@@ -10,22 +10,25 @@ import { Count } from "@/lib/words";
 /**
  * A few questions after the final test, before the score: effort, responsibility for Kai, how well the learner thinks
  * they understand, how much practice helped, enjoyment, and the manipulation check (what the practice's light was
- * about). The same in both conditions; optional.
+ * about), then open questions in the learner's words (optional, for the qualitative analysis). The same in both
+ * conditions; optional as a whole.
  */
 export default function Survey({ onDone }: { onDone: () => void }) {
   const ITEMS = useStudySettings().survey ?? [];
-  const [a, setA] = useState<Record<string, number>>({});
-  const all = ITEMS.every((q) => a[q.id] !== undefined);
+  const [a, setA] = useState<Record<string, number | string>>({});
+  // the rated and chosen ones are needed to go on; the open ones are optional
+  const all = ITEMS.every((q) => q.kind === "text" || a[q.id] !== undefined);
   const send = (skipped: boolean) => {
-    track("survey", { skipped, ...(skipped ? {} : a) }); // one field per question (scales 1 to 7; lights: option index)
+    const answers = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, typeof v === "string" ? v.trim().slice(0, 2000) : v]).filter(([, v]) => v !== ""));
+    track("survey", { skipped, ...(skipped ? {} : answers) }); // one field per question (scales 1 to 7; lights: option index; open: the text)
     flush();
     onDone();
   };
   return (
     <section className="survey" aria-labelledby="survey-h">
       <div className="survey-head">
-        <span className="eyebrow">Before your score</span>
-        <h1 id="survey-h">{Count(ITEMS.length, "quick question")}</h1>
+        <span className="eyebrow">Almost done</span>
+        <h1 id="survey-h">{Count(ITEMS.length, "question")} before your score</h1>
         <p className="lede">Your answers help us understand how learning by teaching works. There are no right answers.</p>
       </div>
       <ol className="survey-list">
@@ -35,7 +38,12 @@ export default function Survey({ onDone }: { onDone: () => void }) {
               <span className="survey-n">{i + 1}</span>
               {q.prompt}
             </p>
-            {q.kind === "scale" ? (
+            {q.kind === "text" ? (
+              <div className="survey-text">
+                {q.hint && <p className="survey-hint">{q.hint}</p>}
+                <textarea className="input" rows={3} maxLength={2000} aria-labelledby={`sv-${q.id}`} value={typeof a[q.id] === "string" ? (a[q.id] as string) : ""} onChange={(e) => setA((x) => ({ ...x, [q.id]: e.target.value }))} placeholder="In your own words (optional)" />
+              </div>
+            ) : q.kind === "scale" ? (
               <div className="survey-scale" role="radiogroup" aria-labelledby={`sv-${q.id}`}>
                 <span className="survey-end">{q.low}</span>
                 <span className="survey-dots">
