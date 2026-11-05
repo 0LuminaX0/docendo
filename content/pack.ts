@@ -51,7 +51,9 @@ export const Exercise = z
     return !q.options && typeof q.answer === "number";
   }, "choice items need options and a valid key, multi-select items options and the true statements' indices; number items have no options");
 export type Exercise = z.infer<typeof Exercise>;
-export const ExercisesFile = z.object({ title: z.string(), items: z.array(Exercise).min(1) });
+// order: "shuffled" (each learner their own order, lib/order.ts) or "fixed" (the file's order: since 2026-11-05 the
+// forms go from understanding greedy to a changed UCB, and the order is part of the design)
+export const ExercisesFile = z.object({ title: z.string(), order: z.enum(["shuffled", "fixed"]).default("shuffled"), items: z.array(Exercise).min(1) });
 
 // The text lesson (optional; lesson.json): read on the lesson step instead of the videos. Paragraphs take **bold**; a
 // figure or formula is named by id (lib/lesson.ts, components/lesson/). Each section names the ideas it explains, for
@@ -72,6 +74,7 @@ export const LessonFile = z.object({
 export type LessonFile = z.infer<typeof LessonFile>;
 
 export const PretestItem = z.object({
+  off: z.boolean().optional(), // left out, kept (2026-11-05: one set, C1; the harder C2 was for calibrating in the pilot)
   id: z.string(),
   kind: z.enum(["background", "knowledge"]),
   prompt: z.string(),

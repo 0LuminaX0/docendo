@@ -32,12 +32,16 @@ export function shuffled<T>(xs: T[], seed: number): T[] {
 }
 
 /** Item ids in the order one learner sees them, form by form: the items to choose (shuffled), then the number items
- * (shuffled). One form gives the same order as before forms were grouped. */
-export function testOrder(items: { id: string; kind: string; form?: string }[], seed: number): string[] {
+ * (shuffled). One form gives the same order as before forms were grouped. Fixed (the pack's choice): the order the
+ * server sent, form by form. */
+export function testOrder(items: { id: string; kind: string; form?: string }[], seed: number, fixed = false): string[] {
   const forms = [...new Set(items.map((q) => q.form ?? ""))];
   return forms.flatMap((f, k) => {
     const mine = items.filter((q) => (q.form ?? "") === f);
-    const part = (number: boolean, salt: number) => shuffled(mine.filter((q) => (q.kind === "number") === number).map((q) => q.id), seed + salt);
+    const part = (number: boolean, salt: number) => {
+      const ids = mine.filter((q) => (q.kind === "number") === number).map((q) => q.id);
+      return fixed ? ids : shuffled(ids, seed + salt);
+    };
     return [...part(false, 2 * k), ...part(true, 2 * k + 1)];
   });
 }

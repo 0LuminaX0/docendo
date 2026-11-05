@@ -1,6 +1,6 @@
 {
   "title": "Before you start",
-  "note": "The team's pretest, option C (2 November 2026): about 4 minutes before the lesson, without the rules. Three screening questions (q1 and q2 flag a session as excluded: an RL course or bandits covered in a course; could explain an algorithm such as UCB; q3, a probability or statistics course, is only recorded until the team decides), then a set of five knowledge items, each with \"I don't know\" and no written reason: two on the maths the lesson builds on (K1, K2: √n, ln(t)) and three on everyday statistical reasoning behind the post-test (R1 to R3: small samples scatter more, picking the best result picks up luck, you only learn about what you choose), with no algorithm named. Set C1 is the default (keys c, d, b, c, a). Set C2 measures the same five things with harder items (H1 to H5, keys c, a, b, d, c; pair names the C1 item). Pilot (settings, pretest.both): every session takes both sets, one after the other, in an order that alternates with the session's test form (A: C1 first, B: C2 first). It checks that the groups start alike and gives a covariate; it does not measure learning gain.",
+  "note": "One set since 2026-11-05 (C1): the pretest isn't tied to the test form, and the harder C2 was there to calibrate items in the pilot; its items are marked off, kept. The team's pretest, option C (2 November 2026): about 4 minutes before the lesson, without the rules. Three screening questions (q1 and q2 flag a session as excluded: an RL course or bandits covered in a course; could explain an algorithm such as UCB; q3, a probability or statistics course, is only recorded until the team decides), then a set of five knowledge items, each with \"I don't know\" and no written reason: two on the maths the lesson builds on (K1, K2: √n, ln(t)) and three on everyday statistical reasoning behind the post-test (R1 to R3: small samples scatter more, picking the best result picks up luck, you only learn about what you choose), with no algorithm named. Set C1 is the default (keys c, d, b, c, a). Set C2 measures the same five things with harder items (H1 to H5, keys c, a, b, d, c; pair names the C1 item). Pilot (settings, pretest.both): every session takes both sets, one after the other, in an order that alternates with the session's test form (A: C1 first, B: C2 first). It checks that the groups start alike and gives a covariate; it does not measure learning gain.",
   "items": [
     {
       "id": "q1",
@@ -160,6 +160,7 @@
     },
     {
       "id": "h1",
+      "off": true,
       "kind": "knowledge",
       "set": "C2",
       "pair": "k1",
@@ -185,6 +186,7 @@
     },
     {
       "id": "h2",
+      "off": true,
       "kind": "knowledge",
       "set": "C2",
       "pair": "k2",
@@ -210,6 +212,7 @@
     },
     {
       "id": "h3",
+      "off": true,
       "kind": "knowledge",
       "set": "C2",
       "pair": "r1",
@@ -236,6 +239,7 @@
     },
     {
       "id": "h4",
+      "off": true,
       "kind": "knowledge",
       "set": "C2",
       "pair": "r2",
@@ -262,6 +266,7 @@
     },
     {
       "id": "h5",
+      "off": true,
       "kind": "knowledge",
       "set": "C2",
       "pair": "r3",

@@ -119,6 +119,7 @@ export type Saved = {
   testWork?: Record<string, string>; // final test: the reason (or the working) under each question
   testOrder?: string[]; // final test: the item ids in the order this learner sees them (lib/order.ts)
   testItems?: TestItem[]; // this session's questions (its form, or both in a pilot), from the server
+  testFixedOrder?: boolean; // the test asks them in the file's order (the pack's choice), not shuffled per learner
   testPart?: number; // a pilot's two forms: how many parts are done and locked (0: on the first)
   since?: "no" | "a little" | "a lot"; // delayed test: has the learner looked at the topic since the session?
   result: GradeResult | null;

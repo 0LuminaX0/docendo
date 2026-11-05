@@ -47,7 +47,7 @@ const msg = "Every round it takes whichever option has the best average at that 
 
 describe("Kai's teaching questions", () => {
   it("are built on the graph: in its order, each for teachable facts, with a follow-up per fact, saying nothing they ask about", () => {
-    expect(Q.map((q) => q.id)).toEqual(["greedy", "greedy-long", "explore", "epsilon", "ucb", "ucb-why", "ucb-size", "ucb-long", "compare", "anything"]);
+    expect(Q.map((q) => q.id)).toEqual(["greedy", "greedy-long", "explore", "ucb", "ucb-why", "ucb-size", "ucb-long", "anything"]);
     const teachable = new Set(bundle.nodes.flatMap((n) => n.facts.filter((f) => f.required && f.teachable && f.assume).map((f) => f.id)));
     // every teachable fact has a question (and the two why-questions ask for a reason the lesson gives), and every
     // follow-up is for one of its question's facts
@@ -66,15 +66,14 @@ describe("Kai's teaching questions", () => {
   });
 
   it("goes through the questions in order, the fixed text word for word after Kai's own reaction", async () => {
-    // each answer teaches its question's facts, so the comparison (whose facts are taught by then) is skipped
-    const facts = ["n05.f1", "n06.f1", "n08.f1", "n07.f1 n07.f2", "n11.f1", "n11.f4", "n11.f2", "n12.f1 n12.f2", ""];
-    const asked = Q.filter((q) => q.id !== "compare");
+    // each answer teaches its question's facts
+    const facts = ["n05.f1", "n06.f1", "n08.f1", "n11.f1", "n11.f4", "n11.f2", "n12.f1 n12.f2", ""];
+    const asked = Q;
     const r = await talk(facts.map((f) => ({ message: msg, say: f ? ok(...f.split(" ")) : { intent: "answer" } })), undefined, async () => "Oh, I see.");
     r.slice(0, -1).forEach((x, i) => {
       expect(x.reply, `after ${asked[i]!.id}`).toBe(`Oh, I see. ${asked[i + 1]!.text}`);
       expect(x.trace.script).toMatchObject({ asked: asked[i]!.id, next: asked[i + 1]!.id, probe: null });
     });
-    expect(r.at(-2)!.trace.script.covered).toEqual(["compare"]);
     const last = r.at(-1)!;
     expect(last.done).toBe(true);
     expect(last.trace.readyReason).toBe("script");
@@ -87,20 +86,19 @@ describe("Kai's teaching questions", () => {
     expect(asks(r[0]!, byId("explore").text)).toBe(true);
     expect(r[0]!.trace.script.covered).toEqual(["greedy-long"]);
     // everything in one message: straight to "anything else?"
-    const all = await talk([{ message: msg, say: ok("n05.f1", "n06.f1", "n08.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f4", "n11.f2", "n12.f1", "n12.f2") }]);
+    const all = await talk([{ message: msg, say: ok("n05.f1", "n06.f1", "n08.f1", "n11.f1", "n11.f4", "n11.f2", "n12.f1", "n12.f2") }]);
     expect(asks(all[0]!, byId("anything").text)).toBe(true);
   });
 
   it("opens a question the learner has already started on with its follow-up on what is still missing", async () => {
-    // "is there a reason to pick what doesn't look best?" answered with ε-greedy's random picks, vaguely: Kai doesn't
-    // ask how ε-greedy decides, but which options its random pick can land on
-    const r = await talk([{ message: "yes, epsilon greedy sometimes picks something random to learn more", say: { intent: "answer", facts: [{ fact: "n08.f1", verdict: "correct", quote: "" }, { fact: "n07.f1", verdict: "partial", quote: "" }] } }], at(Q.findIndex((q) => q.id === "explore")));
-    expect(asks(r[0]!, follow("epsilon", "n07.f2"))).toBe(true);
-    expect(r[0]!.trace.script).toMatchObject({ next: "epsilon", probe: "n07.f2" });
-    // then the other follow-up, and on
-    const r2 = await talk([{ message: "any of them", say: ok("n07.f2") }, { message: "always the same", say: ok("n07.f1") }], r[0]!.state);
-    expect(asks(r2[0]!, follow("epsilon", "n07.f1"))).toBe(true);
-    expect(asks(r2[1]!, byId("ucb").text)).toBe(true);
+    // "is there a reason to pick what doesn't look best?" answered with UCB, vaguely: Kai doesn't ask how UCB decides,
+    // but which option it goes for in the end
+    const r = await talk([{ message: "yes, to learn more, UCB does that with some extra for options it hasn't tried much", say: { intent: "answer", facts: [{ fact: "n08.f1", verdict: "correct", quote: "" }, { fact: "n11.f1", verdict: "partial", quote: "" }] } }], at(Q.findIndex((q) => q.id === "explore")));
+    expect(asks(r[0]!, follow("ucb", "n11.f1"))).toBe(true);
+    expect(r[0]!.trace.script).toMatchObject({ next: "ucb", probe: "n11.f1" });
+    // answered: on to the next question
+    const r2 = await talk([{ message: "the one with the highest average plus bonus", say: ok("n11.f1") }], r[0]!.state);
+    expect(asks(r2[0]!, byId("ucb-why").text)).toBe(true);
   });
 
   it("asks a follow-up only for a fact still missing (or only vaguely taught), once, and never after a short complete answer", async () => {
@@ -117,15 +115,15 @@ describe("Kai's teaching questions", () => {
     // two facts missing: one follow-up each, in the file's order
     const e = await talk(
       [
-        { message: "it sometimes picks at random", say: { intent: "answer" } },
-        { message: "any of them", say: ok("n07.f2") },
-        { message: "yes, same rate", say: ok("n07.f1") },
+        { message: "the bonus keeps changing", say: { intent: "answer", termsUsed: ["bonus"] } },
+        { message: "it gets smaller", say: ok("n12.f1") },
+        { message: "it grows, slower and slower", say: ok("n12.f2") },
       ],
-      at(Q.findIndex((q) => q.id === "epsilon")),
+      at(Q.findIndex((q) => q.id === "ucb-long")),
     );
-    expect(asks(e[0]!, follow("epsilon", "n07.f2"))).toBe(true);
-    expect(asks(e[1]!, follow("epsilon", "n07.f1"))).toBe(true);
-    expect(asks(e[2]!, byId("ucb").text)).toBe(true);
+    expect(asks(e[0]!, follow("ucb-long", "n12.f1"))).toBe(true);
+    expect(asks(e[1]!, follow("ucb-long", "n12.f2"))).toBe(true);
+    expect(asks(e[2]!, byId("anything").text)).toBe(true);
   });
 
   it("doesn't ask again about a fact the learner answered wrongly: Kai believes it", async () => {
@@ -144,7 +142,7 @@ describe("Kai's teaching questions", () => {
     // "how does that play out?" names no term, so it is asked; its follow-ups, about the bonus, are not
     expect(asks(r[1]!, byId("ucb-long").text)).toBe(true);
     const more = await talk([{ message: "it tries all of them in turn I think", say: { intent: "answer" } }], { ...r[1]!.state });
-    expect(asks(more[0]!, byId("compare").text)).toBe(true);
+    expect(asks(more[0]!, byId("anything").text)).toBe(true);
     // with UCB's rule taught, they are asked
     const b = await talk([{ message: "score is average plus a bonus, it takes the highest score", say: ok("n11.f1") }], at(UCB));
     expect(asks(b[0]!, byId("ucb-why").text)).toBe(true);

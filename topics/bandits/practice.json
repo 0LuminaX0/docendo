@@ -1,128 +1,8 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
-  "minutes": 8,
-  "note": "Three problems since 2026-11-05 (P1, P3 and P5, one round; the session cut to about 40 minutes): between them they need every teachable fact a problem uses (ε-greedy's fixed rate and random pick, lock-in, UCB's pick, c, the bonus shrinking and growing). P2, P4 and P6 are marked off: kept, never served. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
+  "minutes": 10,
+  "note": "Three problems since 2026-11-05, greedy and UCB only (ε-greedy left out of the lesson): P3 (greedy against UCB after an unlucky start), P4 (which option UCB picks in one round) and P2 (what one pick does to every score). P1, P5 and P6 need ε-greedy and are marked off: kept, never served. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
   "items": [
-    {
-      "id": "p1",
-      "needs": [
-        "n07.f1",
-        "n07.f2"
-      ],
-      "round": 1,
-      "idea": "epsilon",
-      "title": "Festival stages",
-      "kind": "choice",
-      "prompt": "A festival app recommends one of four stages to each visitor with ε-greedy, ε = 0.2. Ratings so far: stage A averages 7.8 (200 visitors), B 7.5 (3 visitors), C 4.0 (150 visitors) and D 6.9 (180 visitors). Assume A stays the favourite. Of the next 1,000 visitors, about how many are sent to A, and how do B and C compare?",
-      "options": [
-        "About 800 to A; B and C about equally often",
-        "About 800 to A; B much more often than C",
-        "About 850 to A; B and C about equally often",
-        "Nearly all to A; B and C almost never"
-      ],
-      "answer": 2,
-      "steps": [
-        {
-          "text": "A has the highest average, so in 80% of rounds (800 visitors) the app sends people to A.",
-          "facts": [
-            "n07.f1"
-          ]
-        },
-        {
-          "text": "In the other 20% (200 visitors) it picks at random; ε stays at 0.2 however reliable A's average is.",
-          "facts": [
-            "n07.f1"
-          ]
-        },
-        {
-          "text": "A random pick chooses each of the four stages with equal chance, A included: 50 more to A, and 50 each to B, C and D.",
-          "facts": [
-            "n07.f2"
-          ]
-        },
-        {
-          "text": "So about 850 go to A, and B and C come up equally often.",
-          "facts": []
-        }
-      ],
-      "beliefs": [
-        {
-          "replaces": "n07.f1",
-          "belief": "ε-greedy explores less and less once its averages become reliable.",
-          "answer": 3
-        },
-        {
-          "replaces": "n07.f2",
-          "belief": "When ε-greedy picks at random, it chooses among the options other than the favourite.",
-          "answer": 0
-        }
-      ]
-    },
-    {
-      "id": "p2",
-      "off": true,
-      "needs": [
-        "n12.f1",
-        "n12.f2"
-      ],
-      "round": 1,
-      "idea": "ucb",
-      "title": "Exercise types",
-      "kind": "choice",
-      "prompt": "A language app picks the next exercise type with UCB. Before this round: Flashcards average 6.3, bonus 1.0 (tried 20 times); Dialogues average 5.0, bonus 2.5 (tried 3 times); Listening average 4.0, bonus 1.5 (tried 8 times). UCB picks Dialogues, and the learner scores exactly 5.0 on it. What happens to the three scores (average plus bonus) for the next round?",
-      "options": [
-        "Dialogues' score falls; the other two rise slightly",
-        "All three scores fall slightly",
-        "Dialogues' score falls; the other two stay the same",
-        "All three scores stay the same"
-      ],
-      "answer": 0,
-      "steps": [
-        {
-          "text": "The scores were Flashcards 7.3, Dialogues 7.5 and Listening 5.5, so UCB picked Dialogues.",
-          "facts": [
-            "n11.f1"
-          ]
-        },
-        {
-          "text": "The new result equals Dialogues' average, so the average stays 5.0.",
-          "facts": [
-            "n03.f1"
-          ]
-        },
-        {
-          "text": "Dialogues was tried once more, so its bonus shrinks and its score falls.",
-          "facts": [
-            "n12.f1"
-          ]
-        },
-        {
-          "text": "Flashcards and Listening were not picked, so their bonuses grow slightly with the round number.",
-          "facts": [
-            "n12.f2"
-          ]
-        }
-      ],
-      "beliefs": [
-        {
-          "replaces": "n12.f1",
-          "belief": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
-          "answer": 1
-        },
-        {
-          "replaces": "n12.f2",
-          "belief": "An option's bonus stays the same while it is not picked.",
-          "answer": 2,
-          "when": "absent"
-        },
-        {
-          "replaces": "n12.f2",
-          "belief": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
-          "answer": 0,
-          "when": "vague"
-        }
-      ]
-    },
     {
       "id": "p3",
       "needs": [
@@ -208,12 +88,11 @@
     },
     {
       "id": "p4",
-      "off": true,
       "needs": [
         "n11.f1",
         "n12.f1"
       ],
-      "round": 2,
+      "round": 1,
       "idea": "ucb",
       "title": "Audio tours",
       "kind": "choice",
@@ -264,7 +143,128 @@
       ]
     },
     {
+      "id": "p2",
+      "needs": [
+        "n12.f1",
+        "n12.f2"
+      ],
+      "round": 1,
+      "idea": "ucb",
+      "title": "Exercise types",
+      "kind": "choice",
+      "prompt": "A language app picks the next exercise type with UCB. Before this round: Flashcards average 6.3, bonus 1.0 (tried 20 times); Dialogues average 5.0, bonus 2.5 (tried 3 times); Listening average 4.0, bonus 1.5 (tried 8 times). UCB picks Dialogues, and the learner scores exactly 5.0 on it. What happens to the three scores (average plus bonus) for the next round?",
+      "options": [
+        "Dialogues' score falls; the other two rise slightly",
+        "All three scores fall slightly",
+        "Dialogues' score falls; the other two stay the same",
+        "All three scores stay the same"
+      ],
+      "answer": 0,
+      "steps": [
+        {
+          "text": "The scores were Flashcards 7.3, Dialogues 7.5 and Listening 5.5, so UCB picked Dialogues.",
+          "facts": [
+            "n11.f1"
+          ]
+        },
+        {
+          "text": "The new result equals Dialogues' average, so the average stays 5.0.",
+          "facts": [
+            "n03.f1"
+          ]
+        },
+        {
+          "text": "Dialogues was tried once more, so its bonus shrinks and its score falls.",
+          "facts": [
+            "n12.f1"
+          ]
+        },
+        {
+          "text": "Flashcards and Listening were not picked, so their bonuses grow slightly with the round number.",
+          "facts": [
+            "n12.f2"
+          ]
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n12.f1",
+          "belief": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
+          "answer": 1
+        },
+        {
+          "replaces": "n12.f2",
+          "belief": "An option's bonus stays the same while it is not picked.",
+          "answer": 2,
+          "when": "absent"
+        },
+        {
+          "replaces": "n12.f2",
+          "belief": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
+          "answer": 0,
+          "when": "vague"
+        }
+      ]
+    },
+    {
+      "id": "p1",
+      "off": true,
+      "needs": [
+        "n07.f1",
+        "n07.f2"
+      ],
+      "round": 1,
+      "idea": "epsilon",
+      "title": "Festival stages",
+      "kind": "choice",
+      "prompt": "A festival app recommends one of four stages to each visitor with ε-greedy, ε = 0.2. Ratings so far: stage A averages 7.8 (200 visitors), B 7.5 (3 visitors), C 4.0 (150 visitors) and D 6.9 (180 visitors). Assume A stays the favourite. Of the next 1,000 visitors, about how many are sent to A, and how do B and C compare?",
+      "options": [
+        "About 800 to A; B and C about equally often",
+        "About 800 to A; B much more often than C",
+        "About 850 to A; B and C about equally often",
+        "Nearly all to A; B and C almost never"
+      ],
+      "answer": 2,
+      "steps": [
+        {
+          "text": "A has the highest average, so in 80% of rounds (800 visitors) the app sends people to A.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "In the other 20% (200 visitors) it picks at random; ε stays at 0.2 however reliable A's average is.",
+          "facts": [
+            "n07.f1"
+          ]
+        },
+        {
+          "text": "A random pick chooses each of the four stages with equal chance, A included: 50 more to A, and 50 each to B, C and D.",
+          "facts": [
+            "n07.f2"
+          ]
+        },
+        {
+          "text": "So about 850 go to A, and B and C come up equally often.",
+          "facts": []
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n07.f1",
+          "belief": "ε-greedy explores less and less once its averages become reliable.",
+          "answer": 3
+        },
+        {
+          "replaces": "n07.f2",
+          "belief": "When ε-greedy picks at random, it chooses among the options other than the favourite.",
+          "answer": 0
+        }
+      ]
+    },
+    {
       "id": "p5",
+      "off": true,
       "needs": [
         "n11.f1",
         "n11.f2"

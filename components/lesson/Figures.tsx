@@ -136,38 +136,9 @@ function LockIn() {
   );
 }
 
-/** Figure 4: ε-greedy's lottery, early and late: the same share of rounds, landing on any option, the favourite too. */
-function Lottery() {
-  const strip = (y: number, title: string, lottery: Record<number, string>) => (
-    <g>
-      <text x="24" y={y - 12} fontWeight="600" fill={ink}>{title}</text>
-      {Array.from({ length: 40 }, (_, i) => {
-        const l = lottery[i];
-        const x = 24 + i * 17.8;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width="15" height="28" rx="3" fill={l ? accent : edge} fillOpacity={l ? 0.85 : 0.14} />
-            <text x={x + 7.5} y={y + 19} textAnchor="middle" fontSize="11" fontWeight={l ? 600 : 400} fill={l ? "#fff" : quiet}>{l ?? "A"}</text>
-          </g>
-        );
-      })}
-    </g>
-  );
-  return (
-    <svg viewBox="0 0 760 286" role="img" aria-label="ε-greedy's lottery decides the same share of rounds early and late, and can land on any option" fontSize="13">
-      <text x="24" y="30" fontSize="15" fontWeight="600" fill={ink}>ε-greedy, early and late</text>
-      <text x="24" y="52" fontSize="11.5" fill={quiet}>ε = 0.1 and four options, A to D; A is the favourite. A dark square is a round decided by the lottery, with the option it landed on.</text>
-      {strip(96, "Rounds 1 to 40", { 6: "C", 13: "A", 25: "D", 34: "B" })}
-      {strip(176, "Rounds 10,001 to 10,040", { 3: "B", 17: "D", 22: "A", 38: "C" })}
-      <text x="24" y="240" fontSize="11.5" fill={ink}>In both stretches about one round in ten is a lottery: ε has not changed in between.</text>
-      <text x="24" y="260" fontSize="11.5" fill={ink}>The lottery ignores the averages and the counts, so it lands on every option alike, the favourite A included.</text>
-    </svg>
-  );
-}
-
 const fmt = (v: number) => v.toFixed(1);
 
-/** Figure 5: one UCB round with numbers (round 20, c = 1): the bonus can lift an option over a higher average. */
+/** Figure 4: one UCB round with numbers (round 20, c = 1): the bonus can lift an option over a higher average. */
 function Score() {
   const base = 276, scale = 24, w = 92, lnT = Math.log(20);
   const opts = [
@@ -199,7 +170,7 @@ function Score() {
   );
 }
 
-/** Figure 6: one option's bonus over the rounds: it drops at each of its picks and grows, ever more slowly, in between. */
+/** Figure 5: one option's bonus over the rounds: it drops at each of its picks and grows, ever more slowly, in between. */
 function Bonus() {
   const t0 = 10, t1 = 90, n0 = 3, picks = [15, 18, 35, 41, 70];
   const x = (t: number) => 70 + ((t - t0) / (t1 - t0)) * 620;
@@ -237,35 +208,4 @@ function Bonus() {
   );
 }
 
-/** Figure 7: the three rules side by side. */
-function Compare() {
-  const cols = [
-    { x: 130, head: "Most rounds it picks" },
-    { x: 300, head: "It picks something else" },
-    { x: 480, head: "How often it does that" },
-    { x: 660, head: "Random?" },
-  ];
-  const rows = [
-    { name: "Greedy", cells: [["the highest average"], ["never"], ["–"], ["no"]] },
-    { name: "ε-greedy", cells: [["the highest average"], ["when the lottery is drawn:", "any option, the favourite too"], ["a share ε of rounds,", "the same early and late"], ["yes"]] },
-    { name: "UCB", cells: [["the highest average", "plus bonus"], ["when another option's", "bonus lifts it to the top"], ["set by c, each option's", "picks and the round"], ["no"]] },
-  ];
-  return (
-    <svg viewBox="0 0 760 260" role="img" aria-label="Greedy, ε-greedy and UCB side by side" fontSize="13">
-      <text x="24" y="30" fontSize="15" fontWeight="600" fill={ink}>The three rules side by side</text>
-      {cols.map((c) => <text key={c.head} x={c.x} y="68" fontSize="11.5" fontWeight="600" fill={quiet}>{c.head}</text>)}
-      {rows.map((r, i) => {
-        const y = 108 + i * 56;
-        return (
-          <g key={r.name}>
-            <line x1="24" x2="736" y1={y - 24} y2={y - 24} stroke={grid} strokeWidth="1.25" />
-            <text x="24" y={y} fontWeight="600" fill={ink}>{r.name}</text>
-            {r.cells.map((lines, j) => lines.map((l, k) => <text key={`${j}${k}`} x={cols[j]!.x} y={y + k * 17} fontSize="12.5" fill={ink}>{l}</text>))}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-export const FIGURE: Record<string, () => React.ReactElement> = { averages: Averages, greedy: Greedy, lockin: LockIn, lottery: Lottery, score: Score, bonus: Bonus, compare: Compare };
+export const FIGURE: Record<string, () => React.ReactElement> = { averages: Averages, greedy: Greedy, lockin: LockIn, score: Score, bonus: Bonus };

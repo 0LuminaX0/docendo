@@ -5,9 +5,11 @@ import { Bundle } from "../content/schema";
 import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
 
 const bundle = Bundle.parse(bundleJson);
-const practice = PracticeFile.parse(practiceJson);
+const practiceFile = PracticeFile.parse(practiceJson);
+// the problems in use (the app leaves those marked off out); item() finds any, for the solver's mechanics
+const practice = { ...practiceFile, items: practiceFile.items.filter((p) => !p.off) };
 const factIds = new Set(bundle.nodes.flatMap((n) => n.facts.map((f) => f.id)));
-const item = (id: string) => practice.items.find((p) => p.id === id)!;
+const item = (id: string) => practiceFile.items.find((p) => p.id === id)!;
 
 describe("practice problems", () => {
   it("have unique ids, and every solution step cites real lesson facts", () => {
@@ -47,12 +49,12 @@ describe("practice problems", () => {
   });
 
   it("are three in use, in one round (the others switched off, kept)", () => {
-    const used = practice.items.filter((p) => !p.off);
-    expect(used.map((p) => p.id)).toEqual(["p1", "p3", "p5"]);
+    // since 2026-11-05 greedy and UCB only: greedy against UCB, one UCB round, what one pick does to every score
+    const used = practice.items;
+    expect(used.map((p) => p.id)).toEqual(["p3", "p4", "p2"]);
     expect(new Set(used.map((p) => p.round))).toEqual(new Set([1]));
-    // between them they need every fact a problem needs
-    const need = (ps: typeof practice.items) => new Set(ps.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))));
-    for (const f of need(practice.items)) expect(need(used).has(f), f).toBe(true);
+    const need = new Set(used.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))));
+    expect([...need].sort()).toEqual(["n06.f1", "n11.f1", "n12.f1", "n12.f2"]);
   });
 
   it("only use ideas the lesson teaches, and don't put every answer in the same place", () => {
@@ -116,9 +118,10 @@ describe("the knowledge base: facts Kai can be taught, and its assumptions", () 
     for (const id of needed) expect(factOf(id).assume, `${id} has Kai's assumption`).toBeTruthy();
     // given facts: the setup, averages and how reliable they are, trying each option once
     for (const id of ["n01.f1", "n01.f2", "n03.f1", "n03.f3", "n16.f1"]) expect(needed.has(id), `${id} is given`).toBe(false);
-    // the teachable facts of the lesson: greedy, lock-in, ε-greedy (2), UCB's score and c, the bonus's two rules
+    // the teachable facts of the lesson: greedy, lock-in, UCB's score and c, the bonus's two rules (no ε-greedy since
+    // 2026-11-05)
     const withAssumption = lesson.flatMap((n) => n.facts.filter((f) => f.assume).map((f) => f.id));
-    expect(withAssumption).toEqual(["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]);
+    expect(withAssumption).toEqual(["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]);
     for (const id of withAssumption) expect(factOf(id).required && factOf(id).teachable, id).toBe(true);
   });
 

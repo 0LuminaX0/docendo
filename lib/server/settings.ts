@@ -32,11 +32,11 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
   return {
     topic: pack.slug,
     studyLine: "A learning-by-teaching study for CS-411 Digital Education, EPFL",
-    // a session of about 40 minutes (2026-11-05; the pilot's setup, both pretest sets and both test forms, ran past an
-    // hour and a half): one pretest set (4), the lesson (10), teaching (10, script.json), three practice problems (8,
-    // practice.json) and one test form of five items (10). Both sets and both forms can still be switched on for
-    // calibrating items (no follow-up test then: no form is left for it).
-    pretest: { on: true, both: false, minutes: 4 },
+    // a session of about 50 minutes (2026-11-05; the pilot's setup, both pretest sets and both test forms, ran past an
+    // hour and a half): the pretest (5), the lesson (10), teaching (15, script.json), three practice problems (10,
+    // practice.json) and one test form of five items (10). Both forms can still be switched on for calibrating items
+    // (no follow-up test then: no form is left for it).
+    pretest: { on: true, both: false, minutes: 5 },
     watch: { on: true, parts: defaultLesson(pack), minutes: 10 },
     teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true, minutes: pack.script?.minutes ?? 10 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },

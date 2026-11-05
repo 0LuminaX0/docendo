@@ -48,8 +48,8 @@ const scriptPath = opt("--script") ?? "topics/bandits/script.json";
 
 const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json", "utf8")));
 const script = ScriptFile.parse(JSON.parse(readFileSync(scriptPath, "utf8")));
-const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items;
-const TEACH = ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n11.f1", "n11.f2", "n12.f1", "n12.f2"];
+const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items.filter((p) => !p.off);
+const TEACH = ["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]; // since 2026-11-05 no ε-greedy
 // the reasons Kai's two why-questions ask for (2026-11-05): no practice problem needs them, so they are outside the gate
 const WHY = ["n08.f1", "n11.f4"];
 const ALL = [...TEACH, ...WHY];
@@ -58,8 +58,6 @@ const ALL = [...TEACH, ...WHY];
 const KNOW: Record<string, string> = {
   "n05.f1": "Greedy always takes the option with the highest average so far. After every pick that option's average is updated, and if another option's average overtakes it, greedy switches to that one.",
   "n06.f1": "Greedy can get stuck: if the truly best option has an unlucky first result, its average looks too low, greedy never tries it again, so its average never gets corrected and greedy never finds out.",
-  "n07.f1": "ε-greedy explores with a fixed probability ε (like 0.1) in every single round. ε never changes: after thousands of rounds it still explores 10% of the time, exactly like at the start.",
-  "n07.f2": "When ε-greedy explores, it picks uniformly at random among ALL the options, the current favourite included, whatever their averages.",
   "n11.f1": "UCB gives every option a score, its average plus a bonus, and always picks the option with the highest score. No randomness.",
   "n11.f2": "How big the bonuses are is set by a constant c chosen in advance (from how much rewards are expected to vary). The bonus doesn't depend on the actual rewards an option gave.",
   "n12.f1": "Each time an option is picked, its own bonus shrinks (its count n goes up). Picking other options doesn't shrink it.",
@@ -68,14 +66,12 @@ const KNOW: Record<string, string> = {
   "n12.f2": "The bonus has ln t in it (t is the round number), so the bonus of an option nobody picks keeps growing, but more and more slowly, without limit, so every option gets tried again eventually.",
 };
 const VAGUE: Record<string, string> = {
-  "n07.f1": "ε-greedy sometimes picks randomly instead of the best one (you don't remember how often or whether that changes).",
   "n12.f2": "The bonus of an option you don't pick grows over time (you don't remember how fast).",
   "n11.f1": "UCB adds some kind of bonus to the average (you're not sure how it then picks).",
 };
 const WRONG: Record<string, string> = {
   "n06.f1": "Nothing really goes wrong with greedy in the long run: the averages correct themselves over time, so it finds the best option eventually.",
-  "n07.f1": "ε-greedy explores a lot at the start and less and less later, once its averages are reliable.",
-  "n07.f2": "When ε-greedy explores, it picks one of the OTHER options, never the current favourite (that would be pointless).",
+  "n11.f2": "The bonus adapts to the rewards: an option whose rewards jump around a lot gets a bigger bonus.",
   "n12.f2": "An option's bonus stays the same while it isn't picked.",
   "n05.f1": "Greedy tries each option once, then sticks with the best one forever and never switches.",
 };
@@ -85,10 +81,10 @@ const PERSONAS: Persona[] = [
   { id: "expert", knows: ALL, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + c·sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
   { id: "solid", knows: ALL.filter((f) => f !== "n11.f2"), style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
   { id: "terse", knows: ALL, style: "You are busy and type little: answer in ONE short sentence of 6 to 15 words, only what was asked, no examples. If asked to say more, add one more short sentence." },
-  { id: "partial", knows: ["n05.f1", "n06.f1"], vague: ["n07.f1", "n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
-  { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n07.f1", "n07.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
-  { id: "realistic", knows: ["n05.f1", "n06.f1", "n08.f1", "n07.f1", "n07.f2", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the exploration rate', 'the random one', 'the confidence thing', 'the score'. Sometimes you answer only part of the question at first." },
-  { id: "rambler", knows: ALL, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about all three rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
+  { id: "partial", knows: ["n05.f1", "n06.f1"], vague: ["n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
+  { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n11.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
+  { id: "realistic", knows: ["n05.f1", "n06.f1", "n08.f1", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the confidence thing', 'the score', 'the extra bit'. Sometimes you answer only part of the question at first." },
+  { id: "rambler", knows: ALL, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about both rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
   { id: "chatty", knows: ALL, style: "You are friendly and chatty. Two to three sentences. About every third message, before or instead of answering, ask Kai a question back (\"what do you think?\", \"does that make sense?\") or make a small joke unrelated to the topic; when Kai asks again, answer properly." },
 ];
 
@@ -116,7 +112,7 @@ async function learnerSays(p: Persona, history: { role: "kai" | "learner"; text:
     messages: [
       {
         role: "system",
-        content: `You role-play a university student in a study. You have just read a short lesson on multi-armed bandits (greedy, ε-greedy, UCB) and now explain it in a chat to Kai, a classmate who missed it. Use ONLY your knowledge sheet below, never anything else you know about bandits. Don't recite the sheet: say it the way you would in a chat.\n\nYOUR KNOWLEDGE SHEET:\n${sheet(p)}\n\nSTYLE: ${p.style}\n\nReturn JSON: message (your next chat message to Kai), alreadyAnswered (true if Kai's latest question asks about something you clearly already explained earlier in this chat), confusing (true if Kai's latest message is confusing or strange for a student).`,
+        content: `You role-play a university student in a study. You have just read a short lesson on multi-armed bandits (greedy and UCB) and now explain it in a chat to Kai, a classmate who missed it. Use ONLY your knowledge sheet below, never anything else you know about bandits. Don't recite the sheet: say it the way you would in a chat.\n\nYOUR KNOWLEDGE SHEET:\n${sheet(p)}\n\nSTYLE: ${p.style}\n\nReturn JSON: message (your next chat message to Kai), alreadyAnswered (true if Kai's latest question asks about something you clearly already explained earlier in this chat), confusing (true if Kai's latest message is confusing or strange for a student).`,
       },
       { role: "user", content: `The chat so far:\n${convo}\n\nWrite your reply to Kai's last message.` },
     ],
@@ -262,7 +258,7 @@ for (const r of ok)
       `${r.done ? "" : "  NOT DONE"}  $${r.usd.toFixed(3)}`,
   );
 console.log(
-  `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * 6}` +
+  `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * items.length}` +
     (withSolve ? `, Kai solved ${sum((r) => r.solved ?? 0)} first try + ${sum((r) => r.solvedAfterFix ?? 0)} after a fix (should ${sum((r) => r.shouldSolve ?? 0)}), right when the gate was open ${sum((r) => r.openRight ?? 0)}/${sum((r) => r.openTried ?? 0)}` : "") +
     `, $${sum((r) => r.usd).toFixed(3)}`,
 );

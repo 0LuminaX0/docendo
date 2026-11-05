@@ -37,9 +37,10 @@ lesson:
     id: G
     level: Analyze
     text: >-
-      Predict which option greedy, ε-greedy and UCB pick next, and explain why greedy can
-      lock onto a worse option while ε-greedy and UCB keep exploring, each in its own way.
-  scope: [n01, n03, n05, n06, n07, n08, n16, n11, n12]
+      Predict which option greedy and UCB pick next, and explain why greedy can lock onto a
+      worse option while UCB keeps exploring.
+  # 2026-11-05: ε-greedy (n07) left out; the lesson is the setup, greedy and UCB
+  scope: [n01, n03, n05, n06, n08, n16, n11, n12]
   # facts the full graph requires that this lesson doesn't wait for (they repeat another fact)
   optional:
     - n03.f2 # few tries are unreliable: taught as n16.f1

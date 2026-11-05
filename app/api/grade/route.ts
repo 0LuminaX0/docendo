@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const r = await limitAll([[`items:sid:${session.sid}`, 30, 3600, "local"]]);
     if (!r.ok) return fail(429, "Too many requests. Try again later.");
     const forms = session.both ? [session.form, otherForm(session.form)] : [session.form];
-    return ok({ items: pack.publicExercises(session.form, session.both), form: session.form, forms, phase: session.phase });
+    return ok({ items: pack.publicExercises(session.form, session.both), form: session.form, forms, phase: session.phase, fixedOrder: pack.fixedOrder });
   }
 
   const r = await limitAll([

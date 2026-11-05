@@ -29,9 +29,10 @@ function build(slug: string) {
   const raw = RAW_PACKS[slug];
   if (!raw) throw new Error(`No topic pack "${slug}" (lib/server/topics.ts)`);
   const bundle: Bundle = Bundle.parse(raw.bundle);
-  const exercises = ExercisesFile.parse(raw.exercises).items.filter((q) => !q.off); // items switched off stay in the file
+  const exercisesFile = ExercisesFile.parse(raw.exercises);
+  const exercises = exercisesFile.items.filter((q) => !q.off); // items switched off stay in the file
   // the pretest: every item, and what a session takes unless a pilot runs every set (content/pretest.ts)
-  const pretestAll = PretestFile.parse(raw.pretest).items;
+  const pretestAll = PretestFile.parse(raw.pretest).items.filter((q) => !q.off); // items switched off stay in the file
   const pretest = pretestItems(pretestAll, pretestSets(pretestAll).slice(0, 1));
   const practiceFile = PracticeFile.parse(raw.practice);
   const practice = practiceFile.items.filter((p) => !p.off);
@@ -62,6 +63,8 @@ function build(slug: string) {
     /** What the browser may see before grading: the session's questions, no answers, no explanations, nothing for the
      * team (rubric, diagnosis). Sent per session, so the other form's questions aren't in the page before the delayed
      * test. */
+    /** The test's items in the file's order for everyone (the order is part of the design), else each learner's own. */
+    fixedOrder: exercisesFile.order === "fixed",
     publicExercises: (form: Form, both = false) =>
       sessionItems(exercises, form, both).map(({ id, form, section, kind, prompt, table, question, options, unit, dontKnow, reason }) => ({ id, form, section, kind, prompt, table: table ?? null, question: question ?? null, options: options ?? null, unit: unit ?? null, dontKnow, reason })),
     pretest,

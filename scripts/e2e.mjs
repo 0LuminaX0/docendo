@@ -649,7 +649,7 @@ await shot(phoneHome, "10-phone-welcome", true);
 // time the clock counts on ("+…") and nothing ends; each part's time against it is logged and sent with the answers;
 // the shared code gets a debug skip, part by part
 {
-  const ok = await settingsFrom((s) => ({ ...s, pretest: { ...s.pretest, both: true }, test: { ...s.test, both: true, followUp: false }, tools: { ...s.tools, help: true } }));
+  const ok = await settingsFrom((s) => ({ ...s, test: { ...s.test, both: true, followUp: false }, tools: { ...s.tools, help: true } }));
   const pl = await newPage(1280, 860, await browser.createBrowserContext());
   const clock = () => pl.$eval(".top .clock", (e) => e.textContent.trim()).catch(() => "");
   const counting = async () => /^\+\d+:\d\d$/.test(await clock());
@@ -663,7 +663,8 @@ await shot(phoneHome, "10-phone-welcome", true);
   await pl.click("button[type=submit]");
   await pl.waitForFunction(() => location.pathname === "/pretest");
   await pl.waitForSelector(".q");
-  got.pretestParts = /Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
+  // one pretest set since 2026-11-05: no parts, whatever the switch says
+  got.pretestOnePart = !/Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
   got.skipShown = !!(await pl.$(".debug-skip"));
   await movePast(pl, "pretestStartedAt");
   await pl.reload({ waitUntil: "load" });
@@ -673,13 +674,11 @@ await shot(phoneHome, "10-phone-welcome", true);
   await shot(pl, "14-pilot-pretest-overtime");
   await answerPretest(pl);
   await pl.click(".submitbar .btn.primary");
-  await pl.waitForSelector(".pre-done");
-  await wait(1200);
-  const st1 = await saved(pl);
-  got.ownClock = /^\d+:\d\d$/.test(await clock()) && st1.pretestTimes?.length === 1 && st1.pretestTimes[0].over === true && st1.pretestTimes[0].limitMs === 4 * 60_000;
-  await answerPretest(pl); // every question answered, then the skip hands them in
-  await skip("/watch");
+  await pl.waitForFunction(() => location.pathname === "/watch", { timeout: 15000 });
   await pl.waitForSelector(".lesson");
+  await wait(1200);
+  // the lesson's own clock (the pretest's time went with its answers: checked in the log below)
+  got.ownClock = /^\d+:\d\d$/.test(await clock());
   await movePast(pl, "readStartedAt,readChapterAt");
   await pl.reload({ waitUntil: "load" });
   await pl.waitForSelector(".lesson");
@@ -715,7 +714,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   got.graded = !!st2.result && st2.result.parts?.length === 2;
   check(
     Object.values(got).every(Boolean),
-    `the pilot: two pretest parts and two test parts, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
+    `the pilot: one pretest set and two test parts, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
   );
   await pl.close();
   // back to the study's shape for the parts that follow
@@ -804,34 +803,9 @@ await shot(phoneHome, "10-phone-welcome", true);
   let shown = false;
   for (let k = 0; k < 16 && !shown; k++) (shown = await adm.evaluate(async () => /13(<!-- -->)? minutes/.test(await (await fetch("/")).text()))), shown || (await wait(1000));
   const badSave = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, watch: { on: true, parts: [{ ...base.json.settings.watch.parts[0], videoId: "nope" }] } } });
-  // the pilot's pretest: every set, one after the other as parts, in an order that alternates with the test form
+  // both pretest sets: refused, since the pack has one set since 2026-11-05
   const preBoth = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: true, both: true } } });
-  let preShown = false;
-  for (let k = 0; k < 16 && !preShown; k++) (preShown = await adm.evaluate(async () => /starting with 13 quick questions/.test(await (await fetch("/")).text()))), preShown || (await wait(1000));
-  await wait(10_500); // the pretest page keeps its own copy of the settings for up to 10 s
-  const pre = await newPage(1366, 900, await browser.createBrowserContext());
-  await pre.goto(BASE + "/", { waitUntil: "load" });
-  await pre.waitForSelector("button[type=submit]");
-  if (await pre.$("#code")) await pre.type("#code", TEAM_CODE);
-  await pre.click(".consent input");
-  await pre.click("button[type=submit]");
-  await pre.waitForFunction(() => location.pathname === "/pretest", { timeout: 15000 });
-  await pre.waitForSelector(".q");
-  const prePart1 = await answerPretest(pre);
-  const preGoOn = await pre.$eval(".submitbar .btn.primary", (b) => b.textContent);
-  await pre.click(".submitbar .btn.primary");
-  await pre.waitForSelector(".pre-done");
-  const prePart2 = await answerPretest(pre);
-  await shot(pre, "00c-pretest-pilot-part-2");
-  const preForm = await pre.evaluate(() => JSON.parse(atob(JSON.parse(localStorage.getItem("docendo:session:v1")).token.split(".")[0].replace(/-/g, "+").replace(/_/g, "/"))).form);
-  await pre.click(".submitbar .btn.primary");
-  await pre.waitForFunction(() => location.pathname === "/watch", { timeout: 15000 });
-  await pre.close();
-  const firstSet = preForm === "B" ? "h" : "k";
-  check(
-    preBoth.status === 200 && preShown && prePart1.length === 8 && prePart1.slice(0, 3).join() === "q1,q2,q3" && prePart1[3].startsWith(firstSet) && prePart2.length === 5 && !prePart2[0].startsWith(firstSet) && /part 2/i.test(preGoOn),
-    `the pilot's pretest: the screening questions and one set, then the other set as part 2 (form ${preForm}: ${firstSet === "k" ? "C1" : "C2"} first), then the lesson`,
-  );
+  check(preBoth.status === 400 && /one/.test(preBoth.json.error ?? ""), `both pretest sets are refused for a pack with one set ("${preBoth.json.error ?? preBoth.status}")`);
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
   // (and the pilot's test: both forms, one after the other)
   const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: true } } });
@@ -879,11 +853,12 @@ await shot(phoneHome, "10-phone-welcome", true);
   await short.close();
   const formOf = (id) => testItems.find((t) => t.id === id).form;
   const asked = [...part1, ...part2];
-  // each form's items in use; the anchor is asked once, and the first of part 2 is answered wrongly
+  // each form's items in use (no anchor since 2026-11-05), in the file's order; the first of part 2 is "I don't know"
   const n = testItems.filter((t) => t.form === "A").length;
+  const inOrder = (ids) => ids.join() === testItems.filter((t) => t.form === formOf(ids[0])).map((t) => t.id).join();
   check(
-    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n - 1 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === `${2 * n - 2}/${2 * n - 1}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 2} of ${n - 1}`).test(perPart),
-    `the pilot's test: both forms in two parts (${formOf(part1[0])} first), part 2 after part 1 is complete, the anchor once, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
+    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n && inOrder(part1) && inOrder(part2) && part2.every((id) => formOf(id) !== formOf(part1[0])) && new Set(asked).size === 2 * n && /part 2/i.test(goOn) && pilotScore === `${2 * n - 1}/${2 * n}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 1} of ${n}`).test(perPart),
+    `the pilot's test: both forms in two parts (${formOf(part1[0])} first), each in its fixed order, part 2 after part 1 is complete, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
@@ -925,20 +900,19 @@ if (existsSync(logFile)) {
   const has = (t) => evs.some((e) => e.t === t);
   const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", textLesson ? "client_read_continue" : "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
-  const pilotPre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 2);
   const onePre = evs.find((e) => e.t === "pretest" && Array.isArray(e.sets) && e.sets.length === 1);
-  check(pilotPre && pilotPre.of === 10 && pilotPre.dontKnow === 10 && !pilotPre.excluded && onePre && onePre.of === 5 && pilotPre.setScores && has("client_pretest_part"), "the pretest logs the sets taken in order and the score in each (5 items, or 10 in the pilot)");
+  check(onePre && onePre.of === 5 && !evs.some((e) => e.t === "pretest" && e.sets?.length > 1), "the pretest logs the one set taken and its score (5 items)");
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
   const pilot = evs.find((e) => e.t === "grade" && Array.isArray(e.forms) && e.forms.length === 2);
-  check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 1, "the pilot's test logs each part, each form's score (the anchor in both) and every reason");
+  check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 0, "the pilot's test logs each part, each form's score and every reason");
   // the pilot's timing: each part's time against its own, with the answers; every other step's from the browser
-  const timedPre = evs.find((e) => e.t === "pretest" && e.times?.length === 2);
+  const timedPre = evs.find((e) => e.t === "pretest" && e.times?.length === 1 && e.times[0].over);
   const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
   const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
   check(
-    timedPre && timedPre.times.every((t) => t.limitMs === 4 * 60_000) && timedPre.times[0].over && timedTest && timedTest.times.every((t) => t.limitMs === 10 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
-    "the pilot logs every part's time against its own (pretest 4 and test 10 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
+    timedPre && timedPre.times.every((t) => t.limitMs === 5 * 60_000) && timedTest && timedTest.times.every((t) => t.limitMs === 10 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
+    "the pilot logs every part's time against its own (pretest 5 and test 10 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
   );
 } else check(false, "research log written to .data/events.jsonl");
 

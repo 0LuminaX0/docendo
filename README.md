@@ -22,7 +22,7 @@ Explaining something to someone else is one of the most reliable ways to underst
 
 Kai is not a chatbot that already knows the answer. It is a classmate who missed the lecture. It writes down what you say, in your words, asks about what it still doesn't get, and believes your mistakes along with everything else. When Kai later works through a problem, all it has is that notebook.
 
-The current lesson is about **multi-armed bandits**: how greedy, ε-greedy and UCB decide what to try next, and why greedy can get stuck. The app was built for a small study in EPFL's CS-411 Digital Education course.
+The current lesson is about **multi-armed bandits**: how greedy and UCB decide what to try next, and why greedy can get stuck. The app was built for a small study in EPFL's CS-411 Digital Education course.
 
 ## Features
 

@@ -10,48 +10,59 @@ import { DONT_KNOW, reasonGiven } from "../lib/answers";
 import { seedOf, testOrder, testParts } from "../lib/order";
 import { tables } from "../lib/analytics";
 
-// The team's post-test (main doc, 2 November 2026): form A = T1 to T10, form B = V1 to V10 (harder), V9 the same as
-// T10 (the anchor). The pilot takes both forms after the lesson, its own form first.
+// The post-test since 2026-11-05 (greedy and UCB only): five items a form in a fixed order, from understanding greedy
+// to a changed UCB. Form A T1, T11, T12, T4, T6; form B their twins V11, V12, V13, V14 and V4. The team's other items
+// (2 November 2026: T1 to T10, V1 to V10) are marked off, kept. The pilot takes both forms, its own form first.
 
-const test = ExercisesFile.parse(exercisesJson).items;
+const file = ExercisesFile.parse(exercisesJson);
+const all = file.items;
+const test = all.filter((q) => !q.off); // what the app serves
 const forms = { A: test.filter((q) => q.form === "A"), B: test.filter((q) => q.form === "B") };
-const q = (id: string) => test.find((x) => x.id === id)!;
+const q = (id: string) => all.find((x) => x.id === id)!;
 const LETTERS = "abcd";
 const ucb = (avg: number, n: number, t: number, c = Math.SQRT2) => avg + c * Math.sqrt(Math.log(t) / n);
 const argmax = (xs: number[]) => xs.indexOf(Math.max(...xs));
 
 describe("the post-test items", () => {
-  it("are T1 to T10 (form A) and V1 to V10 (form B), every one with “I don't know”, a reason and a rubric", () => {
-    expect(forms.A.map((x) => x.id)).toEqual(Array.from({ length: 10 }, (_, k) => `t${String(k + 1).padStart(2, "0")}`));
-    expect(forms.B.map((x) => x.id)).toEqual(Array.from({ length: 10 }, (_, k) => `v${String(k + 1).padStart(2, "0")}`));
+  it("are five a form in a fixed order (greedy, a changed greedy, UCB's rule, one UCB round, a changed UCB), every one with “I don't know”, a reason and a rubric", () => {
+    expect(file.order).toBe("fixed");
+    expect(forms.A.map((x) => x.id)).toEqual(["t01", "t11", "t12", "t04", "t06"]);
+    expect(forms.B.map((x) => x.id)).toEqual(["v11", "v12", "v13", "v14", "v04"]);
+    expect(forms.A.map((x) => x.section)).toEqual(["Greedy", "Greedy", "UCB", "UCB", "UCB"]);
+    // form B: each item the twin of the form A item in its place
+    expect(forms.B.map((x) => x.pair)).toEqual(forms.A.map((x) => x.id));
     for (const x of test) {
       expect(x.dontKnow && x.reason, x.id).toBe(true);
       expect(x.rubric, x.id).toBeTruthy();
       expect(x.diagnosis, x.id).toHaveLength(x.options!.length);
-      expect(x.options!.length, x.id).toBe(x.id === "v01" ? 3 : 4); // V1 has three options
+      expect(x.options!.length, x.id).toBe(["t11", "v12"].includes(x.id) ? 3 : 4); // the optimistic starts have three
+      expect(`${x.prompt} ${x.options!.join(" ")} ${x.explain}`, x.id).not.toMatch(/ε|epsilon/i); // no ε-greedy since 2026-11-05
     }
   });
 
-  it("have the keys of the team's answer key", () => {
-    // form 1: b, a, d, c, a, d, b, c, a, d; form 2: b, (b, d), a, c, d, a, b, (a, d), d, (b, d)
-    expect(forms.A.map((x) => LETTERS[x.answer as number]).join("")).toBe("badcadbcad");
-    const v = forms.B.map((x) => (Array.isArray(x.answer) ? x.answer.map((k) => LETTERS[k]).join("") : LETTERS[x.answer]));
-    expect(v).toEqual(["b", "bd", "a", "c", "d", "a", "b", "ad", "d", "bd"]);
-    expect(forms.B.filter((x) => x.kind === "multi").map((x) => x.id)).toEqual(["v02", "v08", "v10"]);
+  it("have the keys, each diagnosis agreeing with its key", () => {
+    expect(forms.A.map((x) => LETTERS[x.answer as number]).join("")).toBe("bbdad");
+    expect(forms.B.map((x) => LETTERS[x.answer as number]).join("")).toBe("cabdc");
     // each diagnosis agrees with the key: "correct" (or "true") exactly on the key
-    for (const x of test) for (const [k, d] of x.diagnosis!.entries()) expect(/^(correct|true)$/.test(d), `${x.id} ${k}`).toBe(Array.isArray(x.answer) ? x.answer.includes(k) : x.answer === k);
-  });
-
-  it("make V9 the same item as T10, marked so it is asked once when a session takes both forms", () => {
-    const [t10, v09] = [q("t10"), q("v09")];
-    expect(v09.same).toBe("t10");
-    expect([v09.prompt, v09.options, v09.answer, v09.explain]).toEqual([t10.prompt, t10.options, t10.answer, t10.explain]);
-    expect(test.filter((x) => x.same).map((x) => x.id)).toEqual(["v09"]);
+    for (const x of all) for (const [k, d] of x.diagnosis!.entries()) expect(/^(correct|true)$/.test(d), `${x.id} ${k}`).toBe(Array.isArray(x.answer) ? x.answer.includes(k) : x.answer === k);
+    // one UCB round: no single option offered (the bonus formula isn't given, so the item asks which pairs the tries settle)
+    for (const id of ["t04", "v14"]) for (const o of q(id).options!) expect(o, id).toMatch(/ or |Any of/);
+    // no anchor any more (T10 = V9 was about ε-greedy)
+    expect(test.filter((x) => x.same)).toEqual([]);
   });
 
   it("have keys that follow from their own numbers", () => {
-    // T2: about 2.5% of 50,000 sends are random picks of D
-    expect((50_000 * 0.1) / 4).toBe(1250);
+    // V14: within one round, C beats A (same average, fewer tries) and B beats D (same tries, higher average); B against
+    // C depends on the bonus's size
+    for (const c of [0.1, 1, 5]) {
+      const [A, B, C, D] = [ucb(4.6, 200, 320, c), ucb(4.1, 15, 320, c), ucb(4.6, 90, 320, c), ucb(3.5, 15, 320, c)];
+      expect(C).toBeGreaterThan(A);
+      expect(B).toBeGreaterThan(D);
+    }
+    expect(argmax([ucb(4.1, 15, 320, 0.05), ucb(4.6, 90, 320, 0.05)])).toBe(1);
+    expect(argmax([ucb(4.1, 15, 320, 2), ucb(4.6, 90, 320, 2)])).toBe(0);
+    // V11: A's lucky 9 falls below B's 7.5 after a few sessions near 6
+    expect((9 + 6 + 6) / 3).toBeLessThan(7.5);
     // T4: within one round, A beats C (same average, fewer tries) and B beats D (same tries, higher average); A against
     // B depends on the bonus's size: small c gives A, large c gives B
     for (const c of [0.1, 1, 5]) {
@@ -107,27 +118,23 @@ describe("the post-test items", () => {
     mkdirSync(dir, { recursive: true });
     for (const f of readdirSync("topics/bandits").filter((f) => f.endsWith(".json"))) cpSync(join("topics/bandits", f), join(dir, f));
     const changed = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
-    changed.items.find((x: { id: string }) => x.id === "v09").options[0] = "Neither app";
+    changed.items.find((x: { id: string }) => x.id === "v11").same = "t01"; // marked an anchor, but a twin in its own words
     writeFileSync(join(dir, "exercises.json"), JSON.stringify(changed));
     const errors = checkPack("anchor", root).filter((i) => i.level === "error").map((i) => i.msg);
-    expect(errors.some((m) => m.includes("v09") && m.includes("identical"))).toBe(true);
+    expect(errors.some((m) => m.includes("v11") && m.includes("identical"))).toBe(true);
   });
 });
 
 describe("which items a session answers", () => {
-  it("one form: its ten items", () => {
+  it("one form: its five items", () => {
     expect(sessionItems(test, "A", false).map((x) => x.id)).toEqual(forms.A.map((x) => x.id));
     expect(sessionItems(test, "B", false).map((x) => x.id)).toEqual(forms.B.map((x) => x.id));
   });
-  it("both forms (the pilot): its own form first, then the other without the anchor it has already answered", () => {
+  it("both forms (the pilot): its own form first, then the other", () => {
     const ab = sessionItems(test, "A", true).map((x) => x.id);
-    expect(ab).toHaveLength(19);
-    expect(ab.slice(0, 10)).toEqual(forms.A.map((x) => x.id));
-    expect(ab).not.toContain("v09");
+    expect(ab).toEqual([...forms.A, ...forms.B].map((x) => x.id));
     const ba = sessionItems(test, "B", true).map((x) => x.id);
-    expect(ba).toHaveLength(19);
-    expect(ba.slice(0, 10)).toEqual(forms.B.map((x) => x.id));
-    expect(ba).not.toContain("t10"); // V9 came first: T10 isn't asked again
+    expect(ba).toEqual([...forms.B, ...forms.A].map((x) => x.id));
   });
 });
 
@@ -152,21 +159,17 @@ describe("grading the post-test", () => {
     expect(checkExercise(q("t01"), null)).toBe(false);
     expect(keyText(q("v02"))).toBe(`${q("v02").options![1]} | ${q("v02").options![3]}`);
   });
-  it("scores one form, or both with the anchor answered once and counted in both", () => {
+  it("scores one form, or both, each form on its own", () => {
     const one = gradeTest(test, "A", false, keys(forms.A.map((x) => x.id)));
-    expect([one.score, one.of, one.perForm.A]).toEqual([10, 10, { score: 10, of: 10 }]);
+    expect([one.score, one.of, one.perForm.A]).toEqual([5, 5, { score: 5, of: 5 }]);
     const ids = sessionItems(test, "A", true).map((x) => x.id);
     const answers: unknown[] = keys(ids);
-    answers[ids.indexOf("t10")] = 0; // the anchor wrong: it counts wrong in both forms
-    answers[ids.indexOf("v02")] = DONT_KNOW;
+    answers[ids.indexOf("t04")] = 1;
+    answers[ids.indexOf("v13")] = DONT_KNOW;
     const both = gradeTest(test, "A", true, answers);
-    expect([both.score, both.of]).toEqual([17, 19]);
-    expect(both.perForm).toEqual({ A: { score: 9, of: 10 }, B: { score: 8, of: 10 } });
-    expect(both.copies.map((c) => [c.q.id, c.from, c.correct])).toEqual([["v09", "t10", false]]);
-    // V first: V9 is asked, T10 takes its answer
-    const ba = gradeTest(test, "B", true, keys(sessionItems(test, "B", true).map((x) => x.id)));
-    expect(ba.perForm).toEqual({ B: { score: 10, of: 10 }, A: { score: 10, of: 10 } });
-    expect(ba.copies.map((c) => [c.q.id, c.from])).toEqual([["t10", "v09"]]);
+    expect([both.score, both.of]).toEqual([8, 10]);
+    expect(both.perForm).toEqual({ A: { score: 4, of: 5 }, B: { score: 4, of: 5 } });
+    expect(both.copies).toEqual([]);
   });
   it("still grades a typed number with its tolerance (number items, as in practice)", () => {
     expect(checkNumber("14", 14, 0.05)).toBe(true);
@@ -185,10 +188,14 @@ describe("grading the post-test", () => {
 
 describe("the post-test order and parts", () => {
   const items = sessionItems(test, "A", true).map((x) => ({ id: x.id, kind: x.kind, form: x.form }));
-  it("keeps the forms apart, own form first, each shuffled per learner and stable", () => {
+  it("asks a fixed order as the file gives it, form by form", () => {
+    expect(testOrder(items, seedOf("token-a"), true)).toEqual(items.map((x) => x.id));
+    expect(testOrder(items, seedOf("token-b"), true)).toEqual(items.map((x) => x.id));
+  });
+  it("otherwise keeps the forms apart, own form first, each shuffled per learner and stable", () => {
     const o = testOrder(items, seedOf("token-a"));
-    expect(new Set(o.slice(0, 10))).toEqual(new Set(forms.A.map((x) => x.id)));
-    expect(o.slice(10).every((id) => id.startsWith("v"))).toBe(true);
+    expect(new Set(o.slice(0, 5))).toEqual(new Set(forms.A.map((x) => x.id)));
+    expect(o.slice(5).every((id) => id.startsWith("v"))).toBe(true);
     expect(testOrder(items, seedOf("token-a"))).toEqual(o);
     expect(new Set(["a", "b", "c", "d"].map((t) => testOrder(items, seedOf(`token-${t}`)).join())).size).toBeGreaterThan(2);
   });
@@ -199,8 +206,8 @@ describe("the post-test order and parts", () => {
   it("shows two forms as parts 1 and 2, numbered on", () => {
     const p = testParts(items, testOrder(items, 7));
     expect(p.map((x) => [x.title, x.group, x.start, x.list.length])).toEqual([
-      ["Part 1 of 2", 0, 0, 10],
-      ["Part 2 of 2", 1, 10, 9],
+      ["Part 1 of 2", 0, 0, 5],
+      ["Part 2 of 2", 1, 5, 5],
     ]);
     expect(testParts(forms.A, null).map((x) => x.title)).toEqual([""]); // one form, one kind: no heading
   });

@@ -264,8 +264,8 @@ describe("understanding, moods and Kai's mind", () => {
     let s = applyJudgement(s0, j([{ fact: "n01.f1", verdict: "correct", quote: "you choose between options" }]));
     s = applyMove(bundle, s, { type: "followUp", node: "n01", seed: node("n01").facts[1]!.ask!, fact: "n01.f2" });
     const m = mindView(bundle, s);
-    expect(m.facts.total).toBe(13);
-    expect(m.facts.needed).toBe(11);
+    expect(m.facts.total).toBe(11); // no ε-greedy since 2026-11-05
+    expect(m.facts.needed).toBe(9);
     expect(m.maxTurns).toBe(30);
     const n01 = m.nodes.find((n) => n.id === "n01")!;
     expect(n01).toMatchObject({ status: "mentioned", correct: 1, focus: true, unasked: 0 });
@@ -302,11 +302,11 @@ describe("when Kai feels ready", () => {
   const min = 60_000;
 
   it("is ready at 80% at any time", () => {
-    expect(readyReason(bundle, taught(11), 2 * min)).toBe("score"); // 11 of 13
+    expect(readyReason(bundle, taught(11), 2 * min)).toBe("score"); // 11 of 11
   });
 
   it("is ready at 50% only after 8 minutes of teaching", () => {
-    expect(readyReason(bundle, taught(7), 7 * min)).toBeNull(); // 7 of 13 = 54%, too early
+    expect(readyReason(bundle, taught(7), 7 * min)).toBeNull(); // 7 of 11 = 64%, too early
     expect(readyReason(bundle, taught(7), 8 * min)).toBe("time");
     expect(readyReason(bundle, taught(5), 20 * min)).toBeNull(); // 38%: still not enough
   });
@@ -320,7 +320,7 @@ describe("ideas around the lesson", () => {
   it("are in Kai's mind, but Kai never asks about them and they never count", async () => {
     const outside = bundle.nodes.filter((n) => n.inLesson === false);
     expect(outside.length).toBeGreaterThan(5);
-    expect(bundle.nodes.filter((n) => n.inLesson !== false)).toHaveLength(9);
+    expect(bundle.nodes.filter((n) => n.inLesson !== false)).toHaveLength(8);
     // nothing outside is required or teachable, so readiness and the score ignore it
     for (const n of outside) for (const f of n.facts) expect(f.required || f.teachable, f.id).toBe(false);
     // Kai's questions only ever open lesson ideas, even after an explanation of an outside one

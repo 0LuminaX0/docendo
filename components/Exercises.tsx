@@ -55,7 +55,7 @@ export default function Exercises() {
   const order = items && saved?.testOrder?.length === items.length ? saved.testOrder : null;
   useEffect(() => {
     if (!allowed || !saved || !items || order) return;
-    const o = testOrder(items, seedOf(saved.token));
+    const o = testOrder(items, seedOf(saved.token), !!saved.testFixedOrder);
     update((s) => ({ ...s, testOrder: o }));
     track("test_order", { order: o });
   }, [allowed, saved, order, items, update]);
@@ -333,8 +333,8 @@ export function useTestItems(allowed: boolean, onError: (e: string) => void): Te
   const [saved, update] = useSaved();
   useEffect(() => {
     if (!allowed || !saved || saved.testItems) return;
-    void post<{ items: TestItem[] }>("/api/grade", { token: saved.token, kind: "items" }).then((r) => {
-      if (r.ok) update((s) => ({ ...s, testItems: r.data.items }));
+    void post<{ items: TestItem[]; fixedOrder?: boolean }>("/api/grade", { token: saved.token, kind: "items" }).then((r) => {
+      if (r.ok) update((s) => ({ ...s, testItems: r.data.items, ...(r.data.fixedOrder ? { testFixedOrder: true } : {}) }));
       else if (r.expired) (save(null), router.replace("/"));
       else onError(r.error);
     });
