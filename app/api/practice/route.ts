@@ -4,7 +4,7 @@ import { checkPractice, packFor } from "@/lib/server/content";
 import { State } from "@/engine/tutor/state";
 import { applyJudgement } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
-import { solve, type Solution } from "@/engine/tutor/solve";
+import { plantSlip, solve, type Solution } from "@/engine/tutor/solve";
 import type { LlmCall } from "@/engine/llm";
 import { parseNumber } from "@/content/practice";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
@@ -30,7 +30,8 @@ const Body = z.discriminatedUnion("action", [
   }),
   z.object({ token: z.string().max(400), action: z.literal("hint"), id: z.string().max(20) }),
   // recursive feedback: Kai solves the problem from its notebook (attempt 1)
-  z.object({ token: z.string().max(400), action: z.literal("solve"), id: z.string().max(20), state: State, msOnProblem: z.number().int().min(0).max(24 * 3600_000).optional() }),
+  // wrongSoFar: Kai's first tries that were wrong so far in this practice (the planted slip comes only without any)
+  z.object({ token: z.string().max(400), action: z.literal("solve"), id: z.string().max(20), state: State, msOnProblem: z.number().int().min(0).max(24 * 3600_000).optional(), wrongSoFar: z.number().int().min(0).max(20).optional() }),
   // the learner's one correction after a wrong answer: judged like teaching, then Kai tries again (attempt 2)
   z.object({
     token: z.string().max(400),
@@ -101,7 +102,9 @@ export async function POST(req: NextRequest) {
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [] };
     }
     const errors: string[] = []; // every failed try, in order (a slip, a right answer without the facts, a timeout)
-    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
+    // the planted slip: first tries only, when Kai would otherwise solve every problem (engine/tutor/solve.ts)
+    const slip = body.data.action === "solve" ? plantSlip(pack.practice, item, state, body.data.wrongSoFar ?? 0) : undefined;
+    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, slip, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
     const error = errors.at(-1) ?? null;
     const attempt = body.data.action === "solve" ? 1 : 2;
     record({
@@ -121,6 +124,7 @@ export async function POST(req: NextRequest) {
       gate: sol.gate, // the facts this problem needs, which were missing, misconceptions still believed: Kai can only be right with all of them
 
       by: sol.by, // model, or offline (demo mode, or the model failed)
+      planted: !!sol.planted, // the planted slip: Kai overlooked one of its notes on purpose (keep apart in the analysis)
       error, // the last failed try
       errors, // every failed try, in order
       msOnProblem: body.data.msOnProblem ?? null,

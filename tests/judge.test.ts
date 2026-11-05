@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
+import stashedJson from "../topics/bandits/stash/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile } from "../content/practice";
 import { isAbout, sentenceLike, sentencesOf } from "../engine/tutor/judge";
@@ -8,7 +9,7 @@ import { gate } from "../engine/tutor/solve";
 import { activeMisconceptions, initialState, type State } from "../engine/tutor/state";
 
 const bundle = Bundle.parse(bundleJson);
-const items = PracticeFile.parse(practiceJson).items;
+const items = [...PracticeFile.parse(practiceJson).items, ...PracticeFile.parse(stashedJson).items]; // P4 is stashed, still a good case
 const item = (id: string) => items.find((p) => p.id === id)!;
 
 // the checks in code around the judge (2026-11-05, after the pilot)

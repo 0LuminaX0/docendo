@@ -19,6 +19,10 @@ export const PracticeItem = z
     // vaguely ("vague", the fact's `assumeVague`); unset, both. A vague reading may lead to the key: then a vague
     // explanation is enough for this problem.
     beliefs: z.array(z.object({ replaces: z.string(), belief: z.string(), answer: z.number(), when: z.enum(["absent", "vague"]).optional() })).optional(),
+    // recursive feedback: the one planted slip (2026-11-05). When the learner taught well enough that Kai would solve
+    // every problem, Kai's first try here overlooks what one of its notes says (`need`), reasons as `says` (in its own
+    // voice, sure of itself) and answers `answer`; after the learner's correction it gets it right. Kai is a student.
+    slip: z.object({ need: z.string(), says: z.string().min(10), answer: z.number() }).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),
     prompt: z.string(),

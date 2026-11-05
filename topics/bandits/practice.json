@@ -1,8 +1,53 @@
 {
   "title": "Practice: how greedy, ε-greedy and UCB choose",
   "minutes": 12,
-  "note": "Three problems since 2026-11-05, greedy and UCB only (ε-greedy left out of the lesson): P3 (greedy against UCB after an unlucky start), P4 (which option UCB picks in one round) and P2 (what one pick does to every score). P1, P5 and P6 need ε-greedy: they are in stash/practice.json. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
+  "note": "Three problems (2026-11-05, after two pilot sessions where both learners missed the test's lucky-start greedy items, T1 and V11): P7 (greedy after a lucky start: the favourite's average falls with a poor day and greedy switches; needs greedy's own rule, n05.f1, which no problem needed before, so a learner who taught \"greedy sticks with the trial winner\" sees Kai go wrong), P3 (greedy against UCB after an unlucky start) and P2 (what one pick does to every score). P2 carries the planted slip: when Kai would solve every problem, its first try overlooks that the unpicked options' bonuses grow. P4 (audio tours) and the ε-greedy problems are in stash/practice.json. Two rounds of three problems, from the team's item design (P1 to P6). Round 2 repeats round 1's facts in new settings (P4 repeats P2's, P5 P1's and adds UCB, P6 P3's over many rounds), so a correction in round 1 can carry over. Options state only the prediction. Answers and worked solutions stay on the server and are shown on the results page after the final test. Each solution step lists the facts it relies on. `needs` lists the teachable facts without which the answer can't be reached, in the order the steps use them: in the recursive condition Kai can only be right when its notebook holds all of them, correctly explained. Given facts (the setup, averages, trying each option once) are never needed: Kai knows them and the stems repeat them. `beliefs` give, for each needed fact, the answer Kai's assumption for that fact leads to (the fact's `assume` in the graph, word for word; `when: vague` for how Kai reads a vague explanation, where that differs). When needed facts are missing, Kai reasons from the assumption of the first one in `needs` order whose assumption leads somewhere wrong, says that it is guessing, and its wrong answer follows from its own steps. Every wrong option is the prediction of a named misconception (Kai's or a known learner one), so no option can be ruled out without the facts.",
   "items": [
+    {
+      "id": "p7",
+      "round": 1,
+      "idea": "greedy",
+      "needs": [
+        "n05.f1"
+      ],
+      "beliefs": [
+        {
+          "replaces": "n05.f1",
+          "belief": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
+          "answer": 0
+        }
+      ],
+      "title": "Ice-cream flavours",
+      "kind": "choice",
+      "prompt": "A café features one of three ice-cream flavours each day, chosen with greedy, and scores each day's sales out of 10. The true averages, unknown to the café, are A 8, B 6 and C 5, and most days score within 1 point of their flavour's true average. On the three trial days A scores 7.5, B has an unusually good day and scores 9, and C scores 5. On day 4 greedy features B, which scores 5. Which flavour does greedy feature on day 5, and on most days after that?",
+      "options": [
+        "B on day 5 and after: it won the trials",
+        "A on day 5, and mostly A after that",
+        "A on day 5, then back to B",
+        "C, the one with the least promising start"
+      ],
+      "answer": 1,
+      "steps": [
+        {
+          "text": "Greedy features the flavour with the highest average so far, and updates the average of the one it features.",
+          "facts": [
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "After day 4, B's average is (9 + 5) / 2 = 7, below A's 7.5, so on day 5 greedy switches to A.",
+          "facts": [
+            "n05.f1"
+          ]
+        },
+        {
+          "text": "A's days score around 8, so A's average stays above B's 7, which no longer changes because B isn't featured: mostly A after that.",
+          "facts": [
+            "n05.f1"
+          ]
+        }
+      ]
+    },
     {
       "id": "p3",
       "needs": [
@@ -87,62 +132,6 @@
       ]
     },
     {
-      "id": "p4",
-      "needs": [
-        "n11.f1",
-        "n12.f1"
-      ],
-      "round": 1,
-      "idea": "ucb",
-      "title": "Audio tours",
-      "kind": "choice",
-      "prompt": "A museum app suggests one of four audio tours with UCB. All of the following is for the same round. Tour A averages 6.0 (suggested 50 times), B 6.4 (10 times), C 5.0 (10 times) and D 6.4 (40 times). Which tour does UCB suggest next?",
-      "options": [
-        "B or D",
-        "B",
-        "B or C",
-        "It cannot be told without the bonus values"
-      ],
-      "answer": 1,
-      "steps": [
-        {
-          "text": "UCB suggests the tour with the highest average plus bonus.",
-          "facts": [
-            "n11.f1"
-          ]
-        },
-        {
-          "text": "A tour's bonus shrinks with every suggestion, so in the same round fewer suggestions means a larger bonus.",
-          "facts": [
-            "n12.f1"
-          ]
-        },
-        {
-          "text": "B against D: same average, B suggested less, so B scores higher. B against C: same suggestions and so the same bonus, and B has the higher average. B against A: higher average and fewer suggestions.",
-          "facts": [
-            "n11.f1",
-            "n12.f1"
-          ]
-        },
-        {
-          "text": "So B has the highest score, without computing any bonus.",
-          "facts": []
-        }
-      ],
-      "beliefs": [
-        {
-          "replaces": "n11.f1",
-          "belief": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
-          "answer": 2
-        },
-        {
-          "replaces": "n12.f1",
-          "belief": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
-          "answer": 0
-        }
-      ]
-    },
-    {
       "id": "p2",
       "needs": [
         "n12.f1",
@@ -204,7 +193,12 @@
           "answer": 0,
           "when": "vague"
         }
-      ]
+      ],
+      "slip": {
+        "need": "n12.f2",
+        "says": "Flashcards and Listening weren't picked, so nothing about them changes this round: their averages and their bonuses stay as they were.",
+        "answer": 2
+      }
     }
   ]
 }

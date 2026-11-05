@@ -807,6 +807,8 @@ button { font: inherit; color: inherit; }
 /* voice input: a mic beside Send (teaching) or in the correction box's bar; while recording, a pill with a live
    waveform, the time, discard and done; the words appear in the box in grey italics as they are understood */
 .voice { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+/* practice, recursive: Kai is a student and can slip (said before the problems) */
+.lede.kai-learning { margin-top: 8px; }
 /* the invitation to talk to Kai: once per page per session, over the page */
 .voice-intro-back { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(20, 24, 31, 0.32); animation: vi-fade 0.18s ease-out; }
 .voice-intro { width: min(440px, 100%); background: #fff; border-radius: 18px; padding: 24px 24px 20px; box-shadow: 0 18px 48px rgba(20, 24, 31, 0.22); text-align: left; animation: vi-pop 0.22s ease-out; }

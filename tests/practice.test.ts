@@ -51,12 +51,13 @@ describe("practice problems", () => {
   });
 
   it("are three in use, in one round (the others switched off, kept)", () => {
-    // since 2026-11-05 greedy and UCB only: greedy against UCB, one UCB round, what one pick does to every score
+    // since 2026-11-05 greedy and UCB only: greedy after a lucky start (the caveat both pilot learners missed on the
+    // test), greedy against UCB, what one pick does to every score
     const used = practice.items;
-    expect(used.map((p) => p.id)).toEqual(["p3", "p4", "p2"]);
+    expect(used.map((p) => p.id)).toEqual(["p7", "p3", "p2"]);
     expect(new Set(used.map((p) => p.round))).toEqual(new Set([1]));
     const need = new Set(used.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))));
-    expect([...need].sort()).toEqual(["n06.f1", "n11.f1", "n12.f1", "n12.f2"]);
+    expect([...need].sort()).toEqual(["n05.f1", "n06.f1", "n11.f1", "n12.f1", "n12.f2"]);
   });
 
   it("only use ideas the lesson teaches, and don't put every answer in the same place", () => {
@@ -101,7 +102,7 @@ describe("pretest", () => {
 });
 
 import { initialState, type State } from "../engine/tutor/state";
-import { beliefFor, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
+import { beliefFor, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, plantSlip, solve, type Solution } from "../engine/tutor/solve";
 
 // a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
 const taughtState = (facts: string[], vague: string[] = []): State => ({
@@ -402,5 +403,27 @@ describe("the dashboard's comparison of the conditions", () => {
   });
   it("needs at least two in each group", () => {
     expect(compare([5], [4, 6])).toBeNull();
+  });
+});
+
+describe("the planted slip (Kai is a student: with good notes it can still overlook one)", () => {
+  const p2 = item("p2");
+  const everything = taughtState([...new Set(practice.items.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))))]);
+  it("comes only when Kai would solve every problem and hasn't been wrong yet, on the problem that carries it", () => {
+    expect(plantSlip(practice.items, p2, everything, 0)).toEqual(p2.slip);
+    expect(plantSlip(practice.items, p2, everything, 1)).toBeUndefined(); // Kai already failed one: no slip
+    expect(plantSlip(practice.items, item("p7"), everything, 0)).toBeUndefined(); // P7 carries none
+    // a notebook that misses greedy's rule: P7 will fail anyway, so no slip
+    const thin = taughtState((p2.needs ?? []).concat(["n06.f1", "n11.f1"]));
+    expect(plantSlip(practice.items, p2, thin, 0)).toBeUndefined();
+  });
+  it("makes Kai sure of itself and wrong, with the note it overlooked in its notebook", async () => {
+    const off = offlineSolve(bundle, p2, everything, p2.slip);
+    expect([off.correct, off.planted, off.answer]).toEqual([false, true, "C"]);
+    expect(off.steps.map((s) => s.text).join(" ")).toContain(p2.slip!.says);
+    expect(off.steps.map((s) => s.text).join(" ")).not.toMatch(/guess|don't cover/i);
+    // through solve (demo mode answers offline); without the slip Kai is right
+    expect((await solve(bundle, p2, everything, { demo: true, slip: p2.slip })).planted).toBe(true);
+    expect((await solve(bundle, p2, everything, { demo: true })).correct).toBe(true);
   });
 });

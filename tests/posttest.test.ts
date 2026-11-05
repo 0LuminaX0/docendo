@@ -112,7 +112,7 @@ describe("the post-test items", () => {
   });
 
   it("use settings of their own, never the lesson's or the practice's", () => {
-    const practice = /food truck|restaurant|slot machine|festival|exercise type|cake|audio tour|page layout|thumbnail/i;
+    const practice = /food truck|restaurant|slot machine|festival|exercise type|cake|audio tour|page layout|thumbnail|ice-cream|flavour/i;
     for (const x of test) expect(`${x.prompt} ${x.options!.join(" ")}`, x.id).not.toMatch(practice);
   });
 

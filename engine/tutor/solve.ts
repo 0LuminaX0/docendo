@@ -43,7 +43,9 @@ export type Solution = {
   by: "model" | "offline";
   gate: Gate;
   guess: Guess | null; // the beginner's rule Kai reasoned from, when a needed fact was missing
+  planted?: boolean; // the planted slip: Kai overlooked one of its notes on purpose (the gate was open)
 };
+export type Slip = NonNullable<PracticeItem["slip"]>;
 
 const LETTERS = "ABCDEF";
 const lowerFirst = (t: string) => (/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/u, "");
@@ -168,7 +170,11 @@ const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes,
 // signs that the model argued its way to the key and then turned around
 const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
 
-export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false): Promise<Solution> {
+// the planted slip: one honest mistake with the notes in hand, said with confidence (never "I'm guessing")
+const SLIP = (slip: Slip, item: PracticeItem) =>
+  `\n\nIn this attempt you make one honest slip, the way a student does: at the step that compares the options you overlook what one of your notes says, and you reason like this: "${slip.says}" Don't say you're guessing or that your notes are silent: you believe you're right. Cite your notes for the other steps as usual. Your answer is the one this slip leads to: ${conclusion(item, slip.answer)}.`;
+
+export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false, slip?: Slip): Promise<Solution> {
   const notes = notesOf(state);
   const g = gate(item, state);
   // a fact Kai was told nothing or only vaguely about: it reasons from a beginner's reading of it. (A misconception
@@ -192,7 +198,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     timeoutMs: 18_000,
     retries: 1,
     messages: [
-      { role: "system", content: SYSTEM + (guess ? fromGuess(guess, item, vagueGuess) + HUNCH(hunchFor(bundle, guess), thin) : g.canBeRight ? "" : UNSURE) + (stricter ? STRICTER : "") },
+      { role: "system", content: SYSTEM + (slip ? SLIP(slip, item) : guess ? fromGuess(guess, item, vagueGuess) + HUNCH(hunchFor(bundle, guess), thin) : g.canBeRight ? "" : UNSURE) + (stricter && !slip ? STRICTER : "") },
       { role: "user", content: `YOUR NOTES:\n${notes.length ? notes.map((n, i) => `[${i + 1}] "${n}"`).join("\n") : "(empty: you were told nothing)"}\n\nPROBLEM:\n${problem}` },
     ],
   });
@@ -210,6 +216,12 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     const k = Number(/\d+/.exec(answer)?.[0]) - 1;
     if (!(k >= 0 && k < item.options!.length)) throw new Error(`the solver's answer is not an option (${answer})`);
     answer = LETTERS[k]!;
+  }
+  if (slip) {
+    const lands = item.kind === "choice" ? LETTERS.indexOf(answer) === slip.answer : sameNumber(answer, slip.answer);
+    if (!lands) throw new Error(`the solver didn't make its planted slip (answered ${answer})`);
+    if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
+    return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, planted: true };
   }
   if (guess) {
     // the conclusion must be the guess's own, reached without a turnaround
@@ -276,10 +288,23 @@ function wrongAnswer(item: PracticeItem, seed: string): number {
  * contradicted it goes with what it was told (a misconception) or with its own
  * guess, which decides its answer.
  */
-export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State): Solution {
+export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, slip?: Slip): Solution {
   const notes = notesOf(state);
   const facts = latest(state);
   const g = gate(item, state);
+  if (slip) {
+    // the planted slip: the worked solution up to the step that needs the overlooked note, then the slip, sure of itself
+    const steps: Step[] = [];
+    for (const s of item.steps) {
+      if (s.facts.includes(slip.need)) break;
+      const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
+      steps.push({ text: s.text, notes: [...new Set(cite)] });
+    }
+    steps.push({ text: slip.says, notes: [] });
+    steps.push({ text: item.kind === "choice" ? `So I'd say ${LETTERS[slip.answer]}: ${lowerFirst(item.options![slip.answer]!)}.` : `So I'd say ${answerText(item, slip.answer)}.`, notes: [] });
+    const answer = item.kind === "choice" ? LETTERS[slip.answer]! : String(slip.answer);
+    return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess: null, planted: true };
+  }
   // as in the gate: a wrong belief blocks the fact it contradicts (none: nothing; older notebooks: its idea)
   const blocking = activeMisconceptions(state).filter((m) => m.fact !== null);
   const misledOn = (f: string) => blocking.some((m) => (m.fact === undefined ? m.node === ideaOf(f) : m.fact === f));
@@ -334,9 +359,10 @@ export async function solve(
   item: PracticeItem,
   state: State,
   // deadline: when the caller must have its answer (the practice route: 55 s after the request came in)
-  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean) => Promise<Solution> },
+  // slip: the planted slip, for this attempt (the caller decides: app/api/practice/route.ts)
+  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; slip?: Slip; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, slip?: Slip) => Promise<Solution> },
 ): Promise<Solution> {
-  if (opts.demo) return offlineSolve(bundle, item, state);
+  if (opts.demo) return offlineSolve(bundle, item, state, opts.slip);
   const model = opts.model ?? llmSolve;
   const t0 = Date.now();
   let lastError: unknown = null;
@@ -350,7 +376,8 @@ export async function solve(
   for (let tryNo = 0; tryNo < 3; tryNo++) {
     if (tryNo > 0 && deadline - Date.now() < SOLVE_TRY_MS) break;
     try {
-      const s = await model(bundle, item, state, opts.onCall, tryNo > 0);
+      const s = await model(bundle, item, state, opts.onCall, tryNo > 0, opts.slip);
+      if (opts.slip) return s; // checked in llmSolve: it lands on the slip's answer
       if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
       if (!s.correct && s.gate.canBeRight) throw new Error(`wrong with every fact it needs (answered ${s.answer}): a slip`);
       return s;
@@ -362,5 +389,15 @@ export async function solve(
     }
   }
   void lastError;
-  return offlineSolve(bundle, item, state);
+  return offlineSolve(bundle, item, state, opts.slip);
+}
+
+/**
+ * The planted slip (2026-11-05): Kai's first try on the problem that carries one, when the learner taught well enough
+ * that Kai would solve every problem (the gate open for each, its notebook as it stands) and Kai hasn't been wrong yet
+ * in practice. Kai is a student: with good notes it can still overlook one, and the learner is told so before practice.
+ */
+export function plantSlip(items: PracticeItem[], item: PracticeItem, state: State, wrongSoFar: number): Slip | undefined {
+  if (!item.slip || wrongSoFar > 0) return undefined;
+  return items.every((p) => gate(p, state).canBeRight) ? item.slip : undefined;
 }

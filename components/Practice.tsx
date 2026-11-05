@@ -200,7 +200,9 @@ export default function Practice({ items }: { items: Item[] }) {
     const id = q.id;
     const ms = shownAt.current ? Date.now() - shownAt.current.at : undefined;
     track("practice_kai_solve_start", { id, msOnProblem: ms ?? null });
-    const d = await call<{ solution: KaiAttempt }>({ action: "solve", id, state: saved.chat.state, msOnProblem: ms });
+    // Kai's first tries that were wrong so far (the planted slip comes only when there are none: engine/tutor/solve.ts)
+    const wrongSoFar = Object.entries(state.kai ?? {}).filter(([k, e]) => k !== id && e.attempts[0] && !e.attempts[0].correct).length;
+    const d = await call<{ solution: KaiAttempt }>({ action: "solve", id, state: saved.chat.state, msOnProblem: ms, wrongSoFar });
     setBusy(false);
     if (d) setKai(id, (k) => ({ ...k, attempts: [d.solution] }));
     else setKaiFailed(id);
@@ -315,9 +317,14 @@ export default function Practice({ items }: { items: Item[] }) {
           <div className="prac-title">
             <h1 className="title">Practice problems</h1>
             {mode === "recursive" ? (
+              <>
               <p className="lede">
                 Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {soft ? `About ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}; solutions after the final test.
               </p>
+              <p className="lede kai-learning">
+                <b>Kai is still learning.</b> Like any student, it can slip even when its notes say the right thing: skip a comparison, or use a fact the wrong way. Check every step it writes against its notebook, and when something is off, tell Kai what it missed and why.
+              </p>
+              </>
             ) : (
               <p className="lede">
                 {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}

@@ -1,8 +1,64 @@
 {
   "title": "Stashed practice problems (not served)",
   "minutes": 20,
-  "note": "Taken out 2026-11-05 when ε-greedy left the lesson: P1 (festival stages), P5 (page layouts) and P6 (thumbnails) need ε-greedy's facts (n07). Complete with steps, needs and Kai's beliefs; move one back into ../practice.json to use it.",
+  "note": "Taken out 2026-11-05 when ε-greedy left the lesson: P1 (festival stages), P5 (page layouts) and P6 (thumbnails) need ε-greedy's facts (n07). Complete with steps, needs and Kai's beliefs; move one back into ../practice.json to use it. P4 (audio tours, UCB's pick in one round) was taken out the same day for P7, a greedy problem built on the lucky-start caveat.",
   "items": [
+    {
+      "id": "p4",
+      "needs": [
+        "n11.f1",
+        "n12.f1"
+      ],
+      "round": 1,
+      "idea": "ucb",
+      "title": "Audio tours",
+      "kind": "choice",
+      "prompt": "A museum app suggests one of four audio tours with UCB. All of the following is for the same round. Tour A averages 6.0 (suggested 50 times), B 6.4 (10 times), C 5.0 (10 times) and D 6.4 (40 times). Which tour does UCB suggest next?",
+      "options": [
+        "B or D",
+        "B",
+        "B or C",
+        "It cannot be told without the bonus values"
+      ],
+      "answer": 1,
+      "steps": [
+        {
+          "text": "UCB suggests the tour with the highest average plus bonus.",
+          "facts": [
+            "n11.f1"
+          ]
+        },
+        {
+          "text": "A tour's bonus shrinks with every suggestion, so in the same round fewer suggestions means a larger bonus.",
+          "facts": [
+            "n12.f1"
+          ]
+        },
+        {
+          "text": "B against D: same average, B suggested less, so B scores higher. B against C: same suggestions and so the same bonus, and B has the higher average. B against A: higher average and fewer suggestions.",
+          "facts": [
+            "n11.f1",
+            "n12.f1"
+          ]
+        },
+        {
+          "text": "So B has the highest score, without computing any bonus.",
+          "facts": []
+        }
+      ],
+      "beliefs": [
+        {
+          "replaces": "n11.f1",
+          "belief": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
+          "answer": 2
+        },
+        {
+          "replaces": "n12.f1",
+          "belief": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
+          "answer": 0
+        }
+      ]
+    },
     {
       "id": "p1",
       "needs": [
