@@ -11,7 +11,7 @@ const p = await b.newPage();
 await p.goto("file://" + join(process.cwd(), `report/${name}-report.html`), { waitUntil: "networkidle0" });
 await p.evaluateHandle("document.fonts.ready");
 const footer = `<div style="width:100%;padding:0 20mm;font:500 7.5pt -apple-system,Helvetica,Arial,sans-serif;color:#7a818d;display:flex;justify-content:space-between;">
-  <span>Docendo: ${titles[name] ?? name}, Negrub, Gustke and Cruz</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`;
+  <span>Docendo: ${titles[name] ?? name}${name === "m4-info" ? "" : ", Negrub, Gustke and Cruz"}</span><span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span></div>`;
 await p.pdf({ path: `report/${name}-report.pdf`, format: "A4", printBackground: true, displayHeaderFooter: true, headerTemplate: "<span></span>", footerTemplate: footer, margin: { top: "18mm", bottom: "20mm", left: "20mm", right: "20mm" } });
 await b.close();
 console.log(`wrote report/${name}-report.pdf`);

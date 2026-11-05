@@ -4,55 +4,87 @@
 <meta charset="utf-8">
 <title>Docendo: participant information</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   @page { size: A4; }
-  :root { --ink: #1b1f27; --ink2: #464d5b; --muted: #7a818d; --rule: #e1e4ea; --sunk: #f5f6f8; --red: #f25c54; --yellow: #f2ad1f; --green: #3bb273; --blue: #2d7dd2; --fill: #fff4d6; }
+  :root {
+    --ink: #14181f; --ink2: #2c323d; --muted: #545b67; --rule: #d5dae2; --sunk: #f1f3f6;
+    --red: #e5483f; --yellow: #e89e0f; --green: #2f9e63; --blue: #2468b8;
+    --blue-soft: #e6effa; --yellow-soft: #fdf1d6;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; color: var(--ink); font: 400 9pt/1.38 "Figtree", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8pt; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+  body { margin: 0; color: var(--ink); font: 400 9pt/1.4 "Figtree", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  b { font-weight: 700; }
+  .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
   .bars { display: inline-flex; gap: 3pt; } .bars i { width: 15pt; height: 5pt; border-radius: 3pt; display: block; }
-  h1 { font: 800 19pt/1.05 "Bricolage Grotesque", sans-serif; letter-spacing: -0.03em; margin: 7pt 0 3pt; }
-  .lede { color: var(--ink2); margin: 0 0 6pt; font-size: 9.4pt; }
-  h2 { font: 600 10.8pt/1.2 "Bricolage Grotesque", sans-serif; margin: 7pt 0 2pt; letter-spacing: -0.01em; }
+  h1 { font: 800 21pt/1.05 "Bricolage Grotesque", sans-serif; letter-spacing: -0.03em; margin: 7pt 0 4pt; }
+  .lede { color: var(--ink2); margin: 0 0 9pt; font-size: 9.8pt; }
+  h2 { font: 700 11pt/1.2 "Bricolage Grotesque", sans-serif; margin: 8pt 0 3pt; letter-spacing: -0.01em; color: var(--ink); }
   p { margin: 0 0 4pt; }
-  ul { margin: 0 0 4pt; padding-left: 14pt; } li { margin: 0 0 2pt; }
-  .box { background: var(--sunk); border-radius: 6pt; padding: 6pt 10pt; margin: 5pt 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 8.6pt; margin: 3pt 0 4pt; }
-  td { padding: 2pt 6pt; border-bottom: 0.6pt solid var(--rule); vertical-align: top; }
-  td.t { white-space: nowrap; color: var(--ink2); width: 14%; }
-  td.s { font-weight: 600; white-space: nowrap; width: 22%; }
-  .fill { background: var(--fill); padding: 0 3pt; border-radius: 2pt; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16pt; }
-  .small { font-size: 8.4pt; color: var(--ink2); }
+  ul { margin: 0; padding-left: 13pt; } li { margin: 0 0 2.5pt; }
+
+  /* the three facts that matter first */
+  .facts { display: grid; grid-template-columns: 1.15fr 1.15fr 1fr; border: 1pt solid var(--ink); border-radius: 7pt; overflow: hidden; margin: 0 0 9pt; }
+  .facts div { padding: 7pt 11pt; border-right: 1pt solid var(--rule); }
+  .facts div:last-child { border-right: 0; }
+  .facts dt { font-size: 7.4pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 1pt; }
+  .facts dd { margin: 0; font-size: 10pt; font-weight: 700; line-height: 1.3; }
+  .facts dd span { display: block; font-size: 8.6pt; font-weight: 500; color: var(--ink2); }
+
+  .box { border-radius: 7pt; padding: 7pt 12pt; margin: 0 0 7pt; }
+  .box.who { background: var(--blue-soft); border-left: 4pt solid var(--blue); }
+  .box.who .head { font: 700 10.5pt "Bricolage Grotesque", sans-serif; margin-bottom: 3pt; }
+  .box.who .then { margin-top: 4pt; font-weight: 600; color: var(--ink2); }
+  .box.mind { background: var(--yellow-soft); border-left: 4pt solid var(--yellow); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 2pt 0 8pt; }
+  td { padding: 3pt 7pt; border-bottom: 0.8pt solid var(--rule); vertical-align: top; color: var(--ink2); }
+  tr:first-child td { border-top: 1pt solid var(--ink); }
+  td.s { font-weight: 700; color: var(--ink); white-space: nowrap; width: 24%; }
+  td.t { white-space: nowrap; width: 11%; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .chip { display: inline-block; width: 7pt; height: 7pt; border-radius: 2pt; margin-right: 6pt; vertical-align: 0.5pt; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18pt; }
+  .cols li { color: var(--ink2); }
+  .fine { font-size: 8.5pt; color: var(--ink2); margin-top: 5pt; padding-top: 5pt; border-top: 0.8pt solid var(--rule); }
+  .contact { display: flex; gap: 6pt 22pt; flex-wrap: wrap; margin: 0 0 6pt; }
+  .contact a { color: var(--blue); font-weight: 600; text-decoration: none; }
 </style>
 </head>
 <body>
 <div class="kicker"><span class="bars"><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>Docendo study, EPFL CS-411 Digital Education</div>
 <h1>Participant information</h1>
-<p class="lede">Thank you for considering taking part. We are a student team in EPFL's course CS-411 Digital Education: Andrii Negrub, Phil Gustke and Rafael Cruz. We study how people learn by explaining a topic to an AI classmate. Please read this page before you start; it takes three minutes.</p>
+<p class="lede">Thank you for considering taking part. We are a student team in EPFL's CS-411 Digital Education, studying how people learn by explaining a topic to an AI classmate. Please read this page before you start.</p>
 
-<div class="box">
-<b>Can you take part?</b> Yes, if all of these hold:
-<ul style="margin-top:3pt">
-  <li>you are 18 or older and study computer science or another engineering field at EPFL or RWTH;</li>
-  <li>you have passed a course on probability or statistics;</li>
-  <li>you have <b>not</b> taken a course on multi-armed bandits or reinforcement learning, or learned about them another way.</li>
-</ul>
-If one does not hold, please tell us before you start: your answers could not be used.
+<dl class="facts">
+  <div><dt>Where</dt><dd>docendo-jade.vercel.app<span>with the personal code we send you</span></dd></div>
+  <div><dt>When</dt><dd>9 to 15 November 2026<span>start any time in this week</span></dd></div>
+  <div><dt>How long</dt><dd>About an hour<span>plus 5 minutes, not timed</span></dd></div>
+</dl>
+
+<div class="box who">
+  <div class="head">Can you take part? Yes, if all of these hold:</div>
+  <ul>
+    <li>you are 18 or older and study computer science or another engineering field at EPFL or RWTH;</li>
+    <li>you have passed a course on probability or statistics;</li>
+    <li>you have <b>not</b> taken a course on multi-armed bandits or reinforcement learning, or learned about them another way.</li>
+  </ul>
+  <div class="then">If one does not hold, please tell us before you start: your answers could not be used.</div>
 </div>
 
 <h2>What you will do</h2>
-<p>You take part online at <b>docendo-jade.vercel.app</b>, with a personal access code we send you. The code works once. You can start at any time during <span class="fill">[dates of the three-day window]</span>. The session takes about <b>an hour</b>, plus about five minutes of questions at the end that are not timed.</p>
 <table>
-  <tr><td class="s">1 Short quiz</td><td class="t">8 min</td><td>A few questions about your background and some maths and statistics.</td></tr>
-  <tr><td class="s">2 Read a lesson</td><td class="t">12 min</td><td>A short text on multi-armed bandits, in three chapters.</td></tr>
-  <tr><td class="s">3 Teach Kai</td><td class="t">16 min</td><td>Explain the lesson to Kai, an AI classmate who missed it, by typing or speaking.</td></tr>
-  <tr><td class="s">4 Practice</td><td class="t">12 min</td><td>Three practice problems.</td></tr>
-  <tr><td class="s">5 Final test</td><td class="t">12 min</td><td>Five multiple choice questions, each with a short reason in your own words.</td></tr>
-  <tr><td class="s">6 Your view</td><td class="t">≈ 5 min</td><td>A few questions about how it went, then your score and the worked solutions.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:#8a919c"></span>1 Short quiz</td><td class="t">8 min</td><td>A few questions about your background, and some maths and statistics.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:var(--red)"></span>2 Read a lesson</td><td class="t">12 min</td><td>A short text on multi-armed bandits, in three chapters.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:var(--yellow)"></span>3 Teach Kai</td><td class="t">16 min</td><td>Explain the lesson to Kai, an AI classmate who missed it, by typing or speaking.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:var(--green)"></span>4 Practice</td><td class="t">12 min</td><td>Three practice problems.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:var(--blue)"></span>5 Final test</td><td class="t">12 min</td><td>Five multiple choice questions, each with a short reason in your own words.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:#c6cbd3"></span>6 Your view</td><td class="t">≈ 5 min</td><td>A few questions about how it went, then your score and the worked solutions.</td></tr>
 </table>
-<p><b>Please plan an uninterrupted hour</b> somewhere you can concentrate. Every step has a time limit and moves on by itself when the time is up, so a long break would cut a step short. Use only the website: no search engines, chatbots, notes or copying. A dictionary for English words is fine.</p>
+
+<div class="box mind">
+  <b>Please plan an uninterrupted hour</b> somewhere you can concentrate. Your code works once, and every step has a time limit and moves on by itself, so a long break would cut a step short. Use only the website: no search engines, chatbots, notes or copying. A dictionary for English words is fine.
+</div>
 
 <div class="cols">
 <div>
@@ -72,10 +104,11 @@ If one does not hold, please tell us before you start: your answers could not be
 </ul>
 </div>
 </div>
-<p class="small">Everything is stored under a random session number, never your name, email or IP address, and your access code is not stored with your answers. Your messages to Kai are processed by AI models through OpenRouter, only by providers that do not store them.</p>
+<p class="fine">Everything is stored under a random session number, never your name, email or IP address, and your access code is not stored with your answers. Your messages to Kai are processed by AI models through OpenRouter, only by providers that do not store them.</p>
 
 <h2>Questions?</h2>
-<p>Write in the study's WhatsApp group, or to any of us: Andrii Negrub <span class="fill">[email]</span>, Phil Gustke <span class="fill">[email]</span>, Rafael Cruz <span class="fill">[email]</span>. By starting the session and ticking the consent box on the first page, you confirm that you have read this page and agree to take part.</p>
-<p class="small">You help us understand how teaching others helps people learn, and how AI can support it. Thank you.</p>
+<p>Write in the study's WhatsApp group, or email any of us:</p>
+<div class="contact"><a href="mailto:andrii.negrub@epfl.ch">andrii.negrub@epfl.ch</a><a href="mailto:phil.gustke@epfl.ch">phil.gustke@epfl.ch</a><a href="mailto:rafael.gueifaocruz@epfl.ch">rafael.gueifaocruz@epfl.ch</a></div>
+<p>Ticking the consent box on the first page confirms that you have read this page and agree to take part. Thank you!</p>
 </body>
 </html>
