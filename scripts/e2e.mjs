@@ -710,6 +710,13 @@ else {
   await pl.waitForSelector(".lesson");
   await wait(1200);
   got.readOn = (await pl.evaluate(() => location.pathname)) === "/watch" && (await counting());
+  // the skip goes one chapter at a time, and from the last on to Kai
+  const chapters = JSON.parse(readFileSync(join(TOPIC, "lesson.json"), "utf8")).sections.length;
+  for (let k = 1; k < chapters; k++) {
+    await pl.$eval(".debug-skip", (b) => b.click());
+    await pl.waitForFunction((k) => document.querySelectorAll(".lesson-steps button.now")[0]?.closest("li") === document.querySelectorAll(".lesson-steps li")[k], { timeout: 10000 }, k);
+  }
+  got.skipByChapter = (await pl.evaluate(() => location.pathname)) === "/watch";
   await skip("/teach");
   await pl.waitForSelector(".bubble");
   await movePast(pl, "chat.startedAt");

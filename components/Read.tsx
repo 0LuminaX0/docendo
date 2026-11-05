@@ -125,7 +125,8 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   return (
     <div className="shell">
       <Header step="watch" demo={saved.demo} right={<StepClock left={clock.left} over={clock.over} overMs={clock.overMs} soft={limits.soft} what="the lesson" />} />
-      {saved.step === "watch" && <DebugSkip onSkip={() => next(false, true)} what="Skip to teaching Kai" />}
+      {/* debug: one chapter at a time (without its reading wait); from the last, on to Kai without asking */}
+      {saved.step === "watch" && <DebugSkip onSkip={() => (last ? next(false, true) : go(at + 1, "skip"))} what={last ? "Skip to teaching Kai" : `Skip to chapter ${at + 2}`} />}
       <main className="page">
         <article className="lesson" onCopy={refuse} onCut={refuse} onDragStart={refuse}>
           <p className="lesson-kicker">{lesson.title}</p>
