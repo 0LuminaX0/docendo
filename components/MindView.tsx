@@ -15,6 +15,7 @@ const percent = (v: number) => `${Math.round(v * 100)}%`;
 const STATUS_TEXT: Record<MindStatus, string> = {
   off: "Not part of this lesson, so Kai doesn't wait for it. It's here to show what the lesson connects to; if you know something about it, you can tell Kai anyway.",
   bonus: "Not part of this lesson, but you explained some of it anyway. Kai noted it; it doesn't count towards the score.",
+  known: "Kai knows this from the slides (the setup), so it doesn't wait for it and it doesn't count towards the score. You can still tell Kai more.",
   unseen: "Not taught yet.",
   mentioned: "Started: Kai still has questions about it.",
   explained: "Done: Kai has no more questions about it.",
@@ -24,6 +25,7 @@ const STATUS_TEXT: Record<MindStatus, string> = {
 const STATUS_NAME: Record<MindStatus, string> = {
   off: "Not in this lesson",
   bonus: "Bonus",
+  known: "Known from the slides",
   unseen: "Not taught",
   mentioned: "Started",
   explained: "Done",
@@ -58,7 +60,7 @@ export function GoalMark({ index, size = 10, x, y }: { index: number; size?: num
 }
 
 // how far an idea has come, to tell progress from a setback
-const RANK: Record<MindStatus, number> = { off: 0, unseen: 0, bonus: 1, mentioned: 1, parked: 1, explained: 2, checked: 3 };
+const RANK: Record<MindStatus, number> = { off: 0, unseen: 0, known: 0, bonus: 1, mentioned: 1, parked: 1, explained: 2, checked: 3 };
 const CHANGE_TEXT: Partial<Record<MindStatus, string>> = { mentioned: "started", explained: "done", checked: "done and checked", parked: "set aside", bonus: "noted as a bonus" };
 
 /**
@@ -279,7 +281,7 @@ export default function MindView({ graph, mind, popout }: { graph: GraphView; mi
       </div>
 
       <div className="mind-legend">
-        {(["unseen", "mentioned", "explained", "checked", "parked"] as MindStatus[]).map((s) => (
+        {(["known", "unseen", "mentioned", "explained", "checked", "parked"] as MindStatus[]).map((s) => (
           <span key={s}>
             <i className={`sw s-${s}`} />
             {STATUS_NAME[s]}

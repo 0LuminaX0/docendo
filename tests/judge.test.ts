@@ -67,18 +67,18 @@ describe("the practice gate and wrong beliefs", () => {
     notebook: facts.map((fact) => ({ fact, verdict: "correct" as const, words: `about ${fact}`, turn: 1 })),
     ...extra,
   });
-  const p1 = item("p1"); // needs n07.f1 and n07.f2
+  const p4 = item("p4"); // needs n11.f1 and n12.f1
 
   it("blocks only the fact a wrong belief contradicts", () => {
-    const base = taught(p1.needs!);
-    expect(gate(p1, base).canBeRight).toBe(true);
-    // a wrong belief about ε-greedy's random pick blocks p1
-    expect(gate(p1, { ...base, misconceptions: [{ node: "n07", fact: "n07.f2", words: "never the favourite", turn: 2 }] }).canBeRight).toBe(false);
+    const base = taught(p4.needs!);
+    expect(gate(p4, base).canBeRight).toBe(true);
+    // a wrong belief about what a pick does to the bonus blocks p4
+    expect(gate(p4, { ...base, misconceptions: [{ node: "n12", fact: "n12.f1", words: "every bonus shrinks each round", turn: 2 }] }).canBeRight).toBe(false);
     // one about another fact of the idea (or none at all) doesn't
-    expect(gate(p1, { ...base, misconceptions: [{ node: "n07", fact: null, words: "it explores much faster than greedy", turn: 2 }] }).canBeRight).toBe(true);
-    expect(gate(p1, { ...base, misconceptions: [{ node: "n07", fact: "n07.f3", words: "the favourite gets 0.95", turn: 2 }] }).canBeRight).toBe(true);
+    expect(gate(p4, { ...base, misconceptions: [{ node: "n12", fact: null, words: "it explores much faster than greedy", turn: 2 }] }).canBeRight).toBe(true);
+    expect(gate(p4, { ...base, misconceptions: [{ node: "n12", fact: "n12.f2", words: "a skipped option's bonus stays the same", turn: 2 }] }).canBeRight).toBe(true);
     // an older notebook's belief, without the fact, still blocks its whole idea
-    expect(gate(p1, { ...base, misconceptions: [{ node: "n07", words: "never the favourite", turn: 2 }] }).canBeRight).toBe(false);
+    expect(gate(p4, { ...base, misconceptions: [{ node: "n12", words: "every bonus shrinks each round", turn: 2 }] }).canBeRight).toBe(false);
   });
 
   it("retires a wrong belief when a later message teaches the fact it contradicts", () => {

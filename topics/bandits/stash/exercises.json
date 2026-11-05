@@ -1,0 +1,661 @@
+{
+  "title": "Stashed test items (not served)",
+  "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
+  "items": [
+    {
+      "id": "t15",
+      "goal": "G",
+      "type": "changed rule",
+      "section": "Greedy",
+      "form": "A",
+      "title": "Optimistic start",
+      "kind": "choice",
+      "prompt": "A developer changes greedy: before the first round, every option's average is set to 10, the highest possible score, as if each option had already been tried once and scored 10. The three options truly average 7, 6 and 4, and their daily scores vary by up to 3 points either way. Compared with ordinary greedy, how often does it end up mostly on the best option?",
+      "options": [
+        "About as often",
+        "More often",
+        "Less often"
+      ],
+      "answer": 1,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Whichever option is picked first gets a real score below 10, so its average falls below the others' 10. Greedy then picks an option still at 10, so every option gets tried, and too-high averages keep being tried until they fall. No option starts too low, which is what causes lock-in, so it ends up on the best option more often.",
+      "rubric": "Averages start too high, so each option keeps being tried until its average falls; nothing starts too low, so lock-in is rarer.",
+      "diagnosis": [
+        "Kai: F5 (averages correct themselves, so the start does not matter)",
+        "correct",
+        "learner: the made-up starting values mislead it"
+      ],
+      "estimate": 0.35,
+      "note": "T11 until the merge with Phil's items (2026-11-05); moved from form B (V1): greedy, then a changed greedy. In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
+    },
+    {
+      "id": "v12",
+      "goal": "G",
+      "type": "changed rule",
+      "section": "Greedy",
+      "form": "B",
+      "pair": "t15",
+      "title": "Top ratings to start",
+      "kind": "choice",
+      "prompt": "A music app picks one of four playlists with greedy, and listeners rate each one from 0 to 5. The developer changes greedy: before the first round, every playlist's average is set to 5, the highest possible rating, as if each playlist had already been played once and rated 5. The playlists truly average 4, 3.5, 3 and 2, and ratings vary by up to 1.5 either way. Compared with ordinary greedy, how often does it end up mostly on the best playlist?",
+      "options": [
+        "More often",
+        "About as often",
+        "Less often"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Whichever playlist is played first gets a real rating below 5, so its average falls below the others' 5. Greedy then picks a playlist still at 5, so every playlist gets played, and too-high averages keep being tried until they fall. No playlist starts too low, which is what causes lock-in, so it ends up on the best playlist more often.",
+      "rubric": "Averages start too high, so each playlist keeps being tried until its average falls; nothing starts too low, so lock-in is rarer.",
+      "diagnosis": [
+        "correct",
+        "Kai: F5 (averages correct themselves, so the start does not matter)",
+        "learner: the made-up starting values mislead it"
+      ],
+      "estimate": 0.35,
+      "note": "The twin of T11 (V1's optimistic start, 2026-11-05) in another setting."
+    },
+    {
+      "id": "t11",
+      "goal": "G",
+      "type": "near",
+      "section": "Bandit problem",
+      "form": "A",
+      "title": "Which is a bandit?",
+      "kind": "choice",
+      "prompt": "Which of these is a multi-armed bandit problem?",
+      "options": [
+        "A music app plays one of four playlists to each new listener and sees only whether that listener liked it",
+        "A bakery picks one of four breads to bake extra each morning, and sees every evening how all four sold",
+        "A fitness app picks one of three workouts each day; each workout makes the user fitter, so all workouts score higher over time",
+        "A couple visits three wedding venues, one each weekend, then books one of them for their wedding"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "A bandit is one choice made again and again, where each choice gives a random reward around an average that stays the same, and you see only the reward of what you chose. The music app fits. The bakery sees how every bread sold, the fitness app's rewards change with what it picked before, and the couple chooses only once.",
+      "rubric": "Names both: the same choice is made again and again, each time with a random reward around an average that doesn't change; and only the chosen option's reward is seen (or uses them to rule out the others).",
+      "diagnosis": [
+        "correct",
+        "learner: any repeated choice is a bandit, even when every option's result is seen (F2)",
+        "Kai: the graph's m_bandit_is_rl, what I pick changes the situation (F1: the true averages stay the same)",
+        "learner: trying options out before one choice makes it a bandit (F1: a choice made again and again)"
+      ],
+      "estimate": 0.6,
+      "note": "New 2026-11-05, in t02's place (ε-greedy left the lesson). The setup (lesson chapter 1, n01.f1 and n01.f2), applied to new cases. Kai's questions don't ask about the setup, so this measures the reading as much as the teaching, the same in both conditions."
+    },
+    {
+      "id": "t10",
+      "goal": "G",
+      "type": "far",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Ratings out of 100",
+      "kind": "choice",
+      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
+      "options": [
+        "Neither app's",
+        "Both apps'",
+        "Only app 2's: it explores much more",
+        "Only app 2's: it explores much less"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy's favourite stays the same, because multiplying every rating by 100 keeps their order, so its picks don't change. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
+      "rubric": "The bonus does not grow with the ratings; greedy's choices do not change.",
+      "diagnosis": [
+        "Kai: F14 (the bonus adapts to the observed rewards)",
+        "learner: any change to the ratings changes both rules",
+        "learner: larger numbers mean larger bonuses",
+        "correct"
+      ],
+      "estimate": 0.3,
+      "note": "The anchor item, also V9. In simulation, UCB moved away from the best of three options in 0 of 200 runs at the original scale and in 80 of 200 runs after multiplying by 100. App 1 was ε-greedy until 2026-11-05 (ε-greedy left the lesson); greedy keeps the key, since it too depends only on the order of the averages."
+    },
+    {
+      "id": "t13",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Which options could each pick?",
+      "kind": "choice",
+      "prompt": "Two apps have the same history on three options: A averages 8.0 (100 tries), B 7.9 (2 tries) and C 3.0 (100 tries). App 1 uses greedy and app 2 uses UCB. Which options could each app pick in the next round?",
+      "options": [
+        "App 1: only A; app 2: A, B or C",
+        "App 1: A or B; app 2: A or B",
+        "App 1: only A; app 2: A or B",
+        "App 1: only A; app 2: only B"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy picks the highest average, A. UCB picks the highest average plus bonus. C has as many tries as A, so the same bonus, and a much lower average: it can never beat A. B's average is a little lower than A's, but with far fewer tries its bonus is much larger; whether it beats A depends on the sizes of the bonuses. So app 2 picks A or B.",
+      "rubric": "Greedy follows the averages only; C has A's bonus but a lower average, while B's larger bonus can make up its 0.1 gap.",
+      "diagnosis": [
+        "learner: UCB keeps exploring every option",
+        "learner: greedy alternates when averages are close",
+        "correct",
+        "Kai: F9 (UCB picks the fewest tries, whatever the average)"
+      ],
+      "estimate": 0.55,
+      "note": "New 2026-11-05 in t08's place (ε-greedy left the lesson), off like t08. Near transfer: close to t04 and practice P5."
+    },
+    {
+      "id": "t14",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Two logs",
+      "kind": "choice",
+      "prompt": "Two logs show how often the worst of four options was picked, as a share of rounds, in one run each. One log comes from greedy, the other from UCB.",
+      "table": {
+        "head": [
+          "Rounds",
+          "Log 1",
+          "Log 2"
+        ],
+        "rows": [
+          [
+            "1 to 1,000",
+            "0.1%",
+            "5%"
+          ],
+          [
+            "1,001 to 10,000",
+            "0%",
+            "0.6%"
+          ],
+          [
+            "10,001 to 100,000",
+            "0%",
+            "0.05%"
+          ]
+        ]
+      },
+      "question": "Which rule produced which log?",
+      "options": [
+        "Log 1 is greedy, Log 2 is UCB",
+        "Log 1 is UCB, Log 2 is greedy",
+        "Either rule could have produced either log",
+        "Neither log can come from UCB"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Once the worst option's average is below the others' after its trial, greedy doesn't pick it again: it never picks an option only to learn about it (0.1% of the first 1,000 rounds is that one try). UCB keeps coming back to it, ever more rarely: each pick shrinks its bonus, and while it isn't picked its bonus grows back, ever more slowly.",
+      "rubric": "Greedy stops after the trial (it never explores); UCB returns to the worst option with ever longer gaps (its bonus grows back ever more slowly).",
+      "diagnosis": [
+        "correct",
+        "Kai: F11 (an unpicked bonus stays the same, so UCB stops picking the worst option) or learner: greedy checks every option now and then",
+        "learner: the shares are down to luck",
+        "Kai: F9 (UCB goes for the least-tried options, so the worst option gets a large share)"
+      ],
+      "estimate": 0.6,
+      "note": "New 2026-11-05 in t09's place (ε-greedy left the lesson), off like t09. Simulated: four options with true averages 0.7, 0.6, 0.5 and 0.3, rewards spread around them (sd 0.25, kept between 0 and 1), UCB with c = √2. UCB's shares are means of 20 runs (5.2%, 0.61%, 0.05%; every run within 4.2 to 6.7%, 0.44 to 0.71%, 0.03 to 0.07%); greedy picked the worst option only on its trial in 88% of 200 runs (mean 0.12%, then 0%)."
+    },
+    {
+      "id": "t02",
+      "goal": "G",
+      "type": "near",
+      "section": "ε-greedy",
+      "form": "A",
+      "title": "Subject lines",
+      "kind": "choice",
+      "prompt": "A newsletter tests four subject lines with ε-greedy, ε = 0.1. Subject line D is truly the best (40% of readers open it), but nobody opened its single trial send, so its average is 0%. The current favourite, A, has an opening rate of 30% over 500 sends. What happens to D over the next 50,000 sends?",
+      "options": [
+        "D becomes the favourite after a while",
+        "D is sent now and then but stays behind A",
+        "D is sent ever more rarely and stays behind A",
+        "D is not sent again"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "About 2.5% of sends are random picks of D, about 1,250 of the 50,000. Each send moves D's average towards its true 40%. Once D's average passes A's 30%, D becomes the favourite.",
+      "rubric": "Random picks keep sending D; its average then rises above A's.",
+      "diagnosis": [
+        "correct",
+        "learner: averages based on more sends count more",
+        "Kai: F6 (exploration fades once averages are reliable)",
+        "learner: greedy's lock-in carried over to ε-greedy"
+      ],
+      "estimate": 0.55
+    },
+    {
+      "id": "t03",
+      "goal": "G",
+      "type": "far",
+      "section": "ε-greedy",
+      "form": "A",
+      "title": "Shrinking ε",
+      "kind": "choice",
+      "prompt": "A colleague changes ε-greedy so that ε starts at 0.2 and is halved every month. Compared with the usual ε-greedy, where ε stays at 0.2, what is true after a year?",
+      "options": [
+        "Known-worse options are picked as often as before",
+        "Known-worse options are no longer picked after the first month",
+        "Known-worse options are picked less and less, mostly the least-tried ones",
+        "Known-worse options are picked less and less, at random"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Here ε halves every month, so random picks, and with them picks of known-worse options, become rarer. A random pick still chooses every option with equal chance. In month 2, ε is still 0.1, so the random picks do not stop.",
+      "rubric": "Random picks become rarer; they stay random.",
+      "diagnosis": [
+        "learner: overlooks the change",
+        "learner: ε reaches zero at once",
+        "learner: shrinking ε confused with UCB's aimed exploration",
+        "correct"
+      ],
+      "estimate": 0.55
+    },
+    {
+      "id": "t05",
+      "goal": "G",
+      "type": "far",
+      "section": "UCB",
+      "form": "A",
+      "title": "The setting c",
+      "kind": "choice",
+      "prompt": "Two copies of the same UCB recommender run for 1,000 rounds on the same options. Copy 1 uses c = 0.5, copy 2 uses c = 2. Which is true?",
+      "options": [
+        "Copy 2 tries rarely tried options more often",
+        "Copy 1 tries rarely tried options more often",
+        "Both copies make the same picks",
+        "Copy 2 explores more at first, then both pick the same"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "c sets the size of every bonus but not the averages. The bonus is largest for the options tried least. So with c = 2 the bonus weighs four times as much against the average as with c = 0.5, and rarely tried options win more often, throughout the run.",
+      "rubric": "c scales only the bonus; a larger bonus favours rarely tried options.",
+      "diagnosis": [
+        "correct",
+        "learner: direction reversed",
+        "Kai: F14 (the bonus adapts to the observed rewards, so c does not matter)",
+        "Kai: F10 (every bonus shrinks as rounds pass, so c stops mattering)"
+      ],
+      "estimate": 0.5
+    },
+    {
+      "id": "t07",
+      "goal": "G",
+      "type": "far",
+      "section": "UCB",
+      "form": "A",
+      "title": "Two equally good options",
+      "kind": "choice",
+      "prompt": "UCB runs on three options. A and B are truly equally good; C is clearly worse. After the first 1,000 rounds, A has been picked 600 times, B 300 times and C 100 times, so B has one third of the picks that went to A or B. What happens to B's share over the next 100,000 rounds?",
+      "options": [
+        "It falls towards zero",
+        "It rises towards one half",
+        "It stays at about one third",
+        "It rises, and C also catches up with A and B"
+      ],
+      "answer": 1,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "A's and B's averages both approach the same true average. B has fewer tries, so a larger bonus. With nearly equal averages the larger bonus decides, so UCB picks B more often than A until their counts are close. C's lower average keeps it rare.",
+      "rubric": "The option with fewer tries has the larger bonus; with equal averages that decides.",
+      "diagnosis": [
+        "learner: the leader takes over, as with greedy",
+        "correct",
+        "learner: UCB keeps the proportions it has reached",
+        "Kai: F9 (picks the fewest tries)"
+      ],
+      "estimate": 0.5,
+      "note": "In 40 simulated runs, B's share rose from one third to between 0.38 and 0.76 (median 0.50). Adapted from midterm Q11."
+    },
+    {
+      "id": "t08",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Which rule could pick C?",
+      "kind": "choice",
+      "prompt": "Three apps have the same history on three options: A averages 8.0 (100 tries), B 7.9 (2 tries) and C 3.0 (100 tries). App 1 uses greedy, app 2 ε-greedy and app 3 UCB. Which apps could pick C in the next round?",
+      "options": [
+        "Apps 2 and 3",
+        "None of them",
+        "Only app 2",
+        "All three apps"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy picks the highest average, A. A random pick by ε-greedy can land on C. C has as many tries as A, so the same bonus, and a much lower average, so UCB never ranks C above A.",
+      "rubric": "ε-greedy's random pick can land on C; UCB cannot pick C because C has A's bonus but a lower average.",
+      "diagnosis": [
+        "learner: UCB keeps exploring every option",
+        "learner: random picks go to the least-tried option",
+        "correct",
+        "learner: every rule explores now and then"
+      ],
+      "estimate": 0.5
+    },
+    {
+      "id": "t09",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Two logs",
+      "kind": "choice",
+      "prompt": "Two logs show how often the worst of four options was picked, as a share of rounds. One log comes from ε-greedy with ε = 0.1, the other from UCB.",
+      "table": {
+        "head": [
+          "Rounds",
+          "Log 1",
+          "Log 2"
+        ],
+        "rows": [
+          [
+            "1 to 1,000",
+            "5%",
+            "10%"
+          ],
+          [
+            "1,001 to 10,000",
+            "2.5%",
+            "2.3%"
+          ],
+          [
+            "10,001 to 100,000",
+            "2.5%",
+            "0.3%"
+          ]
+        ]
+      },
+      "question": "Which rule produced which log?",
+      "options": [
+        "Log 1 is ε-greedy, Log 2 is UCB",
+        "Log 1 is UCB, Log 2 is ε-greedy",
+        "Either rule could have produced either log",
+        "Neither log can come from UCB"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "ε-greedy's random picks keep the same share and land on each option equally often: 0.1 ÷ 4 = 2.5% once the worst option is not the favourite. UCB picks a clearly worse option ever more rarely, because its bonus shrinks with each pick and grows back ever more slowly.",
+      "rubric": "One log is constant, the other keeps falling; explained by a fixed ε against a bonus that grows back ever more slowly.",
+      "diagnosis": [
+        "correct",
+        "Kai: F6 (ε-greedy explores less over time) or F11 vague (steady growth)",
+        "learner: the shares are down to luck",
+        "Kai: F11 (UCB stops picking the worst option)"
+      ],
+      "estimate": 0.6,
+      "note": "The numbers are our simulation means."
+    },
+    {
+      "id": "v01",
+      "goal": "G",
+      "type": "changed rule",
+      "section": "Greedy",
+      "form": "B",
+      "title": "Optimistic start",
+      "kind": "choice",
+      "prompt": "A developer changes greedy: before the first round, every option's average is set to 10, the highest possible score, as if each option had already been tried once and scored 10. The three options truly average 7, 6 and 4, and their daily scores vary by up to 3 points either way. Compared with ordinary greedy, how often does it end up mostly on the best option?",
+      "options": [
+        "About as often",
+        "More often",
+        "Less often"
+      ],
+      "answer": 1,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Whichever option is picked first gets a real score below 10, so its average falls below the others' 10. Greedy then picks an option still at 10, so every option gets tried, and too-high averages keep being tried until they fall. No option starts too low, which is what causes lock-in, so it ends up on the best option more often.",
+      "rubric": "Averages start too high, so each option keeps being tried until its average falls; nothing starts too low, so lock-in is rarer.",
+      "diagnosis": [
+        "Kai: F5 (averages correct themselves, so the start does not matter)",
+        "correct",
+        "learner: the made-up starting values mislead it"
+      ],
+      "estimate": 0.35,
+      "note": "In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
+    },
+    {
+      "id": "v02",
+      "goal": "G",
+      "type": "multi-select",
+      "section": "ε-greedy",
+      "form": "B",
+      "title": "Many banners",
+      "kind": "multi",
+      "prompt": "Two shops use ε-greedy with ε = 0.1. Shop 1 has 2 banners, shop 2 has 20. In both shops one banner is clearly the best and is the favourite, and all others are clearly worse. Which statements are true? Select all that apply.",
+      "options": [
+        "In shop 2, random picks go only to the 19 worse banners",
+        "Each worse banner is shown to a smaller share of visitors in shop 2 than in shop 1",
+        "The worse banners together are shown to the same share of visitors in both shops",
+        "The favourite is shown to a larger share of visitors in shop 1 than in shop 2"
+      ],
+      "answer": [
+        1,
+        3
+      ],
+      "dontKnow": true,
+      "reason": true,
+      "explain": "In both shops 10% of visitors get a random pick, which chooses every banner with equal chance, the favourite included. With more banners, each banner, the favourite included, gets a smaller part of the random picks: the favourite is shown to 95% of visitors in shop 1 against 90.5% in shop 2, each worse banner to 5% against 0.5%. The worse banners together get every random pick that misses the favourite: 5% against 9.5%.",
+      "rubric": "Random picks include the favourite; with more banners, each banner gets a smaller part of them.",
+      "diagnosis": [
+        "false; Kai: F7 (the random pick skips the favourite)",
+        "true",
+        "false; learner: all random picks go to worse banners",
+        "true"
+      ],
+      "estimate": 0.3
+    },
+    {
+      "id": "v03",
+      "goal": "G",
+      "type": "changed rule",
+      "section": "ε-greedy",
+      "form": "B",
+      "title": "Aimed random picks",
+      "kind": "choice",
+      "prompt": "A colleague changes ε-greedy: in the 10% of rounds when it would pick at random, it now picks the option it has tried least so far. There are five options, and option E is clearly the worst. How often is E picked over a million rounds under the changed rule?",
+      "options": [
+        "At a roughly constant share of rounds",
+        "Ever more rarely",
+        "More and more often",
+        "Not at all after the first few hundred rounds"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "The share of exploring rounds is still 10%, early and late. The favourite is picked in the other 90%, so it is never the least tried; the exploring rounds rotate among the other four options, about 2.5% of rounds each. Aiming changes which option is explored, not how often. UCB's exploration fades because its bonus shrinks with tries, which this rule lacks.",
+      "rubric": "ε stays fixed, so exploring rounds do not become rarer; aiming only spreads them evenly.",
+      "diagnosis": [
+        "correct",
+        "Kai: F6 (exploration fades), or learner: aiming exploration makes it fade as with UCB",
+        "learner: E is always the least-tried option",
+        "learner: aimed exploration finishes its job"
+      ],
+      "estimate": 0.35
+    },
+    {
+      "id": "v05",
+      "goal": "G",
+      "type": "inverse",
+      "section": "UCB",
+      "form": "B",
+      "title": "Inverse",
+      "kind": "choice",
+      "prompt": "In round 200, UCB picks B, although A has a higher average than B. Which must be true?",
+      "options": [
+        "B was last picked longer ago than A",
+        "B's last reward was above its average",
+        "B's rewards have varied more than A's",
+        "B has been tried fewer times than A"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "UCB picks the highest average plus bonus, so B's score was at least as high as A's. B's average is lower, so B's bonus must be larger. Both bonuses belong to round 200, so they differ only through the tries: a larger bonus means fewer tries.",
+      "rubric": "B's bonus must exceed A's; in the same round that means fewer tries.",
+      "diagnosis": [
+        "learner: the bonus depends on how long ago an option was picked",
+        "learner: the bonus reacts to recent results",
+        "Kai: F14 (the bonus adapts to the observed rewards)",
+        "correct"
+      ],
+      "estimate": 0.4,
+      "note": "Option (a) is tempting because an unpicked bonus grows, but all bonuses use the same round number, so only the tries differ."
+    },
+    {
+      "id": "v06",
+      "goal": "G",
+      "type": "changed rule",
+      "section": "UCB",
+      "form": "B",
+      "title": "Subtracting the bonus",
+      "kind": "choice",
+      "prompt": "A developer makes a sign error: the program picks the option with the highest average minus bonus instead of plus. Compared with greedy and ordinary UCB, which is true?",
+      "options": [
+        "It explores even less than greedy",
+        "It makes the same picks as greedy",
+        "It makes the same picks as ordinary UCB",
+        "It explores more than ordinary UCB"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Rarely tried options have the largest bonus, so they now get the biggest penalty. While an option is not picked its bonus grows, so its score keeps falling. The favourite, tried most, gets the smallest penalty, and ignored options sink further: the rule explores even less than greedy.",
+      "rubric": "Rarely tried options are penalised most; the penalty of an ignored option keeps growing.",
+      "diagnosis": [
+        "correct",
+        "learner: the bonus only matters for exploring, so without it the rule is greedy",
+        "learner: only the order of the scores matters",
+        "learner: a bigger penalty for rarely tried options means trying them more"
+      ],
+      "estimate": 0.35
+    },
+    {
+      "id": "v07",
+      "goal": "G",
+      "type": "harder",
+      "section": "UCB",
+      "form": "B",
+      "title": "Close or far apart",
+      "kind": "choice",
+      "prompt": "Two shops use UCB with two banners each for 10,000 visitors. In shop 1 the banners' true click rates are 90% and 10%; in shop 2 they are 51% and 49%. In which shop does UCB show the worse banner more often?",
+      "options": [
+        "About equally often in both shops",
+        "In shop 2",
+        "In shop 1",
+        "In neither shop, after the first few visitors"
+      ],
+      "answer": 1,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "UCB shows the worse banner whenever its average plus bonus beats the better banner's score. The worse banner's bonus shrinks with each show in the same way in both shops. In shop 1 the averages are 80 points apart, so the worse banner loses once its bonus falls below that, after few shows; in shop 2 they are 2 points apart, so it keeps winning until its bonus is tiny, which takes thousands of shows.",
+      "rubric": "Whether the bonus wins depends on the gap between averages; a small gap is overcome only by a tiny bonus, which needs many shows.",
+      "diagnosis": [
+        "learner: the bonus is set by c, not the rewards, so the gap does not matter",
+        "correct",
+        "learner: a very bad option needs more checking",
+        "Kai: F11 (an unpicked bonus stays the same)"
+      ],
+      "estimate": 0.4,
+      "note": "In simulation (50 runs) UCB showed the worse banner 26 times in shop 1 and 3,553 times in shop 2."
+    },
+    {
+      "id": "v08",
+      "goal": "G",
+      "type": "multi-select",
+      "section": "Comparison",
+      "form": "B",
+      "title": "What each rule guarantees",
+      "kind": "multi",
+      "prompt": "Which statements are true? Select all that apply.",
+      "options": [
+        "Two copies of UCB with the same history always make the same pick",
+        "UCB can pick an option that has both a lower average and more tries than another option",
+        "Two copies of ε-greedy with the same history always make the same pick",
+        "ε-greedy can pick an option that has both a lower average and more tries than another option"
+      ],
+      "answer": [
+        0,
+        3
+      ],
+      "dontKnow": true,
+      "reason": true,
+      "explain": "UCB involves no chance, so the same history gives the same scores and the same pick. In the same round, more tries mean a smaller bonus, and a lower average plus a smaller bonus always scores lower. ε-greedy decides by chance whether to pick at random, and a random pick can land on any option.",
+      "rubric": "UCB's pick is fixed by the scores, and a lower average with more tries always scores lower; ε-greedy's random pick can land anywhere.",
+      "diagnosis": [
+        "true",
+        "false; learner: UCB explores every option now and then",
+        "false; learner: ε-greedy explores on a fixed schedule (every 10th round)",
+        "true"
+      ],
+      "estimate": 0.35
+    },
+    {
+      "id": "v09",
+      "goal": "G",
+      "type": "anchor",
+      "section": "Comparison",
+      "form": "B",
+      "same": "t10",
+      "title": "Anchor (the same as T10)",
+      "kind": "choice",
+      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses ε-greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
+      "options": [
+        "Neither app's",
+        "Both apps'",
+        "Only app 2's: it explores much more",
+        "Only app 2's: it explores much less"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "ε-greedy's favourite stays the same, because multiplying every rating by 100 keeps the order, and its random picks ignore the ratings. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
+      "rubric": "The bonus does not grow with the ratings; ε-greedy's choices do not change.",
+      "diagnosis": [
+        "Kai: F14 (the bonus adapts to the observed rewards)",
+        "learner: any change to the ratings changes both rules",
+        "learner: larger numbers mean larger bonuses",
+        "correct"
+      ],
+      "estimate": 0.3,
+      "note": "The anchor: identical to T10, options and order included. Its share correct in each form shows whether the groups taking each form differ in ability. A session that takes both forms answers it once (as T10), and it counts for both forms."
+    },
+    {
+      "id": "v10",
+      "goal": "G",
+      "type": "multi-select",
+      "section": "Comparison",
+      "form": "B",
+      "title": "Round 9",
+      "kind": "multi",
+      "prompt": "Greedy, ε-greedy (ε = 0.1) and UCB each run on the same eight options and have just tried each option once (rounds 1 to 8). Which statements about round 9 are true? Select all that apply.",
+      "options": [
+        "A random pick by ε-greedy cannot land on the option with the highest average",
+        "Greedy and UCB pick the same option",
+        "The eight options' UCB bonuses differ from each other",
+        "ε-greedy may pick an option other than the one with the highest average"
+      ],
+      "answer": [
+        1,
+        3
+      ],
+      "dontKnow": true,
+      "reason": true,
+      "explain": "In round 9 every option has exactly one try, so all UCB bonuses are equal, and UCB picks the highest average, like greedy. ε-greedy picks at random with probability 0.1, and a random pick may land on any option, the highest average included.",
+      "rubric": "Equal tries mean equal bonuses, so UCB acts like greedy in round 9; ε-greedy's random pick may land anywhere.",
+      "diagnosis": [
+        "false; Kai: F7 (the random pick skips the favourite)",
+        "true",
+        "false; Kai: F14 (the bonus adapts to the observed rewards)",
+        "true"
+      ],
+      "estimate": 0.3
+    }
+  ]
+}

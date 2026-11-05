@@ -567,6 +567,7 @@ button { font: inherit; color: inherit; }
 .m-node.s-checked .fd.c { fill: #fff; }
 .m-node.s-checked .mk { stroke: #fff; }
 .m-node.s-parked rect.b { fill: #fff4dc; stroke: #c38a1b; stroke-width: 1.5; }
+.m-node.s-known rect.b { fill: #eef1f5; stroke: #9aa3ae; stroke-width: 1.2; }
 .m-node.s-parked .mk { stroke: #9e6d10; }
 /* around the lesson: no fill, a faint dotted outline, a plain grey name. Bonus (explained anyway): a green dotted outline */
 .m-node.s-off rect.b, .m-node.s-bonus rect.b { fill: transparent; stroke: #d3d8df; stroke-width: 1.1; stroke-dasharray: 2 3; }
@@ -590,6 +591,7 @@ button { font: inherit; color: inherit; }
 .mind-legend .sw.s-explained { background: var(--green-soft); border-color: var(--green); }
 .mind-legend .sw.s-checked { background: var(--green); border-color: var(--green); }
 .mind-legend .sw.s-parked { background: #fff4dc; border-color: #c38a1b; }
+.mind-legend .sw.s-known { background: #eef1f5; border: 1.2px solid #9aa3ae; }
 .mind-legend .sw.s-off { background: transparent; border: 1.3px dotted #b9c0ca; }
 .mind-legend .sw.s-bonus { background: #f2f3f5; border: 1.3px dashed var(--green); }
 .mind-legend .gmark + .gmark { margin-left: -2px; }
@@ -610,6 +612,7 @@ button { font: inherit; color: inherit; }
 .md-chip .sw.s-explained { background: var(--green-soft); border-color: var(--green); }
 .md-chip .sw.s-checked { background: var(--green); border-color: var(--green); }
 .md-chip .sw.s-parked { background: #fff4dc; border-color: #c38a1b; }
+.md-chip .sw.s-known { background: #eef1f5; border: 1.2px solid #9aa3ae; }
 .md-chip .sw.s-off, .md-chip .sw.s-bonus { background: transparent; border: 1.3px dotted #b9c0ca; }
 .md-chip .sw.s-bonus { border-color: var(--green); }
 .md-facts { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -1217,6 +1220,10 @@ textarea.dictating::placeholder { color: transparent; }
 @media (prefers-reduced-motion: reduce) { .lesson-slide { animation: none; } }
 .lesson-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); }
 .lesson-nav .btn:disabled { opacity: 0.7; }
+/* the last chapter's "teach Kai": asked first, in place of the chapter buttons (the text closes for good) */
+.lesson-confirm { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 14px; }
+.lesson-confirm p { margin: 0; text-wrap: pretty; }
+.lesson-confirm-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .lesson .lesson-foot { margin: 10px 0 0; text-align: right; }
 @media (max-width: 560px) { .lesson-steps .lbl { display: none; } .lesson .lesson-foot { text-align: left; } }
 /* a passage of the lesson shown again as help (teaching, practice) */

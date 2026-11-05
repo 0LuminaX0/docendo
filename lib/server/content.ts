@@ -30,12 +30,12 @@ function build(slug: string) {
   if (!raw) throw new Error(`No topic pack "${slug}" (lib/server/topics.ts)`);
   const bundle: Bundle = Bundle.parse(raw.bundle);
   const exercisesFile = ExercisesFile.parse(raw.exercises);
-  const exercises = exercisesFile.items.filter((q) => !q.off); // items switched off stay in the file
+  const exercises = exercisesFile.items; // items taken out live in the pack's stash/ folder, which is never loaded
   // the pretest: every item, and what a session takes unless a pilot runs every set (content/pretest.ts)
-  const pretestAll = PretestFile.parse(raw.pretest).items.filter((q) => !q.off); // items switched off stay in the file
+  const pretestAll = PretestFile.parse(raw.pretest).items;
   const pretest = pretestItems(pretestAll, pretestSets(pretestAll).slice(0, 1));
   const practiceFile = PracticeFile.parse(raw.practice);
-  const practice = practiceFile.items.filter((p) => !p.off);
+  const practice = practiceFile.items;
   const survey = SurveyFile.parse(raw.survey).items;
   const lesson = raw.lesson ? LessonFile.parse(raw.lesson) : null;
   const copy = TopicCopy.parse(raw.copy);

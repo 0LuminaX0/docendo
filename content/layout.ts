@@ -10,8 +10,8 @@ import type { Node } from "./schema";
 //    cross, so they run through the gaps between boxes instead of behind them.
 // 3. Row order inside each column: barycenter sweeps plus adjacent swaps,
 //    keeping whichever ordering has the fewest crossings.
-// 4. Rows: nodes snap to whole grid rows. Nodes are pulled level with their
-//    neighbours so edges run as straight as the grid allows. Then each long edge
+// 4. Rows: each node lines up with one neighbour (alignment, after Brandes and
+//    Köpf), so chains of ideas run on one row; real nodes on whole rows. Then each long edge
 //    gets one lane (a whole or half row free of boxes and other lanes in every
 //    column it crosses) and keeps it: it changes height only right after its
 //    source and right before its target, never on the way (2026-11-05: waypoints
@@ -163,57 +163,96 @@ export function layout(nodes: Pick<Node, "id" | "needs">[]) {
   }
   order = best;
 
-  // 4. rows: real nodes on whole rows, waypoints on half rows; pull towards neighbours
-  const y = new Map<string, number>(); // in row units, centre line
-  order.forEach((col) => {
-    let r = 0;
-    col.forEach((id) => {
-      y.set(id, r);
-      r += items.get(id)!.real ? 1 : 0.5;
-    });
-  });
-  const snap = (id: string, v: number) => (items.get(id)!.real ? Math.round(v) : Math.round(v * 2) / 2);
-  const gap = (a: string, b: string) => (items.get(a)!.real && items.get(b)!.real ? 1 : 0.5);
-  const place = (col: string[], want: Map<string, number>) => {
-    // keep order and spacing, stay as close to the wanted rows as possible (forward + backward pass)
-    const out = col.map((id) => want.get(id)!);
-    for (let i = 1; i < col.length; i++) out[i] = Math.max(out[i]!, out[i - 1]! + gap(col[i - 1]!, col[i]!));
-    for (let i = col.length - 2; i >= 0; i--) out[i] = Math.min(out[i]!, out[i + 1]! - gap(col[i]!, col[i + 1]!));
-    for (let i = 1; i < col.length; i++) out[i] = Math.max(out[i]!, out[i - 1]! + gap(col[i - 1]!, col[i]!));
-    col.forEach((id, i) => y.set(id, snap(id, out[i]!)));
-    for (let i = 1; i < col.length; i++) {
-      const a = y.get(col[i - 1]!)!;
-      if (y.get(col[i]!)! < a + gap(col[i - 1]!, col[i]!)) y.set(col[i]!, snap(col[i]!, a + gap(col[i - 1]!, col[i]!) + 0.49));
-    }
-  };
-  for (let iter = 0; iter < 10; iter++) {
-    const forward = iter % 2 === 0;
-    const range = forward ? [...Array(layers).keys()] : [...Array(layers).keys()].reverse();
-    for (const l of range) {
-      const col = order[l]!;
-      const want = new Map<string, number>();
-      for (const id of col) {
-        const ns = [...(prev.get(id) ?? []), ...(next.get(id) ?? [])];
-        // waypoints pull hard on each other so long edges come out straight
-        let sum = 0;
-        let w = 0;
-        for (const n of ns) {
-          const weight = items.get(n)!.real && items.get(id)!.real ? 1 : 3;
-          sum += y.get(n)! * weight;
-          w += weight;
-        }
-        want.set(id, w ? sum / w : y.get(id)!);
-      }
-      place(col, want);
+  // 4. rows: alignment (after Brandes and Köpf). Each node lines up with one neighbour in the next column over (the
+  // median one, when that keeps the order), so chains of ideas run on one row; long edges' waypoints line up first, so
+  // they stay straight. Blocks of lined-up nodes are then packed against the ones above them: real nodes on whole rows,
+  // waypoints on half rows. Four directions are tried (aligning with the column before or after, packing from the top
+  // or the bottom), and the one with the fewest crossings, then bends, then rows wins. (2026-11-05: pulling each node to
+  // its neighbours' average made chains step down half a row per column.)
+  const pos0 = position(order);
+  const isDummy = (id: string) => !items.get(id)!.real;
+  // segments between two waypoints (inner) win: another segment that crosses one may not line up
+  const conflicted = new Set<string>();
+  for (let l = 0; l + 1 < layers; l++) {
+    const segs: [string, string][] = [];
+    for (const a of order[l]!) for (const b of next.get(a) ?? []) segs.push([a, b]);
+    const inner = segs.filter(([a, b]) => isDummy(a) && isDummy(b));
+    for (const [a, b] of segs) {
+      if (isDummy(a) && isDummy(b)) continue;
+      if (inner.some(([c, d]) => (pos0.get(a)! - pos0.get(c)!) * (pos0.get(b)! - pos0.get(d)!) < 0)) conflicted.add(`${a}|${b}`);
     }
   }
+  const sep = (a: string, b: string) => (items.get(a)!.real && items.get(b)!.real ? 1 : 0.5);
+  const variant = (ltr: boolean, down: boolean): Map<string, number> => {
+    const root = new Map<string, string>([...items.keys()].map((id) => [id, id]));
+    const range = ltr ? [...Array(layers).keys()].slice(1) : [...Array(layers).keys()].slice(0, -1).reverse();
+    for (const l of range) {
+      const col = down ? order[l]! : [...order[l]!].reverse();
+      let r = down ? -Infinity : Infinity;
+      for (const v of col) {
+        const ns = [...((ltr ? prev : next).get(v) ?? [])].sort((x, z) => pos0.get(x)! - pos0.get(z)!);
+        if (!ns.length) continue;
+        const d = ns.length;
+        const ms = d % 2 ? [ns[(d - 1) / 2]!] : [ns[d / 2 - 1]!, ns[d / 2]!];
+        for (const u of down ? ms : ms.reverse()) {
+          const seg = ltr ? `${u}|${v}` : `${v}|${u}`;
+          if (!conflicted.has(seg) && (down ? pos0.get(u)! > r : pos0.get(u)! < r)) {
+            root.set(v, root.get(u)!);
+            r = pos0.get(u)!;
+            break;
+          }
+        }
+      }
+    }
+    // pack the blocks: each below the ones above it in every column it spans (from the top, or from the bottom)
+    const ys = new Map<string, number>(); // per block root
+    const hasReal = new Map<string, boolean>();
+    for (const [id, rt] of root) if (items.get(id)!.real) hasReal.set(rt, true);
+    for (const rt of new Set(root.values())) ys.set(rt, 0);
+    const snapB = (rt: string, v: number) => (hasReal.get(rt) ? Math.ceil(v - 1e-9) : Math.ceil(v * 2 - 1e-9) / 2);
+    for (let pass = 0, changed = true; changed && pass < items.size + 2; pass++) {
+      changed = false;
+      for (let l = 0; l < layers; l++) {
+        const col = down ? order[l]! : [...order[l]!].reverse();
+        for (let i = 1; i < col.length; i++) {
+          const a = root.get(col[i - 1]!)!;
+          const b = root.get(col[i]!)!;
+          if (a === b) continue;
+          const want = snapB(b, ys.get(a)! + sep(col[i - 1]!, col[i]!));
+          if (want > ys.get(b)!) (ys.set(b, want), (changed = true));
+        }
+      }
+    }
+    const out = new Map<string, number>();
+    for (const [id, rt] of root) out.set(id, down ? ys.get(rt)! : -ys.get(rt)!);
+    return out;
+  };
+  // how a placement reads: crossings between edges in each gap, then edges that bend, then rows
+  const scoreOf = (yy: Map<string, number>) => {
+    let cross = 0;
+    let bends = 0;
+    for (let l = 0; l + 1 < layers; l++) {
+      const segs: [number, number][] = [];
+      for (const a of order[l]!) for (const b of next.get(a) ?? []) segs.push([yy.get(a)!, yy.get(b)!]);
+      for (const [a1, b1] of segs) if (a1 !== b1) bends++;
+      for (let i = 0; i < segs.length; i++)
+        for (let j = i + 1; j < segs.length; j++) if ((segs[i]![0] - segs[j]![0]) * (segs[i]![1] - segs[j]![1]) < 0) cross++;
+    }
+    const vals = [...yy.values()];
+    return cross * 100 + bends * 3 + (Math.max(...vals) - Math.min(...vals));
+  };
+  const y = [true, false].flatMap((ltr) => [true, false].map((down) => variant(ltr, down))).reduce((best, v) => (scoreOf(v) < scoreOf(best) ? v : best));
   // one lane per long edge: the free half-row closest to its two ends, the same in every column it crosses (longest
   // edges first: they have the fewest free lanes)
   const half = (v: number) => Math.round(v * 2);
   const blocked = new Map<number, Set<number>>(); // column -> half rows taken by a box
   for (const it of items.values()) if (it.real) (blocked.get(it.layer) ?? blocked.set(it.layer, new Set()).get(it.layer)!).add(half(y.get(it.id)!));
+  // only the long edges the alignment left bending on the way (its waypoints on more than one row)
+  const long = [...chains.values()].filter((c) => c.length > 2 && new Set(c.slice(1, -1).map((d) => y.get(d))).size > 1).sort((a, b) => b.length - a.length);
+  // the straight ones keep their rows: no other lane may take them
   const lanes: { h: number; from: number; to: number }[] = [];
-  const long = [...chains.values()].filter((c) => c.length > 2).sort((a, b) => b.length - a.length);
+  for (const c of chains.values())
+    if (c.length > 2 && !long.includes(c)) lanes.push({ h: half(y.get(c[1]!)!), from: items.get(c[1]!)!.layer, to: items.get(c[c.length - 2]!)!.layer });
   // where every edge runs in each gap between columns (gap l: from column l to l + 1), in half rows: [start, end]
   const inGap = (skip: string[], l: number) => {
     const out: [number, number][] = [];

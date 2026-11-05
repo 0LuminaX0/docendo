@@ -2,7 +2,7 @@
   "topic": "bandits",
   "title": "Multi-armed bandits",
   "hash": "89b19c6a55646dbe",
-  "builtAt": "2026-11-05T10:16:50.797Z",
+  "builtAt": "2026-11-05T10:51:15.730Z",
   "goals": [
     {
       "id": "G",
@@ -63,6 +63,7 @@
           "text": "Each round you choose one of several options, again and again (for example where to have lunch every day for a year). Each option pays a random reward around its own true average, which stays the same and which you don't know.",
           "required": true,
           "teachable": true,
+          "given": true,
           "ask": "So what do I actually choose between each time, and how many times do I get to choose?"
         },
         {
@@ -70,6 +71,7 @@
           "text": "You only see the reward of the option you chose, so you learn about an option only by choosing it.",
           "required": true,
           "teachable": true,
+          "given": true,
           "ask": "When I pick one option, do I find out anything about the others?"
         },
         {
@@ -181,6 +183,7 @@
           "text": "An option's estimate is the average of the rewards it has given so far.",
           "required": true,
           "teachable": true,
+          "given": true,
           "ask": "How do I put a number on how good an option seems so far?"
         },
         {
@@ -194,7 +197,8 @@
           "id": "n03.f3",
           "text": "Every rule starts by trying each option once, so that each option has an average.",
           "required": false,
-          "teachable": true
+          "teachable": true,
+          "given": true
         }
       ],
       "lexicon": [
@@ -670,7 +674,8 @@
           "id": "n11.f3",
           "text": "An option that has never been picked has an unlimited bonus, which is why UCB tries every option once first.",
           "required": false,
-          "teachable": false
+          "teachable": false,
+          "given": true
         },
         {
           "id": "n11.f4",
@@ -932,6 +937,7 @@
           "text": "An average based on one try is much less reliable than one based on a hundred tries.",
           "required": true,
           "teachable": true,
+          "given": true,
           "ask": "How much should I trust an average from one visit compared with one from a hundred?"
         },
         {

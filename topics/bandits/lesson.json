@@ -4,7 +4,7 @@
   "minutes": 8,
   "minSeconds": 240,
   "remindSeconds": 720,
-  "intro": "Reading this takes about {minutes} minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",
+  "intro": "Reading this takes about {minutes} minutes. Read carefully: once you go on, this text closes and you won't see it again. Next you will explain it to Kai, a classmate who missed it, and after that you will solve practice problems and answer a short test, all from memory. So take in as much as you can: how each rule chooses, and why. You don't need to remember UCB's formula; what matters is the idea behind it, what UCB does and in which situations it picks something other than the favourite. Kai learns best from your own words and your own examples, so aim to understand rather than to memorise sentences.",
   "copied": "That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?",
   "sections": [
     {
@@ -61,7 +61,7 @@
           "caption": "Figure 3. Lock-in under greedy"
         },
         {
-          "p": "Lock-in shows the basic tension of the bandit problem. **Exploiting** means picking the option that looks best, to collect reward now. **Exploring** means picking an option to learn more about it: it may cost reward now, but it can show that an option is better than it looked. Greedy only exploits. Exploring too little risks being stuck with a worse option; exploring too much wastes rounds on options already known to be worse. The next rule, UCB, explores, and decides when to do it."
+          "p": "Lock-in shows the basic tension of the bandit problem. **Exploiting** means picking the option that looks best, to collect reward now. **Exploring** means picking an option to learn more about it: it may cost reward now, but it can show that an option is better than it looked. Greedy only exploits. Exploring too little risks being stuck with a worse option; exploring too much wastes rounds on options already known to be worse. The next rule, UCB, explores, and it does so on purpose rather than by chance."
         }
       ]
     },
@@ -87,7 +87,7 @@
           "caption": "Figure 4. One UCB round with three options"
         },
         {
-          "p": "Why a bonus? An average from few picks is unreliable: the option's true average could be well above what has been seen so far. Think of a range of plausible values around each average, wide for an option picked a few times and narrow for one picked often. UCB treats every option as if it were as good as it could plausibly be, the top of that range, so options tried only a few times get the benefit of the doubt. That is how it explores: it picks an option when the option might be the best."
+          "p": "Why a bonus? An average from few picks is unreliable: the option's true average could be well above what has been seen so far. Think of a range of plausible values around each average, wide for an option picked a few times and narrow for one picked often. UCB treats every option as if it were as good as it could plausibly be, the top of that range, so options tried only a few times get the benefit of the doubt. That is how it explores: it picks an option when that option might be the best."
         },
         {
           "p": "How big the bonuses are is set by c, which is chosen in advance to match how much the rewards are expected to vary. With c = 2 every bonus is twice as big as with c = 1, and the averages stay as they are. The bonus does not look at the rewards an option actually gave: it depends only on c, on how often the option was picked and on the round."
@@ -105,5 +105,5 @@
       ]
     }
   ],
-  "end": "This is the end of the text. In the next step you will teach these two rules to Kai."
+  "end": "That's the end of the text. If anything is still unclear, go back to it now: once you continue, the text closes and you won't be able to open it again."
 }

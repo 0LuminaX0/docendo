@@ -146,6 +146,8 @@ export default function Exercises() {
         router.replace("/");
         return;
       }
+      // the test changed since the page opened: drop the old questions, so the current ones load
+      if (r.status === 409) update((s) => ({ ...s, testItems: undefined, testOrder: undefined, testFixedOrder: undefined }));
       return setError(r.error);
     }
     update((s) => ({ ...s, result: r.data, step: "results", finishedAt: Date.now() }));

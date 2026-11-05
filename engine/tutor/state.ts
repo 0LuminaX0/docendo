@@ -111,7 +111,8 @@ export function initialState(bundle: Bundle): State {
 export { activeMisconceptions, latest, noteParts, notesOf, quotesOf } from "./notebook";
 
 /** Required facts the learner-facing videos cover: what Kai waits for. */
-export const teachableRequired = (n: Node) => n.facts.filter((f) => f.required && f.teachable);
+// what Kai waits to be taught: required and teachable, but not the setup it already knows (given)
+export const teachableRequired = (n: Node) => n.facts.filter((f) => f.required && f.teachable && !f.given);
 
 export type NodeStatus = "unseen" | "mentioned" | "explained";
 

@@ -26,7 +26,7 @@ type Case = { kai?: string; msg: string; want?: Record<string, "correct" | "part
 // The lesson's facts (F1 to F15 in the team's item design): given ones (n01, n03, n16) and teachable ones with the
 // misconception Kai assumes when they weren't explained. Each teachable fact has a right version, and its misconception
 // stated as a learner would, which must not get credit. n12.f2 also has a vague version (growth without its slowing).
-const CASES: Case[] = [
+const ALL_CASES: Case[] = [
   { kai: "So what exactly is the problem we're solving here? What do I get to choose each time?", msg: "Every day you pick one of three food trucks for lunch. Each truck's lunches are random around some true average that you don't know.", want: { "n01.f1": "correct" }, intent: "answer" },
   { kai: "When I pick one option, do I find out anything about the others?", msg: "no, you only see how good the lunch was at the truck you went to", want: { "n01.f2": "correct" } },
   { msg: "You keep the average of what each truck gave you so far, that's your guess of how good it is.", want: { "n03.f1": "correct" } },
@@ -72,6 +72,12 @@ const CASES: Case[] = [
   { msg: "ok what's next?", intent: "move_on" },
   { msg: "Is this like the slot machines in a casino?", intent: "ask_kai" },
 ];
+// cases about an idea the lesson no longer teaches (ε-greedy, n07, since 2026-11-05) are kept here but not run: the
+// judge credits an idea outside the lesson only when nothing in it fits, so they would no longer test the lesson
+const inLesson = new Set(bundle.nodes.filter((n) => n.inLesson !== false).map((n) => n.id));
+const outside = (c: Case) => [...Object.keys(c.want ?? {}), ...(c.not ?? [])].some((f) => !inLesson.has(f.split(".")[0]!));
+const CASES = ALL_CASES.filter((c) => !outside(c));
+console.log(`${CASES.length} cases (${ALL_CASES.length - CASES.length} about ideas outside the lesson, kept but not run)`);
 
 for (const model of models) {
   (MODELS as { judge: string }).judge = model;

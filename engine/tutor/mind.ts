@@ -7,7 +7,7 @@ import { factScore, latest, memo, nodeStatus, teachableRequired, type State } fr
 // asked (or that the learner answered unasked) with the learner's own words,
 // and only counts the questions Kai hasn't asked yet, so it gives no hints.
 
-export type MindStatus = "off" | "bonus" | "unseen" | "mentioned" | "explained" | "checked" | "parked";
+export type MindStatus = "off" | "bonus" | "known" | "unseen" | "mentioned" | "explained" | "checked" | "parked";
 
 export type Question = {
   state: "answered" | "partly" | "wrong" | "asked" | "current";
@@ -53,7 +53,8 @@ export function mindView(bundle: Bundle, state: State): Mind {
     const current = focus && state.last?.node === n.id ? (state.last.fact ?? null) : null;
     const bonusFacts = need.length === 0 ? n.facts.filter((f) => facts.get(f.id)?.verdict === "correct") : [];
     const status: MindStatus =
-      need.length === 0 ? (bonusFacts.length ? "bonus" : "off") : st === "explained" ? (m.probed ? "checked" : "explained") : m.parked ? "parked" : st;
+      // a lesson idea that is all setup Kai knows from the slides (given facts): known, not waited for
+      need.length === 0 && n.inLesson !== false && n.facts.some((f) => f.given) ? "known" : need.length === 0 ? (bonusFacts.length ? "bonus" : "off") : st === "explained" ? (m.probed ? "checked" : "explained") : m.parked ? "parked" : st;
 
     const questions: Question[] = [];
     let unasked = 0;
@@ -81,7 +82,7 @@ export function mindView(bundle: Bundle, state: State): Mind {
     };
   });
   const goals = bundle.goals.map((g) => {
-    const ns = nodes.filter((x) => x.status !== "off" && x.status !== "bonus" && bundle.nodes.find((n) => n.id === x.id)?.goals.includes(g.id));
+    const ns = nodes.filter((x) => x.status !== "off" && x.status !== "bonus" && x.status !== "known" && bundle.nodes.find((n) => n.id === x.id)?.goals.includes(g.id));
     const explained = ns.filter((x) => x.status === "explained" || x.status === "checked").length;
     return { id: g.id, level: g.level, explained, total: ns.length, ok: explained > 0 };
   });

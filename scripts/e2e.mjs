@@ -48,7 +48,7 @@ const OUT = join(process.cwd(), ".e2e");
 mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
-const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.filter((q) => !q.off); // the items in use
+const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
 const FORM_N = testItems.filter((q) => q.form === "A").length; // items a form
 /** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
 async function passSurvey(page, answer = true) {
@@ -81,7 +81,7 @@ async function answerTest(page, wrong = [], idk = [], noReason = []) {
   }
   return shown;
 }
-const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items.filter((p) => !p.off);
+const practiceItems = JSON.parse(readFileSync(join(TOPIC, "practice.json"), "utf8")).items;
 /** Answer the pretest questions on screen: "I don't know" where offered, else the second option. Returns their ids. */
 async function answerPretest(page) {
   const ids = await page.$$eval(".q", (els) => els.map((e) => e.dataset.q));
@@ -194,6 +194,9 @@ async function leaveWatch(p) {
     await p.reload({ waitUntil: "load" });
     await p.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
     await p.click(".lesson-nav .btn.primary");
+    // it asks first: the text closes for good
+    await p.waitForSelector(".lesson-confirm .btn.primary");
+    await p.$eval(".lesson-confirm .btn.primary", (b) => b.click());
   } else {
     await p.click(".aside .btn.primary");
     await p.waitForSelector(".aside .btn.primary.small");
@@ -238,6 +241,23 @@ if (textLesson) {
     seen.shown.push(...now.shown);
   }
   const lastWaits = (await look()).waits;
+  // past the reading time, "teach Kai" asks first (the text closes for good); "Back to the text" stays on it
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+    // past the minimum reading time, inside the time limit (hard limits here)
+    localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 5 * 60_000, readChapterAt: Date.now() - 5 * 60_000 }));
+  });
+  await page.reload({ waitUntil: "load" });
+  await page.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
+  await page.$eval(".lesson-nav .btn.primary", (b) => b.click());
+  await page.waitForSelector(".lesson-confirm");
+  const asks = await page.$eval(".lesson-confirm", (e) => /won.t be able to open it again/.test(e.textContent));
+  const endSays = await page.$eval(".lesson-end", (e) => /won.t be able to open it again/.test(e.textContent));
+  await shot(page, "01-read-confirm");
+  await page.$eval(".lesson-confirm .btn.ghost", (b) => b.click());
+  await page.waitForSelector(".lesson-nav .btn.primary");
+  const stayed = (await page.evaluate(() => location.pathname)) === "/watch";
+  check(asks && endSays && stayed, "the lesson's end says the text closes for good, and “teach Kai” asks before closing it (“Back to the text” stays)");
   check(
     first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.formula).length && seen.figures === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.figure).length && first.select === "none" && lastWaits,
     `the lesson is a text read one chapter at a time (${seen.shown.length} chapters, ${seen.formulas} formulas, ${seen.figures} figures), the chapters ahead closed, that can't be selected; Next waits for a quick read and the last step for the reading time`,
@@ -911,8 +931,8 @@ if (existsSync(logFile)) {
   const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
   const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
   check(
-    timedPre && timedPre.times.every((t) => t.limitMs === 5 * 60_000) && timedTest && timedTest.times.every((t) => t.limitMs === 10 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
-    "the pilot logs every part's time against its own (pretest 5 and test 10 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
+    timedPre && timedPre.times.every((t) => t.limitMs === 8 * 60_000) && timedTest && timedTest.times.every((t) => t.limitMs === 12 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
+    "the pilot logs every part's time against its own (pretest 8 and test 12 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
   );
 } else check(false, "research log written to .data/events.jsonl");
 

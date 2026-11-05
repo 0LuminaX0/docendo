@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
+import stashedJson from "../topics/bandits/stash/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
 
 const bundle = Bundle.parse(bundleJson);
 const practiceFile = PracticeFile.parse(practiceJson);
 // the problems in use (the app leaves those marked off out); item() finds any, for the solver's mechanics
-const practice = { ...practiceFile, items: practiceFile.items.filter((p) => !p.off) };
+const practice = practiceFile;
 const factIds = new Set(bundle.nodes.flatMap((n) => n.facts.map((f) => f.id)));
-const item = (id: string) => practiceFile.items.find((p) => p.id === id)!;
+const stashed = PracticeFile.parse(stashedJson).items; // the problems taken out (stash/): still good for the solver's mechanics
+const item = (id: string) => [...practiceFile.items, ...stashed].find((p) => p.id === id)!;
 
 describe("practice problems", () => {
   it("have unique ids, and every solution step cites real lesson facts", () => {

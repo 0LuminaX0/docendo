@@ -87,6 +87,11 @@ export async function POST(req: NextRequest) {
 
   const answers = "answers" in body.data ? body.data.answers : [];
   const asked = pack.sessionItems(session.form, session.both);
+  // a page loaded before the test's items changed (a deploy mid-session): its answers belong to other questions, so
+  // they aren't graded against these; the page drops its copy and loads the current questions
+  const seen = "order" in body.data ? body.data.order : undefined;
+  if (seen && (seen.length !== asked.length || seen.some((id) => !asked.some((q) => q.id === id))))
+    return fail(409, "The test was updated since this page opened. The current questions are loaded now: please answer them again.");
   if (answers.length !== asked.length) return fail(400, "Bad request.");
   // anything that isn't a valid answer to its item counts as unanswered (content/test.ts)
   const g = gradeTest(pack.exercises, session.form, !!session.both, answers);

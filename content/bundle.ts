@@ -74,7 +74,7 @@ export async function runBundle(topic: Topic) {
         facts: n.facts.map((f) => {
           const d = coverage.facts[f.id];
           const covered = d?.status === "covered" ? (d.where ?? []).some((c) => { const t = timeOf(c); return !!t && watched(t); }) : !!d?.accepted;
-          return { ...f, required: f.required && !lesson?.optional.includes(f.id), teachable: n.kind === "core" && covered };
+          return { ...f, required: f.required && !lesson?.optional.includes(f.id), teachable: n.kind === "core" && covered, ...(lesson?.given.includes(f.id) ? { given: true } : {}) };
         }),
         help,
       };

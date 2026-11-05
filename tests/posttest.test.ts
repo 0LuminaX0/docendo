@@ -3,6 +3,7 @@ import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, cpSync, readdirSyn
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import exercisesJson from "../topics/bandits/exercises.json";
+import stashedJson from "../topics/bandits/stash/exercises.json";
 import { ExercisesFile, checkPack } from "../content/pack";
 import { answerOf, checkExercise, gradeTest, keyText, sessionItems } from "../content/test";
 import { checkNumber } from "../content/practice";
@@ -10,13 +11,14 @@ import { DONT_KNOW, reasonGiven } from "../lib/answers";
 import { seedOf, testOrder, testParts } from "../lib/order";
 import { tables } from "../lib/analytics";
 
-// The post-test since 2026-11-05 (greedy and UCB only): five items a form in a fixed order, from understanding greedy
-// to a changed UCB. Form A T1, T11, T12, T4, T6; form B their twins V11, V12, V13, V14 and V4. The team's other items
-// (2 November 2026: T1 to T10, V1 to V10) are marked off, kept. The pilot takes both forms, its own form first.
+// The post-test since 2026-11-05 (greedy and UCB only, Phil's and Andrii's items merged): five items a form in a fixed
+// order, from understanding greedy to a changed UCB. Form A T1, T12, T16, T4, T6; form B their twins V11, V15, V13, V14
+// and V4. The other items (the team's T1 to T10 and V1 to V10, and later ones) are in stash/exercises.json. The pilot
+// takes both forms, its own form first.
 
 const file = ExercisesFile.parse(exercisesJson);
-const all = file.items;
-const test = all.filter((q) => !q.off); // what the app serves
+const test = file.items; // what the app serves
+const all = [...test, ...ExercisesFile.parse(stashedJson).items]; // with the items taken out (stash/), for the grading rules
 const forms = { A: test.filter((q) => q.form === "A"), B: test.filter((q) => q.form === "B") };
 const q = (id: string) => all.find((x) => x.id === id)!;
 const LETTERS = "abcd";
@@ -24,10 +26,10 @@ const ucb = (avg: number, n: number, t: number, c = Math.SQRT2) => avg + c * Mat
 const argmax = (xs: number[]) => xs.indexOf(Math.max(...xs));
 
 describe("the post-test items", () => {
-  it("are five a form in a fixed order (greedy, a changed greedy, UCB's rule, one UCB round, a changed UCB), every one with “I don't know”, a reason and a rubric", () => {
+  it("are five a form in a fixed order (greedy, greedy's lock-in, UCB's rule, one UCB round, a changed UCB), every one with “I don't know”, a reason and a rubric", () => {
     expect(file.order).toBe("fixed");
-    expect(forms.A.map((x) => x.id)).toEqual(["t01", "t11", "t12", "t04", "t06"]);
-    expect(forms.B.map((x) => x.id)).toEqual(["v11", "v12", "v13", "v14", "v04"]);
+    expect(forms.A.map((x) => x.id)).toEqual(["t01", "t12", "t16", "t04", "t06"]);
+    expect(forms.B.map((x) => x.id)).toEqual(["v11", "v15", "v13", "v14", "v04"]);
     expect(forms.A.map((x) => x.section)).toEqual(["Greedy", "Greedy", "UCB", "UCB", "UCB"]);
     // form B: each item the twin of the form A item in its place
     expect(forms.B.map((x) => x.pair)).toEqual(forms.A.map((x) => x.id));
@@ -35,13 +37,13 @@ describe("the post-test items", () => {
       expect(x.dontKnow && x.reason, x.id).toBe(true);
       expect(x.rubric, x.id).toBeTruthy();
       expect(x.diagnosis, x.id).toHaveLength(x.options!.length);
-      expect(x.options!.length, x.id).toBe(["t11", "v12"].includes(x.id) ? 3 : 4); // the optimistic starts have three
+      expect(x.options!.length, x.id).toBe(4);
       expect(`${x.prompt} ${x.options!.join(" ")} ${x.explain}`, x.id).not.toMatch(/ε|epsilon/i); // no ε-greedy since 2026-11-05
     }
   });
 
   it("have the keys, each diagnosis agreeing with its key", () => {
-    expect(forms.A.map((x) => LETTERS[x.answer as number]).join("")).toBe("bbdad");
+    expect(forms.A.map((x) => LETTERS[x.answer as number]).join("")).toBe("bcdad");
     expect(forms.B.map((x) => LETTERS[x.answer as number]).join("")).toBe("cabdc");
     // each diagnosis agrees with the key: "correct" (or "true") exactly on the key
     for (const x of all) for (const [k, d] of x.diagnosis!.entries()) expect(/^(correct|true)$/.test(d), `${x.id} ${k}`).toBe(Array.isArray(x.answer) ? x.answer.includes(k) : x.answer === k);
@@ -61,8 +63,11 @@ describe("the post-test items", () => {
     }
     expect(argmax([ucb(4.1, 15, 320, 0.05), ucb(4.6, 90, 320, 0.05)])).toBe(1);
     expect(argmax([ucb(4.1, 15, 320, 2), ucb(4.6, 90, 320, 2)])).toBe(0);
-    // V11: A's lucky 9 falls below B's 7.5 after a few sessions near 6
+    // V11: A's lucky 9 falls below B's 7.5 after a few trips near 6
     expect((9 + 6 + 6) / 3).toBeLessThan(7.5);
+    // T12 and V15: the worse option never scores below the better one's unlucky first try, so lock-in is certain
+    expect(6).toBeGreaterThan(5.5);
+    expect(6.5).toBeGreaterThan(6);
     // T4: within one round, A beats C (same average, fewer tries) and B beats D (same tries, higher average); A against
     // B depends on the bonus's size: small c gives A, large c gives B
     for (const c of [0.1, 1, 5]) {

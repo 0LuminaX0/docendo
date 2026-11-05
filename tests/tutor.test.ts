@@ -9,7 +9,10 @@ import { takeTurn, opening, type Deps } from "../engine/tutor/turn";
 import { nextMove, CONFIG, type Move } from "../engine/tutor/policy";
 import { applyJudgement } from "../engine/tutor/turn";
 
-const bundle = Bundle.parse(bundleJson);
+// Kai's free-question mode, on the lesson graph without its given marks: these tests use the setup (n01) as their
+// example idea, which the pack marks as known from the slides (given) since 2026-11-05
+const packBundle = Bundle.parse(bundleJson);
+const bundle = { ...packBundle, nodes: packBundle.nodes.map((n) => ({ ...n, facts: n.facts.map(({ given: _given, ...f }) => f) })) };
 const mock: Deps = {
   judge: async (b, m) => mockJudge(b, m),
   write: async (b, s, move, _h, mood) => mockWrite(b, s, move, mood === "neutral" ? "neutral" : mood),
@@ -354,5 +357,15 @@ describe("the offline judge on not knowing", () => {
       expect(j.intent).toBe("unsure");
       expect(j.facts).toEqual([]);
     }
+  });
+});
+
+describe("the setup Kai knows from the slides (given facts)", () => {
+  it("is never waited for or counted, and Kai's mind shows its ideas as known", () => {
+    const m = mindView(packBundle, initialState(packBundle));
+    // the seven facts Kai's questions ask about: greedy, lock-in, why explore, UCB's score and c, the bonus's two rules
+    expect(m.facts.total).toBe(7);
+    for (const id of ["n01", "n03", "n16"]) expect(m.nodes.find((n) => n.id === id)?.status, id).toBe("known");
+    expect(m.nodes.find((n) => n.id === "n05")?.status).toBe("unseen");
   });
 });

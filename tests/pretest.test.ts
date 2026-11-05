@@ -3,20 +3,29 @@ import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, cpSync, readdirSyn
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import pretestJson from "../topics/bandits/pretest.json";
+import stashedJson from "../topics/bandits/stash/pretest.json";
 import { PretestFile, checkPack } from "../content/pack";
 import { gradePretest, pretestItems, pretestSets, setsFor } from "../content/pretest";
 import { tables } from "../lib/analytics";
 
-// The team's pretest, option C (main doc, 2 November 2026): three screening questions, then set C1 (K1, K2, R1 to
-// R3); C2 is the harder version for the pilot (H1 to H5), which takes both sets in alternating order.
+// The team's pretest, option C (main doc, 2 November 2026): screening questions, then set C1 (K1, K2, R1 to R3); C2 is
+// the harder version for the pilot (H1 to H5), which takes both sets in alternating order. Since 2026-11-05 the pack
+// serves seven questions (q1, q2 and C1); q3 and C2 are in stash/pretest.json. The rules for several sets are tested on
+// the full set, the pack's items and the stashed ones together.
 
-const items = PretestFile.parse(pretestJson).items;
+const active = PretestFile.parse(pretestJson).items;
+const items = [...active, ...PretestFile.parse(stashedJson).items];
 const q = (id: string) => items.find((x) => x.id === id)!;
 const LETTERS = "abcde";
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
 
 describe("the pretest items", () => {
-  it("are the three screening questions, then C1 and C2, five knowledge items each", () => {
+  it("are seven in the pack: two screening questions and set C1", () => {
+    expect(ids(active)).toEqual(["q1", "q2", "k1", "k2", "r1", "r2", "r3"]);
+    expect(pretestSets(active)).toEqual(["C1"]);
+  });
+
+  it("were three screening questions, then C1 and C2, five knowledge items each (with the stashed ones)", () => {
     expect(ids(items.filter((x) => x.kind === "background"))).toEqual(["q1", "q2", "q3"]);
     expect(pretestSets(items)).toEqual(["C1", "C2"]);
     expect(ids(items.filter((x) => x.set === "C1"))).toEqual(["k1", "k2", "r1", "r2", "r3"]);
@@ -59,6 +68,8 @@ describe("the pretest items", () => {
     mkdirSync(dir, { recursive: true });
     for (const f of readdirSync("topics/bandits").filter((f) => f.endsWith(".json"))) cpSync(join("topics/bandits", f), join(dir, f));
     const changed = JSON.parse(readFileSync("topics/bandits/pretest.json", "utf8"));
+    const stashed = JSON.parse(readFileSync("topics/bandits/stash/pretest.json", "utf8"));
+    changed.items.push(...stashed.items.filter((x: { id: string }) => x.id.startsWith("h")));
     changed.items.find((x: { id: string }) => x.id === "h1").pair = "h2";
     writeFileSync(join(dir, "pretest.json"), JSON.stringify(changed));
     const errors = checkPack("pairs", root).filter((i) => i.level === "error").map((i) => i.msg);

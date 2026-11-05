@@ -28,7 +28,8 @@ const { Bundle } = await import("../content/schema");
 const { ScriptFile } = await import("../content/pack");
 const { PracticeFile } = await import("../content/practice");
 const { initialScriptState, scriptOpening, takeScriptTurn } = await import("../engine/tutor/script");
-const { latest, activeMisconceptions, notesOf } = await import("../engine/tutor/state");
+const { latest, activeMisconceptions, notesOf, factScore } = await import("../engine/tutor/state");
+const { CONFIG } = await import("../engine/tutor/config");
 const { applyJudgement } = await import("../engine/tutor/turn");
 const { llmJudge } = await import("../engine/tutor/judge");
 const { llmReact } = await import("../engine/tutor/writer");
@@ -48,7 +49,7 @@ const scriptPath = opt("--script") ?? "topics/bandits/script.json";
 
 const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json", "utf8")));
 const script = ScriptFile.parse(JSON.parse(readFileSync(scriptPath, "utf8")));
-const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items.filter((p) => !p.off);
+const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items;
 const TEACH = ["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]; // since 2026-11-05 no ε-greedy
 // the reasons Kai's two why-questions ask for (2026-11-05): no practice problem needs them, so they are outside the gate
 const WHY = ["n08.f1", "n11.f4"];
@@ -122,6 +123,7 @@ async function learnerSays(p: Persona, history: { role: "kai" | "learner"; text:
 }
 
 type Run = {
+  understanding: number; // Kai's understanding at the end, as the meter shows it (the teachable facts, given ones left out)
   persona: string;
   turns: number;
   words: number;
@@ -202,7 +204,7 @@ async function simulate(p: Persona): Promise<Run> {
     if (open === truth) gateRight++;
     else (open ? gateFalseOpen : gateFalseShut).push(it.id);
   }
-  const run: Run = { persona: p.id, turns, words, repeated, confusing, recall, known: known.length, falseCredit, vagueAsCorrect, caught, wrongHeld: wrongIdeas.size, gateRight, gateFalseOpen, gateFalseShut, done: state.done, usd: 0, log };
+  const run: Run = { understanding: Math.min(1, factScore(bundle, state).score / CONFIG.ready), persona: p.id, turns, words, repeated, confusing, recall, known: known.length, falseCredit, vagueAsCorrect, caught, wrongHeld: wrongIdeas.size, gateRight, gateFalseOpen, gateFalseShut, done: state.done, usd: 0, log };
   if (withSolve) {
     // Kai solves every problem from this notebook; after a wrong answer, the learner corrects it once and Kai retries
     let solved = 0;
@@ -253,12 +255,12 @@ console.log(`\nscript ${scriptPath}: ${script.questions.length} questions; learn
 for (const r of ok)
   console.log(
     `  ${r.persona.padEnd(8)} recall ${r.recall}/${r.known}  false credit ${r.falseCredit.join(" ") || "-"}  vague→correct ${r.vagueAsCorrect.join(" ") || "-"}  wrong caught ${r.caught}/${r.wrongHeld}  ` +
-      `repeats ${r.repeated}  confusing ${r.confusing}  messages ${r.turns}  words ${r.words}  gate ${r.gateRight}/6${r.gateFalseShut.length ? ` shut:${r.gateFalseShut.join(",")}` : ""}${r.gateFalseOpen.length ? ` open:${r.gateFalseOpen.join(",")}` : ""}` +
+      `repeats ${r.repeated}  confusing ${r.confusing}  messages ${r.turns}  words ${r.words}  gate ${r.gateRight}/${items.length}  understood ${Math.round(r.understanding * 100)}%${r.gateFalseShut.length ? ` shut:${r.gateFalseShut.join(",")}` : ""}${r.gateFalseOpen.length ? ` open:${r.gateFalseOpen.join(",")}` : ""}` +
       (r.solved !== undefined ? `  Kai solved ${r.solved}+${r.solvedAfterFix}/6 (should ${r.shouldSolve})` : "") +
       `${r.done ? "" : "  NOT DONE"}  $${r.usd.toFixed(3)}`,
   );
 console.log(
-  `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * items.length}` +
+  `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * items.length}, understood ${Math.round((100 * sum((r) => r.understanding)) / Math.max(1, ok.length))}% on average` +
     (withSolve ? `, Kai solved ${sum((r) => r.solved ?? 0)} first try + ${sum((r) => r.solvedAfterFix ?? 0)} after a fix (should ${sum((r) => r.shouldSolve ?? 0)}), right when the gate was open ${sum((r) => r.openRight ?? 0)}/${sum((r) => r.openTried ?? 0)}` : "") +
     `, $${sum((r) => r.usd).toFixed(3)}`,
 );

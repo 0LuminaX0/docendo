@@ -44,6 +44,10 @@ export const Lesson = z.object({
   goal: Goal.extend({ id: z.string().regex(/^[A-Z][A-Z0-9]{0,5}$/) }), // its own id, so it never collides with the full graph's LG1–LG3
   scope: z.array(z.string().regex(/^(n\d{2}|b\d)$/)).min(1),
   optional: z.array(z.string().regex(/^(n\d{2}|b\d)\.f\d$/)).default([]), // required in the full graph, but not waited for here
+  // the setup Kai already knows (its opening states it, the problems' stems repeat it): required, but never asked or
+  // counted towards Kai's understanding; Kai's mind shows its ideas as known (2026-11-05: counted, they kept the meter
+  // at most about 80% with the fixed questions, which never ask about them)
+  given: z.array(z.string().regex(/^(n\d{2}|b\d)\.f\d$/)).default([]),
   segments: z.array(z.object({ video: z.string(), start: z.number().min(0), end: z.number().positive(), title: z.string() })).min(1),
 });
 export type Lesson = z.infer<typeof Lesson>;
@@ -227,7 +231,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), evidence: z.string().optional() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), given: z.boolean().optional(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), evidence: z.string().optional() });
 export const BundleNode = z.object({
   inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),

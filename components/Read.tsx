@@ -38,6 +38,8 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const allowed = useGuard(saved, "watch");
   const nextOf = useNext();
   const [now, setNow] = useState(() => Date.now());
+  // the last chapter's "teach Kai" asks first: the text closes for good once the learner goes on
+  const [confirming, setConfirming] = useState(false);
   const copies = useRef(0);
   const { limits } = useStudySettings();
   const clock = useDeadline(saved?.readStartedAt, limits.watch);
@@ -165,6 +167,21 @@ export default function Read({ lesson }: { lesson: Lesson }) {
             </p>
           )}
 
+          {confirming && last ? (
+          <div className="lesson-confirm" role="group" aria-labelledby="lesson-confirm-q">
+            <p id="lesson-confirm-q">
+              <b>Go on to Kai?</b> The text closes now, and you won&apos;t be able to open it again: you&apos;ll teach Kai, solve the practice problems and take the test from what you remember.
+            </p>
+            <div className="lesson-confirm-row">
+              <button className="btn ghost" onClick={() => (setConfirming(false), track("read_confirm", { go: false }))}>
+                <ArrowLeft size={17} /> Back to the text
+              </button>
+              <button className="btn primary" onClick={() => (track("read_confirm", { go: true }), next())} autoFocus>
+                <Check size={17} /> Yes, teach Kai
+              </button>
+            </div>
+          </div>
+          ) : (
           <nav className="lesson-nav" aria-label="Chapters">
             {at > 0 ? (
               <button className="btn ghost" onClick={() => go(at - 1, "back")}>
@@ -186,7 +203,7 @@ export default function Read({ lesson }: { lesson: Lesson }) {
                 )}
               </button>
             ) : (
-              <button className="btn primary" onClick={() => next()} disabled={left > 0 || wait > 0}>
+              <button className="btn primary" onClick={() => (setConfirming(true), track("read_confirm_open"))} disabled={left > 0 || wait > 0}>
                 {left > 0 || wait > 0 ? (
                   <>
                     <Clock size={16} aria-hidden="true" /> Teach Kai in {mmss(Math.max(left, wait))}
@@ -199,8 +216,9 @@ export default function Read({ lesson }: { lesson: Lesson }) {
               </button>
             )}
           </nav>
+          )}
           <p className="note lesson-foot">
-            {last ? "The text closes when you go on: you'll explain it to Kai from memory." : "You can go back to the chapters you've read."} {limits.soft
+            {last ? "" : "You can go back to the chapters you've read. "}{limits.soft
               ? `Plan on about ${limits.watch} minutes for the lesson. The clock at the top shows it, and keeps counting if you need longer.`
               : `You have ${limits.watch} minutes for the lesson (the clock is at the top); when the time is up, it closes and you go on to Kai.`}
           </p>
