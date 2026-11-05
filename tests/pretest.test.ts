@@ -9,23 +9,25 @@ import { gradePretest, pretestItems, pretestSets, setsFor } from "../content/pre
 import { tables } from "../lib/analytics";
 
 // The team's pretest, option C (main doc, 2 November 2026): screening questions, then set C1 (K1, K2, R1 to R3); C2 is
-// the harder version for the pilot (H1 to H5), which takes both sets in alternating order. Since 2026-11-05 the pack
-// serves seven questions (q1, q2 and C1); q3 and C2 are in stash/pretest.json. The rules for several sets are tested on
-// the full set, the pack's items and the stashed ones together.
+// its twin (H1 to H5, H2 rewritten as K2's twin on 2026-11-05). A session takes seven questions: q1, q2 and its own set,
+// assigned at its start and balanced with the test form; the pilot takes both sets, its own first. The statistics
+// question q3 is in stash/pretest.json; the rules are tested with it as well (a background question that excludes
+// nobody).
 
 const active = PretestFile.parse(pretestJson).items;
-const items = [...active, ...PretestFile.parse(stashedJson).items];
+const items = [...active, ...PretestFile.parse(stashedJson).items.filter((q) => q.kind === "background")];
 const q = (id: string) => items.find((x) => x.id === id)!;
 const LETTERS = "abcde";
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
 
 describe("the pretest items", () => {
-  it("are seven in the pack: two screening questions and set C1", () => {
-    expect(ids(active)).toEqual(["q1", "q2", "k1", "k2", "r1", "r2", "r3"]);
-    expect(pretestSets(active)).toEqual(["C1"]);
+  it("are two screening questions and two sets of five in the pack: a session takes seven", () => {
+    expect(ids(active)).toEqual(["q1", "q2", "k1", "k2", "r1", "r2", "r3", "h1", "h2", "h3", "h4", "h5"]);
+    expect(pretestSets(active)).toEqual(["C1", "C2"]);
+    expect(pretestItems(active, setsFor(active, false, "A", "C2"))).toHaveLength(7);
   });
 
-  it("were three screening questions, then C1 and C2, five knowledge items each (with the stashed ones)", () => {
+  it("were three screening questions (with the stashed one), then C1 and C2, five knowledge items each", () => {
     expect(ids(items.filter((x) => x.kind === "background"))).toEqual(["q1", "q2", "q3"]);
     expect(pretestSets(items)).toEqual(["C1", "C2"]);
     expect(ids(items.filter((x) => x.set === "C1"))).toEqual(["k1", "k2", "r1", "r2", "r3"]);
@@ -35,7 +37,7 @@ describe("the pretest items", () => {
 
   it("have the team's keys, four options and “I don't know”, and no written reason", () => {
     expect(items.filter((x) => x.set === "C1").map((x) => LETTERS[x.answer!]).join("")).toBe("cdbca");
-    expect(items.filter((x) => x.set === "C2").map((x) => LETTERS[x.answer!]).join("")).toBe("cabdc");
+    expect(items.filter((x) => x.set === "C2").map((x) => LETTERS[x.answer!]).join("")).toBe("ccbdc");
     for (const x of items.filter((i) => i.kind === "knowledge")) {
       expect(x.options, x.id).toHaveLength(5);
       expect(x.options.at(-1), x.id).toBe("I don't know");
@@ -55,10 +57,8 @@ describe("the pretest items", () => {
     expect(25 * (2.0 / 0.5) ** 2).toBe(400);
     // K2: each equal rise of ln(t) needs t to grow tenfold
     expect(Math.log(1000) - Math.log(100)).toBeCloseTo(Math.log(100) - Math.log(10));
-    // H2: the harmonic sum keeps growing (past 7 after 1,000 terms), the sum of 1/n² stays below π²/6
-    const sum = (f: (n: number) => number, n: number) => Array.from({ length: n }, (_, k) => f(k + 1)).reduce((a, b) => a + b, 0);
-    expect(sum((n) => 1 / n, 1000)).toBeGreaterThan(7);
-    expect(sum((n) => 1 / n ** 2, 100_000)).toBeLessThan(Math.PI ** 2 / 6);
+    // H2 (K2's twin): 3.9 at 50, 6.2 at 500, so 8.5 at 5,000
+    expect([Math.log(50), Math.log(500), Math.log(5000)].map((v) => Math.round(v * 10) / 10)).toEqual([3.9, 6.2, 8.5]);
   });
 
   it("pass the pack check, which catches a pair outside the first set", () => {
@@ -79,7 +79,12 @@ describe("the pretest items", () => {
 
 describe("which pretest a session takes", () => {
   it("the first set, or in a pilot both sets in an order that alternates with the test form", () => {
-    expect(setsFor(items, false, "A")).toEqual(["C1"]);
+    // its own set (assigned at the start), or with every set on its own first
+    expect(setsFor(items, false, "A", "C2")).toEqual(["C2"]);
+    expect(setsFor(items, false, "B", "C1")).toEqual(["C1"]);
+    expect(setsFor(items, true, "A", "C2")).toEqual(["C2", "C1"]);
+    expect(setsFor(items, true, "B", "C1")).toEqual(["C1", "C2"]);
+    // a token from before sets were assigned: the first set, or with every set on alternating with the form
     expect(setsFor(items, false, "B")).toEqual(["C1"]);
     expect(setsFor(items, true, "A")).toEqual(["C1", "C2"]);
     expect(setsFor(items, true, "B")).toEqual(["C2", "C1"]);
@@ -127,5 +132,19 @@ describe("the pretest in the research log", () => {
   it("still reads the older screening questions (b1, b2)", () => {
     const t = tables([{ t: "pretest", sid: "s2", at: "2026-10-20T10:00:00.000Z", answers: { b1: 0, b2: 1 }, score: 1, of: 3 }]);
     expect([t.sessions[0]!.rlCourse, t.sessions[0]!.heardOfBandits]).toEqual([true, 1]);
+  });
+});
+
+import { assignment } from "../lib/server/participants";
+
+describe("assigning the test form and the pretest set", () => {
+  it("gives every pairing equally often in each block, and both forms in every two sessions", () => {
+    const cells = Array.from({ length: 8 }, (_, k) => assignment(k + 1, ["A", "B"], ["C1", "C2"]));
+    expect(cells.slice(0, 4).map((c) => `${c.form}${c.pre}`)).toEqual(["AC1", "BC2", "AC2", "BC1"]);
+    expect(new Set(cells.slice(4).map((c) => `${c.form}${c.pre}`)).size).toBe(4);
+    for (let k = 0; k < 8; k += 2) expect(new Set([cells[k]!.form, cells[k + 1]!.form]).size).toBe(2);
+    // one form or one set: the other still alternates
+    expect(Array.from({ length: 4 }, (_, k) => assignment(k + 1, ["A"], ["C1", "C2"]).pre)).toEqual(["C1", "C2", "C2", "C1"]);
+    expect(assignment(3, ["A", "B"], []).pre).toBeNull();
   });
 });

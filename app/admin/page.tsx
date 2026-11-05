@@ -222,6 +222,21 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                 ))}
               </tbody>
             </table>
+            {c.pairs.length > 0 && (
+              <>
+                <h3 className="adm-sub">Balance: condition × test form × pretest set</h3>
+                <table className="adm-table adm-balance">
+                  <thead>
+                    <tr><th></th>{c.pairs.map((k) => <th key={`${k.form}${k.set}`}>Form {k.form}, set {k.set}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {c.pairing.map((b) => (
+                      <tr key={b.cond}><td><span className={`adm-pill ${b.cond === "direct" ? "dir" : "rec"}`}>{b.cond}</span></td>{b.cells.map((n, i) => <td key={i}>{n}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
           </section>
           {showSurvey && <section className="adm-card">
             <h2>After the test</h2>

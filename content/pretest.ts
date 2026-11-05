@@ -15,11 +15,14 @@ export const pretestSets = (items: Pick<Item, "kind" | "set">[]) => {
   return sets.length ? sets : [""];
 };
 
-/** The sets a session takes, in order: the first one, or (both) all of them, reversed for form B. */
-export function setsFor(items: Pick<Item, "kind" | "set">[], both: boolean, form: "A" | "B"): string[] {
+/** The sets a session takes, in order: its own, or (both) its own and then the others. */
+export function setsFor(items: Pick<Item, "kind" | "set">[], both: boolean, form: "A" | "B", pre?: string | null): string[] {
   const all = pretestSets(items);
-  if (!both || all.length < 2) return all.slice(0, 1);
-  return form === "B" ? [...all].reverse() : all;
+  // the session's own set (assigned at its start, balanced with the test form); a token from before that had none: the
+  // first set, or with every set on the order that alternated with the form
+  const own = pre && all.includes(pre) ? pre : both && form === "B" ? all.at(-1)! : all[0]!;
+  if (!both || all.length < 2) return all.length ? [own] : [];
+  return [own, ...all.filter((s) => s !== own)];
 }
 
 /** The items a session answers for these sets: the background questions, then each set's items. */

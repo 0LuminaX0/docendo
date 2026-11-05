@@ -109,6 +109,7 @@ export function tables(events: Ev[]) {
       codeLabel: (start?.code as { label?: string } | null | undefined)?.label || null, // the label of a code made in the admin panel
       phase: start?.phase ?? "main", // main: the whole session; delayed: the follow-up test on its own, days later
       form: start?.form ?? "A", // the test form this session took (the delayed test takes the other)
+      pretestSet: start?.pretestSet ?? null, // the pretest set assigned at the start (balanced with the form; older sessions: none)
       topic: start?.topic ?? "bandits", // the topic pack (sessions before topics were selectable: bandits)
       settingsVersion: start?.settings ?? null, // the study settings it started under (admin panel, Settings)
       flow: ((start?.config as { flow?: string[] } | undefined)?.flow ?? []).join(" ") || null, // the steps it ran (lib/flow.ts)
@@ -557,6 +558,10 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
 
   // condition × test form (forms alternate within each condition)
   const balance = conds.map((c) => ({ cond: c, A: by(c).filter((s) => (s.form ?? "A") === "A").length, B: by(c).filter((s) => s.form === "B").length }));
+  // condition × test form × pretest set (each pairing equally often within a condition, since 2026-11-05)
+  const sets = [...new Set(sessions.map((s) => s.pretestSet).filter((x): x is string => typeof x === "string"))].sort();
+  const pairs = sets.length ? (["A", "B"] as const).flatMap((f) => sets.map((p) => ({ form: f, set: p }))) : [];
+  const pairing = conds.map((c) => ({ cond: c, cells: pairs.map((k) => by(c).filter((s) => (s.form ?? "A") === k.form && s.pretestSet === k.set).length) }));
 
   // data quality: sessions that may need a second look before the analysis
   const flags = [
@@ -577,6 +582,8 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     minutes,
     points,
     balance,
+    pairs,
+    pairing,
     flags,
     // recursive − direct, finished and not excluded; descriptive only: not the study's planned analysis
     comparison: compare(fin("recursive"), fin("direct")),

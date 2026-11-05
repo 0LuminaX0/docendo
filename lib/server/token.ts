@@ -15,7 +15,8 @@ export type Entry = "participant" | "trial" | "team" | "open";
 // form: the test form this session takes (A or B); phase: the main session, or the delayed test on its own;
 // topic: the topic pack the session started with (it keeps it if the study switches topics meanwhile); both: the final
 // test has both forms, its own form first (a pilot, settings test.both), fixed when the session starts
-type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string; both?: boolean };
+// pre: the pretest set this session takes (first, with every set on); older tokens have none
+type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string; both?: boolean; pre?: string };
 export type Who = Omit<Payload, "sid" | "exp">;
 
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
@@ -40,7 +41,7 @@ export function verifyToken(token: string | undefined): Payload | null {
     // tokens issued before conditions existed are team sessions in the direct condition
     // older tokens: form A, main session, the default topic
     // tokens issued before the pilot's two-form test: one form
-    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC, both: p.both === true && p.phase !== "delayed" };
+    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC, both: p.both === true && p.phase !== "delayed", ...(typeof p.pre === "string" ? { pre: p.pre } : {}) };
   } catch {
     return null;
   }

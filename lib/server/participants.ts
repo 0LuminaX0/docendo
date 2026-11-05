@@ -16,6 +16,7 @@ export type Participant = {
   pid: string;
   cond: Condition;
   form: Form; // the final test's form; the delayed test takes the other one
+  pre?: string; // the pretest's set (with every set on, the one taken first); older records: none
   both?: boolean; // the final test had both forms (a pilot): no delayed test, nothing unseen is left
   trial?: boolean; // a dry run's code: the delayed test works the same, counted with the tests
   topic?: string; // the topic pack of the first session (older records: the default topic); the delayed test keeps it
@@ -104,10 +105,12 @@ export async function markTest(pid: string, phase: "main" | "delayed") {
 }
 
 /**
- * The final test's form for a new session: A and B alternate within each group (a condition, or "team"), so each
- * condition gets both orders equally often and a form that turns out harder can't favour one condition.
+ * A new session's test form and pretest set: within each group (a condition, or "team"), every block of
+ * forms × sets sessions takes each pairing once, and every two sessions take both forms (2026-11-05: before, the
+ * pretest set was the first for everyone). So each condition gets every form and every set equally often, in every
+ * pairing, and a form or set that turns out harder can't favour one condition.
  */
-export async function nextForm(group: string): Promise<Form> {
+export async function nextAssignment(group: string, forms: Form[], sets: string[]): Promise<{ form: Form; pre: string | null }> {
   let n: number;
   if (redis) n = Number(await redis.hincrby(FORMS, group, 1));
   else {
@@ -115,5 +118,14 @@ export async function nextForm(group: string): Promise<Form> {
     n = d.forms[group] = (d.forms[group] ?? 0) + 1;
     await writeData(d);
   }
-  return n % 2 === 1 ? "A" : "B";
+  return assignment(n, forms, sets);
+}
+
+/** The n-th session's (1-based) pairing: forms alternate; sets move on every other session, offset by the form, so
+ * two forms and two sets go (A, 1), (B, 2), (A, 2), (B, 1). */
+export function assignment(n: number, forms: Form[], sets: string[]): { form: Form; pre: string | null } {
+  const k = n - 1;
+  const form = forms.length > 1 ? forms[k % forms.length]! : (forms[0] ?? "A");
+  const pre = sets.length ? sets[(Math.floor(k / 2) + (k % 2)) % sets.length]! : null;
+  return { form, pre };
 }

@@ -1,6 +1,6 @@
 {
   "title": "Stashed pretest items (not served)",
-  "note": "Taken out 2026-11-05 (a pretest of seven questions): q3, a probability or statistics course (only ever recorded), and set C2, a harder version of C1's five items (each `pair` names its C1 twin), used to calibrate in the pilot. The app never loads this folder; move an item back into ../pretest.json to use it.",
+  "note": "Taken out 2026-11-05 (a pretest of seven questions a session): q3, a probability or statistics course (only ever recorded), and the harmonic-series item that was C2's h2 until C2 came back the same day as the second set (h2 is now K2's twin). The app never loads this folder; move an item back into ../pretest.json to use it.",
   "items": [
     {
       "id": "q3",
@@ -14,32 +14,7 @@
       "note": "Recorded only; whether \"No\" excludes is a question for Dominic."
     },
     {
-      "id": "h1",
-      "kind": "knowledge",
-      "set": "C2",
-      "pair": "k1",
-      "measures": "sample size and confidence intervals (harder)",
-      "prompt": "A 95% confidence interval for an average, based on 25 readings, is 2.0 wide. About how many readings would make it 0.5 wide, if the readings vary as much as before?",
-      "options": [
-        "About 50",
-        "About 100",
-        "About 400",
-        "About 1,600",
-        "I don't know"
-      ],
-      "answer": 2,
-      "diagnosis": [
-        "square root applied the wrong way",
-        "width proportional to the number of readings",
-        "correct",
-        "squared twice",
-        "I don't know"
-      ],
-      "explain": "The width shrinks with √n, so an interval 4 times narrower needs 16 times as many readings: 25 × 16 = 400. The t-value makes it slightly fewer, still closest to 400. It underlies why a bonus halves only when an option's tries quadruple.",
-      "estimate": 0.45
-    },
-    {
-      "id": "h2",
+      "id": "h2-harmonic",
       "kind": "knowledge",
       "set": "C2",
       "pair": "k2",
@@ -61,84 +36,8 @@
         "I don't know"
       ],
       "explain": "Sum 1, the harmonic series, grows like ln(n): without limit, but ever more slowly. Sum 2 approaches π²/6 ≈ 1.64. It is the distinction between slowing and stopping behind F11.",
-      "estimate": 0.45
-    },
-    {
-      "id": "h3",
-      "kind": "knowledge",
-      "set": "C2",
-      "pair": "r1",
-      "measures": "few against many reviews, both ends (harder)",
-      "prompt": "Restaurant A has an average of 4.8 stars from 5 reviews; restaurant B has 4.6 stars from 500 reviews. Which restaurant's true average is more likely to be above 4.9, and which is more likely to be below 4.5?",
-      "options": [
-        "Above 4.9: A; below 4.5: B",
-        "A for both",
-        "B for both",
-        "Above 4.9: B; below 4.5: A",
-        "I don't know"
-      ],
-      "answer": 1,
-      "diagnosis": [
-        "the lower average looks more likely to be too low",
-        "correct",
-        "more reviews, more room for extreme values",
-        "both effects reversed",
-        "I don't know"
-      ],
-      "explain": "With 5 reviews, A's true average can lie far from 4.8 in either direction; with 500 reviews, B's lies very close to 4.6.",
-      "estimate": 0.35,
-      "note": "The key held in a Bayesian simulation under three different assumptions about typical ratings."
-    },
-    {
-      "id": "h4",
-      "kind": "knowledge",
-      "set": "C2",
-      "pair": "r2",
-      "measures": "choosing on few results (harder)",
-      "prompt": "Two companies each test 20 suppliers before a large order: company X with one delivery per supplier, company Y with ten. Each then gives the large order to the supplier with the best test results. Whose chosen supplier will, on average, fall further short of its test results?",
-      "options": [
-        "Y's",
-        "Both about equally",
-        "Neither",
-        "X's",
-        "I don't know"
-      ],
-      "answer": 3,
-      "diagnosis": [
-        "more test deliveries give more chances for a lucky high score",
-        "both picked their best supplier, so both are equally lucky",
-        "the best test results show the true quality",
-        "correct",
-        "I don't know"
-      ],
-      "explain": "Picking the best of 20 single deliveries mostly picks luck, while averages of ten deliveries contain much less of it. It underlies why greedy's choice after one try per option is unreliable.",
       "estimate": 0.45,
-      "note": "In simulation (20 suppliers, true quality 70 ± 5, each delivery ± 10), X's chosen supplier fell short by 17 points on average and Y's by 3."
-    },
-    {
-      "id": "h5",
-      "kind": "knowledge",
-      "set": "C2",
-      "pair": "r3",
-      "measures": "data only from those you chose (harder)",
-      "prompt": "A company hires only applicants who score above 70 on an entry test. Among the people it hired, the test score barely predicts how well they do the job. Can the company conclude that the test is useless for choosing staff?",
-      "options": [
-        "Yes: among the people hired, the score barely predicts performance",
-        "Yes, provided it has data on many employees",
-        "No: everyone hired scored above 70, so the data hide what the score does",
-        "No: it should first check that the test was marked correctly",
-        "I don't know"
-      ],
-      "answer": 2,
-      "diagnosis": [
-        "the data look clear",
-        "more data fixes everything",
-        "correct",
-        "right conclusion, irrelevant reason",
-        "I don't know"
-      ],
-      "explain": "The company never sees how people scoring below 70 would have done, and within the narrow range it hired, scores differ little (range restriction): you only learn about the options you choose (F2, F5).",
-      "estimate": 0.35
+      "note": "C2's h2 until 2026-11-05, when C2 came back as the second pretest set: the harmonic series asks for more than K2 does, so h2 became K2's twin."
     }
   ]
 }

@@ -142,7 +142,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
           <h2>Before you start</h2>
           {pack.pretestSets.filter(Boolean).length > 1 && (
             <p className="note">
-              A session takes the background questions and set {pack.pretestSets[0]}; with &quot;every set&quot; on (Study setup, pilot) every set ({pack.pretestSets.join(", ")}) in an order that alternates with its test form.
+              A session takes the background questions and one set ({pack.pretestSets.join(" or ")}), assigned at its start and balanced with the test form within each condition; with &quot;every set&quot; on (Study setup, pilot) every set, its own first.
             </p>
           )}
           <ol className="cnt-items">

@@ -8,7 +8,7 @@ import { deviceOf, record } from "@/lib/server/events";
 import { readCode, type Condition } from "@/lib/codes";
 import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
 import { DEFAULT_TOPIC, otherForm, packFor } from "@/lib/server/content";
-import { followUpOpens, getParticipant, nextForm, putParticipant, type Participant } from "@/lib/server/participants";
+import { followUpOpens, getParticipant, nextAssignment, putParticipant, type Participant } from "@/lib/server/participants";
 import { getSettings } from "@/lib/server/settings";
 import type { Settings } from "@/lib/settings";
 import { flowOf } from "@/lib/flow";
@@ -97,14 +97,17 @@ export async function POST(req: NextRequest) {
   try {
     // the topic: a person who started before keeps theirs, else the study's current one
     const pack = packFor(known?.topic ?? st.settings.topic);
-    // the final test's form: kept from an earlier start of the same person, else balanced within the condition
-    // (a pack with one form: always that one)
-    const form = pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? (await nextForm(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team")));
+    // the final test's form and the pretest's set: kept from an earlier start of the same person, else balanced within
+    // the condition, every pairing equally often (lib/server/participants.ts: nextAssignment)
+    const sets = pack.pretestSets.filter(Boolean);
+    const drawn = known ? null : await nextAssignment(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team", pack.forms, sets);
+    const form = pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? drawn!.form);
+    const pre = known ? (known.pre ?? sets[0] ?? null) : drawn!.pre;
     // the pilot (settings test.both): both forms in the final test, this form first, so the order alternates with the
     // form within each condition. A person who started before keeps how their test was set up.
     const both = pack.forms.length > 1 && (known ? known.both === true : st.settings.test.both);
-    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}) }, st.settings.sessionDays);
+    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), startedAt: new Date().toISOString() });
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}) }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -113,6 +116,7 @@ export async function POST(req: NextRequest) {
       phase: "main",
       form, // the final test's form (A or B); the delayed test takes the other
       testForms: both ? [form, otherForm(form)] : [form], // the pilot: both forms, this one first
+      pretestSet: pre, // the pretest set this session takes (with every set on: first), balanced with the form
       topic: pack.slug, // the topic pack (Settings); the session keeps it
       consent: CONSENT_VERSION,
       settings: st.version, // the study settings this session started under (admin panel, Settings)

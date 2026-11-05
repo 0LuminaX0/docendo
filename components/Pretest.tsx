@@ -17,20 +17,21 @@ import { pretestItems, setsFor } from "@/content/pretest";
 type Item = { id: string; kind: "background" | "knowledge"; set: string; prompt: string; options: string[] };
 const KEYS = "ABCDEF";
 
-/** The session's test form, read from its token (signed, not secret): it sets the order of a pilot's sets. */
-function formOf(token: string): "A" | "B" {
+/** The session's test form and pretest set, read from its token (signed, not secret): its set comes first. */
+function assignedOf(token: string): { form: "A" | "B"; pre: string | null } {
   try {
-    const p = JSON.parse(atob((token.split(".")[0] ?? "").replace(/-/g, "+").replace(/_/g, "/"))) as { form?: string };
-    return p.form === "B" ? "B" : "A";
+    const p = JSON.parse(atob((token.split(".")[0] ?? "").replace(/-/g, "+").replace(/_/g, "/"))) as { form?: string; pre?: string };
+    return { form: p.form === "B" ? "B" : "A", pre: typeof p.pre === "string" ? p.pre : null };
   } catch {
-    return "A";
+    return { form: "A", pre: null };
   }
 }
 
 /**
  * Before the lesson: background questions, then a short set of knowledge items, each with "I don't know".
- * Graded and recorded on the server for the analysis; nothing is shown back. In a pilot (settings pretest.both) every
- * set, one after the other as parts, in an order that alternates with the session's test form (content/pretest.ts);
+ * Graded and recorded on the server for the analysis; nothing is shown back. The session takes its own set (assigned
+ * at its start, balanced with the test form within the condition); in a pilot (settings pretest.both) every set, one
+ * after the other as parts, its own first (content/pretest.ts);
  * the next part opens once a part is complete, and the part before is then locked. The sets are fixed the first time
  * the page opens. Each part has its own clock (settings pretest.minutes, per set); with soft timing (the pilot) it
  * counts on past the time and nothing ends, and each part's time against it is sent with the answers.
@@ -62,7 +63,8 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
   });
   useEffect(() => {
     if (!allowed || !saved || fixed) return;
-    const sets = setsFor(items, both, formOf(saved.token));
+    const { form, pre } = assignedOf(saved.token);
+    const sets = setsFor(items, both, form, pre);
     update((s) => ({ ...s, pretestSets: sets }));
     track("pretest_sets", { sets });
   }, [allowed, saved, fixed, items, both, update]);

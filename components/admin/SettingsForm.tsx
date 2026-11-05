@@ -269,7 +269,7 @@ export default function SettingsForm({
                         <Num label={s.timing.soft ? "Recommended time per set (minutes)" : "Time limit per set (minutes): then what is answered is handed in"} value={s.pretest.minutes} min={1} max={30} step={1} onChange={(v) => patch("pretest", { minutes: v })} changed={s.pretest.minutes !== defaults.pretest.minutes} />
                         <Toggle
                           label="Every set, one after the other (pilot)"
-                          hint={summary.pretestSets.length > 1 ? `Every new session takes the background questions and then every set (${summary.pretestSets.join(", ")}) as parts, in an order that alternates with its test form. Otherwise only ${summary.pretestSets[0]}.` : "Needs a second set of knowledge items in the pack's pretest."}
+                          hint={summary.pretestSets.length > 1 ? `Every new session takes the background questions and then every set (${summary.pretestSets.join(", ")}) as parts, its own set first. Otherwise only its own set. A session's set is assigned at its start, balanced with the test form within each condition.` : "Needs a second set of knowledge items in the pack's pretest."}
                           value={s.pretest.both}
                           onChange={(v) => summary.pretestSets.length > 1 && patch("pretest", { both: v })}
                           changed={s.pretest.both !== defaults.pretest.both}

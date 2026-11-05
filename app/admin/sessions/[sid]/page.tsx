@@ -96,7 +96,7 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
             <span className={`adm-pill ${rec ? "rec" : "dir"}`}>{rec ? "recursive" : "direct"}</span>
             <span>{str(s.entry)}{s.demo ? ", demo" : ""}</span>
             {s.phase === "delayed" && <span>follow-up test</span>}
-            <span>{pack.title}, form {str(s.form)}</span>
+            <span>{pack.title}, form {str(s.form)}{s.pretestSet ? `, pretest set ${str(s.pretestSet)}` : ""}</span>
             <span>started {when(s.startedAt)}</span>
             <span>
               settings <code>{str(s.settingsVersion)}</code>

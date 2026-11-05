@@ -55,12 +55,12 @@ export function packSummary(pack: Pack, s: Settings) {
     // one line per block for the Settings page, from the pack and the settings
     blocks: {
       pretest: (() => {
-        // the questions a session answers: the background ones and the first set, or in a pilot every set
+        // the questions a session answers: the background ones and its own set (balanced), or in a pilot every set
         const both = s.pretest.both && pack.pretestSets.length > 1;
         const n = both ? pack.pretestAll.length : pack.pretest.length;
         const knowledge = (both ? pack.pretestAll : pack.pretest).filter((q) => q.kind === "knowledge").length;
         const sets = pack.pretestSets.filter(Boolean);
-        return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: set ${sets[0]}`) : ""}), ${minutes.pretest} min${both ? ` (${s.pretest.minutes} per set)` : ""}`;
+        return `${plural(n, "question")} (${knowledge} on neighbouring ideas${sets.length > 1 ? (both ? `: every set, ${sets.join(" and ")}, one after the other (pilot)` : `: one set a session, ${sets.join(" or ")}, balanced with the test form`) : ""}), ${minutes.pretest} min${both ? ` (${s.pretest.minutes} per set)` : ""}`;
       })(),
       watch: s.watch.parts.length ? `${plural(s.watch.parts.length, "part")} from ${plural(new Set(s.watch.parts.map((p) => p.videoId)).size, "video")}, ${mmss(lessonSec)} in all` : "no parts yet",
       teach: `${plural(lessonNodes.length, "idea")}, ${plural(facts.length, "fact")} Kai waits for; ${s.teach.fixed && pack.script ? `${plural(pack.script.questions.length, "fixed question")}, wrapping up after the last${s.timing.soft ? `; ${s.teach.minutes} min recommended` : ` or at ${s.teach.minutes} min`}` : `Kai chooses its questions; ${s.teach.minutes} min${s.timing.soft ? " recommended" : ""}`}${s.teach.mind ? "" : "; Kai's mind hidden"}`,
