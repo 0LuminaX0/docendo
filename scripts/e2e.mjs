@@ -50,6 +50,9 @@ const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
 const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items.filter((q) => !q.off); // the items in use
 const FORM_N = testItems.filter((q) => q.form === "A").length; // items a form
+// two forms in use: the follow-up test and both forms in the final test can run (since 2026-11-05 the pack serves one;
+// the parts that need two are skipped, and come back with a second form)
+const TWO_FORMS = new Set(testItems.map((q) => q.form)).size > 1;
 /** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
 async function passSurvey(page, answer = true) {
   await page.waitForSelector(".survey");
@@ -103,7 +106,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
 // The defaults: one pretest set and one test form, soft timing (nothing ends at its time). Most of the walkthrough
 // checks the study's shape with hard limits and the follow-up test (the pilot's setup, both sets and both forms, gets
 // its own part below; the admin part resets the settings later)
-const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: true }, timing: { soft: false } });
+const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: TWO_FORMS }, timing: { soft: false } });
 // the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
 {
   const ctx = await browser.createBrowserContext();
@@ -112,11 +115,11 @@ const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test:
   await a.type("#pw", ADMIN_PW);
   await a.$eval("form button", (e) => e.click());
   await a.waitForSelector(".adm-main", { timeout: 15000 });
-  const status = await a.evaluate(async () => {
+  const status = await a.evaluate(async (two) => {
     const post = (body) => fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
     const base = await post({ action: "reset" });
-    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp: true }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
-  });
+    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp: two }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
+  }, TWO_FORMS);
   if (status !== 200) throw new Error(`could not switch the lesson's help on for the walkthrough (${status})`);
   await ctx.close();
   await new Promise((r) => setTimeout(r, 10_500)); // each route keeps the settings for up to 10 s
@@ -124,6 +127,7 @@ const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test:
 const errors = [];
 const checks = [];
 const check = (ok, what) => checks.push(`${ok ? "✓" : "✗"} ${what}`);
+const notRun = (what) => checks.push(`– skipped (one test form): ${what}`);
 
 async function newPage(width = 1366, height = 900, context = null) {
   const page = await (context ?? browser).newPage();
@@ -194,6 +198,9 @@ async function leaveWatch(p) {
     await p.reload({ waitUntil: "load" });
     await p.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
     await p.click(".lesson-nav .btn.primary");
+    // it asks first: the text closes for good
+    await p.waitForSelector(".lesson-confirm .btn.primary");
+    await p.$eval(".lesson-confirm .btn.primary", (b) => b.click());
   } else {
     await p.click(".aside .btn.primary");
     await p.waitForSelector(".aside .btn.primary.small");
@@ -238,6 +245,23 @@ if (textLesson) {
     seen.shown.push(...now.shown);
   }
   const lastWaits = (await look()).waits;
+  // past the reading time, "teach Kai" asks first (the text closes for good); "Back to the text" stays on it
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+    // past the minimum reading time, inside the time limit (hard limits here)
+    localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, readStartedAt: Date.now() - 5 * 60_000, readChapterAt: Date.now() - 5 * 60_000 }));
+  });
+  await page.reload({ waitUntil: "load" });
+  await page.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
+  await page.$eval(".lesson-nav .btn.primary", (b) => b.click());
+  await page.waitForSelector(".lesson-confirm");
+  const asks = await page.$eval(".lesson-confirm", (e) => /won.t be able to open it again/.test(e.textContent));
+  const endSays = await page.$eval(".lesson-end", (e) => /won.t be able to open it again/.test(e.textContent));
+  await shot(page, "01-read-confirm");
+  await page.$eval(".lesson-confirm .btn.ghost", (b) => b.click());
+  await page.waitForSelector(".lesson-nav .btn.primary");
+  const stayed = (await page.evaluate(() => location.pathname)) === "/watch";
+  check(asks && endSays && stayed, "the lesson's end says the text closes for good, and “teach Kai” asks before closing it (“Back to the text” stays)");
   check(
     first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.formula).length && seen.figures === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.figure).length && first.select === "none" && lastWaits,
     `the lesson is a text read one chapter at a time (${seen.shown.length} chapters, ${seen.formulas} formulas, ${seen.figures} figures), the chapters ahead closed, that can't be selected; Next waits for a quick read and the last step for the reading time`,
@@ -537,7 +561,8 @@ await shot(phoneHome, "10-phone-welcome", true);
 
 // the follow-up on the participant's side: a finished session whose graded test came with a follow-up date shows the
 // invitation on the results page, and the welcome page offers "Take the follow-up test" (the server decides if open)
-{
+if (!TWO_FORMS) notRun("the follow-up invitation on the results and welcome pages");
+else {
   const fp = await newPage(1366, 900, await browser.createBrowserContext());
   await fp.goto(BASE + "/", { waitUntil: "load" });
   const later = Date.now() + 3 * 86_400_000;
@@ -649,7 +674,7 @@ await shot(phoneHome, "10-phone-welcome", true);
 // time the clock counts on ("+…") and nothing ends; each part's time against it is logged and sent with the answers;
 // the shared code gets a debug skip, part by part
 {
-  const ok = await settingsFrom((s) => ({ ...s, pretest: { ...s.pretest, both: true }, test: { ...s.test, both: true, followUp: false }, tools: { ...s.tools, help: true } }));
+  const ok = await settingsFrom((s) => ({ ...s, pretest: { ...s.pretest, both: true }, test: { ...s.test, both: TWO_FORMS, followUp: false }, tools: { ...s.tools, help: true } }));
   const pl = await newPage(1280, 860, await browser.createBrowserContext());
   const clock = () => pl.$eval(".top .clock", (e) => e.textContent.trim()).catch(() => "");
   const counting = async () => /^\+\d+:\d\d$/.test(await clock());
@@ -699,7 +724,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   got.practiceOn = (await pl.evaluate(() => location.pathname)) === "/practice" && (await counting());
   await skip("/exercises");
   await pl.waitForSelector(".q");
-  got.testParts = /Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
+  got.testParts = !TWO_FORMS || /Part 1 of 2/.test(await pl.$eval(".quiz-section", (e) => e.textContent).catch(() => ""));
   await movePast(pl, "testStartedAt");
   await pl.reload({ waitUntil: "load" });
   await pl.waitForSelector(".q");
@@ -707,15 +732,17 @@ await shot(phoneHome, "10-phone-welcome", true);
   got.testOn = (await pl.evaluate(() => location.pathname)) === "/exercises" && (await counting());
   await shot(pl, "14-pilot-test-overtime");
   await answerTest(pl);
-  await pl.click(".submitbar .btn.primary");
-  await pl.waitForSelector(".quiz-done");
-  got.testOwnClock = /^\d+:\d\d$/.test(await clock());
+  if (TWO_FORMS) {
+    await pl.click(".submitbar .btn.primary");
+    await pl.waitForSelector(".quiz-done");
+    got.testOwnClock = /^\d+:\d\d$/.test(await clock());
+  }
   await skip("/results");
   const st2 = await saved(pl);
-  got.graded = !!st2.result && st2.result.parts?.length === 2;
+  got.graded = !!st2.result && st2.result.parts?.length === (TWO_FORMS ? 2 : 1);
   check(
     Object.values(got).every(Boolean),
-    `the pilot: two pretest parts and two test parts, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
+    `the pilot: two pretest parts and ${TWO_FORMS ? "two test parts" : "the test"}, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
   );
   await pl.close();
   // back to the study's shape for the parts that follow
@@ -744,6 +771,8 @@ await shot(phoneHome, "10-phone-welcome", true);
   const twice = await post("/api/session", { accessCode: code, consent: true });
   check(noConsent.status === 400, "a session doesn't start without the study consent, whatever the browser sends");
 
+  if (!TWO_FORMS) notRun("the delayed test with the same code, and opening it early from the Follow-up page");
+  else {
   // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
   // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first
   const firstForm = (await post("/api/grade", { token: used.json.token, kind: "items" })).json.form;
@@ -796,6 +825,7 @@ await shot(phoneHome, "10-phone-welcome", true);
     sched.status === 200 && g2.json.followUp?.opensAt > Date.now() + 20 * 86_400_000 && tooSoon.status === 409 && waiting > 0 && opened.json.changed === 1 && back2.status === 200 && back2.json.phase === "delayed",
     `follow-up opened early: a 30-day schedule makes a trial code wait (listed on Follow-up as waiting), "Open now" lets the same code start it (${back2.json.phase})`,
   );
+  }
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
   // settings: a change reaches the participant pages, is versioned, and goes back to the defaults
   const base = await post("/api/admin/settings", { action: "reset" });
@@ -834,7 +864,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   );
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
   // (and the pilot's test: both forms, one after the other)
-  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: true } } });
+  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: TWO_FORMS } } });
   const bothAndFollowUp = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, test: { ...base.json.settings.test, followUp: true, both: true } } });
   let skipped = false;
   for (let k = 0; k < 16 && !skipped; k++) (skipped = await adm.evaluate(async () => { const h = await (await fetch("/")).text(); return !/<h3>Practice<\/h3>/.test(h) && /<h3>Teach Kai<\/h3>/.test(h); })), skipped || (await wait(1000));
@@ -863,6 +893,14 @@ await shot(phoneHome, "10-phone-welcome", true);
   // the pilot's test: both forms as two parts, the session's own form first; part 2 opens once part 1 is complete,
   // and part 1 is then locked; the anchor (V9 = T10) is asked once
   await short.waitForSelector(".q");
+  if (!TWO_FORMS) {
+    // one form: its items in one part; both forms (or a follow-up) are refused while there is only one
+    const only = await answerTest(short);
+    await short.click(".submitbar .btn.primary");
+    await short.waitForFunction(() => location.pathname === "/results");
+    await short.close();
+    check(noPractice.status === 200 && bothAndFollowUp.status === 400 && only.length === FORM_N, `one test form in use (${FORM_N} items, in one part); both forms with a follow-up are refused`);
+  } else {
   const part1 = await answerTest(short);
   const goOn = await short.$eval(".submitbar .btn.primary", (b) => b.textContent);
   await short.click(".submitbar .btn.primary");
@@ -885,6 +923,7 @@ await shot(phoneHome, "10-phone-welcome", true);
     noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n - 1 && part1.every((id) => formOf(id) === formOf(part1[0])) && part2.every((id) => formOf(id) !== formOf(part1[0])) && !(asked.includes("t10") && asked.includes("v09")) && /part 2/i.test(goOn) && pilotScore === `${2 * n - 2}/${2 * n - 1}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 2} of ${n - 1}`).test(perPart),
     `the pilot's test: both forms in two parts (${formOf(part1[0])} first), part 2 after part 1 is complete, the anchor once, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
+  }
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
   const blocks = await adm.$$eval(".study-block", (els) => els.length);
@@ -931,10 +970,11 @@ if (existsSync(logFile)) {
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
   const pilot = evs.find((e) => e.t === "grade" && Array.isArray(e.forms) && e.forms.length === 2);
-  check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 1, "the pilot's test logs each part, each form's score (the anchor in both) and every reason");
+  if (!TWO_FORMS) notRun("the pilot's two-form test in the log");
+  else check(has("client_test_part") && pilot && pilot.formScores && pilot.items.every((it) => "reason" in it && it.form) && pilot.copies.length === 1, "the pilot's test logs each part, each form's score (the anchor in both) and every reason");
   // the pilot's timing: each part's time against its own, with the answers; every other step's from the browser
   const timedPre = evs.find((e) => e.t === "pretest" && e.times?.length === 2);
-  const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
+  const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === (TWO_FORMS ? 2 : 1) && e.skipped === true);
   const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
   check(
     timedPre && timedPre.times.every((t) => t.limitMs === 4 * 60_000) && timedPre.times[0].over && timedTest && timedTest.times.every((t) => t.limitMs === 10 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),

@@ -1,10 +1,10 @@
 {
-  "note": "The text lesson (the team's design, 2 November 2026; rewritten 2026-11-05 after the pilot, where the text read as thin and its figures as too simple: worked numbers in the figures, a passage for each of Kai's questions in the order Kai asks them): every teachable fact once, each with a figure or formula, and none of the consequences the practice and test items ask about. Paragraphs take **bold**. A figure or formula is named by id (components/lesson/). Each section names the ideas it explains (`nodes`), for the help passage that matches Kai's question or a practice problem.",
-  "title": "How greedy, ε-greedy and UCB choose",
-  "minutes": 9,
+  "note": "The text lesson (the team's design, 2 November 2026; rewritten 2026-11-05 after the pilot, where the text read as thin and its figures as too simple: worked numbers in the figures, a passage for each of Kai's questions in the order Kai asks them): every teachable fact once, each with a figure or formula, and none of the consequences the practice and test items ask about. Paragraphs take **bold**. A figure or formula is named by id (components/lesson/). Each section names the ideas it explains (`nodes`), for the help passage that matches Kai's question or a practice problem. 2026-11-05 (later): ε-greedy and the side-by-side chapter taken out (ε-greedy leaves the study); the intro and the end say the text closes for good once the learner goes on.",
+  "title": "How greedy and UCB choose",
+  "minutes": 7,
   "minSeconds": 240,
   "remindSeconds": 720,
-  "intro": "Reading this takes about {minutes} minutes. Afterwards you will explain it to Kai, a classmate who missed it, without this text in front of you. Kai learns best from your own words and your own examples, so aim to understand why each rule chooses as it does rather than to memorise sentences.",
+  "intro": "Reading this takes about {minutes} minutes. Read carefully: once you go on, this text closes and you won't see it again. Next you will explain it to Kai, a classmate who missed it, and after that you will solve practice problems and answer a short test, all from memory. So take in as much as you can: how each rule chooses, and why. You don't need to remember UCB's formula; what matters is the idea behind it, what UCB does and in which situations it picks something other than the favourite. Kai learns best from your own words and your own examples, so aim to understand rather than to memorise sentences.",
   "copied": "That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?",
   "sections": [
     {
@@ -27,7 +27,7 @@
           "caption": "Figure 1. Averages from few and many lunches"
         },
         {
-          "p": "A **rule** decides, round after round, which option to pick, using only what has been seen so far: each option's average and how often it was picked. This text explains three rules. All three start by trying every option once, so that each option has an average. The option with the highest average so far is called the **favourite**."
+          "p": "A **rule** decides, round after round, which option to pick, using only what has been seen so far: each option's average and how often it was picked. This text explains two rules. Both start by trying every option once, so that each option has an average. The option with the highest average so far is called the **favourite**."
         }
       ]
     },
@@ -61,38 +61,13 @@
           "caption": "Figure 3. Lock-in under greedy"
         },
         {
-          "p": "Lock-in shows the basic tension of the bandit problem. **Exploiting** means picking the option that looks best, to collect reward now. **Exploring** means picking an option to learn more about it: it may cost reward now, but it can show that an option is better than it looked. Greedy only exploits. Exploring too little risks being stuck with a worse option; exploring too much wastes rounds on options already known to be worse. The next two rules both explore, in different ways."
-        }
-      ]
-    },
-    {
-      "id": "epsilon",
-      "title": "3. ε-greedy: the favourite, plus a lottery",
-      "nodes": [
-        "n07"
-      ],
-      "blocks": [
-        {
-          "p": "ε-greedy (say \"epsilon-greedy\") adds deliberate randomness to greedy. In every round:"
-        },
-        {
-          "formula": "epsilon"
-        },
-        {
-          "p": "Here k is the number of options. ε is a fixed number chosen in advance, such as 0.1, so on average one round in ten is a lottery. ε stays the same in every round, however long the app has run and however certain its averages are: round 10 and round 10,000 are treated alike."
-        },
-        {
-          "p": "The lottery is a pure draw among all k options, each with the same chance of 1 in k, the favourite included. It ignores the averages and how often each option has been tried: the option with the worst average and the one tried least have the same chance as any other. In the other rounds ε-greedy does what greedy does and picks the favourite. Whatever it picks, it updates that option's average."
-        },
-        {
-          "figure": "lottery",
-          "caption": "Figure 4. How ε-greedy decides, early and late"
+          "p": "Lock-in shows the basic tension of the bandit problem. **Exploiting** means picking the option that looks best, to collect reward now. **Exploring** means picking an option to learn more about it: it may cost reward now, but it can show that an option is better than it looked. Greedy only exploits. Exploring too little risks being stuck with a worse option; exploring too much wastes rounds on options already known to be worse. The next rule, UCB, explores, and it does so on purpose rather than by chance."
         }
       ]
     },
     {
       "id": "ucb",
-      "title": "4. UCB: the average plus a bonus",
+      "title": "3. UCB: the average plus a bonus",
       "nodes": [
         "n11",
         "n12"
@@ -109,10 +84,10 @@
         },
         {
           "figure": "score",
-          "caption": "Figure 5. One UCB round with three options"
+          "caption": "Figure 4. One UCB round with three options"
         },
         {
-          "p": "Why a bonus? An average from few picks is unreliable: the option's true average could be well above what has been seen so far. Think of a range of plausible values around each average, wide for an option picked a few times and narrow for one picked often. UCB treats every option as if it were as good as it could plausibly be, the top of that range, so options tried only a few times get the benefit of the doubt. That is how it explores: it picks an option when the option might be the best, not by lottery."
+          "p": "Why a bonus? An average from few picks is unreliable: the option's true average could be well above what has been seen so far. Think of a range of plausible values around each average, wide for an option picked a few times and narrow for one picked often. UCB treats every option as if it were as good as it could plausibly be, the top of that range, so options tried only a few times get the benefit of the doubt. That is how it explores: it picks an option when that option might be the best."
         },
         {
           "p": "How big the bonuses are is set by c, which is chosen in advance to match how much the rewards are expected to vary. With c = 2 every bonus is twice as big as with c = 1, and the averages stay as they are. The bonus does not look at the rewards an option actually gave: it depends only on c, on how often the option was picked and on the round."
@@ -122,30 +97,13 @@
         },
         {
           "figure": "bonus",
-          "caption": "Figure 6. What the bonus depends on"
+          "caption": "Figure 5. What the bonus depends on"
         },
         {
           "p": "An option that has never been picked has an unlimited bonus, which is why UCB tries every option once first. And there is no randomness: the same history always gives the same pick."
         }
       ]
-    },
-    {
-      "id": "together",
-      "title": "5. The three rules side by side",
-      "nodes": [],
-      "blocks": [
-        {
-          "p": "All three rules pick the favourite in most rounds. What differs is what makes them pick something else, and how often."
-        },
-        {
-          "figure": "compare",
-          "caption": "Figure 7. The three rules side by side"
-        },
-        {
-          "p": "Greedy never picks anything but the favourite. ε-greedy leaves it to a lottery in a fixed share of rounds, and the lottery treats all options alike. UCB picks another option only when that option's average plus bonus beats the favourite's score, and that depends on c, on how often each option has been picked and on the round number."
-        }
-      ]
     }
   ],
-  "end": "This is the end of the text. In the next step you will teach these three rules to Kai."
+  "end": "That's the end of the text. If anything is still unclear, go back to it now: once you continue, the text closes and you won't be able to open it again."
 }

@@ -1,7 +1,36 @@
 {
   "title": "Multi-armed bandits: post-test",
-  "note": "Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
+  "note": "One form since 2026-11-05: form B was dropped (too hard) and ε-greedy left the lesson. Form A serves six items: t11 (what a bandit problem is), t01 and t12 (greedy, t12 on lock-in), t04 and t06 (UCB) and t10 (the anchor on c, app 1 now greedy). The ε-greedy items (t02, t03, t08, t09) and all of form B are marked off, with t13 and t14 (greedy against UCB) written in t08's and t09's places, off like them. Before that: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
   "items": [
+    {
+      "id": "t11",
+      "goal": "G",
+      "type": "near",
+      "section": "Bandit problem",
+      "form": "A",
+      "title": "Which is a bandit?",
+      "kind": "choice",
+      "prompt": "Which of these is a multi-armed bandit problem?",
+      "options": [
+        "A music app plays one of four playlists to each new listener and sees only whether that listener liked it",
+        "A bakery picks one of four breads to bake extra each morning, and sees every evening how all four sold",
+        "A fitness app picks one of three workouts each day; each workout makes the user fitter, so all workouts score higher over time",
+        "A couple visits three wedding venues, one each weekend, then books one of them for their wedding"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "A bandit is one choice made again and again, where each choice gives a random reward around an average that stays the same, and you see only the reward of what you chose. The music app fits. The bakery sees how every bread sold, the fitness app's rewards change with what it picked before, and the couple chooses only once.",
+      "rubric": "Names both: the same choice is made again and again, each time with a random reward around an average that doesn't change; and only the chosen option's reward is seen (or uses them to rule out the others).",
+      "diagnosis": [
+        "correct",
+        "learner: any repeated choice is a bandit, even when every option's result is seen (F2)",
+        "Kai: the graph's m_bandit_is_rl, what I pick changes the situation (F1: the true averages stay the same)",
+        "learner: trying options out before one choice makes it a bandit (F1: a choice made again and again)"
+      ],
+      "estimate": 0.6,
+      "note": "New 2026-11-05, in t02's place (ε-greedy left the lesson). The setup (lesson chapter 1, n01.f1 and n01.f2), applied to new cases. Kai's questions don't ask about the setup, so this measures the reading as much as the teaching, the same in both conditions."
+    },
     {
       "id": "t01",
       "goal": "G",
@@ -32,7 +61,37 @@
       "note": "In 2,000 simulated years greedy ate at A on 97% of days."
     },
     {
+      "id": "t12",
+      "goal": "G",
+      "type": "near",
+      "section": "Greedy",
+      "form": "A",
+      "title": "Study spots",
+      "kind": "choice",
+      "prompt": "A student picks one of two study spots each evening with greedy and rates each evening's focus out of 10. Spot A is truly better: its evenings usually score between 7 and 9. Spot B's evenings always score between 6 and 7. On the two trial evenings, A scores 5.5, a bit below its usual, and B scores 6.5. What does greedy do for the rest of the term?",
+      "options": [
+        "It switches between A and B for a while, since their averages are close",
+        "It goes back to A once B's average drops a little",
+        "It never picks A again, all term",
+        "It goes back to A after a while, once A's average has corrected itself"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "After the trials B leads, 6.5 to 5.5, so greedy picks B. Every evening at B scores at least 6, so B's average never drops below 6, which stays above A's 5.5. A is never picked again, so its 5.5 is never corrected: a first try only a little below its usual is enough to lock greedy out of the better spot.",
+      "rubric": "B's average can't fall below A's 5.5 (B never scores below 6); A isn't picked again, so its average is never corrected.",
+      "diagnosis": [
+        "learner: greedy alternates when averages are close",
+        "learner: overlooks that B never scores below 6, so B's average can't fall below 5.5",
+        "correct",
+        "Kai: F5 (averages correct themselves, so greedy finds the best in the end)"
+      ],
+      "estimate": 0.55,
+      "note": "New 2026-11-05 (ε-greedy left the lesson), in t03's place. Lock-in from a small dip rather than a disaster, with a bound to check: a step past Kai's lock-in question, easier than t01 (a too-high start that corrects itself). The key follows from the bounds; no simulation needed. \"Never picks A again\" can also come from Kai's F4 belief (greedy commits after the first tries): the reason tells them apart."
+    },
+    {
       "id": "t02",
+      "off": true,
       "goal": "G",
       "type": "near",
       "section": "ε-greedy",
@@ -57,7 +116,8 @@
         "Kai: F6 (exploration fades once averages are reliable)",
         "learner: greedy's lock-in carried over to ε-greedy"
       ],
-      "estimate": 0.55
+      "estimate": 0.55,
+      "note": "Off since 2026-11-05: ε-greedy left the lesson."
     },
     {
       "id": "t03",
@@ -86,7 +146,8 @@
         "learner: shrinking ε confused with UCB's aimed exploration",
         "correct"
       ],
-      "estimate": 0.55
+      "estimate": 0.55,
+      "note": "Off since 2026-11-05: ε-greedy left the lesson."
     },
     {
       "id": "t04",
@@ -231,7 +292,38 @@
         "correct",
         "learner: every rule explores now and then"
       ],
-      "estimate": 0.5
+      "estimate": 0.5,
+      "note": "Off since 2026-11-05: ε-greedy left the lesson."
+    },
+    {
+      "id": "t13",
+      "off": true,
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Which options could each pick?",
+      "kind": "choice",
+      "prompt": "Two apps have the same history on three options: A averages 8.0 (100 tries), B 7.9 (2 tries) and C 3.0 (100 tries). App 1 uses greedy and app 2 uses UCB. Which options could each app pick in the next round?",
+      "options": [
+        "App 1: only A; app 2: A, B or C",
+        "App 1: A or B; app 2: A or B",
+        "App 1: only A; app 2: A or B",
+        "App 1: only A; app 2: only B"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy picks the highest average, A. UCB picks the highest average plus bonus. C has as many tries as A, so the same bonus, and a much lower average: it can never beat A. B's average is a little lower than A's, but with far fewer tries its bonus is much larger; whether it beats A depends on the sizes of the bonuses. So app 2 picks A or B.",
+      "rubric": "Greedy follows the averages only; C has A's bonus but a lower average, while B's larger bonus can make up its 0.1 gap.",
+      "diagnosis": [
+        "learner: UCB keeps exploring every option",
+        "learner: greedy alternates when averages are close",
+        "correct",
+        "Kai: F9 (UCB picks the fewest tries, whatever the average)"
+      ],
+      "estimate": 0.55,
+      "note": "New 2026-11-05 in t08's place (ε-greedy left the lesson), off like t08. Near transfer: close to t04 and practice P5."
     },
     {
       "id": "t09",
@@ -286,7 +378,62 @@
         "Kai: F11 (UCB stops picking the worst option)"
       ],
       "estimate": 0.6,
-      "note": "The numbers are our simulation means."
+      "note": "Off since 2026-11-05: ε-greedy left the lesson. The numbers are our simulation means."
+    },
+    {
+      "id": "t14",
+      "off": true,
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "A",
+      "title": "Two logs",
+      "kind": "choice",
+      "prompt": "Two logs show how often the worst of four options was picked, as a share of rounds, in one run each. One log comes from greedy, the other from UCB.",
+      "table": {
+        "head": [
+          "Rounds",
+          "Log 1",
+          "Log 2"
+        ],
+        "rows": [
+          [
+            "1 to 1,000",
+            "0.1%",
+            "5%"
+          ],
+          [
+            "1,001 to 10,000",
+            "0%",
+            "0.6%"
+          ],
+          [
+            "10,001 to 100,000",
+            "0%",
+            "0.05%"
+          ]
+        ]
+      },
+      "question": "Which rule produced which log?",
+      "options": [
+        "Log 1 is greedy, Log 2 is UCB",
+        "Log 1 is UCB, Log 2 is greedy",
+        "Either rule could have produced either log",
+        "Neither log can come from UCB"
+      ],
+      "answer": 0,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Once the worst option's average is below the others' after its trial, greedy doesn't pick it again: it never picks an option only to learn about it (0.1% of the first 1,000 rounds is that one try). UCB keeps coming back to it, ever more rarely: each pick shrinks its bonus, and while it isn't picked its bonus grows back, ever more slowly.",
+      "rubric": "Greedy stops after the trial (it never explores); UCB returns to the worst option with ever longer gaps (its bonus grows back ever more slowly).",
+      "diagnosis": [
+        "correct",
+        "Kai: F11 (an unpicked bonus stays the same, so UCB stops picking the worst option) or learner: greedy checks every option now and then",
+        "learner: the shares are down to luck",
+        "Kai: F9 (UCB goes for the least-tried options, so the worst option gets a large share)"
+      ],
+      "estimate": 0.6,
+      "note": "New 2026-11-05 in t09's place (ε-greedy left the lesson), off like t09. Simulated: four options with true averages 0.7, 0.6, 0.5 and 0.3, rewards spread around them (sd 0.25, kept between 0 and 1), UCB with c = √2. UCB's shares are means of 20 runs (5.2%, 0.61%, 0.05%; every run within 4.2 to 6.7%, 0.44 to 0.71%, 0.03 to 0.07%); greedy picked the worst option only on its trial in 88% of 200 runs (mean 0.12%, then 0%)."
     },
     {
       "id": "t10",
@@ -296,7 +443,7 @@
       "form": "A",
       "title": "Ratings out of 100",
       "kind": "choice",
-      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses ε-greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
+      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
       "options": [
         "Neither app's",
         "Both apps'",
@@ -306,8 +453,8 @@
       "answer": 3,
       "dontKnow": true,
       "reason": true,
-      "explain": "ε-greedy's favourite stays the same, because multiplying every rating by 100 keeps the order, and its random picks ignore the ratings. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
-      "rubric": "The bonus does not grow with the ratings; ε-greedy's choices do not change.",
+      "explain": "Greedy's favourite stays the same, because multiplying every rating by 100 keeps their order, so its picks don't change. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
+      "rubric": "The bonus does not grow with the ratings; greedy's choices do not change.",
       "diagnosis": [
         "Kai: F14 (the bonus adapts to the observed rewards)",
         "learner: any change to the ratings changes both rules",
@@ -315,10 +462,11 @@
         "correct"
       ],
       "estimate": 0.3,
-      "note": "The anchor item, also V9. In simulation, UCB moved away from the best of three options in 0 of 200 runs at the original scale and in 80 of 200 runs after multiplying by 100."
+      "note": "The anchor item, also V9. In simulation, UCB moved away from the best of three options in 0 of 200 runs at the original scale and in 80 of 200 runs after multiplying by 100. App 1 was ε-greedy until 2026-11-05 (ε-greedy left the lesson); greedy keeps the key, since it too depends only on the order of the averages."
     },
     {
       "id": "v01",
+      "off": true,
       "goal": "G",
       "type": "changed rule",
       "section": "Greedy",
@@ -342,10 +490,11 @@
         "learner: the made-up starting values mislead it"
       ],
       "estimate": 0.35,
-      "note": "In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
+      "note": "Off since 2026-11-05: form B dropped (too hard); kept with its key. In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
     },
     {
       "id": "v02",
+      "off": true,
       "goal": "G",
       "type": "multi-select",
       "section": "ε-greedy",
@@ -373,7 +522,8 @@
         "false; learner: all random picks go to worse banners",
         "true"
       ],
-      "estimate": 0.3
+      "estimate": 0.3,
+      "note": "Off since 2026-11-05: form B dropped (too hard); kept with its key."
     },
     {
       "id": "v03",
@@ -406,6 +556,7 @@
     },
     {
       "id": "v04",
+      "off": true,
       "goal": "G",
       "type": "harder",
       "section": "UCB",
@@ -430,10 +581,12 @@
         "correct",
         "Kai: F11 vague (the bonus grows at a steady rate)"
       ],
-      "estimate": 0.4
+      "estimate": 0.4,
+      "note": "Off since 2026-11-05: form B dropped (too hard); kept with its key."
     },
     {
       "id": "v05",
+      "off": true,
       "goal": "G",
       "type": "inverse",
       "section": "UCB",
@@ -459,7 +612,7 @@
         "correct"
       ],
       "estimate": 0.4,
-      "note": "Option (a) is tempting because an unpicked bonus grows, but all bonuses use the same round number, so only the tries differ."
+      "note": "Off since 2026-11-05: form B dropped (too hard); kept with its key. Option (a) is tempting because an unpicked bonus grows, but all bonuses use the same round number, so only the tries differ."
     },
     {
       "id": "v06",
@@ -554,6 +707,7 @@
     },
     {
       "id": "v09",
+      "off": true,
       "goal": "G",
       "type": "anchor",
       "section": "Comparison",
@@ -561,7 +715,7 @@
       "same": "t10",
       "title": "Anchor (the same as T10)",
       "kind": "choice",
-      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses ε-greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
+      "prompt": "Two music apps rate songs between 0 and 1: app 1 uses greedy and app 2 uses UCB with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
       "options": [
         "Neither app's",
         "Both apps'",
@@ -571,8 +725,8 @@
       "answer": 3,
       "dontKnow": true,
       "reason": true,
-      "explain": "ε-greedy's favourite stays the same, because multiplying every rating by 100 keeps the order, and its random picks ignore the ratings. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
-      "rubric": "The bonus does not grow with the ratings; ε-greedy's choices do not change.",
+      "explain": "Greedy's favourite stays the same, because multiplying every rating by 100 keeps their order, so its picks don't change. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
+      "rubric": "The bonus does not grow with the ratings; greedy's choices do not change.",
       "diagnosis": [
         "Kai: F14 (the bonus adapts to the observed rewards)",
         "learner: any change to the ratings changes both rules",
@@ -580,7 +734,7 @@
         "correct"
       ],
       "estimate": 0.3,
-      "note": "The anchor: identical to T10, options and order included. Its share correct in each form shows whether the groups taking each form differ in ability. A session that takes both forms answers it once (as T10), and it counts for both forms."
+      "note": "Off since 2026-11-05: form B dropped (too hard); kept with its key. The anchor: identical to T10, options and order included. Its share correct in each form shows whether the groups taking each form differ in ability. A session that takes both forms answers it once (as T10), and it counts for both forms."
     },
     {
       "id": "v10",

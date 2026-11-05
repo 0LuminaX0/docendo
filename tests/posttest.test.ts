@@ -11,18 +11,28 @@ import { seedOf, testOrder, testParts } from "../lib/order";
 import { tables } from "../lib/analytics";
 
 // The team's post-test (main doc, 2 November 2026): form A = T1 to T10, form B = V1 to V10 (harder), V9 the same as
-// T10 (the anchor). The pilot takes both forms after the lesson, its own form first.
+// T10 (the anchor). The pilot takes both forms after the lesson, its own form first. Since 2026-11-05 one form is
+// served: t11 (what a bandit problem is), t01 and t12 (greedy), t04 and t06 (UCB), t10 (the anchor on c); ε-greedy left
+// the lesson and form B was dropped, so their items are marked off (kept, never served), t13 and t14 written in t08's
+// and t09's places. The checks of the items cover every item in the file; the two-form mechanism is checked on the
+// team's original forms (T1 to T10 and V1 to V10), which it was built for.
 
-const test = ExercisesFile.parse(exercisesJson).items;
-const forms = { A: test.filter((q) => q.form === "A"), B: test.filter((q) => q.form === "B") };
+const test = ExercisesFile.parse(exercisesJson).items; // every item in the file, those marked off included
+const served = test.filter((q) => !q.off);
+const team = test.filter((q) => /^[tv](0\d|10)$/.test(q.id)); // the team's original T1 to T10 and V1 to V10
+const forms = { A: team.filter((q) => q.form === "A"), B: team.filter((q) => q.form === "B") };
 const q = (id: string) => test.find((x) => x.id === id)!;
 const LETTERS = "abcd";
 const ucb = (avg: number, n: number, t: number, c = Math.SQRT2) => avg + c * Math.sqrt(Math.log(t) / n);
 const argmax = (xs: number[]) => xs.indexOf(Math.max(...xs));
 
 describe("the post-test items", () => {
-  it("are T1 to T10 (form A) and V1 to V10 (form B), every one with “I don't know”, a reason and a rubric", () => {
+  it("are T1 to T10 (form A) and V1 to V10 (form B) plus t11 to t14, every one with “I don't know”, a reason and a rubric", () => {
     expect(forms.A.map((x) => x.id)).toEqual(Array.from({ length: 10 }, (_, k) => `t${String(k + 1).padStart(2, "0")}`));
+    expect(test.filter((x) => !team.includes(x)).map((x) => x.id)).toEqual(["t11", "t12", "t13", "t14"]);
+    // served: one form of six, with no ε-greedy item and nothing from form B
+    expect(served.map((x) => x.id)).toEqual(["t11", "t01", "t12", "t04", "t06", "t10"]);
+    for (const x of served) expect(`${x.prompt} ${x.options!.join(" ")}`, x.id).not.toMatch(/ε|epsilon/i);
     expect(forms.B.map((x) => x.id)).toEqual(Array.from({ length: 10 }, (_, k) => `v${String(k + 1).padStart(2, "0")}`));
     for (const x of test) {
       expect(x.dontKnow && x.reason, x.id).toBe(true);
@@ -37,6 +47,9 @@ describe("the post-test items", () => {
     expect(forms.A.map((x) => LETTERS[x.answer as number]).join("")).toBe("badcadbcad");
     const v = forms.B.map((x) => (Array.isArray(x.answer) ? x.answer.map((k) => LETTERS[k]).join("") : LETTERS[x.answer]));
     expect(v).toEqual(["b", "bd", "a", "c", "d", "a", "b", "ad", "d", "bd"]);
+    // the items written 2026-11-05, and the form served
+    expect(["t11", "t12", "t13", "t14"].map((id) => LETTERS[q(id).answer as number]).join("")).toBe("acca");
+    expect(served.map((x) => LETTERS[x.answer as number]).join("")).toBe("abccdd");
     expect(forms.B.filter((x) => x.kind === "multi").map((x) => x.id)).toEqual(["v02", "v08", "v10"]);
     // each diagnosis agrees with the key: "correct" (or "true") exactly on the key
     for (const x of test) for (const [k, d] of x.diagnosis!.entries()) expect(/^(correct|true)$/.test(d), `${x.id} ${k}`).toBe(Array.isArray(x.answer) ? x.answer.includes(k) : x.answer === k);
@@ -63,8 +76,13 @@ describe("the post-test items", () => {
     expect(argmax([ucb(7.2, 80, 300, 5), ucb(6.5, 6, 300, 5)])).toBe(1);
     // T6: A's score is frozen at 5.5, B's never falls below its average, at least 6
     expect(5.5).toBeLessThan(6);
-    // T8: C has A's tries (so A's bonus) and a lower average, so UCB never ranks C above A
+    // T8 and t13: C has A's tries (so A's bonus) and a lower average, so UCB never ranks C above A; t13: B (7.9 from 2
+    // tries) can beat A (8.0 from 100), unless the bonus is tiny
     for (const c of [0.1, 1, 10]) expect(ucb(3, 100, 203, c)).toBeLessThan(ucb(8, 100, 203, c));
+    expect(argmax([ucb(8, 100, 203, 1), ucb(7.9, 2, 203, 1)])).toBe(1);
+    expect(argmax([ucb(8, 100, 203, 0.01), ucb(7.9, 2, 203, 0.01)])).toBe(0);
+    // t12: B's evenings are at least 6, so B's average stays at least 6, above A's frozen 5.5: greedy never goes back
+    for (const bs of [[6.5, 6, 6, 6, 6], [6.5, 7, 6, 6.2]]) expect(bs.reduce((a, b) => a + b, 0) / bs.length).toBeGreaterThan(5.5);
     // T9 and V3: ε-greedy's random picks, a quarter of 10% each, at the same rate early and late
     expect((0.1 / 4) * 100).toBeCloseTo(2.5);
     // V2: the favourite gets 90% + its share of the random picks; each worse banner its share; together the rest
@@ -88,7 +106,7 @@ describe("the post-test items", () => {
       const others = x.options!.filter((_, k) => k !== x.answer).map((o) => o.length);
       expect(x.options![x.answer as number]!.length, x.id).toBeLessThanOrEqual(Math.max(...others) * 1.1);
     }
-    for (const f of [forms.A, forms.B]) {
+    for (const f of [forms.A, forms.B, served]) {
       const counts = [0, 0, 0, 0];
       for (const x of f.filter((t) => t.kind === "choice")) counts[x.answer as number]!++;
       expect(Math.max(...counts)).toBeLessThanOrEqual(3);
@@ -115,16 +133,17 @@ describe("the post-test items", () => {
 });
 
 describe("which items a session answers", () => {
-  it("one form: its ten items", () => {
-    expect(sessionItems(test, "A", false).map((x) => x.id)).toEqual(forms.A.map((x) => x.id));
-    expect(sessionItems(test, "B", false).map((x) => x.id)).toEqual(forms.B.map((x) => x.id));
+  it("one form: its items", () => {
+    expect(sessionItems(team, "A", false).map((x) => x.id)).toEqual(forms.A.map((x) => x.id));
+    expect(sessionItems(team, "B", false).map((x) => x.id)).toEqual(forms.B.map((x) => x.id));
+    expect(sessionItems(served, "A", false).map((x) => x.id)).toEqual(served.map((x) => x.id)); // the form served now
   });
   it("both forms (the pilot): its own form first, then the other without the anchor it has already answered", () => {
-    const ab = sessionItems(test, "A", true).map((x) => x.id);
+    const ab = sessionItems(team, "A", true).map((x) => x.id);
     expect(ab).toHaveLength(19);
     expect(ab.slice(0, 10)).toEqual(forms.A.map((x) => x.id));
     expect(ab).not.toContain("v09");
-    const ba = sessionItems(test, "B", true).map((x) => x.id);
+    const ba = sessionItems(team, "B", true).map((x) => x.id);
     expect(ba).toHaveLength(19);
     expect(ba.slice(0, 10)).toEqual(forms.B.map((x) => x.id));
     expect(ba).not.toContain("t10"); // V9 came first: T10 isn't asked again
@@ -153,18 +172,18 @@ describe("grading the post-test", () => {
     expect(keyText(q("v02"))).toBe(`${q("v02").options![1]} | ${q("v02").options![3]}`);
   });
   it("scores one form, or both with the anchor answered once and counted in both", () => {
-    const one = gradeTest(test, "A", false, keys(forms.A.map((x) => x.id)));
+    const one = gradeTest(team, "A", false, keys(forms.A.map((x) => x.id)));
     expect([one.score, one.of, one.perForm.A]).toEqual([10, 10, { score: 10, of: 10 }]);
-    const ids = sessionItems(test, "A", true).map((x) => x.id);
+    const ids = sessionItems(team, "A", true).map((x) => x.id);
     const answers: unknown[] = keys(ids);
     answers[ids.indexOf("t10")] = 0; // the anchor wrong: it counts wrong in both forms
     answers[ids.indexOf("v02")] = DONT_KNOW;
-    const both = gradeTest(test, "A", true, answers);
+    const both = gradeTest(team, "A", true, answers);
     expect([both.score, both.of]).toEqual([17, 19]);
     expect(both.perForm).toEqual({ A: { score: 9, of: 10 }, B: { score: 8, of: 10 } });
     expect(both.copies.map((c) => [c.q.id, c.from, c.correct])).toEqual([["v09", "t10", false]]);
     // V first: V9 is asked, T10 takes its answer
-    const ba = gradeTest(test, "B", true, keys(sessionItems(test, "B", true).map((x) => x.id)));
+    const ba = gradeTest(team, "B", true, keys(sessionItems(team, "B", true).map((x) => x.id)));
     expect(ba.perForm).toEqual({ B: { score: 10, of: 10 }, A: { score: 10, of: 10 } });
     expect(ba.copies.map((c) => [c.q.id, c.from])).toEqual([["t10", "v09"]]);
   });
@@ -184,7 +203,7 @@ describe("grading the post-test", () => {
 });
 
 describe("the post-test order and parts", () => {
-  const items = sessionItems(test, "A", true).map((x) => ({ id: x.id, kind: x.kind, form: x.form }));
+  const items = sessionItems(team, "A", true).map((x) => ({ id: x.id, kind: x.kind, form: x.form }));
   it("keeps the forms apart, own form first, each shuffled per learner and stable", () => {
     const o = testOrder(items, seedOf("token-a"));
     expect(new Set(o.slice(0, 10))).toEqual(new Set(forms.A.map((x) => x.id)));

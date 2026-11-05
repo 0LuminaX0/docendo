@@ -90,12 +90,12 @@ describe("settings", () => {
 });
 
 describe("topic packs", () => {
-  it("lists the bandits pack, with two test forms of the same length", () => {
+  it("lists the bandits pack, with one test form since 2026-11-05 (form B and the ε-greedy items marked off)", () => {
     expect(topicSlugs()).toContain("bandits");
     expect(hasTopic("bandits")).toBe(true);
     const pack = packFor("bandits");
-    expect(pack.forms).toEqual(["A", "B"]);
-    expect(pack.formItems("A").length).toBe(pack.formItems("B").length);
+    expect(pack.forms).toEqual(["A"]);
+    expect(pack.formItems("A").map((q) => q.id)).toEqual(["t11", "t01", "t12", "t04", "t06", "t10"]);
     expect(packFor("unknown").slug).toBe("bandits"); // an old token or a stale setting
   });
   it("counts the study from the pack, not from text written down", () => {
@@ -141,7 +141,8 @@ describe("checking a topic pack before it ships", () => {
     practice.items[0].needs = ["n99.f9"];
     writeFileSync(join(dir, "practice.json"), JSON.stringify(practice));
     const tests = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
-    tests.items = tests.items.filter((q: { id: string }) => q.id !== "v01");
+    // one form B item switched back on, against form A's six
+    tests.items = tests.items.map((q: { id: string; off?: boolean }) => (q.id === "v01" ? { ...q, off: false } : q));
     writeFileSync(join(dir, "exercises.json"), JSON.stringify(tests));
     const errors = checkPack("broken", root).filter((i) => i.level === "error").map((i) => `${i.where}: ${i.msg}`);
     expect(errors.some((e) => e.startsWith("copy.json"))).toBe(true);
