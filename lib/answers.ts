@@ -5,6 +5,6 @@
 export const DONT_KNOW = "idk";
 export type TestAnswer = number | number[] | string | null;
 
-/** A reason long enough to count as one (items that ask for it): a few words, not a single one. */
-export const REASON_MIN_WORDS = 3;
-export const reasonGiven = (text: string | undefined) => (text ?? "").trim().split(/\s+/).filter(Boolean).length >= REASON_MIN_WORDS;
+/** A reason given (items that ask for it): anything written counts, a word or a symbol; no length and no calculation
+ * asked for (2026-11-05: three words read as requiring a calculation, which passed the count). */
+export const reasonGiven = (text: string | undefined) => (text ?? "").trim().length > 0;

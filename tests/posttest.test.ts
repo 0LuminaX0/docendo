@@ -187,9 +187,11 @@ describe("grading the post-test", () => {
     expect(checkNumber("1.55", 1.589, 0.02)).toBe(false);
     expect(checkNumber("about 50", 50, 1)).toBe(false); // words aren't a number
   });
-  it("needs a few words for a reason", () => {
-    expect(reasonGiven("because")).toBe(false);
-    expect(reasonGiven("its bonus keeps growing")).toBe(true);
+  it("counts any text as a reason, a word or a symbol, and nothing else", () => {
+    expect(reasonGiven("because")).toBe(true);
+    expect(reasonGiven("?")).toBe(true);
+    expect(reasonGiven("   ")).toBe(false);
+    expect(reasonGiven(undefined)).toBe(false);
   });
 });
 

@@ -403,15 +403,15 @@ const wrongId = shownItems.find((t) => t.kind === "choice").id;
 const idkId = shownItems.find((t) => t.id !== wrongId).id;
 const lastId = shownItems.findLast((t) => t.id !== wrongId && t.id !== idkId).id;
 await answerTest(page, [wrongId], [idkId], [lastId]);
-// picked without a reason: it counts (a soft nudge asks for one; 2026-11-05: the reason is optional)
-const counts = await page.$eval(".submitbar .btn.primary", (b) => !b.disabled);
+// picked without a reason: it doesn't count yet (any text will do: no length, no calculation)
+const blocked = await page.$eval(".submitbar .btn.primary", (b) => b.disabled);
 const hinted = !!(await page.$(`.q[data-q="${lastId}"] .qreason-hint`));
 // the reason field calculates like the working field: a sum ending in = gets its result
 await page.$eval(`.q[data-q="${lastId}"] .qwork textarea`, (el) => el.focus());
 await page.keyboard.type("Random picks are spread evenly.\n0.1 / 4 =");
 await page.waitForFunction((id) => /= 0\.025$/.test(document.querySelector(`.q[data-q="${id}"] .qwork textarea`)?.value ?? ""), {}, lastId);
 const open = await page.$eval(".submitbar .btn.primary", (b) => !b.disabled);
-check(counts && hinted && open, "a question counts as answered once an option is picked (the reason optional, with a nudge), and the reason field calculates like the working field");
+check(blocked && hinted && open, "a question counts as answered with its reason, any text at all, and the reason field calculates like the working field");
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");

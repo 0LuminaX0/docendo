@@ -37,10 +37,11 @@ const SINCE = [
   ["a lot", "Yes, quite a bit (videos, reading, a course)"],
 ] as const;
 
-/** Whether an item counts as answered: an option picked (or "I don't know", or a number typed). The reason is asked
- * for but never required (2026-11-05: requiring three words read as requiring a calculation, which passed the count). */
-export function isAnswered(a: TestAnswer | undefined): boolean {
-  return !(a === null || a === undefined || (typeof a === "string" && !a.trim()) || (Array.isArray(a) && !a.length));
+/** Whether an item counts as answered: an option picked (or a number typed), and its reason when it asks for one, any
+ * text at all ("I don't know" needs none). */
+export function isAnswered(q: TestItem, a: TestAnswer | undefined, reason: string | undefined): boolean {
+  if (a === null || a === undefined || (typeof a === "string" && !a.trim()) || (Array.isArray(a) && !a.length)) return false;
+  return !q.reason || a === DONT_KNOW || reasonGiven(reason);
 }
 
 export default function Exercises() {
@@ -89,7 +90,7 @@ export default function Exercises() {
   const dontKnow = items.some((q) => q.dontKnow);
 
   const answers = items.map((_, i) => saved.answers[i] ?? null);
-  const done = (i: number) => isAnswered(answers[i]);
+  const done = (i: number) => isAnswered(items[i]!, answers[i], saved.testWork?.[items[i]!.id]);
   const answered = items.filter((_, i) => done(i)).length + (delayed && saved.since ? 1 : 0);
   const total = items.length + (delayed ? 1 : 0);
   const inGroup = (g: number) => sections.filter((p) => p.group === g).flatMap((p) => p.list);
@@ -239,7 +240,7 @@ function Question({ q, n, a, work, onChoose, onTick, onAnswer, onWork }: { q: Te
     <div className="qwork qreason">
       <p className="qreason-label" id={`${q.id}-why`}>{REASON_PROMPT}</p>
       <Scratchpad id={`${q.id}-work`} where={`test:${q.id}`} label={`${REASON_PROMPT} (question ${n})`} value={work} onChange={onWork} rows={2} placeholder={a === DONT_KNOW ? "Optional when you don't know" : "Because…"} />
-      {a !== null && a !== DONT_KNOW && !reasonGiven(work) && <p className="note qreason-hint">Optional, but a few words on why help us understand your answer.</p>}
+      {a !== null && a !== DONT_KNOW && !reasonGiven(work) && <p className="note qreason-hint">Add your reason, in your own words, to count this question as answered.</p>}
     </div>
   ) : (
     <div className="qwork">
