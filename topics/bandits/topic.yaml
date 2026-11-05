@@ -47,8 +47,9 @@ lesson:
     - n06.f2 # an example of lock-in: n06.f1 states the idea
     - n08.f2 # too little or too much exploration: left for learners to work out
     - n16.f2 # averages alone ignore how many tries they rest on: motivation, not a fact Kai waits for
-  # the setup Kai's opening states and the problems' stems repeat: never asked, never counted
-  given: [n01.f1, n01.f2, n03.f1, n03.f3, n16.f1, n11.f3]
+  # background Kai knows from the slides and the problems' stems repeat: never asked, never counted (the setup itself,
+  # n01.f1 and n01.f2, is Kai's first question since 2026-11-05)
+  given: [n03.f1, n03.f3, n16.f1, n11.f3]
   segments: # 8:12 in total
     - { video: mab-intro, start: 0, end: 111, title: "The problem: three restaurants, hidden averages" }
     - { video: mab-intro, start: 298, end: 547, title: "Exploit only, its lock-in, and ε-greedy" }

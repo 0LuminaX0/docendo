@@ -363,9 +363,11 @@ describe("the offline judge on not knowing", () => {
 describe("the setup Kai knows from the slides (given facts)", () => {
   it("is never waited for or counted, and Kai's mind shows its ideas as known", () => {
     const m = mindView(packBundle, initialState(packBundle));
-    // the seven facts Kai's questions ask about: greedy, lock-in, why explore, UCB's score and c, the bonus's two rules
-    expect(m.facts.total).toBe(7);
-    for (const id of ["n01", "n03", "n16"]) expect(m.nodes.find((n) => n.id === id)?.status, id).toBe("known");
+    // the nine facts Kai's questions ask about: the setup (2), greedy, lock-in, why explore, UCB's score and c, the
+    // bonus's two rules; averages and how reliable they are is background (given)
+    expect(m.facts.total).toBe(9);
+    for (const id of ["n03", "n16"]) expect(m.nodes.find((n) => n.id === id)?.status, id).toBe("known");
+    expect(m.nodes.find((n) => n.id === "n01")?.status).toBe("unseen");
     expect(m.nodes.find((n) => n.id === "n05")?.status).toBe("unseen");
   });
 });

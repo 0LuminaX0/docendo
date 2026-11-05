@@ -34,13 +34,15 @@
           "id": "n01.f1",
           "required": true,
           "ask": "So what do I actually choose between each time, and how many times do I get to choose?",
-          "text": "Each round you choose one of several options, again and again (for example where to have lunch every day for a year). Each option pays a random reward around its own true average, which stays the same and which you don't know."
+          "text": "Each round you choose one of several options, again and again (for example where to have lunch every day for a year). Each option pays a random reward around its own true average, which stays the same and which you don't know.",
+          "key": "choosing one of several options again and again (each round, each day), each giving a random result whose true average you don't know; saying the averages stay fixed is not needed"
         },
         {
           "id": "n01.f2",
           "required": true,
           "ask": "When I pick one option, do I find out anything about the others?",
-          "text": "You only see the reward of the option you chose, so you learn about an option only by choosing it."
+          "text": "You only see the reward of the option you chose, so you learn about an option only by choosing it.",
+          "key": "you see only the result of the option you picked, nothing about the others (\"you only learn about what you choose\" is enough)"
         },
         {
           "id": "n01.f3",

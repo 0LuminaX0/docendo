@@ -1,6 +1,6 @@
 {
-  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. One question per idea in the lesson's order, which is the text's (greedy, where greedy ends up, why ever pick what doesn't look best, UCB, why a bonus, what sets the bonus, UCB over many rounds), then anything else; since 2026-11-05 the lesson leaves ε-greedy out, and its question and the comparison with UCB went with it. The two why-questions (2026-11-05) ask for the reason behind a rule rather than the rule: that is where explaining builds understanding. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again), and after an answer each target still missing gets its own follow-up (`follow`), once; a complete short answer gets none. Follow-ups name their rule, since one can open a question the learner has already started on, and are open questions that name no answer (no yes/no between the right rule and its wrong reading, no scenario that gives the point away): lock-in has none, since every prompt for it hands the learner the unlucky start. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question the learner has already started on, in an answer to an earlier one, opens with its follow-up on what is still missing instead of the whole question. A question left unanswered comes back once at the end, if its facts are still missing.",
-  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits. I get the setup: each round you pick one of a few options, and you only find out how the one you picked did. What I don't get is how the two rules on the slides decide, so I wrote down some questions.",
+  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. The setup first (2026-11-05: one short question, so the learner states the basic structure in a sentence: options picked round after round, true averages unknown, only the picked option's result seen; Kai's opening no longer states it). Then one question per idea in the lesson's order, which is the text's (greedy, where greedy ends up, why ever pick what doesn't look best, UCB, why a bonus, what sets the bonus, UCB over many rounds), then anything else; since 2026-11-05 the lesson leaves ε-greedy out, and its question and the comparison with UCB went with it. The two why-questions (2026-11-05) ask for the reason behind a rule rather than the rule: that is where explaining builds understanding. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again), and after an answer each target still missing gets its own follow-up (`follow`), once; a complete short answer gets none. Follow-ups name their rule, since one can open a question the learner has already started on, and are open questions that name no answer (no yes/no between the right rule and its wrong reading, no scenario that gives the point away): lock-in has none, since every prompt for it hands the learner the unlucky start. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question the learner has already started on, in an answer to an earlier one, opens with its follow-up on what is still missing instead of the whole question. A question left unanswered comes back once at the end, if its facts are still missing.",
+  "opening": "Hi! I'm Kai. I missed the lesson on multi-armed bandits, and the slides alone didn't make sense to me, so I wrote down some questions.",
   "minutes": 16,
   "shortWords": 15,
   "known": [
@@ -13,6 +13,25 @@
     "UCB1"
   ],
   "questions": [
+    {
+      "id": "setup",
+      "node": "n01",
+      "text": "First, the basics: what is a multi-armed bandit problem? What do you do each round, and what do you get to know?",
+      "targets": [
+        "n01.f1",
+        "n01.f2"
+      ],
+      "follow": [
+        {
+          "fact": "n01.f2",
+          "text": "After a pick, what exactly do you get to see?"
+        },
+        {
+          "fact": "n01.f1",
+          "text": "And what does each option give you when you pick it?"
+        }
+      ]
+    },
     {
       "id": "greedy",
       "node": "n05",
