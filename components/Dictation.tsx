@@ -15,9 +15,10 @@ import { useStudySettings } from "./SettingsContext";
  * replaces the grey text; ✕ or Esc discards it. The learner can edit everything before sending. Hidden in demo mode
  * (no model) and in browsers that can't record.
  *
- * The first time the mic shows on a page (teaching, the correction to Kai), a pop-up invites the learner to speak:
- * talking to Kai is the intended way, and people say more out loud than they type (2026-11-05). Once per page per
- * session (`voiceIntro`), with "Try speaking" (starts recording) or "I'll type for now"; logged as voice_intro.
+ * The first time the mic shows in a session (teaching, as a rule), a pop-up invites the learner to speak: talking to
+ * Kai is the intended way, and people say more out loud than they type (2026-11-05). Once per session (`voiceIntro`:
+ * not again on the correction to Kai), with "Try speaking" (starts recording) or "I'll type for now"; logged as
+ * voice_intro.
  */
 
 const BARS = 26;
@@ -142,8 +143,8 @@ export function useDictation({
   const active = phase !== "idle";
   const shown = active ? joinText(joinText(parts.before, preview), parts.after) : value;
 
-  // the invitation to speak, the first time the mic shows on this page
-  const introOpen = !!saved && !saved.voiceIntro?.includes(where) && phase === "idle" && !disabled;
+  // the invitation to speak, the first time the mic shows in this session (not again on another page)
+  const introOpen = !!saved && !saved.voiceIntro?.length && phase === "idle" && !disabled;
   const closeIntro = (choice: "speak" | "type") => {
     update((s) => ({ ...s, voiceIntro: [...new Set([...(s.voiceIntro ?? []), where])] }));
     track("voice_intro", { where, choice });

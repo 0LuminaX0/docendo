@@ -587,7 +587,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   });
   await v.reload({ waitUntil: "load" });
   await v.waitForSelector(".voice-btn", { timeout: 10000 });
-  // the first time the mic shows on a page, an invitation to speak to Kai; once closed, it stays closed on this page
+  // the first time the mic shows in a session, an invitation to speak to Kai; once closed, it stays closed (no other page repeats it)
   await v.waitForSelector(".voice-intro", { timeout: 10000 });
   const invites = await v.$eval(".voice-intro", (e) => /talk to Kai/.test(e.textContent) && /give it a try/i.test(e.textContent));
   await wait(500); // past its fade-in
@@ -601,7 +601,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const refused = await v.evaluate(async (token) => (await fetch("/api/transcribe", { method: "POST", headers: { "content-type": "audio/wav", "x-docendo-token": token, "x-docendo-where": "teach" }, body: new Uint8Array(8000) })).status, JSON.parse(await v.evaluate(() => localStorage.getItem("docendo:session:v1"))).token);
   await shot(v, "03b-teach-voice");
   check(noMicInDemo && refused === 503, `voice input: no mic in demo mode, a mic beside Send otherwise; the demo server refuses to transcribe (${refused})`);
-  check(invites && onceOnly, "the first time the mic shows, a pop-up invites the learner to talk to Kai; closed, it doesn't come back on that page");
+  check(invites && onceOnly, "the first time the mic shows, a pop-up invites the learner to talk to Kai; closed, it doesn't come back");
   await v.close();
 }
 
