@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { Check, Mic, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Check, Keyboard, Mic, X } from "lucide-react";
 import { Dictation, joinText } from "@/lib/client/dictation";
 import { useSaved } from "@/lib/client/store";
 import { track } from "@/lib/client/log";
@@ -13,6 +14,10 @@ import { useStudySettings } from "./SettingsContext";
  * timer in the recording pill. Press ✓ and the whole recording is written out once more, more accurately, and
  * replaces the grey text; ✕ or Esc discards it. The learner can edit everything before sending. Hidden in demo mode
  * (no model) and in browsers that can't record.
+ *
+ * The first time the mic shows on a page (teaching, the correction to Kai), a pop-up invites the learner to speak:
+ * talking to Kai is the intended way, and people say more out loud than they type (2026-11-05). Once per page per
+ * session (`voiceIntro`), with "Try speaking" (starts recording) or "I'll type for now"; logged as voice_intro.
  */
 
 const BARS = 26;
@@ -31,7 +36,7 @@ export function useDictation({
   disabled?: boolean;
   onCommit: (next: string, caret: number, dictatedChars: number) => void; // the text with the dictation in it
 }) {
-  const [saved] = useSaved();
+  const [saved, update] = useSaved();
   const { voice } = useStudySettings(); // voice input can be switched off on the admin panel
   const [phase, setPhase] = useState<Phase>("idle");
   const [parts, setParts] = useState({ before: "", after: "" });
@@ -137,9 +142,19 @@ export function useDictation({
   const active = phase !== "idle";
   const shown = active ? joinText(joinText(parts.before, preview), parts.after) : value;
 
+  // the invitation to speak, the first time the mic shows on this page
+  const introOpen = !!saved && !saved.voiceIntro?.includes(where) && phase === "idle" && !disabled;
+  const closeIntro = (choice: "speak" | "type") => {
+    update((s) => ({ ...s, voiceIntro: [...new Set([...(s.voiceIntro ?? []), where])] }));
+    track("voice_intro", { where, choice });
+    if (choice === "speak") void start();
+  };
+  const intro = introOpen ? <VoiceIntro where={where} onClose={closeIntro} /> : null;
+
   const button =
     !can || !voice || !saved || saved.demo ? null : (
       <span className="voice">
+        {intro}
         {msg && phase === "idle" && <span className="voice-msg" role="status">{msg}</span>}
         {phase === "idle" ? (
           <button type="button" className="voice-btn" onClick={() => void start()} disabled={disabled} aria-label="Speak instead of typing" title="Speak instead of typing (up to 2 minutes)">
@@ -209,5 +224,40 @@ function Ghost({ field, before, text, after, pending, finishing }: { field: RefO
       {sep2}
       {after}
     </div>
+  );
+}
+
+/** The invitation to talk to Kai: a small dialog over the page, once per page per session. */
+function VoiceIntro({ where, onClose }: { where: "teach" | "fix"; onClose: (choice: "speak" | "type") => void }) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose("type");
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onClose]);
+  // on the page's top level: inside the message box it would take on the box's styles
+  return createPortal(
+    <div className="voice-intro-back" onClick={(e) => e.target === e.currentTarget && onClose("type")}>
+      <div className="voice-intro" role="dialog" aria-modal="true" aria-labelledby="voice-intro-h">
+        <span className="voice-intro-icon" aria-hidden="true">
+          <Mic size={22} strokeWidth={2.2} />
+        </span>
+        <h2 id="voice-intro-h">You can talk to Kai</h2>
+        <p>
+          {where === "teach"
+            ? "Hi! See the microphone next to the message box? You can speak to Kai instead of typing. We think talking feels freer, and most people find they have more to say out loud than they would type."
+            : "You can say your correction out loud instead of typing it: press the microphone next to the box and tell Kai what went wrong, the way you would to a classmate."}
+        </p>
+        <p>It's up to you, but this is how Kai is meant to be talked to. Give it a try!</p>
+        <div className="voice-intro-row">
+          <button type="button" className="btn ghost" onClick={() => onClose("type")}>
+            <Keyboard size={17} aria-hidden="true" /> I&apos;ll type for now
+          </button>
+          <button type="button" className="btn primary" onClick={() => onClose("speak")} autoFocus>
+            <Mic size={17} aria-hidden="true" /> Try speaking
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
