@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Docendo: post-test form B, two questions replaced</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; }
+  :root {
+    --ink: #14181f; --ink2: #2c323d; --muted: #545b67; --rule: #d5dae2; --sunk: #f1f3f6;
+    --red: #e5483f; --yellow: #e89e0f; --green: #2f9e63; --blue: #2468b8;
+    --blue-soft: #e6effa; --green-soft: #e3f4ea; --red-soft: #fbe7e5; --yellow-soft: #fdf1d6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: var(--ink); font: 400 9pt/1.42 "Figtree", system-ui, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  b { font-weight: 700; }
+  .kicker { display: flex; align-items: center; gap: 9pt; font-size: 8pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink2); }
+  .bars { display: inline-flex; gap: 3pt; } .bars i { width: 15pt; height: 5pt; border-radius: 3pt; display: block; }
+  h1 { font: 800 20pt/1.08 "Bricolage Grotesque", sans-serif; letter-spacing: -0.03em; margin: 7pt 0 5pt; }
+  .lede { color: var(--ink2); margin: 0 0 10pt; font-size: 9.8pt; }
+  h2 { font: 700 12pt/1.2 "Bricolage Grotesque", sans-serif; margin: 13pt 0 4pt; letter-spacing: -0.01em; }
+  h3 { font: 700 10.5pt/1.25 "Bricolage Grotesque", sans-serif; margin: 0 0 3pt; }
+  p { margin: 0 0 5pt; }
+  ul, ol { margin: 0 0 5pt; padding-left: 14pt; } li { margin: 0 0 2.5pt; }
+  code { font: 500 8.2pt ui-monospace, Menlo, monospace; background: var(--sunk); padding: 0.5pt 3pt; border-radius: 3pt; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.6pt; margin: 3pt 0 8pt; }
+  th { text-align: left; font-size: 7.4pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0 6pt 3pt; border-bottom: 1pt solid var(--ink); }
+  td { padding: 3.5pt 6pt; border-bottom: 0.8pt solid var(--rule); vertical-align: top; color: var(--ink2); }
+  td.id { font-weight: 700; color: var(--ink); white-space: nowrap; }
+  .out { color: #a3332b; font-weight: 700; } .in { color: #1f7a4a; font-weight: 700; }
+  .tag { display: inline-block; font-size: 7.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 1pt 5pt; border-radius: 3pt; }
+  .tag.out { background: var(--red-soft); } .tag.in { background: var(--green-soft); } .tag.keep { background: var(--sunk); color: var(--ink2); }
+
+  .item { border-left: 3.5pt solid var(--rule); padding: 1pt 0 1pt 11pt; margin: 8pt 0 10pt; break-inside: avoid; }
+  .item.new { border-color: var(--green); } .item.old { border-color: var(--red); }
+  .item .meta { font-size: 8pt; color: var(--muted); margin-bottom: 4pt; }
+  .stem { font-size: 9.3pt; color: var(--ink); margin-bottom: 4pt; }
+  .opts { list-style: none; padding: 0; margin: 0 0 5pt; }
+  .opts li { display: grid; grid-template-columns: 13pt 1fr; gap: 0 4pt; margin-bottom: 2pt; }
+  .opts li > span:first-child { font-weight: 700; color: var(--muted); }
+  .opts .d { display: block; font-size: 8pt; color: var(--muted); font-style: italic; }
+  .opts .key { font-weight: 700; color: var(--ink); }
+  .opts .key .d { color: #1f7a4a; font-style: normal; font-weight: 700; }
+  dl.notes { display: grid; grid-template-columns: 62pt 1fr; gap: 2pt 8pt; margin: 0; font-size: 8.6pt; }
+  dl.notes dt { font-weight: 700; color: var(--ink); } dl.notes dd { margin: 0; color: var(--ink2); }
+  .box { border-radius: 6pt; padding: 7pt 11pt; margin: 4pt 0 8pt; background: var(--yellow-soft); border-left: 4pt solid var(--yellow); }
+  .box p:last-child, .box ul:last-child { margin-bottom: 0; }
+  .page { break-before: page; }
+</style>
+</head>
+<body>
+<div class="kicker"><span class="bars"><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>Docendo, for team review, 6 November 2026</div>
+<h1>Post-test form B: two questions replaced</h1>
+<p class="lede">Form B was meant to ask questions of its own, so that a pilot participant who takes both forms tries ten different questions. Two of its five items, V16 and V18, still asked what form A's T4 and T16 ask. They are replaced by V19 (the price of exploring) and V20 (ratings out of 100). Form A is unchanged. The two items taken out are kept whole in the stash, so nothing is lost and either can come back.</p>
+
+<h2>What changed</h2>
+<table>
+  <tr><th style="width:7%">Q</th><th style="width:30%">Form A (unchanged)</th><th style="width:31%">Form B before</th><th>Form B now</th></tr>
+  <tr><td class="id">1</td><td>T1 Canteens: greedy after a lucky start <b>(b)</b></td><td>V1 Optimistic start <b>(b)</b></td><td><span class="tag keep">kept</span> V1 Optimistic start <b>(b)</b></td></tr>
+  <tr><td class="id">2</td><td>T12 Study spots: lock-in from a small dip <b>(c)</b></td><td class="out">V16 Which options could each pick? (c)</td><td><span class="tag in">new</span> <b>V19 The price of exploring (a)</b></td></tr>
+  <tr><td class="id">3</td><td>T16 Inverse: why UCB picked a lower average <b>(d)</b></td><td class="out">V18 Round 9 (d)</td><td><span class="tag keep">kept</span> V7 Close or far apart <b>(b)</b></td></tr>
+  <tr><td class="id">4</td><td>T4 Recipes: which could UCB pick <b>(a)</b></td><td>V7 Close or far apart <b>(b)</b></td><td><span class="tag in">new</span> <b>V20 Ratings out of 100 (d)</b></td></tr>
+  <tr><td class="id">5</td><td>T6 A bonus that stops growing <b>(d)</b></td><td>V4 Forever <b>(c)</b></td><td><span class="tag keep">kept</span> V4 Forever <b>(c)</b></td></tr>
+</table>
+<p>Keys of form B, in order: before b c d b c, now <b>b a b d c</b> (every position used, none more than twice). The order still runs from greedy to UCB: V1 (a changed greedy), V19 (greedy against UCB), V7 (UCB), V20 (UCB with its setting c), V4 (UCB in the long run). V4 stays as you suggested: it shares T6's subject (how a worse-looking option fares from then on) but needs a different fact, the bonus growing without limit and ever more slowly.</p>
+
+<h2>Why V16 and V18 went</h2>
+<p>Both reduce to one step that form A already asks twice: <b>within one round, the bonuses differ only through the tries</b>, so the same tries mean the same bonus, and the higher average wins.</p>
+<ul>
+  <li><b>V16</b> (A 8.0 from 100 tries, B 7.9 from 2, C 3.0 from 100; which could greedy and UCB pick?) is T4 in another setting. C has A's tries and a lower average, exactly T4's D against B; B against A depends on the bonus sizes, exactly T4's A against B. Its greedy half (greedy picks only A) is the first step of T1 and T12.</li>
+  <li><b>V18</b> (round 9 after one try each: greedy and UCB pick the same) is the same step with every option at one try. T4 (B against D) and T16 (the bonuses in round 200 differ only through the tries) already ask it.</li>
+</ul>
+<p>What form A never asks is how big the bonus is (the setting c, the team's F14) and what exploring costs. The two new items ask exactly those, so form B now covers ground form A doesn't, while still needing the same rules.</p>
+
+<h2>Where things are</h2>
+<ul>
+  <li><code>topics/bandits/exercises.json</code>: the served test; V19 and V20 with key, diagnosis per option, rubric, estimate and a note on where each came from.</li>
+  <li><code>topics/bandits/stash/exercises.json</code>: V16 and V18, unchanged, each with a note on why and when it left. Moving an item back into the served file brings it back.</li>
+  <li><code>tests/posttest.test.ts</code>: the form's items and keys, and arithmetic checks behind V19's and V20's keys. <code>pnpm content validate</code> and all tests pass.</li>
+  <li>Answers already given to V16 and V18 (the pilot sessions so far) stay in the export with their item ids. The dashboard's per-item numbers simply show V19 and V20 from now on.</li>
+</ul>
+
+<h2 class="page">The two new items</h2>
+<p>As learners see them, with the misconception behind each wrong option (in grey; never shown to learners). F numbers follow the team's fact list. Both ask for the reason in one or two sentences and offer "I don't know".</p>
+
+<div class="item new">
+  <h3>V19: The price of exploring <span class="tag in">replaces V16</span></h3>
+  <div class="meta">Comparison, far transfer. Facts: F4 and F5 (greedy follows the leader, never re-tries what looks worse), F9 and F11 (UCB picks the highest score; an unpicked bonus keeps growing), plus the lesson's "exploring too much wastes rounds on options already known to be worse". Estimate 40%.</div>
+  <div class="stem">Two apps recommend one of three podcasts: one uses greedy, the other UCB with c chosen to fit ratings from 0 to 10. Every listen is rated, and each rating lands within 2 points of the podcast's true average, which the apps don't know: A 7, B 6 and C 3. Both apps start by trying each podcast once and happen to get the same trial ratings: A 9, B 4 and C 1. Over the next 1,000 listens, which app can expect the higher total rating?</div>
+  <ol class="opts">
+    <li class="key"><span>a</span><span>The greedy app <span class="d">correct</span></span></li>
+    <li><span>b</span><span>The UCB app <span class="d">learner: exploring always pays, so UCB always does better than greedy</span></span></li>
+    <li><span>c</span><span>About the same for both apps <span class="d">Kai's F11 belief (an unpicked bonus stays the same, so UCB soon stops trying B and C), or learner: exploring costs nothing once the best is found</span></span></li>
+    <li><span>d</span><span>It depends on A's next few ratings <span class="d">learner: overlooks that A's average can't fall below 5, above B's 4, so greedy never leaves A</span></span></li>
+  </ol>
+  <dl class="notes">
+    <dt>Reasoning</dt><dd>After the trial, greedy's favourite is A, which is truly the best. A's ratings never fall below 5, so its average stays above B's 4 and C's 1: greedy picks A every round. UCB keeps coming back to B and C now and then, because their bonuses keep growing while they aren't picked, and each of those listens is rated lower than A's would be. Exploring has a price when the first favourite happens to be right.</dd>
+    <dt>Rubric</dt><dd>2 points: greedy stays on A, which is truly the best (A's average can't fall below B's 4); UCB keeps spending listens on B and C (their bonuses keep growing), and those cost rating. 1 point for one of the two.</dd>
+    <dt>Key check</dt><dd>Follows without simulation: greedy picks the truly best podcast every round, so no rule can expect more, and UCB must leave A again and again since an unpicked bonus grows without limit. Simulated (200 runs each): greedy picked A on every listen; UCB with c = 5 spent 58 to 138 of 1,000 listens on B or C and collected 6,893 against greedy's 6,997 on average (behind in 189 of 200 runs; c = 10: behind in 200 of 200).</dd>
+    <dt>Why "c fits"</dt><dd>With a c far too small for 0-to-10 ratings (c = 1), UCB never left A within 1,000 listens and (c) would be right. The stem rules that out by saying c fits the ratings.</dd>
+  </dl>
+</div>
+
+<div class="item new">
+  <h3>V20: Ratings out of 100 <span class="tag in">replaces V18</span></h3>
+  <div class="meta">Comparison, far transfer. The team's T10 (the old anchor, stashed when ε-greedy left the lesson) with greedy in ε-greedy's place. Facts: F14 (c sets the bonus's size; the bonus doesn't adapt to the rewards observed), F9, F4. The only item in either form on c. Estimate 30%.</div>
+  <div class="stem">Two music apps rate songs between 0 and 1: one picks songs with greedy, the other with UCB, with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?</div>
+  <ol class="opts">
+    <li><span>a</span><span>Neither app's <span class="d">Kai's F14 belief (the bonus adapts to the observed rewards)</span></span></li>
+    <li><span>b</span><span>Both apps' <span class="d">learner: any change to the ratings changes both rules</span></span></li>
+    <li><span>c</span><span>Only the UCB app's: it explores much more <span class="d">learner: larger numbers mean larger bonuses</span></span></li>
+    <li class="key"><span>d</span><span>Only the UCB app's: it explores much less <span class="d">correct</span></span></li>
+  </ol>
+  <dl class="notes">
+    <dt>Reasoning</dt><dd>Greedy's picks stay the same: multiplying every rating by 100 keeps the order of the averages. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings. The bonus becomes tiny next to the gaps between averages, and UCB behaves almost like greedy.</dd>
+    <dt>Rubric</dt><dd>2 points: the bonus is set by c and doesn't grow with the ratings, so it becomes tiny next to the averages; greedy only compares averages, whose order doesn't change. 1 point for one of the two.</dd>
+    <dt>Key check</dt><dd>Simulated again for the greedy version (four songs, true averages 0.7, 0.6, 0.5, 0.3, 2,000 rounds, 200 runs): with c = 0.5 the UCB app ended mostly on a worse song in 0 runs at the original scale and in 42 after multiplying by 100 (c = 1.41: 0 and 38). It spent 8.6% of rounds away from its own favourite before and 0.5% after, about greedy's 0.4%. Greedy's picks are identical at both scales.</dd>
+    <dt>Changes</dt><dd>"App 1 / app 2" became "the greedy app / the UCB app", so learners don't have to keep track of which number is which rule. The options are otherwise T10's.</dd>
+  </dl>
+</div>
+
+<h2>Multiple-choice checks applied</h2>
+<ul>
+  <li><b>Every wrong option is a named misconception</b> (a Kai belief for a fact, or a known learner one), and none can be ruled out without the rules: no out-of-range or joke options.</li>
+  <li><b>Options state predictions only</b>, are parallel, and the key is never the longest option (V19's key is the shortest; V20's two "Only the UCB app's" options are the same length).</li>
+  <li><b>No vague degrees:</b> V19 asks which app, V20 which app and in which direction. No two options are true under one belief.</li>
+  <li><b>Settings of their own</b> (podcasts, music ratings), never the lesson's or the practice's. Every number in V19's stem is used: the true averages say A is best, the ±2 band and the trial ratings show A's average can't fall below B's.</li>
+  <li><b>No calculation needed:</b> both are answered from the rules; V19 needs one comparison (7 − 2 = 5 is above 4).</li>
+</ul>
+
+<h2>Candidates considered and not used</h2>
+<table>
+  <tr><th style="width:27%">Candidate</th><th>Why not</th></tr>
+  <tr><td class="id">Two logs (T9, with greedy)</td><td>Already in the stash as t14. Without ε-greedy the greedy log is simply 0% after the trial, which gives it away, and the UCB half (ever rarer, never zero) is what V4 asks.</td></tr>
+  <tr><td class="id">Two studios (greedy against UCB after an unlucky start)</td><td>Repeats practice P3 (greedy against UCB after an unlucky start). In simulation its key also depended on c: with a c too small for the scale UCB never returned to the better option.</td></tr>
+  <tr><td class="id">3 against 30 options under UCB</td><td>A good idea (each option's bonus depends only on its own tries, so each worse option is tried about as often with 30 options as with 3; simulated 61 against 70 picks), but only one strong wrong option ("the exploring is shared out"); the others would have been filler.</td></tr>
+</table>
+
+<div class="box">
+  <p><b>For the team to check</b></p>
+  <ul>
+    <li><b>V1 against T1.</b> V1 also leans on T1's mechanism (a too-high average corrects itself because greedy keeps picking that option). It stays because it is form B's only item on greedy alone and it changes the rule (the optimistic start), but it is the next candidate if form B should be more different still.</li>
+    <li><b>V19 against T12.</b> V19's greedy half uses T12's bound ("can't fall below"), but asks the opposite consequence: lock-in on the right option costs nothing, while UCB pays for exploring.</li>
+    <li><b>The forms are no longer parallel on c.</b> Form B asks about c (V20), form A doesn't. For the pilot (both forms) this doesn't matter; for the study, where each person takes one form, it is one more reason to compare scores within a form.</li>
+    <li><b>Estimates</b> (40% and 30%) are guesses to compare with the pilot, as for the other items.</li>
+  </ul>
+</div>
+</body>
+</html>

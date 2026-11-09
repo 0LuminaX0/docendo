@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 const chrome = process.env.CHROME_PATH ?? { darwin: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", win32: "C:/Program Files/Google/Chrome/Application/chrome.exe" }[process.platform] ?? "/usr/bin/google-chrome";
 const name = process.argv[2] ?? "m4";
-const titles = { m3: "M3 project description", m4: "M4 research plan", "m4-info": "Participant information" };
+const titles = { m3: "M3 project description", m4: "M4 research plan", "m4-info": "Participant information", "form-b": "Post-test form B, 6 November 2026" };
 const b = await puppeteer.launch({ executablePath: chrome, headless: true });
 const p = await b.newPage();
 await p.goto("file://" + join(process.cwd(), `report/${name}-report.html`), { waitUntil: "networkidle0" });

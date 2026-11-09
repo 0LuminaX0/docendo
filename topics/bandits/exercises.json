@@ -1,7 +1,7 @@
 {
   "title": "Multi-armed bandits: post-test",
   "order": "fixed",
-  "note": "Two forms of five, asked in a fixed order (2026-11-05: form B took questions of its own, so a pilot that takes both forms tries ten different questions; the caveats stay in both). Form A: T1 (greedy after a lucky start, in the long run), T12 (lock-in from a small dip), T16 (why UCB picked a lower average), T4 (one UCB round, no calculation needed, every option a set), T6 (a bonus that stops growing). Form B: V1 (greedy with an optimistic start), V16 (which options greedy and UCB could each pick, Phil's T13), V18 (round 9: after one try each, UCB picks what greedy picks), V7 (UCB shows the worse banner more when the two are close), V4 (UCB keeps picking the worst option, with ever longer gaps). Prompts trimmed to what each question needs; each keeps a setting of its own (transfer, not recall of the lesson's or the practice's). Every other item, the earlier twins V11, V13, V14 and V15 among them, is in stash/exercises.json.",
+  "note": "Two forms of five, asked in a fixed order (2026-11-05: form B took questions of its own, so a pilot that takes both forms tries ten different questions; the caveats stay in both). Form A: T1 (greedy after a lucky start, in the long run), T12 (lock-in from a small dip), T16 (why UCB picked a lower average), T4 (one UCB round, no calculation needed, every option a set), T6 (a bonus that stops growing). Form B: V1 (greedy with an optimistic start), V19 (the price of exploring: greedy against UCB when the first favourite is right), V7 (UCB shows the worse banner more when the two are close), V20 (ratings out of 100: c doesn't grow with the ratings, the team's T10 with greedy), V4 (UCB keeps picking the worst option, with ever longer gaps). 2026-11-06: V16 and V18 taken out (they asked what T4 and T16 ask), for V19 and V20. Prompts trimmed to what each question needs; each keeps a setting of its own (transfer, not recall of the lesson's or the practice's). Every other item, the earlier twins V11, V13, V14 and V15 among them, is in stash/exercises.json.",
   "items": [
     {
       "id": "t01",
@@ -176,62 +176,33 @@
       "note": "In 3,000 simulated runs ordinary greedy ended mostly at the best option in 79% of runs, optimistic greedy in 99% (Sutton & Barto, §2.6). Revised after the pretest review; three options suffice here."
     },
     {
-      "id": "v16",
+      "id": "v19",
       "goal": "G",
-      "type": "near",
+      "type": "far",
       "section": "Comparison",
       "form": "B",
-      "title": "Which options could each pick?",
+      "title": "The price of exploring",
       "kind": "choice",
-      "prompt": "Two apps have the same history on three options: A averages 8.0 (100 tries), B 7.9 (2 tries) and C 3.0 (100 tries). App 1 uses greedy and app 2 uses UCB. Which options could each app pick in the next round?",
+      "prompt": "Two apps recommend one of three podcasts: one uses greedy, the other UCB with c chosen to fit ratings from 0 to 10. Every listen is rated, and each rating lands within 2 points of the podcast's true average, which the apps don't know: A 7, B 6 and C 3. Both apps start by trying each podcast once and happen to get the same trial ratings: A 9, B 4 and C 1. Over the next 1,000 listens, which app can expect the higher total rating?",
       "options": [
-        "App 1: only A; app 2: A, B or C",
-        "App 1: A or B; app 2: A or B",
-        "App 1: only A; app 2: A or B",
-        "App 1: only A; app 2: only B"
+        "The greedy app",
+        "The UCB app",
+        "About the same for both apps",
+        "It depends on A's next few ratings"
       ],
-      "answer": 2,
+      "answer": 0,
       "dontKnow": true,
       "reason": true,
-      "explain": "Greedy picks the highest average, A. UCB picks the highest average plus bonus. C has as many tries as A, so the same bonus, and a much lower average: it can never beat A. B's average is a little lower than A's, but with far fewer tries its bonus is much larger; whether it beats A depends on the sizes of the bonuses. So app 2 picks A or B.",
-      "rubric": "Greedy follows the averages only; C has A's bonus but a lower average, while B's larger bonus can make up its 0.1 gap.",
+      "explain": "After the trial, greedy's favourite is A, which is truly the best. A's ratings never fall below 5, so its average stays above B's 4 and C's 1, and greedy picks A every round: B's and C's averages are never corrected, but here that costs nothing. UCB keeps coming back to B and C now and then, because their bonuses keep growing while they aren't picked, and each of those listens is rated about 1 or 4 points lower than A's would be on average. So greedy collects more: exploring has a price when the first favourite happens to be the right one.",
+      "rubric": "Greedy stays on A, which is truly the best (A's average can't fall below 5, above B's 4); UCB keeps spending some listens on B and C (their bonuses keep growing), and those cost rating.",
       "diagnosis": [
-        "learner: UCB keeps exploring every option",
-        "learner: greedy alternates when averages are close",
         "correct",
-        "Kai: F9 (UCB picks the fewest tries, whatever the average)"
-      ],
-      "estimate": 0.55,
-      "note": "Phil's T13 (2026-11-05: greedy against UCB in t08's place), in form B since form B took questions of its own."
-    },
-    {
-      "id": "v18",
-      "goal": "G",
-      "type": "near",
-      "section": "Comparison",
-      "form": "B",
-      "title": "Round 9",
-      "kind": "choice",
-      "prompt": "Greedy and UCB each run on the same eight options and have just tried each option once, in rounds 1 to 8. Which is true about round 9?",
-      "options": [
-        "UCB picks the option with the lowest result so far, to learn about it",
-        "UCB may pick any of the eight, depending on its bonuses",
-        "Greedy tries the option with the lowest result once more first",
-        "Greedy and UCB pick the same option"
-      ],
-      "answer": 3,
-      "dontKnow": true,
-      "reason": true,
-      "explain": "Each option has been tried once, in the same round, so every bonus is the same: the bonus depends only on c, the round and how often the option was tried. UCB's highest score is then simply the highest average, which is greedy's pick too.",
-      "rubric": "Every bonus is equal (the same tries in the same round), so the highest score is the highest average, greedy's pick.",
-      "diagnosis": [
-        "Kai: F9 (UCB picks the option it is least sure about)",
-        "Kai: F14 (the bonus adapts to the observed rewards)",
-        "learner: greedy explores a little at the start",
-        "correct"
+        "learner: exploring always pays, so UCB always does better than greedy",
+        "Kai: F11 (an unpicked bonus stays the same, so UCB soon stops trying B and C) or learner: exploring costs nothing once the best is found",
+        "learner: overlooks that A's average can't fall below 5, above B's 4, so greedy never leaves A"
       ],
       "estimate": 0.4,
-      "note": "V10 (round 9) adapted to greedy and UCB (2026-11-05), single choice; ε-greedy left the lesson."
+      "note": "New 2026-11-06 in v16's place (v16 asked what t04 asks: which options UCB could pick, settled by comparing averages and tries). The trade-off the lesson states (\"exploring too much wastes rounds on options already known to be worse\") from the side the other items don't show: greedy's lock-in is harmless when the first favourite is right, and UCB pays for exploring. The key follows without simulation: greedy picks the truly best option every round, so no rule can expect more; UCB picks B or C whenever their bonuses carry them past A, which happens again and again since an unpicked bonus grows without limit. Simulated (ratings uniform within 2 points of the true average, 200 runs each): greedy picked A on every listen; UCB with c = 5 spent 58 to 138 of 1,000 listens on B or C and collected 6,893 against greedy's 6,997 on average, behind greedy in 189 of 200 runs (c = 10: 157 to 250, behind in 200 of 200). With a c far too small for the scale (c = 1) UCB never left A in 1,000 listens, so the stem says c fits the ratings."
     },
     {
       "id": "v07",
@@ -261,6 +232,35 @@
       ],
       "estimate": 0.4,
       "note": "In simulation (50 runs) UCB showed the worse banner 26 times in shop 1 and 3,553 times in shop 2."
+    },
+    {
+      "id": "v20",
+      "goal": "G",
+      "type": "far",
+      "section": "Comparison",
+      "form": "B",
+      "title": "Ratings out of 100",
+      "kind": "choice",
+      "prompt": "Two music apps rate songs between 0 and 1: one picks songs with greedy, the other with UCB, with c chosen to fit ratings between 0 and 1. A developer switches both apps to ratings between 0 and 100 (every rating is multiplied by 100) and changes nothing else, so c stays as it was. Whose behaviour changes?",
+      "options": [
+        "Neither app's",
+        "Both apps'",
+        "Only the UCB app's: it explores much more",
+        "Only the UCB app's: it explores much less"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy's picks stay the same, because multiplying every rating by 100 keeps the order of the averages. UCB's averages are now 100 times larger, but its bonus is still set by c, not by the ratings observed. So the bonus is tiny next to the gaps between the averages, and UCB behaves almost like greedy.",
+      "rubric": "The bonus is set by c and doesn't grow with the ratings, so it becomes tiny next to the averages; greedy only compares averages, whose order doesn't change.",
+      "diagnosis": [
+        "Kai: F14 (the bonus adapts to the observed rewards)",
+        "learner: any change to the ratings changes both rules",
+        "learner: larger numbers mean larger bonuses",
+        "correct"
+      ],
+      "estimate": 0.3,
+      "note": "New 2026-11-06 in v18's place (v18 asked what t04 and t16 already settle: in one round the bonuses differ only through the tries). The team's T10 (stashed t10, the old anchor) with greedy in ε-greedy's place: the only item in either form on c (n11.f2). Simulated again (four songs, true averages 0.7, 0.6, 0.5 and 0.3, ratings spread around them with sd 0.25, 2,000 rounds, 200 runs): with c = 0.5 the UCB app ended mostly on a worse song in 0 runs at the original scale and in 42 after multiplying by 100 (c = 1.41: 0 and 38); it spent 8.6% of rounds away from its own favourite before and 0.5% after, about greedy's 0.4%. Greedy's picks are exactly the same at both scales."
     },
     {
       "id": "v04",

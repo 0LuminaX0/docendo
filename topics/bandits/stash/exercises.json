@@ -1,6 +1,6 @@
 {
   "title": "Stashed test items (not served)",
-  "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
+  "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: 2026-11-06: v16 (which options could greedy and UCB pick) and v18 (round 9) taken out of form B, which asked what form A's T4 and T16 ask; v19 (the price of exploring) and v20 (ratings out of 100, greedy against UCB) took their places. Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
   "items": [
     {
       "id": "v15",
@@ -720,6 +720,64 @@
         "true"
       ],
       "estimate": 0.3
+    },
+    {
+      "id": "v16",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "B",
+      "title": "Which options could each pick?",
+      "kind": "choice",
+      "prompt": "Two apps have the same history on three options: A averages 8.0 (100 tries), B 7.9 (2 tries) and C 3.0 (100 tries). App 1 uses greedy and app 2 uses UCB. Which options could each app pick in the next round?",
+      "options": [
+        "App 1: only A; app 2: A, B or C",
+        "App 1: A or B; app 2: A or B",
+        "App 1: only A; app 2: A or B",
+        "App 1: only A; app 2: only B"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Greedy picks the highest average, A. UCB picks the highest average plus bonus. C has as many tries as A, so the same bonus, and a much lower average: it can never beat A. B's average is a little lower than A's, but with far fewer tries its bonus is much larger; whether it beats A depends on the sizes of the bonuses. So app 2 picks A or B.",
+      "rubric": "Greedy follows the averages only; C has A's bonus but a lower average, while B's larger bonus can make up its 0.1 gap.",
+      "diagnosis": [
+        "learner: UCB keeps exploring every option",
+        "learner: greedy alternates when averages are close",
+        "correct",
+        "Kai: F9 (UCB picks the fewest tries, whatever the average)"
+      ],
+      "estimate": 0.55,
+      "note": "Phil's T13 (2026-11-05: greedy against UCB in t08's place), in form B since form B took questions of its own. Taken out 2026-11-06: it asks what t04 asks (which options UCB could pick, settled by comparing averages and tries: C has A's tries and a lower average, like t04's D against B), so a pilot taking both forms met the same question twice. Replaced by v19 (the price of exploring)."
+    },
+    {
+      "id": "v18",
+      "goal": "G",
+      "type": "near",
+      "section": "Comparison",
+      "form": "B",
+      "title": "Round 9",
+      "kind": "choice",
+      "prompt": "Greedy and UCB each run on the same eight options and have just tried each option once, in rounds 1 to 8. Which is true about round 9?",
+      "options": [
+        "UCB picks the option with the lowest result so far, to learn about it",
+        "UCB may pick any of the eight, depending on its bonuses",
+        "Greedy tries the option with the lowest result once more first",
+        "Greedy and UCB pick the same option"
+      ],
+      "answer": 3,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "Each option has been tried once, in the same round, so every bonus is the same: the bonus depends only on c, the round and how often the option was tried. UCB's highest score is then simply the highest average, which is greedy's pick too.",
+      "rubric": "Every bonus is equal (the same tries in the same round), so the highest score is the highest average, greedy's pick.",
+      "diagnosis": [
+        "Kai: F9 (UCB picks the option it is least sure about)",
+        "Kai: F14 (the bonus adapts to the observed rewards)",
+        "learner: greedy explores a little at the start",
+        "correct"
+      ],
+      "estimate": 0.4,
+      "note": "V10 (round 9) adapted to greedy and UCB (2026-11-05), single choice; ε-greedy left the lesson. Taken out 2026-11-06: in one round the bonuses differ only through the tries, which t04 (B against D) and t16 already ask. Replaced by v20 (ratings out of 100)."
     }
   ]
 }
