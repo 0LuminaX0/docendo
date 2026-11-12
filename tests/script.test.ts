@@ -46,19 +46,23 @@ async function talk(steps: { message: string; say: Say; elapsedMs?: number }[], 
 const asks = (r: { reply: string }, text: string) => r.reply.endsWith(text);
 const at = (i: number, sc = script): State => ({ ...initialScriptState(bundle, sc), script: { ...initialScriptState(bundle, sc).script!, at: i } });
 const UCB = Q.findIndex((q) => q.id === "ucb");
-const GREEDY = Q.findIndex((q) => q.id === "greedy"); // the setup comes first (2026-11-05); most tests start at greedy
+const GREEDY = Q.findIndex((q) => q.id === "greedy");
+// a question's place in another version of the questions (the stashed one with follow-ups still opens with the setup)
+const ix = (sc: typeof script, id: string) => sc.questions.findIndex((q) => q.id === id);
 const msg = "Every round it takes whichever option has the best average at that moment, and switches when another gets ahead.";
 
 describe("Kai's teaching questions", () => {
   it("are built on the graph: in its order, each for teachable facts, saying nothing they ask about", () => {
-    expect(Q.map((q) => q.id)).toEqual(["setup", "greedy", "greedy-long", "explore", "ucb", "ucb-why", "ucb-size", "ucb-long", "anything"]);
+    expect(Q.map((q) => q.id)).toEqual(["greedy", "greedy-long", "explore", "ucb", "ucb-why", "ucb-size", "ucb-long", "anything"]);
     const teachable = new Set(bundle.nodes.flatMap((n) => n.facts.filter((f) => f.required && f.teachable && f.assume).map((f) => f.id)));
     // every teachable fact has a question (and the two why-questions ask for a reason the lesson gives), and every
     // follow-up is for one of its question's facts
     const targets = new Set(Q.flatMap((q) => q.targets));
     for (const f of teachable) expect(targets.has(f), f).toBe(true);
-    // the setup (n01.f1, n01.f2) and the two reasons have no beginner's assumption: no practice problem needs them
-    expect([...targets].filter((f) => !teachable.has(f))).toEqual(["n01.f1", "n01.f2", "n08.f1", "n11.f4"]);
+    // the two reasons have no beginner's assumption: no practice problem needs them (the setup, n01.f1 and n01.f2, is
+    // background Kai knows from the slides since 2026-11-12: no question asks for it)
+    expect([...targets].filter((f) => !teachable.has(f))).toEqual(["n08.f1", "n11.f4"]);
+    expect(Q.some((q) => q.targets.some((f) => f.startsWith("n01.")))).toBe(false);
     for (const q of Q) for (const f of q.follow) expect(q.targets, q.id).toContain(f.fact);
     // no follow-up asks for a missing fact by name (2026-11-12): what the learner leaves out stays out of Kai's notes,
     // so Kai's mistakes in practice come from the teaching
@@ -75,7 +79,7 @@ describe("Kai's teaching questions", () => {
 
   it("goes through the questions in order, the fixed text word for word after Kai's own reaction", async () => {
     // each answer teaches its question's facts
-    const facts = ["n01.f1 n01.f2", "n05.f1", "n06.f1", "n08.f1", "n11.f1", "n11.f4", "n11.f2", "n12.f1 n12.f2", ""];
+    const facts = ["n05.f1", "n06.f1", "n08.f1", "n11.f1", "n11.f4", "n11.f2", "n12.f1 n12.f2", ""];
     const asked = Q;
     const r = await talk(facts.map((f) => ({ message: msg, say: f ? ok(...f.split(" ")) : { intent: "answer" } })), undefined, async () => "Oh, I see.");
     r.slice(0, -1).forEach((x, i) => {
@@ -128,14 +132,14 @@ describe("Kai's teaching questions", () => {
 
   it("with follow-ups, asks one only for a fact still missing (or only vaguely taught), once, and never after a short complete answer", async () => {
     const F = withFollow.questions;
-    const short = await talk([{ message: "best average each round, switches when overtaken", say: ok("n05.f1") }], at(GREEDY, withFollow), undefined, withFollow);
+    const short = await talk([{ message: "best average each round, switches when overtaken", say: ok("n05.f1") }], at(ix(withFollow, "greedy"), withFollow), undefined, withFollow);
     expect(asks(short[0]!, byId("greedy-long").text)).toBe(true);
     const r = await talk(
       [
         { message: "it picks the best one", say: vague("n05.f1") },
         { message: "hm, the best one I think", say: vague("n05.f1") },
       ],
-      at(GREEDY, withFollow),
+      at(ix(withFollow, "greedy"), withFollow),
       undefined,
       withFollow,
     );
@@ -176,7 +180,7 @@ describe("Kai's teaching questions", () => {
     const more = await talk([{ message: "it tries all of them in turn I think", say: { intent: "answer" } }], { ...r[0]!.state });
     expect(asks(more[0]!, byId("anything").text)).toBe(true);
     // with follow-ups: the one on UCB's rule comes first; those of "how does that play out?", about the bonus, wait too
-    const f = await talk([{ message: "it picks whichever looks best", say: { intent: "answer" } }, { message: "not sure", say: { intent: "unsure" } }, { message: "it tries all of them in turn I think", say: { intent: "answer" } }], at(UCB, withFollow), undefined, withFollow);
+    const f = await talk([{ message: "it picks whichever looks best", say: { intent: "answer" } }, { message: "not sure", say: { intent: "unsure" } }, { message: "it tries all of them in turn I think", say: { intent: "answer" } }], at(ix(withFollow, "ucb"), withFollow), undefined, withFollow);
     expect(asks(f[0]!, follow("ucb", "n11.f1"))).toBe(true);
     expect(f[1]!.trace.script.gated).toEqual(["ucb-why", "ucb-size"]);
     expect(asks(f[1]!, byId("ucb-long").text)).toBe(true);
@@ -285,9 +289,9 @@ describe("Kai's teaching questions", () => {
     // the 2026-11-03 script had ten questions: a session at its ninth, with its eighth waiting at the back
     const old: State = { ...initialScriptState(bundle, script), script: { at: 9, more: false, again: 0, skipped: [8], back: false, probe: null, probed: [], covered: [], repeats: 0 } };
     const r = await talk([{ message: msg, say: ok("n05.f1") }], old);
-    // the setup isn't answered yet: it comes first
-    expect(asks(r[0]!, byId("setup").text)).toBe(true);
-    expect(r[0]!.trace.script).toMatchObject({ restart: true, next: "setup" });
+    // greedy's rule is answered now: the first question not yet answered is where greedy ends up
+    expect(asks(r[0]!, byId("greedy-long").text)).toBe(true);
+    expect(r[0]!.trace.script).toMatchObject({ restart: true, next: "greedy-long" });
     expect(r[0]!.state.script!.ids).toBe(Q.map((q) => q.id).join(" "));
     // and from then on it is a session of this version
     const r2 = await talk([{ message: msg, say: ok("n06.f1") }], r[0]!.state);

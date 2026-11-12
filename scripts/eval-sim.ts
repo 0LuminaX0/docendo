@@ -53,9 +53,8 @@ const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practic
 const TEACH = ["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]; // since 2026-11-05 no ε-greedy
 // the reasons Kai's two why-questions ask for (2026-11-05): no practice problem needs them, so they are outside the gate
 const WHY = ["n08.f1", "n11.f4"];
-// the setup, Kai's first question since 2026-11-05: every learner read it
-const SETUP = ["n01.f1", "n01.f2"];
-const ALL = [...SETUP, ...TEACH, ...WHY];
+// the setup (n01.f1, n01.f2) is background Kai knows from the slides since 2026-11-12: no question asks for it
+const ALL = [...TEACH, ...WHY];
 
 // a student's understanding of each teachable fact (not the fact's wording), and of its usual wrong version
 const KNOW: Record<string, string> = {
@@ -86,9 +85,9 @@ const PERSONAS: Persona[] = [
   { id: "expert", knows: ALL, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + c·sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
   { id: "solid", knows: ALL.filter((f) => f !== "n11.f2"), style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
   { id: "terse", knows: ALL, style: "You are busy and type little: answer in ONE short sentence of 6 to 15 words, only what was asked, no examples. If asked to say more, add one more short sentence." },
-  { id: "partial", knows: [...SETUP, "n05.f1", "n06.f1"], vague: ["n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
-  { id: "misled", knows: [...SETUP, "n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n11.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
-  { id: "realistic", knows: [...SETUP, "n05.f1", "n06.f1", "n08.f1", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the confidence thing', 'the score', 'the extra bit'. Sometimes you answer only part of the question at first." },
+  { id: "partial", knows: ["n05.f1", "n06.f1"], vague: ["n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
+  { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n11.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
+  { id: "realistic", knows: ["n05.f1", "n06.f1", "n08.f1", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the confidence thing', 'the score', 'the extra bit'. Sometimes you answer only part of the question at first." },
   { id: "rambler", knows: ALL, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about both rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
   { id: "chatty", knows: ALL, style: "You are friendly and chatty. Two to three sentences. About every third message, before or instead of answering, ask Kai a question back (\"what do you think?\", \"does that make sense?\") or make a small joke unrelated to the topic; when Kai asks again, answer properly." },
 ];
