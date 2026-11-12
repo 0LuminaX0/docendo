@@ -419,12 +419,17 @@ describe("the caveats (Kai fails at least once, never against its notes)", () =>
     expect(caveatFor(practice.items, p7, thin, 0)).toBeUndefined();
   });
   it("are left alone where the notes say them, in the learner's words, and the next open one comes into play", () => {
-    // lock-in explained as "its average is never corrected" says that only the featured option's average changes
+    // P7 (2026-11-12): an average moves towards its option's true average while it is picked; said in other words
+    const evens = withNotes({ "n05.f1": "greedy takes the highest average every round, and the more often an option is picked, the closer its average gets to its true average" });
+    expect(caveatOpen(p7.caveat!, evens)).toBe(false);
+    expect(caveatFor(practice.items, p7, evens, 0)).toBeUndefined();
+    // lock-in explained as "never picks it again, so its average is never corrected" says P3's point, not P7's
     const said = withNotes({ "n06.f1": "if the best one has an unlucky first try greedy never picks it again, so its average is never corrected" });
-    expect(caveatOpen(p7.caveat!, said)).toBe(false);
+    expect(caveatOpen(p7.caveat!, said)).toBe(true);
     expect(caveatOpen(p3.caveat!, said)).toBe(false);
-    expect(caveatFor(practice.items, p7, said, 0)).toBeUndefined();
     expect(caveatFor(practice.items, p3, said, 0)).toBeUndefined();
+    // P7's point taught, P3's left open: P3's comes into play
+    expect(caveatFor(practice.items, p3, evens, 0)).toEqual(p3.caveat);
     // "grows when not picked for a long time" leaves one round open; "grows every round" doesn't
     const long = withNotes({ "n12.f2": "the bonus of an option that isn't picked for a long time keeps growing, more and more slowly" });
     expect(caveatOpen(p2.caveat!, long)).toBe(true);

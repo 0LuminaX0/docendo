@@ -4,7 +4,7 @@ import practiceJson from "../topics/bandits/practice.json";
 import stashedJson from "../topics/bandits/stash/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile } from "../content/practice";
-import { isAbout, sentenceLike, sentencesOf } from "../engine/tutor/judge";
+import { isAbout, sentenceLike, sentencesOf, settleReply, type Reply } from "../engine/tutor/judge";
 import { gate } from "../engine/tutor/solve";
 import { activeMisconceptions, initialState, type State } from "../engine/tutor/state";
 
@@ -43,7 +43,8 @@ describe("the checks around the judge", () => {
 describe("the evidence a key needs (a check in code around the judge)", () => {
   const ev = (id: string) => new RegExp(bundle.nodes.flatMap((n) => n.facts).find((f) => f.id === id)!.evidence!, "iu");
   it("finds the bonus's slowing growth in the learner's own words, and not in a vague answer", () => {
-    for (const m of ["it keeps growing but by less each time", "the growth gets smaller", "it grows more gently as time goes on", "grows slower and slower", "the ln t term keeps growing", "it grows logarithmically", "grows without limit but more and more slowly", "like sqrt(log t)"]) expect(ev("n12.f2").test(m), m).toBe(true);
+    // "logarith-": speech input cut the word in a pilot run (2026-11-12)
+    for (const m of ["it keeps growing but by less each time", "the growth gets smaller", "it grows more gently as time goes on", "grows slower and slower", "the ln t term keeps growing", "it grows logarithmically", "It grows logarith- in the number of rounds", "grows without limit but more and more slowly", "like sqrt(log t)"]) expect(ev("n12.f2").test(m), m).toBe(true);
     for (const m of ["the ones you skip keep getting a bigger bonus over time", "it grows over time", "the logic is that it grows", "see my blog"]) expect(ev("n12.f2").test(m), m).toBe(false);
   });
   it("finds ε's fixed rate, a fixed share or a number, and not \"sometimes\" or a bare ε", () => {
@@ -58,6 +59,30 @@ describe("the evidence a key needs (a check in code around the judge)", () => {
     // "e.g." doesn't end the sentence (the pilot: "you also choose an eps (e.g. 0.1), Each day you give…")
     const p = "Its almost greedy, but you also choose an eps (e.g. 0.1), Each day you give the best provider a 1-eps chance.";
     expect(ev("n07.f1").test(sentencesOf(p, "you also choose an eps"))).toBe(true);
+  });
+});
+
+describe("the key's words (a check in code around the judge, 2026-11-12)", () => {
+  const reply = (facts: Reply["facts"]): Reply => ({ intent: "answer", facts, misconceptions: [] });
+  const oskar = "Ideally it ends up choosing the best option all the time. To solve this, there is the UCB rule, which applies bonuses";
+  it("keeps a credit whose key words are the learner's own", () => {
+    const m = "UCB gives every option a score, its average plus a bonus, and picks the highest score.";
+    const j = settleReply(bundle, m, "", reply([{ fact: "n11.f1", verdict: "correct", quote: "UCB gives every option a score, its average plus a bonus", keyQuote: "picks the highest score", before: "", after: "" }]));
+    expect(j.facts[0]).toMatchObject({ fact: "n11.f1", verdict: "correct", keyQuote: "picks the highest score" });
+  });
+  it("makes a credit partial when the judge names no key words, or words that aren't in the message", () => {
+    const none = settleReply(bundle, oskar, "", reply([{ fact: "n11.f1", verdict: "correct", quote: "there is the UCB rule, which applies bonuses", keyQuote: "", before: "", after: "" }]));
+    expect(none.facts[0]!.verdict).toBe("partial");
+    expect(none.dropped!.some((d) => /no words stating the key/.test(d.quote))).toBe(true);
+    const made = settleReply(bundle, oskar, "", reply([{ fact: "n11.f1", verdict: "correct", quote: "there is the UCB rule, which applies bonuses", keyQuote: "and picks the option with the highest score", before: "", after: "" }]));
+    expect(made.facts[0]!.verdict).toBe("partial");
+  });
+  it("leaves a fact without a key, and verdicts other than correct, as the judge gave them", () => {
+    const m = "Exploring is trying options to learn about them, exploiting is going to the one that looks best.";
+    const j = settleReply(bundle, m, "", reply([{ fact: "n08.f1", verdict: "correct", quote: "Exploring is trying options to learn about them", keyQuote: "", before: "", after: "" }]));
+    expect(j.facts[0]!.verdict).toBe("correct");
+    const p = settleReply(bundle, oskar, "", reply([{ fact: "n11.f1", verdict: "partial", quote: "there is the UCB rule, which applies bonuses", keyQuote: "", before: "", after: "" }]));
+    expect([p.facts[0]!.verdict, p.dropped!.length]).toEqual(["partial", 0]);
   });
 });
 

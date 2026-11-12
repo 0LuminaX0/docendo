@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "2944221665bebfc6",
-  "builtAt": "2026-11-05T11:15:39.513Z",
+  "hash": "309970d63d4b5b5d",
+  "builtAt": "2026-11-12T16:53:52.837Z",
   "goals": [
     {
       "id": "G",
@@ -753,7 +753,7 @@
           "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
           "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often.",
           "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial.",
-          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarithm\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*"
+          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarith\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*"
         }
       ],
       "lexicon": [

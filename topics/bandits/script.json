@@ -84,7 +84,7 @@
       "node": null,
       "text": "Is there anything else I should know before I try some problems on my own?",
       "again": {
-        "text": "Thanks! Anything else, or anything I've got wrong in my notes?",
+        "text": "Thanks! Anything else, or anything you think I might have misunderstood?",
         "max": 2
       }
     }

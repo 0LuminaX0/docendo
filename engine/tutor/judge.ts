@@ -11,7 +11,9 @@ export const Intent = z.enum(["explain", "answer", "ask_kai", "unsure", "move_on
 export type Judgement = {
   intent: z.infer<typeof Intent>;
   // note: the point as a whole sentence around the learner's words (null when the judge gave none or it failed the check)
-  facts: { fact: string; verdict: Verdict; quote: string; note?: string | null }[];
+  // keyQuote: for a fact with a key judged correct, the learner's words that state the key (logged; code checks they
+  // are in the message, else the fact is only partial)
+  facts: { fact: string; verdict: Verdict; quote: string; note?: string | null; keyQuote?: string }[];
   // wrong beliefs the learner stated, open-ended (no fixed list); `belief` is the judge's summary, for the log only
   // fact: the lesson fact it contradicts (null: none listed)
   misconceptions?: { node: string; quote: string; belief: string; note?: string | null; fact?: string | null }[];
@@ -22,7 +24,7 @@ export type Judgement = {
 
 // before/after: the few words the model puts around the quote; code assembles the note (notes.ts), so the quote is verbatim
 type Around = { before?: string; after?: string };
-type Reply = { claims?: string[]; intent: z.infer<typeof Intent>; facts: (Judgement["facts"][number] & Around)[]; misconceptions?: (NonNullable<Judgement["misconceptions"]>[number] & Around)[] };
+export type Reply = { claims?: string[]; intent: z.infer<typeof Intent>; facts: (Judgement["facts"][number] & Around)[]; misconceptions?: (NonNullable<Judgement["misconceptions"]>[number] & Around)[] };
 
 // the fact and node fields may only hold real ids, so the model can't return "n01.f1: <text>"
 const replyCache = new WeakMap<Bundle, z.ZodType<Reply>>();
@@ -36,7 +38,7 @@ function replySchema(bundle: Bundle) {
     // first, the message split into its separate claims: makes the model weigh each one (log only)
     claims: z.array(z.string()),
     intent: Intent,
-    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string(), before: z.string(), after: z.string() })),
+    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string(), keyQuote: z.string(), before: z.string(), after: z.string() })),
     misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), fact: z.enum(["none", ...ids] as [string, ...string[]]), quote: z.string(), belief: z.string(), before: z.string(), after: z.string() })).optional(),
   });
   replyCache.set(bundle, schema);
@@ -197,6 +199,7 @@ For every fact the message explains, return:
 - fact: its id only, e.g. "n03.f2".
 - verdict: "correct" if the message gets the idea across. Be generous: informal wording, an analogy, a worked example or a short answer to the classmate's question all count, as long as the core idea is right. "partial" only if a key part of the fact is missing or it is too vague to tell. Some facts have a KEY: be generous about wording, examples and notation, but not about the key: a message that gets the general idea without the key is "partial". "wrong" if it says something that contradicts the fact.
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
+- keyQuote: only for a fact that has a KEY and that you mark "correct": the exact words from the teacher's message that state the key itself, copied character for character (often the same words as quote, sometimes other words of the message). If no words in the message state the key, the fact is "partial", not "correct". Leave keyQuote empty ("") for every other verdict and for facts without a KEY.
 - before, after: the classmate writes the quote into their notebook, and it must still make sense when read alone later. So give the few words that go before and after the quote to make it one whole sentence (code puts them together: before + quote + after). Add only what the quote leaves implicit, taken from the classmate's question or the rest of the teacher's message: what "it" or "they" stands for, what the quote answers. Usually 2 to 8 words, often only before. Fill them whenever the quote doesn't say what it is about: it starts with "it", "they", "with", "and", a verb ("picks the…"), or it continues a sentence that began earlier in the message. Never add an idea, a term or a number the teacher didn't say, never use the wording of the facts above, and don't correct or improve the quote. If the quote already reads as a whole statement that names its subject, leave both empty. Never repeat the quote's words in before or after.
   Examples. Classmate: "So what does greedy keep track of for each truck?" Teacher: "you store its average" → before "For each truck greedy tries,", after "". Classmate: "Does greedy ever go back to a truck that looked bad at first?" Teacher: "nope, never" → before "Going back to a truck that looked bad at first, for greedy:", after "". Teacher: "and never tries the others again" (earlier in the message: "Greedy always goes to the best average") → before "Greedy", after "".
 A short "no" or "nope" counts when it clearly answers the classmate's question as asked ("nope, never" to "would I ever go back?"). When it only says they don't know ("nope, no idea", "not this either", "me neither" after an "I don't know"), it is "unsure": credit nothing for it.
@@ -242,10 +245,30 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
     ],
   });
   onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
-  const { kept: quoted, dropped } = screenQuotes(bundle, message, r.data.facts);
+  return settleReply(bundle, message, kaiLast, r.data);
+}
+
+/**
+ * The checks in code around the judge's reply: quotes in the learner's words, the key's words, the evidence a key
+ * needs, wrong beliefs pinned to their fact, one reading per message, and Kai's notes. Separate from the model call so
+ * it can be tested.
+ */
+export function settleReply(bundle: Bundle, message: string, kaiLast: string, reply: Reply): Judgement {
+  const { kept: quoted, dropped } = screenQuotes(bundle, message, reply.facts);
+  // a fact with a key counts as correct only when the judge points to the learner's words that state the key, and those
+  // words are in the message (2026-11-12: the pilot's judge credited "there is the UCB rule, which applies bonuses" as
+  // UCB's rule, whose key is picking the highest score). The model judges what the words mean; code only checks they
+  // are the learner's. A verdict without key words, or with words not in the message, is partial (logged).
+  const keyed = quoted.map((v) => {
+    if (v.verdict !== "correct" || !factOf(bundle, v.fact)?.key) return v;
+    const words = v.keyQuote?.trim() ? (findQuote(message, v.keyQuote) ?? sentenceLike(message, v.keyQuote)) : null;
+    if (words) return { ...v, keyQuote: words };
+    dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: ${v.keyQuote?.trim() ? `its key words "${v.keyQuote.slice(0, 80)}" aren't in the message` : "no words stating the key"})` });
+    return { ...v, verdict: "partial" as const };
+  });
   // the check around the judge: a fact with `evidence` counts as correct only when the sentence that carries the
   // credited words has it (else partial; a pattern that doesn't compile is skipped and logged)
-  const kept = quoted.map((v) => {
+  const kept = keyed.map((v) => {
     const ev = v.verdict === "correct" ? factOf(bundle, v.fact)?.evidence : undefined;
     if (!ev) return v;
     let re: RegExp;
@@ -255,11 +278,12 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
       dropped.push({ fact: v.fact, quote: "(its evidence pattern doesn't compile: not checked)" });
       return v;
     }
-    if (re.test(sentencesOf(message, v.quote))) return v;
+    // the sentence with the credited words, or the one with the key's words
+    if (re.test(sentencesOf(message, v.quote)) || (v.keyQuote && re.test(sentencesOf(message, v.keyQuote)))) return v;
     dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: no evidence of the key)` });
     return { ...v, verdict: "partial" as const };
   });
-  const mis = screenMisconceptions(bundle, message, r.data.misconceptions ?? []);
+  const mis = screenMisconceptions(bundle, message, reply.misconceptions ?? []);
   // what Kai writes down for each: the learner's words, made a statement that stands alone (notes.ts)
   const notesDropped: Refusal[] = [];
   // one message that teaches a fact and contradicts it: the judge contradicts itself, so neither stands; the fact is
@@ -270,7 +294,7 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
   for (const f of torn) dropped.push({ fact: `${f} (taught and contradicted in one message: partial, the misconception set aside)`, quote: "" });
   const credited = settled.map((v) => withNote(bundle, v, message, kaiLast, misKept, (x) => notesDropped.push(x)));
   const beliefs = misKept.map((m) => withNote(bundle, m, message, kaiLast, settled, (x) => notesDropped.push(x)));
-  return consistent({ intent: r.data.intent, facts: credited, misconceptions: beliefs, dropped: [...dropped, ...mis.dropped], notesDropped, termsUsed: termsUsed(bundle, message) });
+  return consistent({ intent: reply.intent, facts: credited, misconceptions: beliefs, dropped: [...dropped, ...mis.dropped], notesDropped, termsUsed: termsUsed(bundle, message) });
 }
 
 // intents that say the message teaches nothing: "I don't know", chit-chat, "what's next?"

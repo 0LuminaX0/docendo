@@ -48,10 +48,10 @@
         }
       ],
       "caveat": {
-        "about": "Greedy updates only the average of the option it features; the others' averages stay exactly as they were until they are featured again.",
-        "misreading": "While A is featured, B's average keeps drifting back towards B's usual days, so after a while B's average climbs above A's again and greedy goes back to B.",
+        "about": "An option's average moves towards its own true average only while it is featured. A's 7.5 is a little below A's true 8, so A's days of about 8 pull A's average up, not down, and it stays above B's 7, which no longer changes because B isn't featured.",
+        "misreading": "A's 7.5 also came from a single day, so once A is featured its average will come down the way B's did after its lucky 9, fall below B's 7, and then greedy goes back to B.",
         "answer": 2,
-        "covered": "\\bonly (?:the |its )?(?:one|option|flavou?r|truck|arm|choice)s? (?:it|you|greedy|that'?s?) (?:pick|choose|feature|tr(?:y|ie)|select)|(?:other|rest|others'?)\\b[^.]{0,60}\\b(?:stay|don'?t change|unchanged|frozen|not updated|never (?:gets? )?(?:updated|corrected|changed))|\\bupdate[sd]? (?:only|just)\\b|\\bonly (?:gets? |is )?updated|never (?:gets? )?(?:updated|corrected)|isn'?t (?:updated|corrected)"
+        "covered": "(?:closer|close|nearer|towards?|approach\\w*|converg\\w*|settl\\w*|tends?)\\b[^.]{0,40}\\b(?:true|real|actual|underlying)\\b[^.]{0,15}\\b(?:average|mean|value|quality|score)s?\\b|\\b(?:true|real|actual) (?:average|mean|value)s?\\b[^.]{0,40}\\b(?:approach\\w*|converg\\w*|reach\\w*|get close)|\\beven(?:s|ed|ing)? (?:themselves )?out\\b|\\bmore (?:reliable|accurate|precise)\\b"
       }
     },
     {
