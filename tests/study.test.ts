@@ -90,12 +90,13 @@ describe("settings", () => {
 });
 
 describe("topic packs", () => {
-  it("lists the bandits pack, with two test forms of the same length", () => {
+  it("lists the bandits pack, with one final test (form A) and the pilot's candidates (form B)", () => {
     expect(topicSlugs()).toContain("bandits");
     expect(hasTopic("bandits")).toBe(true);
     const pack = packFor("bandits");
     expect(pack.forms).toEqual(["A", "B"]);
-    expect(pack.formItems("A").length).toBe(pack.formItems("B").length);
+    expect(pack.finalForm).toBe("A");
+    expect(pack.formItems("A").length).toBe(7);
     expect(packFor("unknown").slug).toBe("bandits"); // an old token or a stale setting
   });
   it("counts the study from the pack, not from text written down", () => {
@@ -142,6 +143,7 @@ describe("checking a topic pack before it ships", () => {
     writeFileSync(join(dir, "practice.json"), JSON.stringify(practice));
     const tests = JSON.parse(readFileSync("topics/bandits/exercises.json", "utf8"));
     tests.items = tests.items.filter((q: { id: string }) => q.id !== "v01");
+    delete tests.final; // two parallel forms again: then they must match
     writeFileSync(join(dir, "exercises.json"), JSON.stringify(tests));
     const errors = checkPack("broken", root).filter((i) => i.level === "error").map((i) => `${i.where}: ${i.msg}`);
     expect(errors.some((e) => e.startsWith("copy.json"))).toBe(true);

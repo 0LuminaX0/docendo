@@ -50,8 +50,13 @@ const OUT = join(process.cwd(), ".e2e");
 mkdirSync(OUT, { recursive: true });
 const TOPIC = join(process.cwd(), "topics/bandits");
 const bundle = JSON.parse(readFileSync(join(TOPIC, "bundle.json"), "utf8"));
-const testItems = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8")).items;
-const FORM_N = testItems.filter((q) => q.form === "A").length; // items a form
+const testFile = JSON.parse(readFileSync(join(TOPIC, "exercises.json"), "utf8"));
+const testItems = testFile.items;
+// a pack with a final form: everyone takes it, the other form holds the pilot's candidates, and there is no follow-up
+// test (its parts below are skipped); without one, two parallel forms and the follow-up test
+const FINAL = testFile.final ?? null;
+const FOLLOW = !FINAL;
+const FORM_N = testItems.filter((q) => q.form === (FINAL ?? "A")).length; // items in the test a session takes
 /** The questions after the test, before the score: answered (a 5 on every scale, the second choice) or skipped. */
 async function passSurvey(page, answer = true) {
   await page.waitForSelector(".survey");
@@ -108,7 +113,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
 // The defaults: one pretest set and one test form, soft timing (nothing ends at its time). Most of the walkthrough
 // checks the study's shape with hard limits and the follow-up test (the pilot's setup, both sets and both forms, gets
 // its own part below; the admin part resets the settings later)
-const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: true }, timing: { soft: false } });
+const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: FOLLOW }, timing: { soft: false } });
 // the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
 {
   const ctx = await browser.createBrowserContext();
@@ -117,11 +122,11 @@ const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test:
   await a.type("#pw", ADMIN_PW);
   await a.$eval("form button", (e) => e.click());
   await a.waitForSelector(".adm-main", { timeout: 15000 });
-  const status = await a.evaluate(async () => {
+  const status = await a.evaluate(async (followUp) => {
     const post = (body) => fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
     const base = await post({ action: "reset" });
-    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp: true }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
-  });
+    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
+  }, FOLLOW);
   if (status !== 200) throw new Error(`could not switch the lesson's help on for the walkthrough (${status})`);
   await ctx.close();
   await new Promise((r) => setTimeout(r, 10_500)); // each route keeps the settings for up to 10 s
@@ -569,7 +574,8 @@ await shot(phoneHome, "10-phone-welcome", true);
 
 // the follow-up on the participant's side: a finished session whose graded test came with a follow-up date shows the
 // invitation on the results page, and the welcome page offers "Take the follow-up test" (the server decides if open)
-{
+if (!FOLLOW) console.log(`- skipped the follow-up test's checks: the pack's final test is form ${FINAL}, so there is none`);
+else {
   const fp = await newPage(1366, 900, await browser.createBrowserContext());
   await fp.goto(BASE + "/", { waitUntil: "load" });
   const later = Date.now() + 3 * 86_400_000;
@@ -797,6 +803,7 @@ await shot(phoneHome, "10-phone-welcome", true);
 
   // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
   // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first
+  if (FOLLOW) {
   const firstForm = (await post("/api/grade", { token: used.json.token, kind: "items" })).json.form;
   const graded = await post("/api/grade", { token: used.json.token, answers: Array(FORM_N).fill(null) });
   const early = await post("/api/session", { accessCode: code, consent: true });
@@ -847,6 +854,7 @@ await shot(phoneHome, "10-phone-welcome", true);
     sched.status === 200 && g2.json.followUp?.opensAt > Date.now() + 20 * 86_400_000 && tooSoon.status === 409 && waiting > 0 && opened.json.changed === 1 && back2.status === 200 && back2.json.phase === "delayed",
     `follow-up opened early: a 30-day schedule makes a trial code wait (listed on Follow-up as waiting), "Open now" lets the same code start it (${back2.json.phase})`,
   );
+  }
   const csv = await adm.evaluate(async () => (await (await fetch("/api/admin/export?table=sessions")).text()).split("\n")[0]);
   // settings: a change reaches the participant pages, is versioned, and goes back to the defaults
   const base = await post("/api/admin/settings", { action: "reset" });
@@ -928,11 +936,13 @@ await shot(phoneHome, "10-phone-welcome", true);
   await short.close();
   const formOf = (id) => testItems.find((t) => t.id === id).form;
   const asked = [...part1, ...part2];
-  // each form's items in use (no anchor since 2026-11-05), in the file's order; the first of part 2 is "I don't know"
-  const n = testItems.filter((t) => t.form === "A").length;
+  // each form's items in use (no anchor since 2026-11-05), in the file's order; the first of part 2 is "I don't know"; with
+  // a final form the two parts differ in length (the final test, then the pilot's candidates)
+  const n1 = testItems.filter((t) => t.form === formOf(part1[0])).length;
+  const n2 = testItems.filter((t) => t.form !== formOf(part1[0])).length;
   const inOrder = (ids) => ids.join() === testItems.filter((t) => t.form === formOf(ids[0])).map((t) => t.id).join();
   check(
-    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n && inOrder(part1) && inOrder(part2) && part2.every((id) => formOf(id) !== formOf(part1[0])) && new Set(asked).size === 2 * n && /part 2/i.test(goOn) && pilotScore === `${2 * n - 1}/${2 * n}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 1} of ${n}`).test(perPart),
+    noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n1 && part2.length === n2 && inOrder(part1) && inOrder(part2) && part2.every((id) => formOf(id) !== formOf(part1[0])) && new Set(asked).size === n1 + n2 && /part 2/i.test(goOn) && pilotScore === `${n1 + n2 - 1}/${n1 + n2}` && new RegExp(`Part 1: ${n1} of ${n1}, Part 2: ${n2 - 1} of ${n2}`).test(perPart) && (!FINAL || formOf(part1[0]) === FINAL),
     `the pilot's test: both forms in two parts (${formOf(part1[0])} first), each in its fixed order, part 2 after part 1 is complete, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
   // the two shared codes decide the tests themselves, whatever Study setup says: under this setup (both forms on) the

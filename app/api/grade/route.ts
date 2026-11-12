@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
   const { settings } = await getSettings();
   // a person with a follow-up test (a code that names them, the follow-up switched on, two forms): when it opens
   let followUp: { opensAt: number } | null = null;
-  if (session.phase === "main" && !session.both && settings.test.followUp && pack.forms.length > 1 && session.pid && (session.entry === "participant" || session.entry === "trial")) {
+  if (session.phase === "main" && !session.both && settings.test.followUp && pack.forms.length > 1 && !pack.finalForm && session.pid && (session.entry === "participant" || session.entry === "trial")) {
     const p = await getParticipant(session.pid).catch(() => null);
     const opens = p ? followUpOpens(p, settings.test.followUpDays) : null;
     if (opens !== null) followUp = { opensAt: opens };

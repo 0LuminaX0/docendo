@@ -31,7 +31,9 @@ export function packSummary(pack: Pack, s: Settings) {
   const lessonSec = s.watch.parts.reduce((a, p) => a + Math.max(0, p.end - p.start), 0);
   const coverage = pack.lessonCoverage(s.watch.on ? s.watch.parts : []);
   const kindsOf = (f: (typeof forms)[number]) => [f.choice && `${f.choice} to choose`, f.multi && `${f.multi} select all that apply`, f.number && `${f.number} to work out`, f.reasons && `${f.reasons} with a written reason`].filter(Boolean).join(", ");
-  const testText = forms.map((f) => `form ${f.form}: ${plural(f.items, "question")} (${kindsOf(f)})`).join("; ");
+  // a final form: the final test for everyone, the other form the pilot's candidates (asked after it with the pilot code)
+  const role = (f: (typeof forms)[number]) => (!pack.finalForm ? "" : f.form === pack.finalForm ? ", the final test for everyone" : ", the pilot's candidates, asked after it with both forms");
+  const testText = forms.map((f) => `form ${f.form}: ${plural(f.items, "question")} (${kindsOf(f)})${role(f)}`).join("; ");
   return {
     slug: pack.slug,
     title: pack.title,
@@ -76,7 +78,7 @@ export function packSummary(pack: Pack, s: Settings) {
       ["Kai wraps up", `${s.timing.soft ? "" : `at the teaching time limit (${s.teach.minutes} min, set above), or `}after ${CONFIG.maxTurns} learner messages (engine/tutor/policy.ts)`],
       ["Practice problems", `${plural(pack.practice.length, "problem")}, the same in both conditions (topics/${pack.slug}/practice.json)`],
       ["Final test", `${testText} (topics/${pack.slug}/exercises.json)`],
-      ["Conditions", `from the access code, balanced in blocks of 4${forms.length > 1 ? (both ? "; the test form taken first alternates within each condition" : "; test forms alternate within each condition") : ""}`],
+      ["Conditions", `from the access code, balanced in blocks of 4${forms.length > 1 && !pack.finalForm ? (both ? "; the test form taken first alternates within each condition" : "; test forms alternate within each condition") : ""}`],
       ["Consent", "the wording on the welcome page, versioned in app/api/session/route.ts"],
     ] as [string, string][],
   };
@@ -97,6 +99,7 @@ export function settingsProblem(s: Settings): string | null {
   if (!hasTopic(s.topic)) return `There is no topic pack "${s.topic}".`;
   const pack = packFor(s.topic);
   if (s.test.followUp && pack.forms.length < 2) return `The follow-up test needs two test forms, and "${pack.title}" has one. Switch it off.`;
+  if (s.test.followUp && pack.finalForm) return `The follow-up test needs a second test like the first, and "${pack.title}" has one final test (the other form holds the pilot's candidates). Switch it off.`;
   if (s.test.both && pack.forms.length < 2) return `Both test forms in the final test needs two forms, and "${pack.title}" has one. Switch it off.`;
   if (s.test.both && s.test.followUp) return "With both test forms in the final test, nothing is left for a follow-up test. Switch one of the two off.";
   if (s.practice.on && !pack.practice.length) return `"${pack.title}" has no practice problems: switch the practice step off.`;

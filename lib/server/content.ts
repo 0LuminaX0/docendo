@@ -54,6 +54,9 @@ function build(slug: string) {
     exercises,
     /** The test forms this pack has (a follow-up test needs two). */
     forms,
+    /** The form every session takes, when the pack names one; the other form is then the pilot's candidates (asked
+     * after it only with both forms), and there is no follow-up test. */
+    finalForm: exercisesFile.final ?? null,
     /** One form's items, in file order (the order the server grades in). */
     formItems,
     /** A fingerprint of a form's content, logged with every graded test: answers to an edited item stay apart. */

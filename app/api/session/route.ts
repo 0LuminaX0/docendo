@@ -33,7 +33,7 @@ const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: 
  */
 async function delayedTest(p: Participant, req: NextRequest, st: { settings: Settings; version: string }): Promise<Response | null> {
   const pack = packFor(p.topic ?? DEFAULT_TOPIC);
-  if (!st.settings.test.followUp || !p.testAt || pack.forms.length < 2 || p.both) return null;
+  if (!st.settings.test.followUp || !p.testAt || pack.forms.length < 2 || pack.finalForm || p.both) return null;
   if (p.delayedAt) return fail(409, "You've done both tests. Thank you for taking part!");
   // the schedule (days after the final test), or earlier if the admin panel opened it
   const opens = followUpOpens(p, st.settings.test.followUpDays)!;
@@ -104,8 +104,9 @@ export async function POST(req: NextRequest) {
     // the final test's form and the pretest's set: kept from an earlier start of the same person, else balanced within
     // the condition, every pairing equally often (lib/server/participants.ts: nextAssignment)
     const sets = pack.pretestSets.filter(Boolean);
-    const drawn = known ? null : await nextAssignment(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team", pack.forms, sets);
-    const form = pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? drawn!.form);
+    // a pack with a final form: everyone takes it (the other form holds the pilot's candidates, asked after it with both)
+    const drawn = known ? null : await nextAssignment(who.entry === "participant" ? who.cond : who.entry === "trial" ? `trial-${who.cond}` : "team", pack.finalForm ? [pack.finalForm] : pack.forms, sets);
+    const form = pack.finalForm ?? (pack.forms.length < 2 ? pack.forms[0]! : (known?.form ?? drawn!.form));
     const pre = known ? (known.pre ?? sets[0] ?? null) : drawn!.pre;
     // the pilot (settings test.both): both forms in the final test, this form first, so the order alternates with the
     // form within each condition. A person who started before keeps how their test was set up.

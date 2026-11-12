@@ -50,7 +50,9 @@ export const Exercise = z
 export type Exercise = z.infer<typeof Exercise>;
 // order: "shuffled" (each learner their own order, lib/order.ts) or "fixed" (the file's order: since 2026-11-05 the
 // forms go from understanding greedy to a changed UCB, and the order is part of the design)
-export const ExercisesFile = z.object({ title: z.string(), order: z.enum(["shuffled", "fixed"]).default("shuffled"), items: z.array(Exercise).min(1) });
+// final: the form every session takes in the study (2026-11-12); the other form then holds the pilot's extra candidates,
+// asked after it only with both forms (the pilot code), so the two forms need not match and there is no follow-up test
+export const ExercisesFile = z.object({ title: z.string(), order: z.enum(["shuffled", "fixed"]).default("shuffled"), final: z.enum(["A", "B"]).optional(), items: z.array(Exercise).min(1) });
 
 // The text lesson (optional; lesson.json): read on the lesson step instead of the videos. Paragraphs take **bold**; a
 // figure or formula is named by id (lib/lesson.ts, components/lesson/). Each section names the ideas it explains, for
@@ -215,9 +217,12 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     for (const id of ids.filter((x, i) => ids.indexOf(x) !== i)) err("exercises.json", `item ${id} appears twice`);
     const a = tests.items.filter((q) => q.form === "A");
     const b = tests.items.filter((q) => q.form === "B");
-    if (b.length && a.length !== b.length) err("exercises.json", `form A has ${a.length} items and form B ${b.length}: parallel forms must match`);
+    // a final form: the other form holds the pilot's candidates, not a parallel form
+    if (tests.final && !tests.items.some((q) => q.form === tests.final)) err("exercises.json", `the final form ${tests.final} has no items`);
+    if (!tests.final && b.length && a.length !== b.length) err("exercises.json", `form A has ${a.length} items and form B ${b.length}: parallel forms must match`);
     for (const q of b) if (q.pair && !a.some((x) => x.id === q.pair)) err("exercises.json", `${q.id} is the twin of ${q.pair}, which isn't in form A`);
     if (!b.length) warn("exercises.json", "one test form only: the follow-up test can't be switched on");
+    else if (tests.final) warn("exercises.json", `form ${tests.final} is the final test and the other form the pilot's candidates: the follow-up test can't be switched on`);
     const shown = (q: (typeof tests.items)[number]) => JSON.stringify([q.kind, q.prompt, q.table ?? null, q.question ?? null, q.options ?? null, q.answer]);
     for (const q of tests.items) {
       const twin = q.same ? tests.items.find((x) => x.id === q.same) : null;
