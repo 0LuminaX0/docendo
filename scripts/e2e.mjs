@@ -12,6 +12,8 @@ import { join } from "node:path";
 
 let server = null;
 const TEAM_CODE = process.env.E2E_TEAM_CODE ?? "e2e-team-code";
+// the pilot's shared code: the same as the team code, with every pretest set and both test forms
+const PILOT_CODE = process.env.E2E_PILOT_CODE ?? "e2e-pilot-code";
 const ADMIN_PW = process.env.E2E_ADMIN_PASSWORD ?? "e2e-admin-password";
 let BASE = process.argv[2];
 if (!BASE) {
@@ -20,7 +22,7 @@ if (!BASE) {
     process.exit(1);
   }
   // a team code and an admin password, so the start page asks for a code and the admin panel can be checked
-  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
+  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, PILOT_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
   if (await fetch("http://localhost:3199").then(() => true, () => false)) {
     console.error("Port 3199 is already in use (a leftover test server?). Stop it first: kill $(lsof -ti tcp:3199)");
     process.exit(1);
@@ -700,7 +702,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   await pl.goto(BASE + "/", { waitUntil: "load" });
   await pl.waitForSelector("button[type=submit]");
   got.welcome = await pl.evaluate(() => /suggested time/i.test(document.querySelector(".intro-head")?.textContent ?? ""));
-  if (await pl.$("#code")) await pl.type("#code", TEAM_CODE);
+  if (await pl.$("#code")) await pl.type("#code", PILOT_CODE);
   await pl.click(".consent input");
   await pl.click("button[type=submit]");
   await pl.waitForFunction(() => location.pathname === "/pretest");
@@ -859,7 +861,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const pre = await newPage(1366, 900, await browser.createBrowserContext());
   await pre.goto(BASE + "/", { waitUntil: "load" });
   await pre.waitForSelector("button[type=submit]");
-  if (await pre.$("#code")) await pre.type("#code", TEAM_CODE);
+  if (await pre.$("#code")) await pre.type("#code", PILOT_CODE);
   await pre.click(".consent input");
   await pre.click("button[type=submit]");
   await pre.waitForFunction(() => location.pathname === "/pretest", { timeout: 15000 });
@@ -891,7 +893,7 @@ await shot(phoneHome, "10-phone-welcome", true);
   const short = await newPage(1366, 900, await browser.createBrowserContext());
   await short.goto(BASE + "/", { waitUntil: "load" });
   await short.waitForSelector("button[type=submit]");
-  if (await short.$("#code")) await short.type("#code", TEAM_CODE);
+  if (await short.$("#code")) await short.type("#code", PILOT_CODE);
   await short.click(".consent input");
   await short.click("button[type=submit]");
   await short.waitForFunction(() => location.pathname === "/teach", { timeout: 15000 });
@@ -933,6 +935,16 @@ await shot(phoneHome, "10-phone-welcome", true);
     noPractice.status === 200 && bothAndFollowUp.status === 400 && part1.length === n && part2.length === n && inOrder(part1) && inOrder(part2) && part2.every((id) => formOf(id) !== formOf(part1[0])) && new Set(asked).size === 2 * n && /part 2/i.test(goOn) && pilotScore === `${2 * n - 1}/${2 * n}` && new RegExp(`Part 1: ${n} of ${n}, Part 2: ${n - 1} of ${n}`).test(perPart),
     `the pilot's test: both forms in two parts (${formOf(part1[0])} first), each in its fixed order, part 2 after part 1 is complete, graded ${pilotScore} (${perPart}); with a follow-up as well it is refused`,
   );
+  // the two shared codes decide the tests themselves, whatever Study setup says: under this setup (both forms on) the
+  // team code still runs the study's one pretest set and one test form, the pilot's code every set and both forms
+  const payloadOf = async (code) => {
+    const r = await fetch(BASE + "/api/session", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ accessCode: code, consent: true }) });
+    const j = await r.json();
+    return JSON.parse(Buffer.from(j.token.split(".")[0], "base64url").toString());
+  };
+  const teamTok = await payloadOf(TEAM_CODE);
+  const pilotTok = await payloadOf(PILOT_CODE);
+  check(!teamTok.both && teamTok.preBoth === false && pilotTok.both === true && pilotTok.preBoth === true, "the team code runs one pretest set and one test form and the pilot's code every set and both forms, whatever Study setup says");
   const back = await post("/api/admin/settings", { action: "reset" });
   await adm.goto(BASE + "/admin/settings", { waitUntil: "load" });
   const blocks = await adm.$$eval(".study-block", (els) => els.length);

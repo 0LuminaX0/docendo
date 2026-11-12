@@ -16,7 +16,9 @@ export type Entry = "participant" | "trial" | "team" | "open";
 // topic: the topic pack the session started with (it keeps it if the study switches topics meanwhile); both: the final
 // test has both forms, its own form first (a pilot, settings test.both), fixed when the session starts
 // pre: the pretest set this session takes (first, with every set on); older tokens have none
-type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string; both?: boolean; pre?: string };
+// preBoth: the pretest takes every set (the pilot), fixed when the session starts; older tokens have none (the page
+// then follows the settings)
+type Payload = { sid: string; exp: number; cond: Condition; entry: Entry; pid: string | null; form: "A" | "B"; phase: "main" | "delayed"; topic: string; both?: boolean; pre?: string; preBoth?: boolean };
 export type Who = Omit<Payload, "sid" | "exp">;
 
 const b64 = (s: string | Buffer) => Buffer.from(s).toString("base64url");
@@ -41,7 +43,7 @@ export function verifyToken(token: string | undefined): Payload | null {
     // tokens issued before conditions existed are team sessions in the direct condition
     // older tokens: form A, main session, the default topic
     // tokens issued before the pilot's two-form test: one form
-    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC, both: p.both === true && p.phase !== "delayed", ...(typeof p.pre === "string" ? { pre: p.pre } : {}) };
+    return { sid: p.sid, exp: p.exp, cond: CONDITIONS.includes(p.cond) ? p.cond : "direct", entry: p.entry ?? "team", pid: p.pid ?? null, form: p.form === "B" ? "B" : "A", phase: p.phase === "delayed" ? "delayed" : "main", topic: typeof p.topic === "string" ? p.topic : DEFAULT_TOPIC, both: p.both === true && p.phase !== "delayed", ...(typeof p.pre === "string" ? { pre: p.pre } : {}), ...(typeof p.preBoth === "boolean" ? { preBoth: p.preBoth } : {}) };
   } catch {
     return null;
   }

@@ -43,9 +43,9 @@ export default async function Page() {
       sessions: t.sessions.filter((s) => s.entry === "team" && s.pid && s.phase !== "delayed" && codes.some((c) => c.id === s.pid)).length,
     },
     {
-      name: "The shared code",
-      on: !!config.accessCode,
-      how: "One code for the whole team, set on the server (ACCESS_CODE in Vercel's environment), not here. Always the direct condition, with the shortcuts and the switch. It names nobody, so there is no follow-up test with it.",
+      name: "The shared codes",
+      on: !!config.accessCode || !!config.pilotCode,
+      how: "Codes for the whole team, set on the server in Vercel's environment, not here: ACCESS_CODE runs the study as it will run (one pretest set, one test form), PILOT_CODE the pilot's tests (every pretest set, both test forms), whatever Study setup says. Always the direct condition, with the shortcuts, the switch and a skip button on every step. They name nobody, so there is no follow-up test with them.",
       counted: "Team and tests.",
       sessions: t.sessions.filter((s) => s.entry === "team" && s.phase !== "delayed" && !codes.some((c) => c.id === s.pid)).length,
     },
@@ -58,7 +58,7 @@ export default async function Page() {
     },
     {
       name: "No code",
-      on: !config.accessCode && !config.codeSecret && !config.adminPassword,
+      on: !config.accessCode && !config.pilotCode && !config.codeSecret && !config.adminPassword,
       how: "Only when the server has no code of any kind and no admin password: a developer's machine.",
       counted: "Team and tests.",
       sessions: n("open"),

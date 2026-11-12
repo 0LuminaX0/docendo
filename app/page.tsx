@@ -26,7 +26,7 @@ export default async function Page() {
   };
   return (
     <Intro
-      accessRequired={!!config.accessCode || !!config.codeSecret || !!config.adminPassword}
+      accessRequired={!!config.accessCode || !!config.pilotCode || !!config.codeSecret || !!config.adminPassword}
       demo={config.demo}
       cards={cards}
       totalMinutes={Math.ceil(sum.total / 5) * 5}

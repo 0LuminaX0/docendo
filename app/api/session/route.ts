@@ -70,7 +70,10 @@ export async function POST(req: NextRequest) {
   const stored = given ? await findCode(given).catch(() => null) : null;
   const participant = !stored && config.codeSecret && given ? readCode(config.codeSecret, given) : null;
   let who: { cond: Condition; entry: Entry; pid: string | null };
-  let debug = false; // the shared code (ACCESS_CODE) only: a skip button on every step, for trying the flow without the clocks
+  let debug = false; // the shared codes (ACCESS_CODE, PILOT_CODE) only: a skip button on every step, for trying the flow without the clocks
+  // the pilot's code: every pretest set and both test forms; the other shared code: one of each, as the study will run.
+  // Both decide this themselves, whatever Study setup says (participants and trial codes follow Study setup)
+  let pilot: boolean | null = null;
   if (stored && !stored.active) return fail(401, "That access code is no longer active.");
   let code: { id: string; label: string; use: number } | null = null;
   // a code that names one person (a one-use code, or a participant code) keeps a record, for the delayed test
@@ -86,8 +89,9 @@ export async function POST(req: NextRequest) {
     code = { id: stored.id, label: stored.label, use };
     who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: stored.id };
   } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
-  else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true);
-  else if (!config.accessCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
+  else if (config.pilotCode && codeMatches(given, config.pilotCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = true);
+  else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = false);
+  else if (!config.accessCode && !config.pilotCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
   else {
     // wrong codes: 10 per 15 minutes per network, then a pause (a lab room's typos fit; guessing doesn't)
     const tries = await limit(`session:badcode:${ip}`, 10, 900);
@@ -105,9 +109,11 @@ export async function POST(req: NextRequest) {
     const pre = known ? (known.pre ?? sets[0] ?? null) : drawn!.pre;
     // the pilot (settings test.both): both forms in the final test, this form first, so the order alternates with the
     // form within each condition. A person who started before keeps how their test was set up.
-    const both = pack.forms.length > 1 && (known ? known.both === true : st.settings.test.both);
+    const both = pack.forms.length > 1 && (known ? known.both === true : (pilot ?? st.settings.test.both));
+    // the pretest: every set (the pilot) or the session's own one, fixed now like the test's forms
+    const preBoth = sets.length > 1 && (pilot ?? st.settings.pretest.both);
     if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}) }, st.settings.sessionDays);
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), preBoth }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -124,6 +130,8 @@ export async function POST(req: NextRequest) {
       code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
       demo: config.demo,
       ...(debug ? { debug: true } : {}), // the shared code: steps may be skipped (logged as debug_skip)
+      ...(pilot ? { pilot: true } : {}), // the pilot's code: every pretest set and both test forms
+      ...(preBoth ? { pretestBoth: true } : {}), // the pretest takes every set (the pilot)
       device: deviceOf(req.headers.get("user-agent")),
       config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings) },
     });

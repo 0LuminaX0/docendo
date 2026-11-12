@@ -7,7 +7,8 @@ import { z } from "zod";
 const Env = z.object({
   OPENROUTER_API_KEY: z.string().min(20).optional(),
   SESSION_SECRET: z.string().min(32).optional(),
-  ACCESS_CODE: z.string().min(4).max(64).optional(), // one shared code: team and demo sessions
+  ACCESS_CODE: z.string().min(4).max(64).optional(), // one shared code: team and demo sessions (the study as it will run)
+  PILOT_CODE: z.string().min(4).max(64).optional(), // a second shared code: the same, with the pilot's tests (every pretest set, both forms)
   CODE_SECRET: z.string().min(16).optional(), // participant codes (lib/codes.ts): each code carries its condition
   ADMIN_PASSWORD: z.string().min(10).optional(), // the admin panel (/admin): off without it
   PRACTICE_MINUTES: z.coerce.number().positive().max(60).optional(), // overrides practice.json
@@ -47,6 +48,7 @@ export class ConfigError extends Error {}
 export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
   accessCode: env.ACCESS_CODE,
+  pilotCode: env.PILOT_CODE,
   codeSecret: env.CODE_SECRET,
   adminPassword: env.ADMIN_PASSWORD,
   practiceMinutes: env.PRACTICE_MINUTES,

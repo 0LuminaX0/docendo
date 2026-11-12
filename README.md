@@ -142,6 +142,7 @@ For the real Kai, copy `.env.example` to `.env` and fill in an [OpenRouter](http
 OPENROUTER_API_KEY=sk-or-...
 SESSION_SECRET=...      # openssl rand -hex 32
 ACCESS_CODE=...         # what you type on the start page
+PILOT_CODE=...          # optional: the same, with every pretest set and both test forms (the pilot's tests)
 ```
 
 A session costs a few cents in model calls; give the key a credit limit on OpenRouter. The other options are described in [.env.example](.env.example).

@@ -17,13 +17,14 @@ import { pretestItems, setsFor } from "@/content/pretest";
 type Item = { id: string; kind: "background" | "knowledge"; set: string; prompt: string; options: string[] };
 const KEYS = "ABCDEF";
 
-/** The session's test form and pretest set, read from its token (signed, not secret): its set comes first. */
-function assignedOf(token: string): { form: "A" | "B"; pre: string | null } {
+/** The session's test form and pretest set, read from its token (signed, not secret): its set comes first. preBoth:
+ * every set (the pilot), fixed when the session started; null in older tokens, which follow the settings. */
+function assignedOf(token: string): { form: "A" | "B"; pre: string | null; preBoth: boolean | null } {
   try {
-    const p = JSON.parse(atob((token.split(".")[0] ?? "").replace(/-/g, "+").replace(/_/g, "/"))) as { form?: string; pre?: string };
-    return { form: p.form === "B" ? "B" : "A", pre: typeof p.pre === "string" ? p.pre : null };
+    const p = JSON.parse(atob((token.split(".")[0] ?? "").replace(/-/g, "+").replace(/_/g, "/"))) as { form?: string; pre?: string; preBoth?: boolean };
+    return { form: p.form === "B" ? "B" : "A", pre: typeof p.pre === "string" ? p.pre : null, preBoth: typeof p.preBoth === "boolean" ? p.preBoth : null };
   } catch {
-    return { form: "A", pre: null };
+    return { form: "A", pre: null, preBoth: null };
   }
 }
 
@@ -63,8 +64,8 @@ export default function Pretest({ items, both }: { items: Item[]; both: boolean 
   });
   useEffect(() => {
     if (!allowed || !saved || fixed) return;
-    const { form, pre } = assignedOf(saved.token);
-    const sets = setsFor(items, both, form, pre);
+    const { form, pre, preBoth } = assignedOf(saved.token);
+    const sets = setsFor(items, preBoth ?? both, form, pre);
     update((s) => ({ ...s, pretestSets: sets }));
     track("pretest_sets", { sets });
   }, [allowed, saved, fixed, items, both, update]);
