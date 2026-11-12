@@ -58,6 +58,9 @@ export type PracticeEntry = {
   correct: boolean | null; // result of the last check
   firstCorrect?: boolean; // result of the first check
   ms?: number; // time spent on this problem
+  // after a right answer: why it is right, in a sentence (required to go on; any text counts). Okita & Schwartz's
+  // direct-feedback groups also put their rule into words after each round they won (2026-11-12)
+  why?: string;
 };
 export type Condition = "direct" | "recursive";
 

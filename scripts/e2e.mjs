@@ -364,6 +364,12 @@ try {
   throw e;
 }
 check((await page.$$(".prog li")).length === practiceItems.length, `practice shows ${practiceItems.length} problems`);
+// after a right answer the learner says in a sentence why it's right before going on (any text counts)
+const held = await page.$eval(".submitbar .btn", (b) => b.disabled);
+await page.focus(`#${practiceItems[0].id}-why`);
+await page.keyboard.type("B's average fell below A's, so greedy switched.");
+await page.waitForFunction(() => !document.querySelector(".submitbar .btn")?.disabled);
+check(held, "after a right answer, practice asks why it's right and goes on once there's a sentence");
 await nextProblem(1);
 // p2: a wrong option twice; between the tries, rewatch the lesson moment
 const p2 = practiceItems[1];

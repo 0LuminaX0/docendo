@@ -352,6 +352,8 @@ export function tables(events: Ev[]) {
         kaiCallsRight: of("client_practice_kai_call").filter((e) => e.id === id && e.agreed === true).length,
         kaiCalls: of("client_practice_kai_call").filter((e) => e.id === id).length,
         firstTryCorrect: checks.length ? !!checks[0]!.correct : null,
+        // direct feedback: the learner's sentence on why their right answer is right (2026-11-12)
+        explanation: first("client_practice_explain", (e) => e.id === id)?.text ?? null,
         retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
         skipped: of("client_practice_skip").some((e) => e.id === id),
         checks: checks.length,

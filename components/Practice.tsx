@@ -114,6 +114,7 @@ export default function Practice({ items }: { items: Item[] }) {
         solved: es.filter((e) => e.correct).length,
         firstTry: es.filter((e) => e.firstCorrect).length,
         tried: es.filter((e) => e.checks > 0).length,
+        explained: es.filter((e) => e.why?.trim()).length, // direct: right answers with their reason
         reached: Math.min((p?.current ?? 0) + 1, items.length),
       });
       const n = nextOf("practice");
@@ -152,6 +153,10 @@ export default function Practice({ items }: { items: Item[] }) {
   // an attempt counts once the learner has made their call on it (until then nothing shows the outcome)
   const kaiDone = (k: KaiEntry) => k.attempts.some((a) => a.correct && a.call !== undefined) || k.attempts[1]?.call !== undefined;
   const finished = mode === "recursive" ? kaiDone(ke) : e.correct === true || e.checks >= tries;
+  // direct feedback: after a right answer the learner says why it is right, in a sentence, before going on (2026-11-12,
+  // as Okita & Schwartz's direct groups explained their rule after each round they won); any text counts
+  const explain = mode === "direct" && e.correct === true;
+  const unexplained = explain && !e.why?.trim();
   const last = index === items.length - 1;
   const inRound = items.filter((x) => x.round === q.round);
   const rounds = [...new Set(items.map((x) => x.round))];
@@ -267,6 +272,8 @@ export default function Practice({ items }: { items: Item[] }) {
   );
 
   function next() {
+    if (unexplained && !over) return;
+    if (explain) track("practice_explain", { id: q.id, attempt: e.checks, chars: e.why!.trim().length, text: e.why!.trim().slice(0, 2000) });
     if (last) return goTest("done");
     leaveProblem(finished ? "next" : "skip");
     if (!finished) track("practice_skip", { id: q.id, checks: e.checks });
@@ -325,7 +332,7 @@ export default function Practice({ items }: { items: Item[] }) {
             ) : (
               <p className="lede">
                 {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}
-                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right. Solutions after the final test.
+                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right, and after a right answer you say in a sentence why. Solutions after the final test.
               </p>
             )}
           </div>
@@ -440,14 +447,27 @@ export default function Practice({ items }: { items: Item[] }) {
                 <span className="grow" />
                 {video && rewatch}
               </div>
+              {explain && (
+                <Scratchpad
+                  id={`${q.id}-why`}
+                  where={`practice-why:${q.id}`}
+                  label="Why is this right?"
+                  value={e.why ?? ""}
+                  onChange={(v) => set(q.id, (x) => ({ ...x, why: v }))}
+                  rows={2}
+                  disabled={over}
+                  placeholder="In a sentence: which rule decides it, and how"
+                />
+              )}
             </div>
           </section>
         )}
 
         <div className="submitbar">
-          <button className={`btn${finished ? " primary" : ""}`} onClick={next}>
+          <button className={`btn${finished ? " primary" : ""}`} onClick={next} disabled={unexplained && !over}>
             {last ? "Go to the final test" : finished ? "Next problem" : "Skip this problem"} <ArrowRight size={17} />
           </button>
+          {unexplained && !over && <span className="answered">Say in a sentence why it&apos;s right, then go on.</span>}
           <span className="answered">
             Problem {index + 1} of {items.length}
           </span>
