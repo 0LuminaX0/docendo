@@ -22,7 +22,7 @@ if (!BASE) {
     process.exit(1);
   }
   // a team code and an admin password, so the start page asks for a code and the admin panel can be checked
-  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, PILOT_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
+  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, ACCESS_AS_PILOT: "0", PILOT_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
   if (await fetch("http://localhost:3199").then(() => true, () => false)) {
     console.error("Port 3199 is already in use (a leftover test server?). Stop it first: kill $(lsof -ti tcp:3199)");
     process.exit(1);

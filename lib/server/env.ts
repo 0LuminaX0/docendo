@@ -9,6 +9,7 @@ const Env = z.object({
   SESSION_SECRET: z.string().min(32).optional(),
   ACCESS_CODE: z.string().min(4).max(64).optional(), // one shared code: team and demo sessions (the study as it will run)
   PILOT_CODE: z.string().min(4).max(64).optional(), // a second shared code: the same, with the pilot's tests (every pretest set, both forms)
+  ACCESS_AS_PILOT: z.enum(["0", "1"]).optional(), // "1": ACCESS_CODE runs the pilot too; "0": the study as it will run; unset: ACCESS_AS_PILOT_DEFAULT
   CODE_SECRET: z.string().min(16).optional(), // participant codes (lib/codes.ts): each code carries its condition
   ADMIN_PASSWORD: z.string().min(10).optional(), // the admin panel (/admin): off without it
   PRACTICE_MINUTES: z.coerce.number().positive().max(60).optional(), // overrides practice.json
@@ -45,10 +46,16 @@ export function sessionSecret(): string {
 
 export class ConfigError extends Error {}
 
+// 2026-11-13: PILOT_CODE isn't set on the deployment yet, so the team code runs the pilot (both test forms, soft
+// clocks). To revert, set this to false (or ACCESS_AS_PILOT=0 on the server): the team code then runs the study as it
+// will run again (one form, hard clocks).
+const ACCESS_AS_PILOT_DEFAULT = true;
+
 export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
   accessCode: env.ACCESS_CODE,
   pilotCode: env.PILOT_CODE,
+  accessAsPilot: env.ACCESS_AS_PILOT ? env.ACCESS_AS_PILOT === "1" : ACCESS_AS_PILOT_DEFAULT,
   codeSecret: env.CODE_SECRET,
   adminPassword: env.ADMIN_PASSWORD,
   practiceMinutes: env.PRACTICE_MINUTES,

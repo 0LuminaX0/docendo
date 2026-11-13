@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: stored.id };
   } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
   else if (config.pilotCode && codeMatches(given, config.pilotCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = true);
-  else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = false);
+  else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = config.accessAsPilot);
   else if (!config.accessCode && !config.pilotCode && !config.codeSecret && !config.adminPassword) who = { cond: "direct", entry: "open", pid: body.data.pid ?? null };
   else {
     // wrong codes: 10 per 15 minutes per network, then a pause (a lab room's typos fit; guessing doesn't)

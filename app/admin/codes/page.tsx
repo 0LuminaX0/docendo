@@ -45,7 +45,7 @@ export default async function Page() {
     {
       name: "The shared codes",
       on: !!config.accessCode || !!config.pilotCode,
-      how: "Codes for the whole team, set on the server in Vercel's environment, not here: ACCESS_CODE runs the study as it will run (one pretest set, one test form), PILOT_CODE the pilot's tests (every pretest set, both test forms), whatever Study setup says. Always the direct condition, with the shortcuts, the switch and a skip button on every step. They name nobody, so there is no follow-up test with them.",
+      how: `Codes for the whole team, set on the server in Vercel's environment, not here: ACCESS_CODE runs ${config.accessAsPilot ? "the pilot for now (both test forms, soft clocks; ACCESS_AS_PILOT)" : "the study as it will run (one test form, hard clocks)"}, PILOT_CODE the pilot's tests (both test forms, soft clocks), whatever Study setup says. Always the direct condition, with the shortcuts, the switch and a skip button on every step. They name nobody, so there is no follow-up test with them.`,
       counted: "Team and tests.",
       sessions: t.sessions.filter((s) => s.entry === "team" && s.phase !== "delayed" && !codes.some((c) => c.id === s.pid)).length,
     },
