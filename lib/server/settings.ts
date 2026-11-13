@@ -41,7 +41,7 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
     watch: { on: true, parts: defaultLesson(pack), minutes: 12 },
     teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true, minutes: pack.script?.minutes ?? 10 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
-    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 16 },
+    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 16, review: false },
     timing: { soft: true },
     survey: { on: true },
     sessionDays: Math.round(config.sessionHours / 24),

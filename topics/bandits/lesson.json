@@ -4,7 +4,7 @@
   "minutes": 8,
   "minSeconds": 240,
   "remindSeconds": 720,
-  "intro": "Reading this takes about {minutes} minutes. Read carefully: once you go on, this text closes and you won't see it again. Next you will explain it to Kai, a classmate who missed it, and after that you will solve practice problems and answer a short test, all from memory. So take in as much as you can: how each rule chooses, and why. You don't need to remember UCB's formula; what matters is the idea behind it, what UCB does and in which situations it picks something other than the favourite. Kai learns best from your own words and your own examples, so aim to understand rather than to memorise sentences.",
+  "intro": "Reading this takes about {minutes} minutes. Read carefully: once you go on, this text closes and you won't see it again. Next you will explain it to Kai, a classmate who missed it, and after that you will solve practice problems and answer a short test, all from memory: please don't take notes (a dictionary is fine). So take in as much as you can: how each rule chooses, and why. You don't need to remember UCB's formula; what matters is the idea behind it, what UCB does and in which situations it picks something other than the favourite. Kai learns best from your own words and your own examples, so aim to understand rather than to memorise sentences.",
   "copied": "That sounds like the reading, and I didn't get it from there. Can you say it in your own words, or give me an example?",
   "sections": [
     {

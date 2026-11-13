@@ -21,8 +21,9 @@ export const LessonPart = z
 export type LessonPart = z.infer<typeof LessonPart>;
 
 /** A question after the final test (a topic pack's survey.json). */
-// text: an open question (optional, up to 2,000 characters), for the qualitative analysis (2026-11-05)
-export const SurveyItem = z.object({ id: z.string(), kind: z.enum(["scale", "choice", "text"]), prompt: z.string(), hint: z.string().optional(), low: z.string().optional(), high: z.string().optional(), options: z.array(z.string()).optional() });
+// text: an open question (optional, up to 2,000 characters), for the qualitative analysis (2026-11-05). condition: asked
+// only in that practice (a team session: the view it practised in)
+export const SurveyItem = z.object({ id: z.string(), kind: z.enum(["scale", "choice", "text"]), prompt: z.string(), hint: z.string().optional(), low: z.string().optional(), high: z.string().optional(), options: z.array(z.string()).optional(), condition: z.enum(["direct", "recursive"]).optional() });
 export type SurveyItem = z.infer<typeof SurveyItem>;
 
 /** What a topic pack says to participants in its own words (topics/<slug>/copy.json). */
@@ -54,8 +55,10 @@ export const Settings = z
     // the final test is always on (the outcome). The follow-up test: on or off, and how many days after the final test
     // it opens on its own (0: right away); the admin panel can also open it early for one person or everyone. both: the
     // pilot's final test, both forms one after the other (each session's own form first), with no follow-up then
-    // minutes: per test form (the pilot's two forms get twice as long)
-    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false), minutes: z.number().min(2).max(40).default(20) }),
+    // minutes: per test form (the pilot's two forms get twice as long). review: after the test, the answers with their
+    // explanations and the practice problems' worked solutions (off since 2026-11-13: a thank-you page with the score,
+    // and nothing that would give away the items, in case a delayed test reuses them)
+    test: z.object({ followUp: z.boolean(), followUpDays: z.number().min(0).max(60), both: z.boolean().default(false), minutes: z.number().min(2).max(40).default(20), review: z.boolean().default(false) }),
     // soft (the pilot): each step's minutes are a recommended time. The clock counts down, then keeps counting past it
     // ("+2:10"), and nothing ends on its own: the learner takes as long as they need, and the time spent against the
     // recommended time is logged per step and part (step_time; the pretest's and test's also with their answers).
@@ -106,6 +109,7 @@ export type PublicSettings = {
   voice: boolean;
   help: boolean; // the lesson's passage or video moment as help, while teaching and in practice
   limits: { pretest: number; watch: number; teach: number; test: number; soft: boolean }; // minutes per step (the pretest: per set, the test: per form); soft: recommended, nothing ends at 0
+  review: boolean; // after the test: the answers explained and the practice solutions (else a thank-you page)
   mind: boolean; // Kai's mind (the graph) while teaching and after the results
   survey: SurveyItem[] | null; // null: no questions after the test
   copy: TopicCopy & { studyLine: string };
@@ -122,6 +126,7 @@ export const publicOf = (s: Settings, pack: { copy: TopicCopy; survey: SurveyIte
   help: s.tools.help,
   mind: s.teach.mind,
   limits: { pretest: s.pretest.minutes, watch: s.watch.minutes, teach: s.teach.minutes, test: s.test.minutes, soft: s.timing.soft },
+  review: s.test.review,
   survey: s.survey.on && pack.survey.length ? pack.survey : null,
   copy: { ...pack.copy, studyLine: s.studyLine },
   lessonKind: pack.lesson ? "text" : "video",

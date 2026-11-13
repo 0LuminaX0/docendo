@@ -150,5 +150,8 @@ export async function POST(req: NextRequest) {
   }
   // per part (a pilot's two forms): what the learner answered in each
   const parts = g.forms.map((f) => ({ form: f, score: g.asked.filter((x) => x.q.form === f && x.correct).length, of: g.asked.filter((x) => x.q.form === f).length }));
-  return ok({ score: g.score, of: g.of, items, parts, followUp, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
+  // the review (Study setup's test.review): the keys, explanations and worked solutions; without it only the score and
+  // which questions were right, for a thank-you page (nothing that gives the items away, in case a later test reuses them)
+  if (!settings.test.review) return ok({ score: g.score, of: g.of, items: items.map(({ id, form, kind, chosen, correct }) => ({ id, form, kind, chosen, correct })), parts, followUp, review: false });
+  return ok({ score: g.score, of: g.of, items, parts, followUp, review: true, ...(session.phase === "main" && settings.practice.on ? { practice: pack.practiceReview } : {}) });
 }

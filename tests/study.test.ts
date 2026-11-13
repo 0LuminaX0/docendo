@@ -54,7 +54,7 @@ describe("settings", () => {
     // saved before the pilot's timing too: the default tests and times, the rest as saved
     expect(m.practice).toEqual({ on: true, minutes: 12, tries: 3 });
     expect(m.teach).toEqual({ stopAfterMessages: 6, stopAfterMinutes: 5, fixed: true, mind: true, minutes: 12 });
-    expect(m.test).toEqual({ followUp: false, followUpDays: 9, both: false, minutes: 16 });
+    expect(m.test).toEqual({ followUp: false, followUpDays: 9, both: false, minutes: 16, review: false });
     expect(m.tools).toEqual({ calculator: false, voice: true, help: false });
     expect(m.watch.parts).toHaveLength(1);
     expect(m.sessionDays).toBe(7);
@@ -194,8 +194,8 @@ describe("the follow-up test", () => {
   it("reads an older test block (0 days meant off) into the switch and the days", () => {
     const timing = { soft: true };
     expect(merge({ test: { followUpDays: 0 }, timing }).test.followUp).toBe(false);
-    expect(merge({ test: { followUpDays: 5, both: false }, timing }).test).toEqual({ followUp: true, followUpDays: 5, both: false, minutes: 16 });
-    expect(merge({ test: { followUp: true, followUpDays: 0, both: false }, timing }).test).toEqual({ followUp: true, followUpDays: 0, both: false, minutes: 16 });
+    expect(merge({ test: { followUpDays: 5, both: false }, timing }).test).toEqual({ followUp: true, followUpDays: 5, both: false, minutes: 16, review: false });
+    expect(merge({ test: { followUp: true, followUpDays: 0, both: false }, timing }).test).toEqual({ followUp: true, followUpDays: 0, both: false, minutes: 16, review: false });
   });
   it("opens on the schedule, or earlier when the admin panel opened it", async () => {
     const { followUpOpens } = await import("../lib/server/participants");

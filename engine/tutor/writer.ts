@@ -50,13 +50,13 @@ function instruction(m: Move): string {
 
 const clipText = (s: string, max: number) => (s.length <= max ? s : `${s.slice(0, max).replace(/\s+\S*$/, "")} …`);
 
-export function notebookLines(_bundle: Bundle, state: State): string {
+export function notebookLines(_bundle: Bundle, state: State, turn?: number): string {
   const facts = latest(state);
-  // the learner's words only: Kai never sees the lesson's own fact text
-  const lines = [...facts.values()].map((e) => `- ${e.verdict === "partial" ? "(vague) " : ""}"${e.words}"`);
+  // the learner's words only: Kai never sees the lesson's own fact text. With a turn: only what that message added
+  const lines = [...facts.values()].filter((e) => turn === undefined || e.turn === turn).map((e) => `- ${e.verdict === "partial" ? "(vague) " : ""}"${e.words}"`);
   // wrong beliefs are things Kai was told too, and it believes them
-  for (const m of activeMisconceptions(state)) if (!lines.some((l) => l.includes(m.words))) lines.push(`- "${m.words}"`);
-  return lines.length ? lines.join("\n") : "(empty: they haven't taught you anything yet)";
+  for (const m of activeMisconceptions(state)) if ((turn === undefined || m.turn === turn) && !lines.some((l) => l.includes(m.words))) lines.push(`- "${m.words}"`);
+  return lines.length ? lines.join("\n") : turn === undefined ? "(empty: they haven't taught you anything yet)" : "(nothing new)";
 }
 
 const REACTION: Record<"neutral" | "great" | "okay" | "confused", string> = {
@@ -117,7 +117,7 @@ const REACT: Record<Reaction, string> = {
 
 const reactPersona = (topic: string) => `You are Kai, a curious second-year engineering student who missed the lecture on ${topic}. A classmate is teaching it to you. You wrote your questions down beforehand and ask them in order; your next question is added after your line, word for word, by someone else.
 
-You know ONLY what is in YOUR NOTEBOOK: the things your classmate has told you, in their words. You have no other knowledge of ${topic}. Never add an idea, example, consequence, rule, number or technical word that is not in your notebook or in their messages. You believe what you are told and never correct, praise or grade your classmate.
+You know ONLY what your classmate has told you, in their words. You have no other knowledge of ${topic}. Never add an idea, example, consequence, rule, number or technical word that is not in what you just wrote down or in their messages. You believe what you are told and never correct, praise or grade your classmate.
 
 Talk about your own understanding, never about their explanation: no "clear", "great", "good example", "right", "correct", "exactly", "makes total sense".
 
@@ -142,8 +142,10 @@ export function reactPrompt(bundle: Bundle, state: State, kind: Reaction, histor
     { role: "system" as const, content: reactPersona(bundle.title.toLowerCase()) },
     {
       role: "user" as const,
+      // only what the latest message added (2026-11-13): with the whole notebook Kai sometimes said an old note back
+      // before a new question (a pilot learner heard greedy's rule again before each bonus question)
       content:
-        `YOUR NOTEBOOK:\n${notebookLines(bundle, state)}\n\nCONVERSATION SO FAR:\n${recent}\n\nHOW YOU FEEL: ${FEELS[mood]}\n\nINSTRUCTION: ${REACT[kind]}` +
+        `WHAT YOU JUST WROTE DOWN FROM THEIR LATEST MESSAGE:\n${notebookLines(bundle, state, state.turn)}\n\nCONVERSATION SO FAR:\n${recent}\n\nHOW YOU FEEL: ${FEELS[mood]}\n\nINSTRUCTION: ${REACT[kind]}` +
         (next ? `\n\n(Your next question is added after your line. Don't lead up to it or hint at what it asks.)` : "") +
         (avoid.length ? `\n\nDo NOT use these words, they haven't taught you them: ${avoid.join(", ")}.` : "") +
         `\n\nWrite only Kai's line.`,

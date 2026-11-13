@@ -240,11 +240,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           </section>
           {showSurvey && <section className="adm-card">
             <h2>After the test</h2>
-            <p className="note">The questions before the score, means from 1 to 7 (direct / recursive), and the manipulation check.</p>
+            <p className="note">The questions before the score, means from 1 to 7 (direct / recursive). Light: the manipulation check, 1 my own understanding to 7 Kai&apos;s; expected low in direct, high in recursive. If not, the manipulation didn&apos;t land.</p>
             <ol className="ch-funnel">
               {c.survey.map((q) => (
                 <li key={q.key}>
-                  <span>{q.key}</span>
+                  <span>{q.key === "LightScale" ? "Light" : q.key}</span>
                   <span className="ch-pair">
                     <i className="ch-d" style={{ width: `${((q.direct ?? 0) / 7) * 100}%` }} />
                     <i className="ch-r" style={{ width: `${((q.recursive ?? 0) / 7) * 100}%` }} />
@@ -253,7 +253,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                 </li>
               ))}
             </ol>
-            <h3 className="adm-sub">The practice&apos;s light was mostly about…</h3>
+            <h3 className="adm-sub">Kai knowing more, help used</h3>
+            <table className="adm-table adm-balance">
+              <thead>
+                <tr><th></th><th>answered</th><th>Kai seemed to know something untold</th><th>help besides a dictionary</th></tr>
+              </thead>
+              <tbody>
+                {c.flagsAfter.map((l) => (
+                  <tr key={l.cond}><td><span className={`adm-pill ${l.cond === "direct" ? "dir" : "rec"}`}>{l.cond}</span></td><td>{l.n}</td><td>{l.leak}</td><td>{l.help}</td></tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="note" style={{ marginTop: 8 }}>Recursive, what a call on Kai&apos;s answer rested on: Kai&apos;s steps {c.calls[0]}, own answer {c.calls[1]}, Kai sounded sure {c.calls[2]}, a guess {c.calls[3]}.</p>
+            {c.lights.some((l) => l.own + l.kai + l.unsure > 0) && <>
+            <h3 className="adm-sub">The light, as asked before 13 November (a choice)</h3>
             <table className="adm-table adm-balance">
               <thead>
                 <tr><th></th><th>my understanding</th><th>Kai&apos;s</th><th>not sure</th></tr>
@@ -264,7 +277,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                 ))}
               </tbody>
             </table>
-            <p className="note" style={{ marginTop: 8 }}>Expected: direct answers &quot;my understanding&quot;, recursive &quot;Kai&apos;s&quot;. If not, the manipulation didn&apos;t land.</p>
+            </>}
           </section>}
           <section className="adm-card">
             <h2>Teaching Kai</h2>

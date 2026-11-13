@@ -1,5 +1,5 @@
 {
-  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers), the same in both conditions; not after the delayed test. Scales run 1 to 7. 'lights' is the manipulation check: in the direct condition the practice's right/wrong light is about the learner's own answers, in the recursive one about Kai's. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed.",
+  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers); not after the delayed test. Scales run 1 to 7. 'lightScale' is the manipulation check (2026-11-13, a scale in place of the choice 'lights', where 2 of 4 pilot learners chose \"I'm not sure\"): in the direct condition the practice's right/wrong light is about the learner's own answers (expected near 1), in the recursive one about Kai's (near 7). 'calls' (recursive only, `condition`): what the learner's call on Kai's answer rested on, to tell trusting Kai from not reading its steps (the pilot's calls matched the light 6 of 12 times). 'leak': whether Kai seemed to know something it wasn't told (the leak check's view from the learner). 'help': notes or other help besides a dictionary, against the rule that everything is from memory. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed. Anything else goes in the feedback box on the last page.",
   "items": [
     {
       "id": "effort",
@@ -37,13 +37,43 @@
       "high": "Very much"
     },
     {
-      "id": "lights",
-      "kind": "choice",
+      "id": "lightScale",
+      "kind": "scale",
       "prompt": "In the practice problems, the right/wrong light told me mostly about…",
+      "low": "My own understanding",
+      "high": "Kai's understanding"
+    },
+    {
+      "id": "calls",
+      "kind": "choice",
+      "condition": "recursive",
+      "prompt": "When you called Kai's answer right or wrong, what did you mostly go on?",
       "options": [
-        "my own understanding",
-        "Kai's understanding",
+        "I checked Kai's steps against what I knew",
+        "I worked out the answer myself and compared",
+        "Kai sounded sure, so I went with it",
+        "A guess: no time or energy to check"
+      ]
+    },
+    {
+      "id": "leak",
+      "kind": "choice",
+      "prompt": "Did Kai ever seem to know something you hadn't told it?",
+      "options": [
+        "No",
+        "Yes",
         "I'm not sure"
+      ]
+    },
+    {
+      "id": "help",
+      "kind": "choice",
+      "prompt": "Besides a dictionary, did you use anything during the session?",
+      "options": [
+        "No, only what I remembered",
+        "Notes I had written",
+        "The web or another AI",
+        "Something else"
       ]
     },
     {

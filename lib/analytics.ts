@@ -119,8 +119,11 @@ export function tables(events: Ev[]) {
       daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
       openedEarly: start?.openedEarly ?? null, // delayed sessions: opened early from the admin panel (Follow-up), not on the schedule
       since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)
-      // after the final test, before the score (topics/bandits/survey.json): scales 1 to 7; lights = the manipulation
-      // check (0 my own understanding, 1 Kai's, 2 not sure)
+      // after the final test, before the score (topics/bandits/survey.json): scales 1 to 7; lightScale = the manipulation
+      // check since 2026-11-13 (1 my own understanding … 7 Kai's); lights = the earlier choice (0 my own, 1 Kai's, 2 not
+      // sure); calls (recursive only): what a call on Kai's answer rested on (0 its steps, 1 my own answer, 2 Kai sounded
+      // sure, 3 a guess); leak: Kai seemed to know something it wasn't told (0 no, 1 yes, 2 not sure); help besides a
+      // dictionary (0 none, 1 own notes, 2 the web or another AI, 3 something else)
       surveySkipped: first("client_survey")?.skipped ?? null,
       surveyEffort: first("client_survey")?.effort ?? null,
       surveyResponsible: first("client_survey")?.responsible ?? null,
@@ -128,6 +131,10 @@ export function tables(events: Ev[]) {
       surveyPractice: first("client_survey")?.practice ?? null,
       surveyEnjoy: first("client_survey")?.enjoy ?? null,
       surveyLights: first("client_survey")?.lights ?? null,
+      surveyLightScale: first("client_survey")?.lightScale ?? null,
+      surveyCalls: first("client_survey")?.calls ?? null,
+      surveyLeak: first("client_survey")?.leak ?? null,
+      surveyHelp: first("client_survey")?.help ?? null,
       // the open questions (qualitative analysis): the learner's own words
       surveyHelped: first("client_survey")?.helped ?? null,
       surveyDifficulty: first("client_survey")?.difficulty ?? null,
@@ -594,12 +601,16 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     // recursive − direct, finished and not excluded; descriptive only: not the study's planned analysis
     comparison: compare(fin("recursive"), fin("direct")),
     // the questions after the test: means per condition, and the manipulation check's answers
-    survey: (["Effort", "Responsible", "Understand", "Practice", "Enjoy"] as const).map((k) => ({
+    survey: (["Effort", "Responsible", "Understand", "Practice", "Enjoy", "LightScale"] as const).map((k) => ({
       key: k,
       direct: mean(by("direct").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),
       recursive: mean(by("recursive").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),
     })),
     lights: conds.map((c) => ({ cond: c, own: by(c).filter((s) => s.surveyLights === 0).length, kai: by(c).filter((s) => s.surveyLights === 1).length, unsure: by(c).filter((s) => s.surveyLights === 2).length })),
+    // the questions after the test that are counted, per condition: Kai seemed to know more (yes), help besides a
+    // dictionary (any), and in the recursive condition what the calls rested on
+    flagsAfter: conds.map((c) => ({ cond: c, leak: by(c).filter((s) => s.surveyLeak === 1).length, help: by(c).filter((s) => typeof s.surveyHelp === "number" && s.surveyHelp > 0).length, n: by(c).filter((s) => s.surveyLeak !== null || s.surveyHelp !== null).length })),
+    calls: [0, 1, 2, 3].map((k) => by("recursive").filter((s) => s.surveyCalls === k).length),
   };
 }
 export type Charts = ReturnType<typeof charts>;

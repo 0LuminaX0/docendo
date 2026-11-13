@@ -325,6 +325,13 @@ export default function SettingsForm({
                           onChange={(v) => twoForms && !s.test.both && patch("test", { followUp: v })}
                           changed={s.test.followUp !== defaults.test.followUp}
                         />
+                        <Toggle
+                          label="Answers and solutions after the test"
+                          hint={s.test.review ? "The results show each question with its answer and explanation, and the practice problems' worked solutions." : "The results are a thank-you page with the score: no answers, explanations or worked solutions reach the browser."}
+                          value={s.test.review}
+                          onChange={(v) => patch("test", { review: v })}
+                          changed={s.test.review !== defaults.test.review}
+                        />
                         {s.test.followUp && (
                           <Num label="Opens on its own after this many days (0: right away)" value={s.test.followUpDays} min={0} max={60} step={1} onChange={(v) => patch("test", { followUpDays: v })} changed={s.test.followUpDays !== defaults.test.followUpDays} />
                         )}

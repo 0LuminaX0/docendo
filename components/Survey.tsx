@@ -5,22 +5,27 @@ import { ArrowRight } from "lucide-react";
 import { flush, track } from "@/lib/client/log";
 import { useStudySettings } from "./SettingsContext";
 import { Count } from "@/lib/words";
+import { useSaved } from "@/lib/client/store";
 
 
 /**
  * A few questions after the final test, before the score: effort, responsibility for Kai, how well the learner thinks
  * they understand, how much practice helped, enjoyment, and the manipulation check (what the practice's light was
- * about), then open questions in the learner's words (optional, for the qualitative analysis). The same in both
- * conditions; optional as a whole.
+ * about), what a call on Kai's answer rested on (recursive only), whether Kai seemed to know more than it was told,
+ * help besides a dictionary, then open questions in the learner's words (optional, for the qualitative analysis). A
+ * question with a `condition` is asked only in that practice (a team session: the view it practised in); optional as
+ * a whole.
  */
 export default function Survey({ onDone }: { onDone: () => void }) {
-  const ITEMS = useStudySettings().survey ?? [];
+  const [saved] = useSaved();
+  const practised = saved?.practice?.view ?? saved?.condition ?? "direct";
+  const ITEMS = (useStudySettings().survey ?? []).filter((q) => !q.condition || q.condition === practised);
   const [a, setA] = useState<Record<string, number | string>>({});
   // the rated and chosen ones are needed to go on; the open ones are optional
   const all = ITEMS.every((q) => q.kind === "text" || a[q.id] !== undefined);
   const send = (skipped: boolean) => {
     const answers = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, typeof v === "string" ? v.trim().slice(0, 2000) : v]).filter(([, v]) => v !== ""));
-    track("survey", { skipped, ...(skipped ? {} : answers) }); // one field per question (scales 1 to 7; lights: option index; open: the text)
+    track("survey", { skipped, ...(skipped ? {} : answers) }); // one field per question (scales 1 to 7; choices: the option's index; open: the text)
     flush();
     onDone();
   };

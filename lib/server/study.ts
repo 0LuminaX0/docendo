@@ -53,7 +53,8 @@ export function packSummary(pack: Pack, s: Settings) {
     coverage,
     flow,
     minutes,
-    total: flow.reduce((a, k) => a + minutes[k], 0) + (s.survey.on && pack.survey.length ? 1 : 0),
+    // the questions after the test: about a minute for every four (2026-11-13: twelve, with three open ones)
+    total: flow.reduce((a, k) => a + minutes[k], 0) + (s.survey.on && pack.survey.length ? Math.ceil(pack.survey.length / 4) : 0),
     // one line per block for the Settings page, from the pack and the settings
     blocks: {
       pretest: (() => {

@@ -26,7 +26,9 @@ export type GradeResult = {
   of: number;
   // choice items: chosen is the option's index; multi: the statements ticked (answer: the true ones); number items: the
   // typed answer, and key the value with its unit; "idk": I don't know
-  items: { id: string; form?: "A" | "B"; kind?: "choice" | "multi" | "number"; chosen: TestAnswer; answer: number | number[]; key?: string; correct: boolean; explain: string }[];
+  // answer, key and explain only with the review (Study setup's test.review)
+  items: { id: string; form?: "A" | "B"; kind?: "choice" | "multi" | "number"; chosen: TestAnswer; answer?: number | number[]; key?: string; correct: boolean; explain?: string }[];
+  review?: boolean; // false: a thank-you page with the score, no answers or solutions (absent in older sessions: the review)
   // a pilot's two forms: the score in each part (absent with one form)
   parts?: { form: "A" | "B"; score: number; of: number }[];
   // the practice problems' worked solutions, shown only after the test (absent in older sessions)

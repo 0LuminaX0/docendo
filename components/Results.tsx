@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Brain, CalendarClock, Check, Minus, RotateCcw, X } from "lucide-react";
+import { Brain, CalendarClock, Check, Heart, Minus, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
@@ -49,6 +49,57 @@ export default function Results() {
       </div>
     );
 
+  const kaiThanks = !delayed && (
+    <div className="hero-kai" style={{ marginTop: 8 }}>
+      <KaiFace mood={saved.chat.done ? "great" : "okay"} size={40} />
+      <div className="bubble">
+        Thanks for teaching me! You sent me {taught} explanation{taught === 1 ? "" : "s"}
+        {saved.chat.done ? " and I ended up feeling ready" : ""}, at {Math.round((saved.chat.mind?.understanding ?? saved.chat.progress) * 100)}% understanding. The whole session took about {minutes} minute{minutes === 1 ? "" : "s"}.{" "}
+        {showMind && <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
+          <Brain size={15} /> See what I learned
+        </Link>}
+      </div>
+    </div>
+  );
+  const restart = (
+    <div className="row">
+      <button
+        className="btn"
+        onClick={() => {
+          save(null);
+          router.push("/");
+        }}
+      >
+        <RotateCcw size={16} /> Start a new session
+      </button>
+    </div>
+  );
+
+  // without the review (Study setup, off by default since 2026-11-13): a thank-you page with the score, the end of
+  // the session; the browser has no keys, explanations or worked solutions
+  if (r.review === false)
+    return (
+      <div className="shell">
+        <Header step="results" label={delayed ? "Follow-up done" : "Done"} demo={saved.demo} />
+        <main className="page narrow thanks">
+          <div className="thanks-head">
+            <span className="eyebrow">
+              <Heart size={13} aria-hidden="true" /> All done
+            </span>
+            <h1 className="title">Thank you for taking part!</h1>
+            <p className="lede">That&apos;s the end of the session, and everything you did is saved. You can close this tab now.</p>
+            <p className="thanks-score">
+              You answered <b>{r.score} of {r.of}</b> test questions correctly
+              {r.parts && r.parts.length > 1 ? ` (${r.parts.map((p, k) => `part ${k + 1}: ${p.score} of ${p.of}`).join(", ")})` : ""}.
+            </p>
+          </div>
+          {kaiThanks}
+          <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
+          {saved.team && restart}
+        </main>
+      </div>
+    );
+
   return (
     <div className="shell">
       <Header step="results" label={delayed ? "Follow-up results" : "Results"} demo={saved.demo} />
@@ -71,18 +122,7 @@ export default function Results() {
               )}
             </div>
           </div>
-          {!delayed && (
-          <div className="hero-kai" style={{ marginTop: 8 }}>
-            <KaiFace mood={saved.chat.done ? "great" : "okay"} size={40} />
-            <div className="bubble">
-              Thanks for teaching me! You sent me {taught} explanation{taught === 1 ? "" : "s"}
-              {saved.chat.done ? " and I ended up feeling ready" : ""}, at {Math.round((saved.chat.mind?.understanding ?? saved.chat.progress) * 100)}% understanding. The whole session took about {minutes} minute{minutes === 1 ? "" : "s"}.{" "}
-              {showMind && <Link href="/mind" style={{ display: "inline-flex", alignItems: "center", gap: 5, verticalAlign: "bottom" }}>
-                <Brain size={15} /> See what I learned
-              </Link>}
-            </div>
-          </div>
-          )}
+          {kaiThanks}
         </div>
 
         {/* the follow-up test: when to come back, and how (only for a code that names this person) */}
@@ -234,17 +274,7 @@ export default function Results() {
           </section>
         )}
 
-        <div className="row">
-          <button
-            className="btn"
-            onClick={() => {
-              save(null);
-              router.push("/");
-            }}
-          >
-            <RotateCcw size={16} /> Start a new session
-          </button>
-        </div>
+        {restart}
       </main>
     </div>
   );

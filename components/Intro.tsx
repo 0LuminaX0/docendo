@@ -93,7 +93,8 @@ export default function Intro({
             {pretestItems ? `, starting with ${count(pretestItems, "quick question")} (${pretestMinutes} minutes)` : ""}.{" "}
             {limits.soft
               ? "Each part has a suggested time, shown as a clock at the top of the page. If you need longer, keep going: the clock just counts on."
-              : <>Each part has its own time limit, shown as a clock at the top of the page: when it runs out, that part ends and what you&apos;ve done so far is kept.</>}
+              : <>Each part has its own time limit, shown as a clock at the top of the page: when it runs out, that part ends and what you&apos;ve done so far is kept.</>}{" "}
+            Everything is from memory: please don&apos;t take notes or use other help (a dictionary is fine).
           </p>
         </div>
 

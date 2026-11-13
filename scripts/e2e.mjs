@@ -69,7 +69,7 @@ async function passSurvey(page, answer = true) {
     if (open) await open.type("The day by day table made the switch clear.");
     await page.$eval(".survey .btn.primary", (b) => b.click());
   } else await page.$eval(".survey-skip", (b) => b.click());
-  await page.waitForSelector(".big");
+  await page.waitForSelector(".big, .thanks-head"); // the score with the review, or the thank-you page without it
   return hidden;
 }
 
@@ -113,7 +113,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
 // The defaults: one pretest set and one test form, soft timing (nothing ends at its time). Most of the walkthrough
 // checks the study's shape with hard limits and the follow-up test (the pilot's code, both forms and soft clocks, gets
 // its own part below; the admin part resets the settings later)
-const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: FOLLOW }, timing: { soft: false } });
+const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test: { ...s.test, both: false, followUp: FOLLOW, review: true }, timing: { soft: false } });
 // the walkthrough checks the lesson's help (Kai's card, Rewatch in practice), off by default: switched on for it
 {
   const ctx = await browser.createBrowserContext();
@@ -125,7 +125,7 @@ const studyShape = (s) => ({ ...s, pretest: { ...s.pretest, both: false }, test:
   const status = await a.evaluate(async (followUp) => {
     const post = (body) => fetch("/api/admin/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json().then((j) => ({ status: r.status, j })));
     const base = await post({ action: "reset" });
-    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
+    return (await post({ action: "save", settings: { ...base.j.settings, pretest: { ...base.j.settings.pretest, both: false }, test: { ...base.j.settings.test, both: false, followUp, review: true }, timing: { soft: false }, tools: { ...base.j.settings.tools, help: true } } })).status;
   }, FOLLOW);
   if (status !== 200) throw new Error(`could not switch the lesson's help on for the walkthrough (${status})`);
   await ctx.close();
@@ -768,6 +768,11 @@ else {
   await skip("/results");
   const st2 = await saved(pl);
   got.graded = !!st2.result && st2.result.parts?.length === 2;
+  // without the review (the default): a thank-you page, and no keys, explanations or solutions in the browser
+  if (await pl.$(".survey")) await passSurvey(pl);
+  await pl.waitForSelector(".thanks-head", { timeout: 15000 }).catch(() => null);
+  got.thanks = (await pl.$eval(".thanks-head h1", (e) => e.textContent).catch(() => "")).includes("Thank you") && !(await pl.$(".explain")) && st2.result.review === false && st2.result.items.every((x) => x.explain === undefined && x.answer === undefined) && !st2.result.practice;
+  await shot(pl, "14-pilot-thanks");
   check(
     Object.values(got).every(Boolean),
     `the pilot's code under a hard Study setup: soft clocks of its own, one pretest part and two test parts, each with its own clock; past its time the clock counts on and nothing ends (pretest, lesson, teaching, practice, test); the shared code skips part by part (${Object.entries(got).filter(([, v]) => !v).map(([k]) => k).join(", ") || "all"})`,
@@ -880,7 +885,7 @@ else {
   check(preBoth.status === 400 && preAsked.join() === preWant.join(), `one pretest for every code: ${preAsked.join(", ")}, then the lesson (every pretest set can't be switched on)`);
   // a step switched off: the welcome page drops its card, and a session goes past it (practice → straight to the test)
   // (and the pilot's test: both forms, one after the other)
-  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: true } } });
+  const noPractice = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, pretest: { on: false }, watch: { ...base.json.settings.watch, on: false }, practice: { ...base.json.settings.practice, on: false }, test: { ...base.json.settings.test, followUp: false, both: true, review: true } } });
   const bothAndFollowUp = await post("/api/admin/settings", { action: "save", settings: { ...base.json.settings, test: { ...base.json.settings.test, followUp: true, both: true } } });
   let skipped = false;
   for (let k = 0; k < 16 && !skipped; k++) (skipped = await adm.evaluate(async () => { const h = await (await fetch("/")).text(); return !/<h3>Practice<\/h3>/.test(h) && /<h3>Teach Kai<\/h3>/.test(h); })), skipped || (await wait(1000));

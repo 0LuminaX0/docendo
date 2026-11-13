@@ -48,7 +48,7 @@ export default function Exercises() {
   const router = useRouter();
   const [saved, update] = useSaved();
   const allowed = useGuard(saved, "exercises");
-  const { calculator, copy, limits } = useStudySettings();
+  const { calculator, copy, limits, review } = useStudySettings();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const items = useTestItems(allowed, setError);
@@ -164,10 +164,10 @@ export default function Exercises() {
     ? `For each, pick the answer you think is right${dontKnow ? " (or “I don't know”)" : ""} and explain your choice in one or two sentences.`
     : `Work things out under each question if it helps${calculator ? "; to calculate, end a calculation with =" : ""}.`;
   const lede = delayed
-    ? `Welcome back. ${Count(items.length, "new question")} on the same ideas as last time${shape ? `, in the same ${shape}` : ""}. ${reasons ? how : calculator ? "To calculate, end a calculation with =." : ""} You'll see the explanations afterwards.`
+    ? `Welcome back. ${Count(items.length, "new question")} on the same ideas as last time${shape ? `, in the same ${shape}` : ""}. ${reasons ? how : calculator ? "To calculate, end a calculation with =." : ""}${review ? " You'll see the explanations afterwards." : ""}`
     : groups > 1
-      ? `${Count(groups, "part")}, one after the other, ${Count(items.length, "question")} in all. ${how} Once you go on to the next part, your answers to the one before can't be changed. You'll see the explanations at the end.`
-      : `${Count(items.length, "question")}${shape ? ` in ${shape}` : ""}. ${how} You'll see the explanations afterwards.`;
+      ? `${Count(groups, "part")}, one after the other, ${Count(items.length, "question")} in all. ${how} Once you go on to the next part, your answers to the one before can't be changed.${review ? " You'll see the explanations at the end." : ""} From memory, please: no notes or other help.`
+      : `${Count(items.length, "question")}${shape ? ` in ${shape}` : ""}. ${how}${review ? " You'll see the explanations afterwards." : ""} From memory, please: no notes or other help.`;
 
   return (
     <div className="shell">

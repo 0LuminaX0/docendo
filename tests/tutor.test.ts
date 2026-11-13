@@ -370,3 +370,23 @@ describe("the setup Kai knows from the slides (given facts)", () => {
     expect(m.nodes.find((n) => n.id === "n05")?.status).toBe("unseen");
   });
 });
+
+import { reactPrompt } from "../engine/tutor/writer";
+
+describe("Kai's reaction before its next question", () => {
+  it("sees only what the latest message added, so it can't say an old note back (a pilot learner heard greedy's rule again before each bonus question)", () => {
+    const s: State = {
+      ...initialState(bundle),
+      turn: 3,
+      notebook: [
+        { fact: "n05.f1", verdict: "correct", words: "each round you pick the option with the highest average", turn: 1 },
+        { fact: "n12.f1", verdict: "correct", words: "picking an option shrinks its own bonus", turn: 3 },
+      ],
+    };
+    const text = (st: State) => reactPrompt(bundle, st, "answered", [], null).map((m) => m.content).join("\n");
+    expect(text(s)).toContain("picking an option shrinks its own bonus");
+    expect(text(s)).not.toContain("highest average");
+    // a message that added nothing: nothing to say back from the notebook
+    expect(text({ ...s, turn: 4 })).toContain("(nothing new)");
+  });
+});

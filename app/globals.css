@@ -713,6 +713,16 @@ button { font: inherit; color: inherit; }
 .fb-rate button { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--rule); background: #fff; font: 700 15px var(--font-display), sans-serif; color: var(--ink-2); cursor: pointer; }
 .fb-rate button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
 .fb-rate .note { margin-left: 6px; }
+
+/* ---------- the end: a thank-you page (without the review) ---------- */
+.thanks { gap: 28px; }
+.thanks-head { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.thanks-head .eyebrow { display: inline-flex; align-items: center; gap: 6px; }
+.thanks-head .eyebrow svg { color: var(--red); } /* an icon: 3:1 is enough */
+.thanks-head .title { margin: 0; font-size: clamp(30px, 4.4vw, 44px); }
+.thanks-head .lede { margin: 0; text-wrap: pretty; }
+.thanks-score { margin: 4px 0 0; font-size: 16px; color: var(--ink-2); }
+.thanks-score b { font: 700 17px var(--font-display), sans-serif; color: var(--ink); }
 .fb-thanks { padding-top: 18px; border-top: 1px solid var(--rule); }
 .review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 10px; margin-bottom: -12px; }
 .review-head h2 { margin: 0; font: 700 18px var(--font-display), sans-serif; }
