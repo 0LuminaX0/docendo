@@ -14,7 +14,7 @@ const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: List
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, reading time and video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
 
-type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean };
+type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean; soft?: boolean };
 
 export default function Intro({
   accessRequired,
@@ -64,7 +64,7 @@ export default function Intro({
     setBusy(false);
     // 409: the code is known and its tests are done, or the follow-up isn't open yet: a message, not an error
     if (!r.ok) return r.status === 409 ? setInfo(r.error) : setError(r.error);
-    const s = newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition, !!r.data.debug);
+    const s = { ...newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition, !!r.data.debug), ...(typeof r.data.soft === "boolean" ? { soft: r.data.soft } : {}) };
     if (r.data.phase === "delayed") {
       save({ ...s, phase: "delayed", step: "exercises" });
       router.push("/exercises");

@@ -26,6 +26,7 @@ The study compares recursive and direct feedback (Okita & Schwartz 2013, Exp. 2)
 
 ## Next, in order
 
+00000000. **One pretest, clocks per code, no delayed test (2026-11-13):** the pretest is one set for everyone (q1, q2, k1, k2, h3, h4 reworded, r3b new; 7 minutes); `ACCESS_CODE` (the final demo code) runs hard limits and one test form, `PILOT_CODE` (the pilot code) soft clocks and both forms (the seven, then V1, V15, T7, V21); participants follow Study setup: set the times (pretest 7, reading 12, teaching 12, practice 12, test 16), soft timing off and both forms off before Monday. The delayed test is cut.
 0000000. **No c in the lesson (2026-11-13):** the formula, text and figures without c, Kai's question on what sets the bonus gone (seven questions, six facts on the meter), n11.f2 optional; teaching stays 12 minutes.
    The test is 16 minutes for its seven items (the pilots: 1.8 to 2.6 minutes a question on a first form); on the deployed Study setup set it there too.
 000000. **Teaching without the setup question (2026-11-12, its own commit, to revert if the team prefers it back):** Kai's opening says it remembers the setup from the slides (n01.f1, n01.f2 given again), eight questions, teaching 12 minutes (the buffer is for more test items). On the deployed Study setup, set teaching to 12: a saved settings version keeps its 16.

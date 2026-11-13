@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
   const { message, state: before, elapsedMs } = body.data;
   // teaching's time (Study setup). Hard limits: the page closes the chat when it runs out, and a message long after it is
   // refused. Soft (the pilot): a recommendation only, so teaching goes on as long as the learner needs
-  const soft = settings.timing.soft;
+  const soft = session.soft ?? settings.timing.soft; // a shared code fixes the clocks
   if (!soft && (elapsedMs ?? 0) > settings.teach.minutes * 60_000 + 90_000 && session.entry !== "team") return fail(409, "Time's up for teaching. Go on to the next step.");
   // a text lesson: how much of the message comes word for word from it (logged with every turn)
   const overlap = pack.lessonOverlap ? pack.lessonOverlap(message) : null;

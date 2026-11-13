@@ -113,8 +113,11 @@ export async function POST(req: NextRequest) {
     const both = pack.forms.length > 1 && (known ? known.both === true : (pilot ?? st.settings.test.both));
     // the pretest: every set (the pilot) or the session's own one, fixed now like the test's forms
     const preBoth = sets.length > 1 && (pilot ?? st.settings.pretest.both);
+    // the clocks: the pilot's code soft (suggested times, nothing ends), the other shared code hard limits, as the study
+    // runs (2026-11-13); everyone else follows Study setup
+    const soft = pilot ?? undefined;
     if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), startedAt: new Date().toISOString() });
-    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), preBoth }, st.settings.sessionDays);
+    const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), preBoth, ...(soft !== undefined ? { soft } : {}) }, st.settings.sessionDays);
     record({
       t: "session_start",
       sid,
@@ -133,12 +136,13 @@ export async function POST(req: NextRequest) {
       ...(debug ? { debug: true } : {}), // the shared code: steps may be skipped (logged as debug_skip)
       ...(pilot ? { pilot: true } : {}), // the pilot's code: every pretest set and both test forms
       ...(preBoth ? { pretestBoth: true } : {}), // the pretest takes every set (the pilot)
+      softTiming: soft ?? st.settings.timing.soft, // the clocks this session runs with (a shared code fixes them)
       device: deviceOf(req.headers.get("user-agent")),
       config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings) },
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
     // trial codes get a participant's experience: no shortcuts, no condition switch
-    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond, ...(debug ? { debug: true } : {}) });
+    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond, ...(debug ? { debug: true } : {}), ...(soft !== undefined ? { soft } : {}) });
   } catch (e) {
     if (e instanceof ConfigError) return fail(500, "The server isn't fully configured yet.");
     throw e;

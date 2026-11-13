@@ -174,9 +174,9 @@ describe("the follow-up test", () => {
   it("runs a session of about an hour by default: one pretest set, one test form, soft timing", async () => {
     const d = merge(null);
     expect([d.pretest.both, d.test.both, d.test.followUp, d.timing.soft]).toEqual([false, false, false, true]);
-    expect([d.pretest.minutes, d.watch.minutes, d.teach.minutes, d.practice.minutes, d.test.minutes]).toEqual([8, 12, 12, 12, 16]);
+    expect([d.pretest.minutes, d.watch.minutes, d.teach.minutes, d.practice.minutes, d.test.minutes]).toEqual([7, 12, 12, 12, 16]);
     const { minutesOf } = await import("../lib/flow");
-    expect(minutesOf("pretest", d, { forms: 1, sets: 1 }) + minutesOf("watch", d, { forms: 1 }) + minutesOf("teach", d, { forms: 1 }) + minutesOf("practice", d, { forms: 1 }) + minutesOf("exercises", d, { forms: 1 })).toBe(60); // teaching 12 since 2026-11-12, the test 16 for seven items since 2026-11-13
+    expect(minutesOf("pretest", d, { forms: 1, sets: 1 }) + minutesOf("watch", d, { forms: 1 }) + minutesOf("teach", d, { forms: 1 }) + minutesOf("practice", d, { forms: 1 }) + minutesOf("exercises", d, { forms: 1 })).toBe(59); // teaching 12 since 2026-11-12, the pretest 7 and the test 16 for seven items since 2026-11-13
     // both sets and both forms for calibrating items: each part its own time
     const both = merge({ pretest: { on: true, both: true, minutes: 5 }, test: { followUp: false, followUpDays: 7, both: true, minutes: 10 }, timing: { soft: true } });
     expect(minutesOf("pretest", both, { forms: 2, sets: 2 })).toBe(10); // per set
@@ -186,7 +186,7 @@ describe("the follow-up test", () => {
   it("gives a version saved before the pilot's timing the default tests and times, and keeps the rest", () => {
     const old = { pretest: { on: true, both: false, minutes: 5 }, watch: { minutes: 10 }, teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: false, minutes: 10 }, practice: { on: true, minutes: 10, tries: 2 }, test: { followUp: true, followUpDays: 7, both: false, minutes: 10 }, tools: { calculator: true, voice: false, help: false } };
     const m = merge(old);
-    expect([m.pretest.both, m.pretest.minutes, m.watch.minutes, m.teach.minutes, m.practice.minutes, m.test.both, m.test.followUp, m.test.minutes]).toEqual([false, 8, 12, 12, 12, false, false, 16]);
+    expect([m.pretest.both, m.pretest.minutes, m.watch.minutes, m.teach.minutes, m.practice.minutes, m.test.both, m.test.followUp, m.test.minutes]).toEqual([false, 7, 12, 12, 12, false, false, 16]);
     expect([m.teach.mind, m.tools.voice, m.tools.help, m.timing.soft]).toEqual([false, false, false, true]);
     // saved since (with a timing block): as saved
     expect(merge({ ...old, timing: { soft: false } }).pretest).toEqual({ on: true, both: false, minutes: 5 });

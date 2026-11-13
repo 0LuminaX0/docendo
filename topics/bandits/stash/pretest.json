@@ -1,6 +1,6 @@
 {
   "title": "Stashed pretest items (not served)",
-  "note": "Taken out 2026-11-05 (a pretest of seven questions a session): q3, a probability or statistics course (only ever recorded), and the harmonic-series item that was C2's h2 until C2 came back the same day as the second set (h2 is now K2's twin). The app never loads this folder; move an item back into ../pretest.json to use it.",
+  "note": "Taken out 2026-11-05 (a pretest of seven questions a session): q3, a probability or statistics course (only ever recorded), and the harmonic-series item that was C2's h2 until C2 came back the same day as the second set (h2 is now K2's twin). The app never loads this folder; move an item back into ../pretest.json to use it. Taken out 2026-11-13 (one pretest for everyone, set `final`: q1, q2, k1, k2, h3, h4, r3b): r1, r2 and r3 of set C1 and h1, h2 and h5 of set C2, kept with their sets and pairs (the pilot took both sets). h4 was reworded in the pack, and r3b replaces r3.",
   "items": [
     {
       "id": "q3",
@@ -38,6 +38,155 @@
       "explain": "Sum 1, the harmonic series, grows like ln(n): without limit, but ever more slowly. Sum 2 approaches π²/6 ≈ 1.64. It is the distinction between slowing and stopping behind F11.",
       "estimate": 0.45,
       "note": "C2's h2 until 2026-11-05, when C2 came back as the second pretest set: the harmonic series asks for more than K2 does, so h2 became K2's twin."
+    },
+    {
+      "id": "r1",
+      "kind": "knowledge",
+      "set": "C1",
+      "measures": "small samples land at both ends",
+      "prompt": "A country ranks its 1,000 schools by this year's average exam score. Schools have between 20 and 2,000 students. Suppose all schools teach equally well, so a school's average differs only because of which students happen to attend. The top 50 schools turn out to be mostly small schools. Which schools most likely make up the bottom 50?",
+      "options": [
+        "Mostly large schools",
+        "Mostly small schools",
+        "Schools of all sizes, in proportion to how common they are",
+        "Mostly medium-sized schools",
+        "I don't know"
+      ],
+      "answer": 1,
+      "diagnosis": [
+        "if the small ones top the list, the large ones must be at the bottom",
+        "correct",
+        "size cannot matter when teaching is equal",
+        "the two ends of the size range take the two ends of the ranking",
+        "I don't know"
+      ],
+      "explain": "Averages of small groups scatter more, so small schools fill both ends of the ranking (Wainer's \"most dangerous equation\"). It underlies why an early average from few tries can be far off in either direction.",
+      "estimate": 0.35,
+      "note": "In simulation (200 rankings, equal teaching, sizes 20 to 2,000), 99% of the bottom 50 were smaller than the median school. Replaces the café version of the hospital problem, which many statistics students know."
+    },
+    {
+      "id": "r2",
+      "kind": "knowledge",
+      "set": "C1",
+      "measures": "picking the best result picks up luck",
+      "prompt": "A company tries 20 new suppliers with one delivery each. The suppliers truly differ in quality, and each delivery's quality also varies by chance. The company gives a second order to the supplier whose first delivery was best. What should it expect from that second delivery?",
+      "options": [
+        "As good as the first delivery",
+        "Better than the first delivery",
+        "Worse than the first, still above the average supplier",
+        "Worse than the first, and below the average supplier",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "one result shows the true quality",
+        "a good start means a good streak",
+        "correct",
+        "overcorrection",
+        "I don't know"
+      ],
+      "explain": "The best first delivery was partly luck, so the second is expected to fall back towards the supplier's true quality, which is still likely above average (regression to the mean). It underlies why a too-high start corrects itself once the option is tried again (D1).",
+      "estimate": 0.4
+    },
+    {
+      "id": "r3",
+      "kind": "knowledge",
+      "set": "C1",
+      "measures": "you only learn about what you choose",
+      "prompt": "A bank grants loans only to applicants its scoring rule rates as safe, and records whether each loan is repaid. Can the bank find out from these records whether its rule turns away many people who would have repaid?",
+      "options": [
+        "No, not from these records alone",
+        "Yes, from these records alone",
+        "Yes, once it has enough records",
+        "Yes, if it also records the rejected applicants' incomes",
+        "I don't know"
+      ],
+      "answer": 0,
+      "diagnosis": [
+        "correct",
+        "the records cover everyone who matters",
+        "more data fixes everything",
+        "more information about them replaces their outcomes",
+        "I don't know"
+      ],
+      "explain": "Rejected applicants never produce a repayment record, so no amount of data about the accepted ones, or about the rejected ones' incomes, shows how many of the rejected would have repaid. In bandit terms, an option that is never chosen never produces data (F2, F5).",
+      "estimate": 0.55
+    },
+    {
+      "id": "h1",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "k1",
+      "measures": "sample size and confidence intervals (harder)",
+      "prompt": "A 95% confidence interval for an average, based on 25 readings, is 2.0 wide. About how many readings would make it 0.5 wide, if the readings vary as much as before?",
+      "options": [
+        "About 50",
+        "About 100",
+        "About 400",
+        "About 1,600",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "square root applied the wrong way",
+        "width proportional to the number of readings",
+        "correct",
+        "squared twice",
+        "I don't know"
+      ],
+      "explain": "The width shrinks with √n, so an interval 4 times narrower needs 16 times as many readings: 25 × 16 = 400. The t-value makes it slightly fewer, still closest to 400. It underlies why a bonus halves only when an option's tries quadruple.",
+      "estimate": 0.45
+    },
+    {
+      "id": "h2",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "k2",
+      "measures": "logarithmic growth",
+      "prompt": "A quantity equals ln(t). At t = 50 it is about 3.9, and at t = 500 it is about 6.2. At about which t does it reach 8.5?",
+      "options": [
+        "It never gets there: it levels off",
+        "At about t = 950",
+        "At about t = 5,000",
+        "At about t = 1,000",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "logarithm confused with a curve that levels off",
+        "equal steps in t give equal rises",
+        "correct",
+        "the needed step doubles each time",
+        "I don't know"
+      ],
+      "explain": "Each rise of about 2.3 in ln(t) needs t to grow tenfold: 50 to 500 gave 3.9 to 6.2, so 8.5 comes at 5,000. It underlies why an unpicked option's bonus keeps growing without limit but takes ever longer to grow by the same amount (F11).",
+      "estimate": 0.5,
+      "note": "K2's twin (2026-11-05), in place of the harmonic-series item (stash: h2-harmonic)."
+    },
+    {
+      "id": "h5",
+      "kind": "knowledge",
+      "set": "C2",
+      "pair": "r3",
+      "measures": "data only from those you chose (harder)",
+      "prompt": "A company hires only applicants who score above 70 on an entry test. Among the people it hired, the test score barely predicts how well they do the job. Can the company conclude that the test is useless for choosing staff?",
+      "options": [
+        "Yes: among the people hired, the score barely predicts performance",
+        "Yes, provided it has data on many employees",
+        "No: everyone hired scored above 70, so the data hide what the score does",
+        "No: it should first check that the test was marked correctly",
+        "I don't know"
+      ],
+      "answer": 2,
+      "diagnosis": [
+        "the data look clear",
+        "more data fixes everything",
+        "correct",
+        "right conclusion, irrelevant reason",
+        "I don't know"
+      ],
+      "explain": "The company never sees how people scoring below 70 would have done, and within the narrow range it hired, scores differ little (range restriction): you only learn about the options you choose (F2, F5).",
+      "estimate": 0.35
     }
   ]
 }

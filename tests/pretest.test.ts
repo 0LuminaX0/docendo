@@ -8,23 +8,32 @@ import { PretestFile, checkPack } from "../content/pack";
 import { gradePretest, pretestItems, pretestSets, setsFor } from "../content/pretest";
 import { tables } from "../lib/analytics";
 
-// The team's pretest, option C (main doc, 2 November 2026): screening questions, then set C1 (K1, K2, R1 to R3); C2 is
-// its twin (H1 to H5, H2 rewritten as K2's twin on 2026-11-05). A session takes seven questions: q1, q2 and its own set,
-// assigned at its start and balanced with the test form; the pilot takes both sets, its own first. The statistics
-// question q3 is in stash/pretest.json; the rules are tested with it as well (a background question that excludes
-// nobody).
+// The pretest (2026-11-13): one set for everyone (`final`): the screening questions q1 and q2, then k1, k2, h3, h4 and
+// r3b. Before, the team's option C (main doc, 2 November 2026): set C1 (K1, K2, R1 to R3) and its twin C2 (H1 to H5),
+// a session taking its own set and the pilot both; the rules for sets are still tested on those two, rebuilt from the
+// pack and the stash, with the stashed statistics question q3 (a background question that excludes nobody).
 
 const active = PretestFile.parse(pretestJson).items;
-const items = [...active, ...PretestFile.parse(stashedJson).items.filter((q) => q.kind === "background")];
+const stashed = PretestFile.parse(stashedJson).items;
+const find = (id: string) => [...active, ...stashed].find((x) => x.id === id)!;
+// the pilot's two sets: k1 and k2 were C1's, h3 and h4 C2's (h4 reworded since)
+const inSet = (set: string, pairs: Record<string, string> = {}) => (id: string) => ({ ...find(id), set, ...(pairs[id] ? { pair: pairs[id] } : {}) });
+const items = [
+  ...["q1", "q2", "q3"].map(find),
+  ...["k1", "k2", "r1", "r2", "r3"].map(inSet("C1")),
+  ...["h1", "h2", "h3", "h4", "h5"].map(inSet("C2", { h3: "r1", h4: "r2" })),
+];
 const q = (id: string) => items.find((x) => x.id === id)!;
 const LETTERS = "abcde";
 const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
 
 describe("the pretest items", () => {
-  it("are two screening questions and two sets of five in the pack: a session takes seven", () => {
-    expect(ids(active)).toEqual(["q1", "q2", "k1", "k2", "r1", "r2", "r3", "h1", "h2", "h3", "h4", "h5"]);
-    expect(pretestSets(active)).toEqual(["C1", "C2"]);
-    expect(pretestItems(active, setsFor(active, false, "A", "C2"))).toHaveLength(7);
+  it("are one set for everyone: two screening questions and five knowledge items", () => {
+    expect(ids(active)).toEqual(["q1", "q2", "k1", "k2", "h3", "h4", "r3b"]);
+    expect(pretestSets(active)).toEqual(["final"]);
+    // even with every set on (the pilot's code), a session takes these seven
+    expect(ids(pretestItems(active, setsFor(active, true, "B")))).toEqual(ids(active));
+    expect(active.filter((x) => x.kind === "knowledge").map((x) => LETTERS[x.answer!]).join("")).toBe("cdbdc");
   });
 
   it("were three screening questions (with the stashed one), then C1 and C2, five knowledge items each", () => {
@@ -38,7 +47,7 @@ describe("the pretest items", () => {
   it("have the team's keys, four options and “I don't know”, and no written reason", () => {
     expect(items.filter((x) => x.set === "C1").map((x) => LETTERS[x.answer!]).join("")).toBe("cdbca");
     expect(items.filter((x) => x.set === "C2").map((x) => LETTERS[x.answer!]).join("")).toBe("ccbdc");
-    for (const x of items.filter((i) => i.kind === "knowledge")) {
+    for (const x of [...items, ...active].filter((i) => i.kind === "knowledge")) {
       expect(x.options, x.id).toHaveLength(5);
       expect(x.options.at(-1), x.id).toBe("I don't know");
       expect(x.diagnosis?.[x.answer!], x.id).toBe("correct");

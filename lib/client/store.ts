@@ -81,6 +81,7 @@ export type Saved = {
   team?: boolean; // started with the shared code (or no code): test shortcuts are on. Participants' own codes: false
   condition?: Condition; // from the participant's code (team sessions: direct, with a switch on the practice page)
   debug?: boolean; // started with the shared code (ACCESS_CODE): a skip button on every step (components/DebugSkip.tsx)
+  soft?: boolean; // the clocks, fixed by a shared code (PILOT_CODE: suggested times; ACCESS_CODE: hard limits); else Study setup
   startedAt: number;
   step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
   phase?: "main" | "delayed"; // delayed: the follow-up test only (a session of its own, days after the main one)
