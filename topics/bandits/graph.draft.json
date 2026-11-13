@@ -247,7 +247,8 @@
           "text": "Lock-in: once an option's average is too low, greedy never picks it again, so its average is never corrected, even if it is truly the best option (for example after one unlucky first try).",
           "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end.",
           "hunch": "My hunch is that it sorts itself out: if greedy keeps going, the averages even out and it ends up on the best one.",
-          "key": "the best option can look worse after an unlucky start, greedy then never picks it again, so its average is never corrected."
+          "key": "the best option can look worse after an unlucky start, greedy then never picks it again, so its average is never corrected.",
+          "evidence": "\\bnever\\b|\\bagain\\b|\\bany ?more\\b|\\bno longer\\b|\\bforever\\b|\\bfor good\\b|\\bignor\\w*|\\bstops? (?:pick|choos|tr[yi]|select|pull|play|sampl|explor|look|check)\\w*|\\b(?:not|no|never|cannot|\\w+n['’]?t)\\b(?:\\s+\\S+){0,4}?\\s+(?:pick|choos|chos|tr[yi]|select|pull|play|sampl|explor|revisit|correct|updat|fix|recover|return|go(?:es)? back|come back|find out|learn|see|check|test)\\w*|\\bstays? (?:too |that |so )?(?:low|wrong|bad|underestimat\\w*)|\\bstuck at\\b|\\bunderestimat\\w*|\\buncorrected\\b"
         },
         {
           "id": "n06.f2",
@@ -489,7 +490,8 @@
           "text": "UCB gives each option a score, its average plus a bonus, and picks the option with the highest score. There is no randomness: the same history always gives the same pick.",
           "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
           "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times.",
-          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial."
+          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial.",
+          "evidence": "\\bhighest\\b|\\blargest\\b|\\bbiggest\\b|\\bgreatest\\b|\\bmax\\w*|\\btop\\b|\\bbest (?:score|total|sum|value|number|result|one|option|arm)\\b|\\bargmax\\b|\\bwins?\\b|\\bwinner\\b|\\bwhichever (?:is |has |gives |scores )?(?:the )?(?:higher|bigger|larger|greater)\\b|\\b(?:pick|choos|tak|select|go|went)\\w* (?:for |with )?the (?:higher|bigger|larger|greater)\\b"
         },
         {
           "id": "n11.f2",
@@ -510,7 +512,8 @@
           "required": true,
           "ask": "What is that extra part of the score for?",
           "text": "The bonus gives options tried only a few times the benefit of the doubt: UCB treats each option as if it were as good as it could plausibly be, the upper end of a confidence interval around its average.",
-          "key": "an average from few tries is unsure, so the option could really be better than it looks, and the bonus gives it that benefit of the doubt (treats it as good as it plausibly could be). \"It makes UCB explore\" or \"it favours options tried less\" without the doubt about the average is partial."
+          "key": "an average from few tries is unsure, so the option could really be better than it looks, and the bonus gives it that benefit of the doubt (treats it as good as it plausibly could be). \"It makes UCB explore\" or \"it favours options tried less\" without the doubt about the average is partial.",
+          "evidence": "\\bunsure\\b|\\buncertain\\w*|\\bnot (?:yet |really |that |so |very |fully )?(?:sure|certain|reliable|accurate|precise|trustworthy)\\b|\\bunreliab\\w*|\\binaccura\\w*|\\bimprecise\\b|\\b(?:trust|rely|relia)\\w*|\\bbenefit of the doubt\\b|\\bdoubt\\w*|\\boptimis\\w*|\\boptimiz\\w*|\\bconfiden\\w*|\\bplausib\\w*|\\b(?:could|might|may|can|possibly|perhaps|maybe)\\b[^.;!?]{0,30}\\b(?:better|best|good|great|higher|wrong|off|misleading|underrated|underestimat\\w*|unlucky|lucky)\\b|\\b(?:actually|really|truly|secretly) (?:better|good|the best)\\b|\\bunderestimat\\w*|\\bunlucky\\b|\\bluck\\b|\\bby chance\\b|\\bnois[ey]\\w*|\\bdon['’]?t know\\b|\\bdo not know\\b|\\bunknown\\b|\\b(?:less|little|not enough|limited|insufficient|more) (?:information|info|data|evidence|knowledge)\\b|\\bsmall sample\\b|\\bmislead\\w*"
         }
       ],
       "lexicon": [

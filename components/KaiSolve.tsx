@@ -138,7 +138,7 @@ export default function KaiSolve({
         {asking && (
           <div className="ks-fix" ref={fixBox}>
             <h3>Correct Kai</h3>
-            <p className="note">Kai got it wrong. Tell it what it should know (you aren&apos;t told which step is wrong). Kai writes down what it takes from it and tries once more.</p>
+            <p className="note">Kai got it wrong. Explain what it misunderstood, not just this problem&apos;s answer (you aren&apos;t told which step is wrong). Kai writes down what it takes from it and tries once more.</p>
             <Scratchpad
               id={`${q.id}-fix`}
               where={`practice-fix:${q.id}`}

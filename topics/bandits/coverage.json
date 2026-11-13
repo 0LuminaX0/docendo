@@ -2,7 +2,7 @@
   "decidedBy": "manual: Claude (claude-opus-5-5), from reading both transcripts in full (ritvikmath e3L4VocZnnQ + DataMListic 8CquWcViBfg); lesson facts re-decided 2026-11-02 for the F1 to F15 fact list",
   "decidedAt": "2026-11-02",
   "recheckedAt": "2026-11-05: keys, evidence and hunches added, ln t written ln(t), the trade-off idea placed before ε-greedy and UCB; every coverage decision stands; 2026-11-12: n12.f2's evidence pattern also takes \"logarith-\" (a word speech input cut off); no fact text changed, every coverage decision stands; 2026-11-13: n11.f4 (the benefit of the doubt) required, with a key and a question, its text unchanged; c (n11.f2) optional in the lesson; every coverage decision stands",
-  "graphHash": "3de1b9293723446b",
+  "graphHash": "e37ded7bdfa0982e",
   "facts": {
     "n01.f1": {
       "status": "covered",

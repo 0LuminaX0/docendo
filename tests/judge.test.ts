@@ -47,6 +47,19 @@ describe("the evidence a key needs (a check in code around the judge)", () => {
     for (const m of ["it keeps growing but by less each time", "the growth gets smaller", "it grows more gently as time goes on", "grows slower and slower", "the ln t term keeps growing", "it grows logarithmically", "It grows logarith- in the number of rounds", "grows without limit but more and more slowly", "like sqrt(log t)"]) expect(ev("n12.f2").test(m), m).toBe(true);
     for (const m of ["the ones you skip keep getting a bigger bonus over time", "it grows over time", "the logic is that it grows", "see my blog"]) expect(ev("n12.f2").test(m), m).toBe(false);
   });
+  // 2026-11-13, a pilot learner answering tersely on purpose: the judge credited each of these in full
+  it("finds lock-in's mechanism (never picked again, never corrected), and not \"it can lock in\" alone", () => {
+    for (const m of ["greedy might never go back to it, so it never finds out it's actually the best", "which could prevent the Greedy rule from choosing this option again", "if the best one has a bad first day greedy won't pick it so its average stays too low", "So A's average will never be corrected"]) expect(ev("n06.f1").test(m), m).toBe(true);
+    for (const m of ["Greedy can lock in on the wrong arm with an unlucky start.", "It's can Lock in the wrong arm or it can lock in on the right arm and be very good."]) expect(ev("n06.f1").test(m), m).toBe(false);
+  });
+  it("finds UCB picking the highest score, and not \"a mean and a bonus\" alone", () => {
+    for (const m of ["its average plus a bonus, and always picks the highest score", "it adds a bonus to the average and goes with whichever is bigger", "UCB picks the arm with the best score"]) expect(ev("n11.f1").test(m), m).toBe(true);
+    for (const m of ["UCB uses a mean and a bonus, and the bonus is higher for less explored options and lower for better exploit options.", "there is the UCB rule, which applies bonuses"]) expect(ev("n11.f1").test(m), m).toBe(false);
+  });
+  it("finds the doubt about an average from few tries, and not \"for exploring\" alone", () => {
+    for (const m of ["an average you can't trust yet: it could really be much better than it looks", "we're not sure about options we tried less, they might be better than they look", "the average of a rarely tried option might just be unlucky", "it gives them the benefit of the doubt"]) expect(ev("n11.f4").test(m), m).toBe(true);
+    for (const m of ["It's for exploration, for the trade off. So it explores more than greedy does.", "I think for exploring bad options that are bad get a higher bonus, so we also explore.", "with it, it prioritizes arms that have been explored less.", "so options that were tried less get a chance to be picked"]) expect(ev("n11.f4").test(m), m).toBe(false);
+  });
   it("finds ε's fixed rate, a fixed share or a number, and not \"sometimes\" or a bare ε", () => {
     for (const m of ["with probability 0.1 it picks a random option", "picks randomly 10% of the time", "Each day you give the best provider a 1-eps chance", "ε never changes", "it explores 10 percent of the rounds", "the rate stays the same"]) expect(ev("n07.f1").test(m), m).toBe(true);
     for (const m of ["sometimes it picks at random", "with a small probability epsilon it explores", "it explores now and then"]) expect(ev("n07.f1").test(m), m).toBe(false);
