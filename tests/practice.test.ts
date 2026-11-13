@@ -121,10 +121,12 @@ describe("the knowledge base: facts Kai can be taught, and its assumptions", () 
     for (const id of needed) expect(factOf(id).assume, `${id} has Kai's assumption`).toBeTruthy();
     // given facts: the setup, averages and how reliable they are, trying each option once
     for (const id of ["n01.f1", "n01.f2", "n03.f1", "n03.f3", "n16.f1"]) expect(needed.has(id), `${id} is given`).toBe(false);
-    // the teachable facts of the lesson: greedy, lock-in, UCB's score and c, the bonus's two rules (no ε-greedy since
-    // 2026-11-05)
-    const withAssumption = lesson.flatMap((n) => n.facts.filter((f) => f.assume).map((f) => f.id));
-    expect(withAssumption).toEqual(["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]);
+    // the teachable facts of the lesson: greedy, lock-in, UCB's score, the bonus's two rules (no ε-greedy since
+    // 2026-11-05; c, n11.f2, left the lesson 2026-11-13: optional here, never needed)
+    const withAssumption = lesson.flatMap((n) => n.facts.filter((f) => f.assume && f.required).map((f) => f.id));
+    expect(withAssumption).toEqual(["n05.f1", "n06.f1", "n11.f1", "n12.f1", "n12.f2"]);
+    expect(factOf("n11.f2").required).toBe(false);
+    expect(needed.has("n11.f2")).toBe(false);
     for (const id of withAssumption) expect(factOf(id).required && factOf(id).teachable, id).toBe(true);
   });
 

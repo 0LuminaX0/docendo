@@ -2,7 +2,7 @@
   "topic": "bandits",
   "title": "Multi-armed bandits",
   "hash": "309970d63d4b5b5d",
-  "builtAt": "2026-11-12T17:16:23.832Z",
+  "builtAt": "2026-11-13T14:46:09.486Z",
   "goals": [
     {
       "id": "G",
@@ -665,7 +665,7 @@
         {
           "id": "n11.f2",
           "text": "The size of every bonus is set by c, a setting chosen in advance to match how much the rewards are expected to vary. The bonus does not adapt to the rewards actually observed, and c does not change the averages.",
-          "required": true,
+          "required": false,
           "teachable": true,
           "ask": "What decides how much that extra part of the score counts?",
           "assume": "The bonus adapts to how much an option's observed rewards vary.",

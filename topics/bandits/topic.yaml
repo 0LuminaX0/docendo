@@ -47,6 +47,7 @@ lesson:
     - n06.f2 # an example of lock-in: n06.f1 states the idea
     - n08.f2 # too little or too much exploration: left for learners to work out
     - n16.f2 # averages alone ignore how many tries they rest on: motivation, not a fact Kai waits for
+    - n11.f2 # c, the bonus's size: left out of the lesson 2026-11-13 (no item asks about it; the formula has no c)
   # background Kai knows from the slides and the problems' stems repeat: never asked, never counted. The setup (n01.f1,
   # n01.f2) was Kai's first question from 2026-11-05 to 2026-11-12; no problem or test item needs it, and its answers
   # took 1.5 to 5 minutes, so Kai's opening says it remembers the setup instead

@@ -80,7 +80,7 @@
           "formula": "ucb"
         },
         {
-          "p": "The first term is option i's average and the second is its **bonus**: nᵢ is how often option i has been picked so far, t is the round number, and c is a setting chosen in advance. You will not need to calculate with the formula, but its parts matter."
+          "p": "The first term is option i's average and the second is its **bonus**: nᵢ is how often option i has been picked so far and t is the round number. You will not need to calculate with the formula, but its parts matter."
         },
         {
           "figure": "score",
@@ -90,10 +90,7 @@
           "p": "Why a bonus? An average from few picks is unreliable: the option's true average could be well above what has been seen so far. Think of a range of plausible values around each average, wide for an option picked a few times and narrow for one picked often. UCB treats every option as if it were as good as it could plausibly be, the top of that range, so options tried only a few times get the benefit of the doubt. That is how it explores: it picks an option when that option might be the best."
         },
         {
-          "p": "How big the bonuses are is set by c, which is chosen in advance to match how much the rewards are expected to vary. With c = 2 every bonus is twice as big as with c = 1, and the averages stay as they are. The bonus does not look at the rewards an option actually gave: it depends only on c, on how often the option was picked and on the round."
-        },
-        {
-          "p": "The bonus changes in two ways. Each pick of an option makes its own bonus smaller, because its nᵢ grows; picks of other options do not shrink it. And as rounds pass, every bonus grows, because ln(t) grows with t: without limit, but more and more slowly. ln(10) ≈ 2.3, ln(100) ≈ 4.6 and ln(1,000) ≈ 6.9, so each further step of 2.3 takes ten times as many rounds. Only how often an option was picked matters, not when."
+          "p": "The bonus changes in two ways. Each pick of an option makes its own bonus smaller, because its nᵢ grows; picks of other options do not shrink it. And as rounds pass, every bonus grows, because ln(t) grows with t: without limit, but more and more slowly. ln(10) ≈ 2.3, ln(100) ≈ 4.6 and ln(1,000) ≈ 6.9, so each further step of 2.3 takes ten times as many rounds. Only how often an option was picked matters, not when, and the bonus does not look at the rewards the option gave."
         },
         {
           "figure": "bonus",

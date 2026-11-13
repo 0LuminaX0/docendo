@@ -50,7 +50,7 @@ const scriptPath = opt("--script") ?? "topics/bandits/script.json";
 const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json", "utf8")));
 const script = ScriptFile.parse(JSON.parse(readFileSync(scriptPath, "utf8")));
 const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items;
-const TEACH = ["n05.f1", "n06.f1", "n11.f1", "n11.f2", "n12.f1", "n12.f2"]; // since 2026-11-05 no ε-greedy
+const TEACH = ["n05.f1", "n06.f1", "n11.f1", "n12.f1", "n12.f2"]; // since 2026-11-05 no ε-greedy, since 2026-11-13 no c
 // the reasons Kai's two why-questions ask for (2026-11-05): no practice problem needs them, so they are outside the gate
 const WHY = ["n08.f1", "n11.f4"];
 // the setup (n01.f1, n01.f2) is background Kai knows from the slides since 2026-11-12: no question asks for it
@@ -61,7 +61,6 @@ const KNOW: Record<string, string> = {
   "n05.f1": "Greedy always takes the option with the highest average so far. After every pick that option's average is updated, and if another option's average overtakes it, greedy switches to that one.",
   "n06.f1": "Greedy can get stuck: if the truly best option has an unlucky first result, its average looks too low, greedy never tries it again, so its average never gets corrected and greedy never finds out.",
   "n11.f1": "UCB gives every option a score, its average plus a bonus, and always picks the option with the highest score. No randomness.",
-  "n11.f2": "How big the bonuses are is set by a constant c chosen in advance (from how much rewards are expected to vary). The bonus doesn't depend on the actual rewards an option gave.",
   "n12.f1": "Each time an option is picked, its own bonus shrinks (its count n goes up). Picking other options doesn't shrink it.",
   "n01.f1": "A bandit problem: you choose one of several options again and again, each round; each pick gives a random result around that option's true average, which you don't know.",
   "n01.f2": "You only see the result of the option you picked, never how the others would have done.",
@@ -75,18 +74,17 @@ const VAGUE: Record<string, string> = {
 };
 const WRONG: Record<string, string> = {
   "n06.f1": "Nothing really goes wrong with greedy in the long run: the averages correct themselves over time, so it finds the best option eventually.",
-  "n11.f2": "The bonus adapts to the rewards: an option whose rewards jump around a lot gets a bigger bonus.",
   "n12.f2": "An option's bonus stays the same while it isn't picked.",
   "n05.f1": "Greedy tries each option once, then sticks with the best one forever and never switches.",
 };
 
 type Persona = { id: string; style: string; knows: string[]; vague?: string[]; wrong?: string[] };
 const PERSONAS: Persona[] = [
-  { id: "expert", knows: ALL, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + c·sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
-  { id: "solid", knows: ALL.filter((f) => f !== "n11.f2"), style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
+  { id: "expert", knows: ALL, style: "You are a strong computer-science student who understood the lesson completely. Be precise and concise: one to three sentences, you may use notation like Q + sqrt(ln t / n). You explain everything relevant to the question at once. If Kai asks something you have clearly already explained, say so briefly (and repeat it in a few words)." },
+  { id: "solid", knows: ALL.filter((f) => f !== "n12.f2"), vague: ["n12.f2"], style: "You are a solid student. Explain in plain words, two to four sentences, sometimes with a tiny example with numbers." },
   { id: "terse", knows: ALL, style: "You are busy and type little: answer in ONE short sentence of 6 to 15 words, only what was asked, no examples. If asked to say more, add one more short sentence." },
   { id: "partial", knows: ["n05.f1", "n06.f1"], vague: ["n12.f2", "n11.f1"], style: "You read the lesson quickly and remember only some of it. Two to three sentences. When asked about something not in your knowledge sheet, say honestly you don't remember." },
-  { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n11.f2", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
+  { id: "misled", knows: ["n11.f1", "n12.f1"], wrong: ["n05.f1", "n06.f1", "n12.f2"], style: "You are confident and explain in two to three sentences. You believe your wrong beliefs completely and state them as facts when they are relevant." },
   { id: "realistic", knows: ["n05.f1", "n06.f1", "n08.f1", "n11.f1", "n12.f1"], vague: ["n12.f2"], style: "You are an ordinary student in a lab session, a bit tired. Write like in a chat: lowercase, an occasional typo, one to three sentences. You don't always use the lesson's words: say things like 'the confidence thing', 'the score', 'the extra bit'. Sometimes you answer only part of the question at first." },
   { id: "rambler", knows: ALL, style: "You are eager and in a hurry: in your FIRST message, whatever Kai asks, explain everything you know about both rules in one long paragraph. After that, keep answers to one or two sentences, and say so if Kai asks something you already covered." },
   { id: "chatty", knows: ALL, style: "You are friendly and chatty. Two to three sentences. About every third message, before or instead of answering, ask Kai a question back (\"what do you think?\", \"does that make sense?\") or make a small joke unrelated to the topic; when Kai asks again, answer properly." },

@@ -9,8 +9,8 @@ const MATHML: Record<string, { label: string; ml: string }> = {
     ml: `<math display="block"><mtext>pick</mtext><mo>=</mo><mtext>the option&#xA0;</mtext><mi>i</mi><mtext>&#xA0;with the highest average&#xA0;</mtext>${XBAR_I}</math>`,
   },
   ucb: {
-    label: "score i equals x bar i plus c times the square root of ln of t over n i",
-    ml: `<math display="block"><msub><mtext>score</mtext><mi>i</mi></msub><mo>=</mo>${XBAR_I}<mo>+</mo><mi>c</mi><mspace width="0.17em"></mspace><msqrt><mfrac><mrow><mi>ln</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow><msub><mi>n</mi><mi>i</mi></msub></mfrac></msqrt></math>`,
+    label: "score i equals x bar i plus the square root of ln of t over n i",
+    ml: `<math display="block"><msub><mtext>score</mtext><mi>i</mi></msub><mo>=</mo>${XBAR_I}<mo>+</mo><msqrt><mfrac><mrow><mi>ln</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo></mrow><msub><mi>n</mi><mi>i</mi></msub></mfrac></msqrt></math>`,
   },
 };
 

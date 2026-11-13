@@ -138,7 +138,7 @@ function LockIn() {
 
 const fmt = (v: number) => v.toFixed(1);
 
-/** Figure 4: one UCB round with numbers (round 20, c = 1): the bonus can lift an option over a higher average. */
+/** Figure 4: one UCB round with numbers (round 20): the bonus can lift an option over a higher average. */
 function Score() {
   const base = 276, scale = 24, w = 92, lnT = Math.log(20);
   const opts = [
@@ -150,7 +150,7 @@ function Score() {
   return (
     <svg viewBox="0 0 760 356" role="img" aria-label="One UCB round with numbers: B has the highest score although A has the highest average" fontSize="13">
       <text x="24" y="30" fontSize="15" fontWeight="600" fill={ink}>One UCB round, with numbers</text>
-      <text x="24" y="52" fontSize="11.5" fill={quiet}>Round t = 20, c = 1, so each bonus is √(<tspan className="ln">ln</tspan>(20) / n) with <tspan className="ln">ln</tspan>(20) ≈ 3.0. Grey: the average. Blue: the bonus.</text>
+      <text x="24" y="52" fontSize="11.5" fill={quiet}>Round t = 20, so each bonus is √(<tspan className="ln">ln</tspan>(20) / n) with <tspan className="ln">ln</tspan>(20) ≈ 3.0. Grey: the average. Blue: the bonus.</text>
       {opts.map((o) => {
         const top = base - (o.avg + o.bonus) * scale;
         const win = o.avg + o.bonus === best;
@@ -189,7 +189,7 @@ function Bonus() {
   return (
     <svg viewBox="0 0 760 312" role="img" aria-label="One option's bonus: it drops each time the option is picked and grows, ever more slowly, in the rounds between" fontSize="13">
       <text x="24" y="30" fontSize="15" fontWeight="600" fill={ink}>One option&apos;s bonus, round by round</text>
-      <text x="24" y="52" fontSize="11.5" fill={quiet}>c = 1. The option has been picked 3 times by round 10; for the example, say it is also picked in rounds 15, 18, 35, 41 and 70.</text>
+      <text x="24" y="52" fontSize="11.5" fill={quiet}>The option has been picked 3 times by round 10; for the example, say it is also picked in rounds 15, 18, 35, 41 and 70.</text>
       <line x1="70" y1="78" x2="70" y2="244" stroke={edge} strokeWidth="1.25" />
       <line x1="70" y1="244" x2="700" y2="244" stroke={edge} strokeWidth="1.25" />
       <text x="56" y="160" transform="rotate(-90 56 160)" textAnchor="middle" fontSize="11.5" fill={quiet}>bonus</text>
