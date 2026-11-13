@@ -267,8 +267,8 @@ describe("understanding, moods and Kai's mind", () => {
     let s = applyJudgement(s0, j([{ fact: "n01.f1", verdict: "correct", quote: "you choose between options" }]));
     s = applyMove(bundle, s, { type: "followUp", node: "n01", seed: node("n01").facts[1]!.ask!, fact: "n01.f2" });
     const m = mindView(bundle, s);
-    expect(m.facts.total).toBe(10); // no ε-greedy since 2026-11-05, no c since 2026-11-13
-    expect(m.facts.needed).toBe(8);
+    expect(m.facts.total).toBe(11); // no ε-greedy since 2026-11-05, no c but the benefit of the doubt since 2026-11-13
+    expect(m.facts.needed).toBe(9);
     expect(m.maxTurns).toBe(30);
     const n01 = m.nodes.find((n) => n.id === "n01")!;
     expect(n01).toMatchObject({ status: "mentioned", correct: 1, focus: true, unasked: 0 });
@@ -363,9 +363,10 @@ describe("the offline judge on not knowing", () => {
 describe("the setup Kai knows from the slides (given facts)", () => {
   it("is never waited for or counted, and Kai's mind shows its ideas as known", () => {
     const m = mindView(packBundle, initialState(packBundle));
-    // the six facts Kai's questions ask about: greedy, lock-in, why explore, UCB's score, the bonus's two rules (c left
-    // 2026-11-13); the setup and averages (how reliable they are) are background (given; the setup again since 2026-11-12)
-    expect(m.facts.total).toBe(6);
+    // the seven facts Kai's questions ask about: greedy, lock-in, why explore, UCB's score, why a bonus (counted since
+    // 2026-11-13), the bonus's two rules (c left 2026-11-13); the setup and averages (how reliable they are) are
+    // background (given; the setup again since 2026-11-12)
+    expect(m.facts.total).toBe(7);
     for (const id of ["n01", "n03", "n16"]) expect(m.nodes.find((n) => n.id === id)?.status, id).toBe("known");
     expect(m.nodes.find((n) => n.id === "n05")?.status).toBe("unseen");
   });

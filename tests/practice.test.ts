@@ -179,6 +179,23 @@ describe("Kai solving practice problems (recursive feedback)", () => {
       }
   });
 
+  it("doesn't claim to go by a note that leads to none of the problem's wrong answers (a true remark read as wrong)", () => {
+    // 2026-11-13 pilot: "greedy will eventually switch arms and then keep pulling the best arm", recorded against
+    // greedy's rule, closed P7's gate; Kai had said it went by that note and then answered that greedy stays with B
+    const p7 = practice.items.find((x) => x.id === "p7")!;
+    const words = "over many rounds the estimated mean of the arm being pulled converges to its true mean and greedy will eventually switch arms";
+    const st: State = { ...taughtState(p7.needs!), misconceptions: [{ node: "n05", fact: "n05.f1", words, note: null, turn: 2 }] };
+    expect(gate(p7, st).canBeRight).toBe(false);
+    const s = offlineSolve(bundle, p7, st);
+    const step = s.steps.find((x) => x.text.includes(words))!.text;
+    expect(step).toMatch(/not sure how that applies/);
+    expect(step).not.toMatch(/go by that/);
+    // a note that does lead to a wrong answer is still what Kai goes by
+    const sticks = "greedy sticks with whichever option leads after the first tries, for good, without switching";
+    const s2 = offlineSolve(bundle, p7, { ...taughtState(p7.needs!), misconceptions: [{ node: "n05", fact: "n05.f1", words: sticks, note: null, turn: 2 }] });
+    expect(s2.steps.find((x) => x.text.includes(sticks))!.text).toMatch(/go by that here/);
+  });
+
   it("with several facts missing, fails at the first one in the order the steps use them", () => {
     for (const p of practice.items) {
       const s = offlineSolve(bundle, p, base);

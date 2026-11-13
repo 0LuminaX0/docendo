@@ -507,8 +507,10 @@
         },
         {
           "id": "n11.f4",
-          "required": false,
-          "text": "The bonus gives options tried only a few times the benefit of the doubt: UCB treats each option as if it were as good as it could plausibly be, the upper end of a confidence interval around its average."
+          "required": true,
+          "ask": "What is that extra part of the score for?",
+          "text": "The bonus gives options tried only a few times the benefit of the doubt: UCB treats each option as if it were as good as it could plausibly be, the upper end of a confidence interval around its average.",
+          "key": "an average from few tries is unsure, so the option could really be better than it looks, and the bonus gives it that benefit of the doubt (treats it as good as it plausibly could be). \"It makes UCB explore\" or \"it favours options tried less\" without the doubt about the average is partial."
         }
       ],
       "lexicon": [

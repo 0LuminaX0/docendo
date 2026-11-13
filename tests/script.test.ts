@@ -127,7 +127,7 @@ describe("Kai's teaching questions", () => {
     expect(r[0]!.trace.script).toMatchObject({ next: "ucb", probe: "n11.f1" });
     // answered: on to the next question
     const r2 = await talk([{ message: "the one with the highest average plus bonus", say: ok("n11.f1") }], r[0]!.state, undefined, withFollow);
-    expect(asks(r2[0]!, byId("ucb-why").text)).toBe(true);
+    expect(asks(r2[0]!, F.find((q) => q.id === "ucb-why")!.text)).toBe(true);
   });
 
   it("with follow-ups, asks one only for a fact still missing (or only vaguely taught), once, and never after a short complete answer", async () => {

@@ -48,7 +48,7 @@
     {
       "id": "ucb-why",
       "node": "n11",
-      "text": "Why does UCB need that bonus at all?",
+      "text": "Why would UCB give an option a bonus at all? What is it for?",
       "targets": [
         "n11.f4"
       ]

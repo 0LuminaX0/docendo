@@ -331,10 +331,14 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, c
     // what Kai was told wins (a misconception, or a wrong statement of the fact); otherwise its own guess
     const words = belief?.words ?? (told && told.verdict === "wrong" ? told.words : undefined);
     if (words) {
-      steps.push({ text: `My notes say “${words.replace(/[.!\s]+$/u, "")}”, so I'll go by that here.`, notes: [notes.indexOf(words) + 1].filter((n) => n > 0) });
-      // the answer must be the one that follows from what Kai was told: the wrong rule closest in wording to it
+      // the answer must be the one that follows from what Kai was told: the wrong rule closest in wording to it. A note
+      // that leads to none of them (2026-11-13: a true remark the judge had read as wrong, "greedy will eventually switch
+      // arms") isn't claimed as the reason: Kai says it isn't sure how it applies, and guesses
       const match = closestBelief(item, words);
-      if (match) followed = match;
+      const cite = [notes.indexOf(words) + 1].filter((n) => n > 0);
+      const said = words.replace(/[.!\s]+$/u, "");
+      if (match) (followed = match), steps.push({ text: `My notes say “${said}”, so I'll go by that here.`, notes: cite });
+      else steps.push({ text: `My notes say “${said}”, but I'm not sure how that applies here. ${guess ? (hunchFor(bundle, guess) ?? `I'm guessing: ${guess.belief}`) : "So I'll have to guess."}`, notes: cite });
     }
     else if (told && guess) steps.push({ text: `My notes only say "${told.words}". ${hunchFor(bundle, guess) ?? `I understood it like this: ${guess.belief}`}`, notes: [notes.indexOf(told.words) + 1].filter((n) => n > 0) });
     else steps.push({ text: guess ? `My notes don't cover this part. ${hunchFor(bundle, guess) ?? `I'm guessing: ${guess.belief}`}` : "My notes don't cover this part, so I'll have to guess.", notes: [] });
