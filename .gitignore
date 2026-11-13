@@ -15,4 +15,6 @@ next-env.d.ts
 # research data: what learners wrote (never commit)
 .data/
 data/
+# the pilot runs: committed by hand (git add -f) with the names replaced by initials, 2026-11-13; new runs stay
+# ignored until their names are replaced
 /Pilot results/

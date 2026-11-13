@@ -1,0 +1,721 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docendo pilot review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=Shantell+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (about 72ch) inside a 1080px frame; tables and the time budget use the full frame. */
+:root {
+  --bg: #ffffff;
+  --paper: #f4f6f9;
+  --ink: #14181f;
+  --ink-2: #2f3541;
+  --muted: #5b6270;
+  --rule: #e0e4ea;
+  --rule-strong: #14181f;
+  --link: #1f5fae;
+  /* the app's four step colours: reading red, teaching yellow, practice green, test blue */
+  --red: #e5483f;
+  --yellow: #e89e0f;
+  --green: #2f9e63;
+  --blue: #2468b8;
+  --seg-neutral: #cdd3db;
+  --on-red: #14181f;
+  --on-yellow: #14181f;
+  --on-green: #14181f;
+  --on-blue: #ffffff;
+  --on-neutral: #14181f;
+  --red-soft: #fbe8e6;
+  --yellow-soft: #fdf1d6;
+  --green-soft: #e3f4ea;
+  --blue-soft: #e7eef9;
+  --good: #1c7044;
+  --bad: #a3322a;
+  --warn-ink: #7a5300;
+  /* Kai's notebook: white paper, blue rules, a red margin line, navy ink */
+  --kai-paper: #ffffff;
+  --kai-rule: #d6e2f6;
+  --kai-margin: #f0b8b3;
+  --kai-ink: #1e3a8a;
+  --tip-bg: #14181f;
+  --tip-ink: #ffffff;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-hand: "Shantell Sans", "Bradley Hand", "Segoe Print", cursive;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121419; --paper: #1b1f26; --ink: #eceff4; --ink-2: #c7ccd5; --muted: #9ba2ae;
+    --rule: #2b3039; --rule-strong: #c7ccd5; --link: #8ab4f0;
+    --red: #c0453f; --yellow: #b98a10; --green: #239e86; --blue: #4f87d8; --seg-neutral: #3b414c;
+    --on-red: #ffffff; --on-yellow: #121419; --on-green: #121419; --on-blue: #121419; --on-neutral: #eceff4;
+    --red-soft: #3a2120; --yellow-soft: #352b12; --green-soft: #15302a; --blue-soft: #1a2940;
+    --good: #7fd8a8; --bad: #f29a92; --warn-ink: #f0c66b;
+    --kai-paper: #161b24; --kai-rule: #263450; --kai-margin: #6e3431; --kai-ink: #b7c8ff;
+    --tip-bg: #eceff4; --tip-ink: #121419;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121419; --paper: #1b1f26; --ink: #eceff4; --ink-2: #c7ccd5; --muted: #9ba2ae;
+  --rule: #2b3039; --rule-strong: #c7ccd5; --link: #8ab4f0;
+  --red: #c0453f; --yellow: #b98a10; --green: #239e86; --blue: #4f87d8; --seg-neutral: #3b414c;
+  --on-red: #ffffff; --on-yellow: #121419; --on-green: #121419; --on-blue: #121419; --on-neutral: #eceff4;
+  --red-soft: #3a2120; --yellow-soft: #352b12; --green-soft: #15302a; --blue-soft: #1a2940;
+  --good: #7fd8a8; --bad: #f29a92; --warn-ink: #f0c66b;
+  --kai-paper: #161b24; --kai-rule: #263450; --kai-margin: #6e3431; --kai-ink: #b7c8ff;
+  --tip-bg: #eceff4; --tip-ink: #121419;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16.5px/1.6 var(--font-body); }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+a { color: var(--link); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 3px; }
+code { font: 500 0.86em var(--font-mono); background: var(--paper); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+b, strong { font-weight: 700; color: var(--ink); }
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-block: 44px 80px;
+  padding-left: max(clamp(16px, 4vw, 32px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(16px, 4vw, 32px), env(safe-area-inset-right, 0px));
+}
+.prose > p, .prose > ul, .prose > ol, p.prose, ul.prose { max-width: 72ch; }
+p { margin: 0 0 12px; text-wrap: pretty; }
+ul, ol { margin: 0 0 14px; padding-left: 1.25em; }
+li { margin: 0 0 6px; }
+
+/* header */
+.kicker { display: flex; align-items: center; gap: 10px; font: 700 12px/1 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.bars { display: inline-flex; gap: 4px; }
+.bars i { display: block; width: 20px; height: 7px; border-radius: 99px; }
+h1 { font: 800 clamp(31px, 4.4vw, 48px)/1.04 var(--font-display); letter-spacing: -0.03em; margin: 16px 0 16px; max-width: 22ch; text-wrap: balance; }
+.lede { font-size: 18.5px; line-height: 1.55; color: var(--ink-2); max-width: 66ch; margin: 0 0 12px; }
+.meta { font-size: 13.5px; color: var(--muted); margin: 0; max-width: 80ch; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 22px 0 0; font-size: 14.5px; }
+nav.toc a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--rule); padding-bottom: 1px; }
+nav.toc a:hover { border-color: var(--ink-2); }
+
+/* sections */
+section { padding-top: 44px; margin-top: 44px; border-top: 1px solid var(--rule); }
+.eyebrow { font: 700 12px/1.2 var(--font-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+h2 { font: 700 27px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0 0 14px; text-wrap: balance; max-width: 40ch; }
+h3 { font: 700 18.5px/1.3 var(--font-display); letter-spacing: -0.005em; margin: 30px 0 10px; text-wrap: balance; }
+.short { font-size: 18.5px; line-height: 1.5; font-weight: 500; color: var(--ink); max-width: 66ch; margin: 0 0 16px; }
+
+/* recommendations */
+ol.decisions { list-style: none; margin: 18px 0 0; padding: 0; counter-reset: d; }
+ol.decisions > li { counter-increment: d; display: grid; grid-template-columns: 12.5rem minmax(0, 1.2fr) minmax(0, 1fr); gap: 6px 28px; padding: 16px 0; margin: 0; border-top: 1px solid var(--rule); }
+ol.decisions > li:last-child { border-bottom: 1px solid var(--rule); }
+.d-name { font: 700 17px/1.3 var(--font-display); margin: 0; display: flex; gap: 10px; align-items: baseline; }
+.d-name::before { content: counter(d); font: 700 13px/1 var(--font-body); color: var(--muted); min-width: 1.1em; font-variant-numeric: tabular-nums; }
+.d-name a { color: inherit; text-decoration: none; }
+.d-name a:hover { text-decoration: underline; }
+.d-rec { margin: 0; color: var(--ink); }
+.d-why { margin: 0; color: var(--ink-2); font-size: 15px; }
+.d-where { grid-column: 3; margin: 0; font-size: 13px; color: var(--muted); }
+
+/* tables */
+.scroll { overflow-x: auto; margin: 16px 0 10px; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.tbl th { text-align: left; font: 700 11.5px/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0 10px 7px; border-bottom: 1.5px solid var(--rule-strong); vertical-align: bottom; }
+.tbl td { padding: 9px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; color: var(--ink-2); }
+.tbl td:first-child, .tbl th:first-child { padding-left: 0; }
+.tbl td.name { color: var(--ink); font-weight: 600; white-space: nowrap; }
+.tbl td.num, .tbl th.num { text-align: right; white-space: nowrap; }
+.tbl .nw { white-space: nowrap; }
+table.fixed { table-layout: fixed; }
+.tbl tr.group td { padding-top: 18px; font: 700 12px/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--rule); }
+.tbl tr.sub td { color: var(--muted); font-size: 13.5px; padding-top: 0; }
+.tbl tfoot td { border-bottom: none; font-weight: 600; color: var(--ink); }
+.tbl .hl { color: var(--ink); font-weight: 700; }
+.tbl small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; margin-top: 2px; }
+.caption { font-size: 13.5px; color: var(--muted); max-width: 90ch; margin: 6px 0 0; }
+
+/* chips and marks: text always says the state, colour only supports it */
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { display: inline-block; font: 600 12.5px/1.35 var(--font-body); padding: 3px 8px; border-radius: 4px; white-space: nowrap; background: var(--paper); color: var(--muted); }
+.chip b { color: inherit; font-weight: 800; margin-right: 3px; }
+.chip.answer { background: var(--green-soft); color: var(--good); }
+.chip.follow, .chip.planted { background: var(--yellow-soft); color: var(--warn-ink); }
+.chip.nokey { background: var(--red-soft); color: var(--bad); }
+.chip.belief, .chip.gap { background: var(--blue-soft); color: var(--ink); }
+.m { display: inline-block; font: 600 12.5px/1.35 var(--font-body); padding: 2px 6px; border-radius: 4px; margin: 0 3px 3px 0; white-space: nowrap; }
+.m.ok { background: var(--green-soft); color: var(--good); }
+.m.no { background: var(--red-soft); color: var(--bad); }
+.tag { display: inline-block; font: 700 11px/1.3 var(--font-body); letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 7px; border-radius: 4px; white-space: nowrap; }
+.tag.keep { background: var(--green-soft); color: var(--good); }
+.tag.drop { background: var(--red-soft); color: var(--bad); }
+.tag.check { background: var(--yellow-soft); color: var(--warn-ink); }
+.tag.alt, .tag.done { background: var(--paper); color: var(--muted); }
+.tag.open { background: var(--yellow-soft); color: var(--warn-ink); }
+.tag.finding { background: var(--blue-soft); color: var(--ink); }
+.legend-line { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 13.5px; color: var(--muted); margin: 10px 0 0; }
+
+/* Kai's notebook, for the learners' words the judge credited */
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; margin: 18px 0 8px; }
+.note { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.paper { position: relative; background-color: var(--kai-paper); background-image: repeating-linear-gradient(to bottom, transparent 0 27px, var(--kai-rule) 27px 28px); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 14px 8px 32px; }
+.paper::before { content: ""; position: absolute; top: 0; bottom: 0; left: 21px; width: 1.5px; background: var(--kai-margin); }
+.paper blockquote { margin: 0; font: 400 16px/28px var(--font-hand); color: var(--kai-ink); }
+.note figcaption { font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.note figcaption b { display: block; color: var(--ink); }
+
+/* the time budget: a tall segmented bar per row on one 0 to 70 minute scale */
+figure.budget { margin: 22px 0 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; list-style: none; padding: 0; margin: 0 0 14px; font-size: 13.5px; color: var(--ink-2); }
+.legend li { display: flex; align-items: center; gap: 6px; margin: 0; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: block; }
+.brow { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 4px 16px; align-items: center; margin-bottom: 14px; }
+.blabel { font-size: 14px; line-height: 1.3; color: var(--ink-2); }
+.blabel b { display: block; font-size: 14.5px; }
+.blabel span { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 28px; }
+.seg { position: absolute; top: 0; bottom: 0; left: calc(var(--a) / 70 * 100% + 1px); width: calc(var(--w) / 70 * 100% - 2px); border-radius: 4px; display: flex; align-items: center; cursor: default; }
+.seg i { font: 700 12.5px/1 var(--font-body); font-style: normal; padding-left: 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.seg:focus-visible { outline-offset: 1px; }
+.s-pre, .s-after { background: var(--seg-neutral); color: var(--on-neutral); }
+.s-read { background: var(--red); color: var(--on-red); }
+.s-teach { background: var(--yellow); color: var(--on-yellow); }
+.s-prac { background: var(--green); color: var(--on-green); }
+.s-test { background: var(--blue); color: var(--on-blue); }
+.hour { position: absolute; top: -6px; bottom: -6px; left: calc(60 / 70 * 100%); border-left: 1.5px dashed var(--ink-2); pointer-events: none; }
+.axis { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 0 16px; }
+.ticks { position: relative; height: 22px; border-top: 1px solid var(--rule); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ticks span { position: absolute; top: 4px; transform: translateX(-50%); white-space: nowrap; }
+.ticks span:first-child { transform: none; }
+.ticks span.h { color: var(--ink); font-weight: 700; }
+#tip { position: fixed; z-index: 20; pointer-events: none; background: var(--tip-bg); color: var(--tip-ink); font: 500 13px/1.35 var(--font-body); padding: 6px 9px; border-radius: 6px; max-width: 280px; box-shadow: 0 2px 10px rgb(0 0 0 / 0.18); }
+
+ol.plan { padding-left: 1.3em; max-width: 76ch; }
+ol.plan > li { margin-bottom: 12px; }
+ol.plan > li::marker { font-weight: 700; color: var(--muted); }
+
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--muted); }
+footer h2 { font: 700 15px/1.3 var(--font-body); letter-spacing: 0; margin: 0 0 8px; color: var(--ink-2); }
+footer ul { max-width: 90ch; }
+
+@media (max-width: 760px) {
+  body { font-size: 16px; }
+  .lede, .short { font-size: 17px; }
+  ol.decisions > li { grid-template-columns: minmax(0, 1fr); }
+  .d-where { grid-column: auto; }
+  .brow, .axis { grid-template-columns: minmax(0, 1fr); }
+  .axis > div:first-child { display: none; }
+  section { padding-top: 32px; margin-top: 32px; }
+  h2 { font-size: 23px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+/* the pretest's items in full: each pair side by side, the chosen one marked */
+.pairs { display: grid; gap: 28px; margin-top: 12px; }
+.pair h4 { margin: 0 0 8px; font: 600 15px/1.3 var(--font-body); }
+.pair .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .pair .two { grid-template-columns: 1fr; } }
+.qitem { border-left: 3px solid var(--rule); padding: 2px 0 2px 14px; }
+.qitem.chosen { border-left-color: var(--green); }
+.qitem .qid { font: 700 12px/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.qitem.chosen .qid { color: var(--good); }
+.qitem p { margin: 0 0 6px; }
+.qitem ol { margin: 0; padding-left: 1.4em; list-style: upper-alpha; }
+.qitem li { margin: 2px 0; }
+.qitem li.key { font-weight: 600; }
+.qitem li.key::after { content: " (key)"; font-weight: 500; color: var(--good); }
+.pair .why { margin: 8px 0 0; color: var(--ink-2); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker"><span class="bars" aria-hidden="true"><i style="background:var(--red)"></i><i style="background:var(--yellow)"></i><i style="background:var(--green)"></i><i style="background:var(--blue)"></i></span>Docendo, for team review, 9 November 2026</div>
+    <h1>What the pilots tell us before the main study</h1>
+    <p class="lede">Answers to P's seven open questions, from the five pilot sessions of 4 and 5 November. Two offline checks add to them: the app's own practice gate, run on the pilot learners' notebooks, and a simulation of test length against power. The app changed between almost every run, so the evidence is thin, and every count below says whose answers it counts.</p>
+    <p class="meta">Sources: the session pages in <code>Pilot results/</code>, the topic pack at commit 2e847c9, the gate and caveat code in <code>engine/tutor/solve.ts</code>. No model was called for this review.</p>
+    <nav class="toc" aria-label="On this page">
+      <a href="#decisions">Recommendations</a>
+      <a href="#runs">The five runs</a>
+      <a href="#teaching">1 Teaching Kai</a>
+      <a href="#practice">2 Practice</a>
+      <a href="#power">3 Test length</a>
+      <a href="#items">4 Which items</a>
+      <a href="#pretest">Pretest items</a>
+      <a href="#time">5 and 6 Times</a>
+      <a href="#feedback">7 Other feedback</a>
+      <a href="#plan">The last pilot</a>
+    </nav>
+  </header>
+
+  <section id="decisions">
+    <h2>Recommendations</h2>
+    <p class="prose">In the order the work would be done. Each links to its evidence below.</p>
+    <ol class="decisions">
+      <li>
+        <h3 class="d-name"><a href="#teaching">Kai's questions</a></h3>
+        <p class="d-rec">Keep one question per idea, the two why-questions included. Drop the follow-ups that ask for one missing fact, and ask “anything else?” once. Check three facts' keys in code: lock-in, UCB's rule, and a pick shrinking its own bonus.</p>
+        <p class="d-why">The bonus facts practice needs were never stated precisely in answer to Kai's main questions. They came from follow-ups, or from the judge reading more into an answer than it said. With both changes, every error Kai makes on the three pilot notebooks comes from what the learner left out or got wrong.</p>
+        <p class="d-where">Changes: script.json, three evidence patterns in graph.draft.json, eval:judge and eval:sim (about $2)</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#practice">Practice</a></h3>
+        <p class="d-rec">Keep P7, P3 and P2 and 12 minutes. Put P4 back as a fourth problem only if the last pilot ends well inside the hour.</p>
+        <p class="d-why">Both runs on the newer problems got every first try right, in 4½ and 5½ minutes. In the recursive condition, the errors from recommendation 1 add the practice that matters: each takes about 4 minutes and brings a correction.</p>
+        <p class="d-where">Changes: none, or practice.json</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#items">Final test</a></h3>
+        <p class="d-rec">One test of seven items for everyone: T1, T12, T4, V7, V4, T6, V19. Drop T16. Keep V1 and V20 as alternates. Report a score with the reasons next to the choice score.</p>
+        <p class="d-why">T16 and its twin were answered right 5 of 5 times. Seven items make each person's score steadier. Power barely moves, and scoring the reasons gains more than two extra items.</p>
+        <p class="d-where">Changes: exercises.json, Study setup</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#pretest">Pretest</a></h3>
+        <p class="d-rec">Built 13 Nov: one set of five for everyone, q1 and q2 then k1, k2, h3, h4 (reworded) and r3b (new); 7 minutes. Analyse it as a covariate; report pre and post percentages with a note on what each measures.</p>
+        <p class="d-why">The pilots can't rank the items (one newcomer took them all). Choose between twins on wording, cues and time: k1 and k2 need less arithmetic; r1 is a textbook example; r2's and r3's keys stand out from their options. The two extra items are worth less than the time they would take from the test.</p>
+        <p class="d-where">Changes: pretest.json, Study setup</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#items">Follow-up test</a></h3>
+        <p class="d-rec">Cut (decided 13 Nov).</p>
+        <p class="d-why">It is not in the M4 plan, it needs a second form, and a week after the last session falls after 15 November.</p>
+        <p class="d-where">Changes: Study setup</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#time">Times</a></h3>
+        <p class="d-rec">Soft timing, as piloted. Recommended: pretest 7, reading 10, teaching 12, practice 12, test 15 minutes. With the questions after the test, about an hour.</p>
+        <p class="d-why">Measured on the current content: 45 seconds a pretest question, 9½ minutes of reading, 8 to 12 minutes of teaching, about 2 minutes a test item.</p>
+        <p class="d-where">Changes: Study setup</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#feedback">Small fixes</a></h3>
+        <p class="d-rec">State the note-taking rule and ask about it afterwards. Reword the manipulation check. Let Kai's reaction speak only to the last message.</p>
+        <p class="d-why">L asked to be told to take notes. 2 of 4 answered “I'm not sure” to the light question. Kai repeated old notes in L's second run.</p>
+        <p class="d-where">Changes: lesson.json, survey.json, the reaction prompt in writer.ts</p>
+      </li>
+      <li>
+        <h3 class="d-name"><a href="#plan">The last pilot</a></h3>
+        <p class="d-rec">The new participant runs the final setup in the recursive condition. O and L answer the test items they haven't seen.</p>
+        <p class="d-why">No newcomer has met P7, the planted misreadings or the corrections. V19 and V20 have no answers at all.</p>
+        <p class="d-where">Changes: one trial code</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="runs">
+    <h2>What five runs can show</h2>
+    <div class="prose">
+      <p>Only O met the current lesson and test as a newcomer. A knows the topic and clicked through the pretest in 25 seconds. L's second run repeated form A, whose solutions he had seen after his first. P wrote the questions. L's first run was cut short in every step by limits of 5 to 10 minutes.</p>
+    </div>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 860px">
+        <thead><tr><th>Run</th><th>Date</th><th>Setup</th><th>Condition</th><th>Use it for</th><th>Not for</th></tr></thead>
+        <tbody>
+          <tr><td class="name">L, first run</td><td class="nw">4 Nov</td><td>Before the rework: ε-greedy in a five-chapter text, the earlier ten questions, form A of ten items, hard limits of 5 to 10 minutes</td><td>Recursive, participant code</td><td>His feedback, and what hard limits do</td><td>Times or items: every step was cut, 4 test items unanswered</td></tr>
+          <tr><td class="name">P</td><td class="nw">4 Nov</td><td>The same content with soft timing</td><td>Team code, Kai solving</td><td>An expert's times (66 minutes) and Kai acting on real slips</td><td>Item difficulty: he wrote the items</td></tr>
+          <tr><td class="name">A</td><td class="nw">5 Nov</td><td>The current lesson and questions; P3, P4, P2 without planted misreadings; both pretest sets; both forms, form B then twins of form A</td><td>Recursive, trial code</td><td>Teaching by voice, Kai's solving, test choices</td><td>The pretest (25 seconds) and the reasons (calculator tests such as “213 +4= 217”)</td></tr>
+          <tr><td class="name">O</td><td class="nw">5 Nov</td><td>As A</td><td>Direct, participant code</td><td>Everything: the one newcomer on the current content</td><td>He was in a hurry</td></tr>
+          <tr><td class="name">L, second run</td><td class="nw">5 Nov</td><td>The current setup, except V16 and V18 (replaced 9 Nov) and the open questions after the test (added later that day)</td><td>Direct, team code with skips</td><td>Teaching on the current questions; the first part of form B</td><td>Form A (seen with solutions after his first run); practice (skipped)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="teaching">
+    <p class="eyebrow">Question 1</p>
+    <h2>Is teaching Kai too easy to complete?</h2>
+    <p class="short">Yes, for the facts that decide practice. The main questions are only part of the reason: the follow-ups and a generous judge supply the rest.</p>
+    <div class="prose">
+      <p>On the current questions the three learners ended with 7, 7 and 9 of Kai's 9 facts, in 8 to 12 minutes of the 16 allowed. Practice needs five of those facts. The table shows how each one got into Kai's notebook.</p>
+    </div>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 640px">
+        <thead><tr><th>Fact (needed by)</th><th>A</th><th>O</th><th>L, second run</th></tr></thead>
+        <tbody>
+          <tr><td>Greedy takes the highest average, every round <small>n05.f1 (P7)</small></td><td><span class="chip belief">wrong belief</span></td><td><span class="chip answer">answer</span></td><td><span class="chip answer">answer</span></td></tr>
+          <tr><td>Lock-in: never picked again, never corrected <small>n06.f1 (P3)</small></td><td><span class="chip answer">answer</span></td><td><span class="chip answer">answer</span></td><td><span class="chip nokey">no key</span></td></tr>
+          <tr><td>UCB: average plus bonus, the highest score wins <small>n11.f1 (P3)</small></td><td><span class="chip answer">answer</span></td><td><span class="chip nokey">no key</span></td><td><span class="chip answer">answer, a formula</span></td></tr>
+          <tr><td>A pick shrinks that option's own bonus <small>n12.f1 (P3, P2)</small></td><td><span class="chip follow">follow-up*</span></td><td><span class="chip nokey">no key</span></td><td><span class="chip follow">follow-up</span></td></tr>
+          <tr><td>An unpicked bonus keeps growing, ever more slowly <small>n12.f2 (P3, P2)</small></td><td><span class="chip follow">follow-up*</span></td><td><span class="chip">vague</span></td><td><span class="chip follow">follow-up</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption"><b>Answer</b>: stated in the answer to Kai's main question on that idea. <b>Follow-up</b>: stated only when Kai asked for that fact by name. <b>No key</b>: credited although the answer leaves out what the fact's key requires. <b>Vague</b>: partial, which for P3 and P2 still points to the right answer by design. *Credited a turn earlier without the direction, then stated in answer to the follow-up. Without it Kai would have asked how UCB plays out over many rounds, and A would likely have said the same.</p>
+    <div class="prose">
+      <p style="margin-top: 16px">Only 6 of the 15 came from answers to the main questions. The two bonus facts never did: each time, a follow-up asked for them by name, the judge credited an answer that didn't state them, or the answer stayed vague. These are the facts P3 and P2 test. Here are the three credits without the key, as Kai's notebook holds them:</p>
+    </div>
+    <div class="notes">
+      <figure class="note">
+        <div class="paper"><blockquote>To solve this, there is the UCB rule, which applies bonuses</blockquote></div>
+        <figcaption><b>O, credited as UCB's rule</b>The key asks for the average plus the bonus and the highest score; “it adds a bonus” alone is partial.</figcaption>
+      </figure>
+      <figure class="note">
+        <div class="paper"><blockquote>The bonus is calculated based on how often we have choosen the option already and how mannc rounds we have played so far.</blockquote></div>
+        <figcaption><b>O, credited as “a pick shrinks its own bonus”</b>Names what the bonus depends on, but not which way it moves.</figcaption>
+      </figure>
+      <figure class="note">
+        <div class="paper"><blockquote>It might end up with the best option, it might also choose a worse one, if the actual good option had an unlucky bad first "experience"</blockquote></div>
+        <figcaption><b>L, credited as lock-in</b>The key asks that greedy never picks the option again, so its average is never corrected.</figcaption>
+      </figure>
+    </div>
+
+    <h3>What Kai would do with these notebooks</h3>
+    <div class="prose">
+      <p>The app's own gate and caveat code, run offline on each notebook rebuilt from the logged verdicts, on today's practice set. The table gives Kai's first try on each problem, before any correction. “Planted” is the caveat misreading, which Kai gets only when it would otherwise solve everything.</p>
+    </div>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 820px">
+        <thead><tr><th>Learner</th><th>As judged now</th><th>Stricter keys</th><th>No follow-ups</th><th>Both changes</th></tr></thead>
+        <tbody>
+          <tr><td class="name">A</td>
+            <td><div class="chips"><span class="chip belief" title="Kai reasons from A's note that greedy keeps the trial winner"><b>P7</b>his belief</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip belief"><b>P7</b>his belief</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip belief"><b>P7</b>his belief</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip belief"><b>P7</b>his belief</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td></tr>
+          <tr><td class="name">O</td>
+            <td><div class="chips"><span class="chip planted"><b>P7</b>planted</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip right"><b>P7</b>right</span><span class="chip gap" title="No note says a pick shrinks its own bonus; Kai guesses that every bonus shrinks, picked or not"><b>P3</b>gap</span><span class="chip gap" title="The same gap: own picks shrink the bonus"><b>P2</b>gap</span></div></td>
+            <td><div class="chips"><span class="chip planted"><b>P7</b>planted</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip right"><b>P7</b>right</span><span class="chip gap"><b>P3</b>gap</span><span class="chip gap"><b>P2</b>gap</span></div></td></tr>
+          <tr><td class="name">L, second run</td>
+            <td><div class="chips"><span class="chip planted"><b>P7</b>planted</span><span class="chip right"><b>P3</b>right</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip right"><b>P7</b>right</span><span class="chip gap" title="Lock-in not stated; Kai guesses that the averages correct themselves"><b>P3</b>gap</span><span class="chip right"><b>P2</b>right</span></div></td>
+            <td><div class="chips"><span class="chip right"><b>P7</b>right</span><span class="chip gap" title="No note on the bonus over time; Kai guesses that every bonus shrinks"><b>P3</b>gap</span><span class="chip gap"><b>P2</b>gap</span></div></td>
+            <td><div class="chips"><span class="chip right"><b>P7</b>right</span><span class="chip gap"><b>P3</b>gap</span><span class="chip gap"><b>P2</b>gap</span></div></td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Kai's wrong first tries</td><td>1 from teaching, 2 planted</td><td>4 from teaching</td><td>3 from teaching, 1 planted</td><td>5 from teaching</td></tr>
+        </tfoot>
+      </table>
+    </div>
+    <p class="caption">A correction that teaches the missing bonus fact on P3 also opens P2, so the five errors in the last column mean three to five correction episodes. P7 did not exist when A ran; the table shows what the current set would do with his notebook.</p>
+
+    <h3>Recommendation</h3>
+    <ul class="prose">
+      <li><b>Keep one question per idea</b>, the two why-questions included. The greedy question drew out the only real misconception in the pilots, A's “starts to exploit each day their option which had the highest score from the first test”, and Kai would fail P7 on it. That is recursive feedback at its best.</li>
+      <li><b>Drop the follow-ups that name a missing fact</b>, such as “What happens to an option's bonus each time it gets picked?”, and ask “anything else?” once.</li>
+      <li><b>Check three keys in code</b>, the way “ever more slowly” is checked today: lock-in needs “never … again”, “stuck” or “never corrected”; UCB's rule needs “highest” or “max”; a pick needs a direction (“smaller”, “lower”, “shrinks”). Tried on eleven pilot quotes, the three credits above become partial and the six clear answers still pass. Two edge cases to decide: a UCB formula without “pick the highest” (L) and a “highest” in the sentence after the quote (P).</li>
+      <li><b>Keep the planted misreading as the fallback</b> for a learner whose notes cover everything. On these three notebooks it would no longer come into play.</li>
+    </ul>
+    <div class="prose">
+      <p>P's fuller version, one broad question per rule, should go through <code>eval:sim</code> before a person meets it. Its risks are fewer misconceptions said out loud, and problems with several gaps that one correction can't fix. In L's first run a right correction left a second fact missing, and Kai stayed wrong.</p>
+      <p>Each extra error costs about 4 minutes of practice: a wrong first try with its correction took 5 to 6 minutes, a right one 1 to 2½.</p>
+    </div>
+  </section>
+
+  <section id="practice">
+    <p class="eyebrow">Question 2</p>
+    <h2>Are the practice problems too easy, or too few?</h2>
+    <p class="short">Too easy for a learner who solves them, and short. Practice is the one step where the conditions differ, and it took 4½ to 5½ minutes of a session of about 50.</p>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 720px">
+        <thead><tr><th>Run</th><th>Condition</th><th>Problems</th><th>First tries right</th><th class="num">Time</th><th class="num">Test</th></tr></thead>
+        <tbody>
+          <tr><td class="name">O</td><td>Direct</td><td>P3, P4, P2</td><td>3 of 3</td><td class="num">4:24</td><td class="num">4 of 10</td></tr>
+          <tr><td class="name">A</td><td>Recursive</td><td>P3, P4, P2</td><td>Kai 3 of 3</td><td class="num">5:27</td><td class="num">7 of 10</td></tr>
+          <tr><td class="name">P</td><td>Recursive, older set</td><td>P1, P2, P3</td><td>Kai 0 of 3</td><td class="num">17:01</td><td class="num">10 of 10</td></tr>
+          <tr><td class="name">L, first run</td><td>Recursive, older set</td><td>P1, P2, then time</td><td>Kai 0 of 2</td><td class="num">10:01</td><td class="num">4 of 10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="prose">
+      <p>O solved all three at the first try and then missed T1 and T12, which ask the same rules in harder cases. The current set adds P7 for T1's case. P3 still makes lock-in obvious: a bad day of 3 against a floor of 5, where T12 (5.5 against 6) asks for the floor check.</p>
+      <p>In the recursive condition the problems are as hard as the notebook makes them, since Kai can only be right with the facts. There, “too easy” is question 1 again.</p>
+      <p>Two more things from the runs where Kai was wrong. <b>Learners trust Kai</b>: their call matched the light 6 of 12 times, and 5 of the 6 misses were “right” for a wrong Kai. <b>Corrections behave as designed</b>: the one correction that was right and complete fixed Kai. Two were themselves wrong (P: “the bonus shrinks with time logarithmically”; “when an option isn't picked, the bonus decreases”), and Kai stayed wrong, showing an expert his slip. One was right but left a second fact missing (L), and Kai stayed wrong.</p>
+    </div>
+    <h3>Recommendation</h3>
+    <ul class="prose">
+      <li><b>Keep three problems and 12 minutes.</b> With recommendation 1, recursive learners meet about two errors and corrections instead of one. That is the stronger dose, and it fits in 12 minutes.</li>
+      <li><b>P4 is the candidate fourth problem</b> (audio tours, validated, in the stash). Placed after P3, a correction there often carries over. Add it if the last pilot ends well under the hour.</li>
+      <li><b>Optional:</b> P3 with a smaller dip (cake A's bad day 4.5 instead of 3) would make direct learners check the floor, as T12 does. It needs one <code>eval:solver</code> run.</li>
+      <li>Direct learners will mostly see green lights, and practice will take recursive learners longer. Both belong to the design; the time is logged per condition, so report it.</li>
+    </ul>
+  </section>
+
+  <section id="power">
+    <p class="eyebrow">Question 3</p>
+    <h2>Are five test questions enough?</h2>
+    <p class="short">Seven make each score steadier, but no test length rescues significance with 20 learners. At 10 per condition even a perfect test finds the original effect about one time in three.</p>
+    <div class="scroll">
+      <table class="tbl fixed" style="min-width: 680px">
+        <colgroup><col style="width: 24%"><col style="width: 17%"><col style="width: 17%"><col style="width: 25%"><col style="width: 17%"></colgroup>
+        <thead><tr><th>Learners per condition</th><th class="num">5 items</th><th class="num">7 items</th><th class="num">7 items and scored reasons</th><th class="num">A perfect test</th></tr></thead>
+        <tbody>
+          <tr class="group"><td colspan="5">Effect d = 0.75, the original study's</td></tr>
+          <tr><td class="hl">10 (the plan)</td><td class="num">21–25%</td><td class="num">22–25%</td><td class="num">30–32%</td><td class="num">33%</td></tr>
+          <tr><td>15</td><td class="num">26–34%</td><td class="num">32–38%</td><td class="num">41–45%</td><td class="num">45%</td></tr>
+          <tr><td>20</td><td class="num">36–47%</td><td class="num">41–50%</td><td class="num">53–56%</td><td class="num">61–63%</td></tr>
+          <tr class="group"><td colspan="5">Effect d = 0.5, a weaker replication</td></tr>
+          <tr><td class="hl">10 (the plan)</td><td class="num">12–15%</td><td class="num">12–14%</td><td class="num">15–17%</td><td class="num">17–18%</td></tr>
+          <tr><td>15</td><td class="num">14–18%</td><td class="num">17–21%</td><td class="num">22–23%</td><td class="num">22%</td></tr>
+          <tr><td>20</td><td class="num">19–25%</td><td class="num">21–26%</td><td class="num">27–29%</td><td class="num">34–35%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">Power: the share of simulated studies in which a two-sided Welch t-test at 5% finds the difference. Ranges run from weaker to better items (discrimination and spread of difficulty), 3,000 simulated studies a cell, so ±1 to 2 points. The M4 plan's 36% is the analytic value for a perfect test.</p>
+    <ul class="prose" style="margin-top: 16px">
+      <li><b>Reliability.</b> Seven items raise Cronbach's α in the simulation from .47–.65 to .54–.72, so one lucky guess moves a score less. That helps the item analysis and the per-learner measures more than the t-test.</li>
+      <li><b>The reasons are the cheaper gain.</b> Scored 0 to 2 against the rubrics you already have and added to the choices, they gain more power than two extra items.</li>
+      <li><b>The pretest as covariate adds a little.</b> If it correlates .3 with the test, the comparison is as precise as with 10% more learners; at .5, a third more.</li>
+      <li><b>Each learner recruited adds more than any of these.</b> With about seven people asked so far (M4), every extra one counts.</li>
+    </ul>
+    <h3>One setting for two questions</h3>
+    <div class="prose">
+      <p>A test item takes about 2 minutes, and most of it goes into deciding and writing the reason. Reading the setting takes perhaps 20 to 30 seconds. Two questions on one setting would save about one item's worth in 15 minutes, and give two answers that fail together when the setting is misread. Keep a setting per item.</p>
+    </div>
+    <h3>The same number in both tests</h3>
+    <div class="prose">
+      <p>Equal lengths are fine but buy nothing in the analysis. The pretest asks the reasoning the lesson builds on and names no rule; the test asks the rules. A gain from one to the other, as the M4 plan reports, compares two different tests. Use the pretest as the covariate and report the test score on its own.</p>
+    </div>
+  </section>
+
+  <section id="items">
+    <p class="eyebrow">Question 4</p>
+    <h2>Which questions to keep</h2>
+    <p class="short">The pilots settle two items and leave the rest open. T16 is too easy and T1 was too hard. One to three first-time answers can't place any other item: 2 right of 3 fits a true share anywhere from 9% to 99%.</p>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 860px">
+        <thead><tr><th>Item</th><th>What it asks</th><th style="width: 10rem">First-time answers</th><th class="num">Right</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr class="group"><td colspan="5">Form A</td></tr>
+          <tr><td class="name">T1 Canteens</td><td>Greedy after a lucky start, in the long run<small>O: “it takes some time until the average sinks low enough”, the right mechanism with doubt about the time span. L says he misclicked under time pressure.</small></td><td><span class="m no">A ✗</span><span class="m no">O ✗</span><span class="m no">L1 ✗</span></td><td class="num">0 of 3</td><td><span class="tag check">Keep, recheck</span><small>P7 now practises its case, and the stem says “over many years”</small></td></tr>
+          <tr class="sub"><td>twin V11</td><td></td><td><span class="m no">A ✗</span><span class="m no">O ✗</span></td><td class="num">0 of 2</td><td></td></tr>
+          <tr><td class="name">T12 Study spots</td><td>Lock-in from a small dip, checked against B's floor<small>O: “a is way better it will most probably catch up once B's average drops”.</small></td><td><span class="m ok">A ✓</span><span class="m no">O ✗</span><span class="m ok">L2 ✓</span></td><td class="num">2 of 3</td><td><span class="tag keep">Keep</span></td></tr>
+          <tr class="sub"><td>twin V15</td><td></td><td><span class="m ok">A ✓</span><span class="m no">O ✗</span></td><td class="num">1 of 2</td><td></td></tr>
+          <tr><td class="name">T16 Inverse</td><td>Why UCB picked a lower average</td><td><span class="m ok">A ✓</span><span class="m ok">O ✓</span><span class="m ok">L2 ✓</span></td><td class="num">3 of 3</td><td><span class="tag drop">Drop</span><small>Too easy, and T4 asks the same step</small></td></tr>
+          <tr class="sub"><td>twin V13</td><td></td><td><span class="m ok">A ✓</span><span class="m ok">O ✓</span></td><td class="num">2 of 2</td><td></td></tr>
+          <tr><td class="name">T4 Recipes</td><td>Which recipes UCB could pick, from averages and tries<small>O's right choice came with “idk. Ds average seems to low for the bonus to kick in???”; on the twin he picked the two least-tried options.</small></td><td><span class="m ok">A ✓</span><span class="m ok">O ✓</span></td><td class="num">2 of 2</td><td><span class="tag keep">Keep</span><small>Read the reasons</small></td></tr>
+          <tr class="sub"><td>twin V14</td><td></td><td><span class="m no">A ✗</span><span class="m no">O ✗</span></td><td class="num">0 of 2</td><td></td></tr>
+          <tr><td class="name">T6 A bonus that stops growing</td><td>A changed UCB locks in<small>L, who had seen its solution after his first run, still chose “It picks A again after a while”.</small></td><td><span class="m ok">A ✓</span><span class="m ok">O ✓</span></td><td class="num">2 of 2</td><td><span class="tag keep">Keep</span></td></tr>
+          <tr class="group"><td colspan="5">Form B</td></tr>
+          <tr><td class="name">V1 Optimistic start</td><td>A changed greedy that starts every average at 10</td><td><span class="m no">L2 ✗</span></td><td class="num">0 of 1</td><td><span class="tag alt">Alternate</span><small>Leans on T1's mechanism</small></td></tr>
+          <tr><td class="name">V19 The price of exploring</td><td>Greedy beats UCB when its first favourite is right</td><td>none</td><td class="num">none</td><td><span class="tag check">Keep, review</span><small>If reviewers find it clear and the key unambiguous</small></td></tr>
+          <tr><td class="name">V7 Close or far apart</td><td>Where UCB shows the worse banner more</td><td><span class="m ok">L2 ✓</span></td><td class="num">1 of 1</td><td><span class="tag keep">Keep</span></td></tr>
+          <tr><td class="name">V20 Ratings out of 100</td><td>What c does when the ratings are rescaled</td><td>none</td><td class="num">none</td><td><span class="tag alt">Alternate</span><small>The only item on c, which no practice problem uses</small></td></tr>
+          <tr><td class="name">V4 Forever</td><td>UCB keeps returning to the worst option<small>O: “after some round, D is no longer picked”, “because the bonus grows slower”.</small></td><td><span class="m ok">A ✓</span><span class="m no">O ✗</span><span class="m ok">L2 ✓</span></td><td class="num">2 of 3</td><td><span class="tag keep">Keep</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">A, O, L1 and L2: L's first and second runs. A's choices count; his reasons were calculator tests. L's second run is left out where he had seen the item's solution after his first (T1, T4, T6). For scale: 5 right of 5 fits a true share of 48% to 100%, 0 of 5 one of 0% to 52% (95% intervals).</p>
+    <h3>The test</h3>
+    <div class="prose">
+      <p>Seven items in one fixed order, from greedy to the comparison: <b>T1, T12, T4, V7, V4, T6, V19</b>, keys b, c, a, b, c, d, a. They cover greedy's rule and lock-in, UCB's choice, the bonus over time from both sides (V4 ordinary, T6 changed) and the price of exploring. They leave out c; swap V20 in for V19 if the review goes badly.</p>
+      <p>One form for everyone removes the form-to-form noise from a 20-person comparison and doubles the answers per item. If the follow-up test stays, keep two forms of five instead, replace T16 in form A with a harder UCB item, and compare scores within each form.</p>
+    </div>
+    <h3>The pretest</h3>
+    <div class="prose">
+      <p>One set of seven: C1 (k1, k2, r1, r2, r3) plus h3 (few against many reviews) and h4 (one delivery against ten), the two C2 items nearest to what the test asks. The only newcomer's answers to both sets are O's: 2 of 5 on C1 and 3 of 5 on C2, near the middle as intended.</p>
+    </div>
+  </section>
+
+  <section id="pretest">
+    <p class="eyebrow">Added 13 November</p>
+    <h2>The pretest, item by item</h2>
+    <p class="short">The pilots can't rank the pretest items: only O answered every item as a newcomer. L's first run got through two items before the 5-minute clock ran out. P knows the items, and A clicked all twelve in 23 seconds. The choice rests on wording and time. O's twins point the same way on four of five pairs, so the two sets measure the same things.</p>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 860px">
+        <thead><tr><th>What it measures</th><th>Set C1</th><th>Set C2 (twin)</th><th>Choose</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Interval width and √n</td><td>k1: 10 against 1,000 readings<small>O 57 s and L 77 s, both picked “100 times as wide”, the linear reading</small> <span class="m no">O ✗</span><span class="m no">L ✗</span></td><td>h1: how many readings for a 4× narrower interval<small>O 37 s, “about 100”: the same linear reading. Needs a calculation.</small> <span class="m no">O ✗</span></td><td><span class="tag keep">k1</span><small>The same idea without the arithmetic</small></td></tr>
+          <tr><td class="name">Logarithmic growth</td><td>k2: how much further t must grow<small>O 22 s; L 117 s, picked “by about 180” (doubling steps)</small> <span class="m ok">O ✓</span><span class="m no">L ✗</span></td><td>h2: where ln(t) reaches 8.5<small>O 27 s</small> <span class="m ok">O ✓</span></td><td><span class="tag keep">k2</span><small>States the step; either works</small></td></tr>
+          <tr><td class="name">Small samples land at both ends</td><td>r1: small schools at the top, who is at the bottom?<small>O 86 s, changed “large schools” to “all sizes”. It is Wainer's well-known example: the reason the hospital version was dropped applies to it too.</small> <span class="m no">O ✗</span></td><td>h3: 4.8 stars from 5 reviews against 4.6 from 500<small>O 47 s, picked “above: A, below: B”</small> <span class="m no">O ✗</span></td><td><span class="tag check">h3</span><small>New to everyone, half the words; close to the test's averages with counts</small></td></tr>
+          <tr><td class="name">Picking the best result picks up luck</td><td>r2: the best of 20 suppliers' first deliveries<small>O 50 s</small> <span class="m ok">O ✓</span></td><td>h4: one delivery each against ten<small>O 49 s</small> <span class="m ok">O ✓</span></td><td><span class="tag check">h4, reworded</span><small>r2's key is the cautious middle option, which a guesser picks without the idea</small></td></tr>
+          <tr><td class="name">You only learn about what you choose</td><td>r3: can the bank see whom it wrongly turned away?<small>O 39 s, first right, then “yes, if it also records incomes”</small> <span class="m no">O ✗</span></td><td>h5: a hiring test among those hired<small>O 68 s, changed twice. The same blind spot, in hiring data.</small> <span class="m ok">O ✓</span></td><td><span class="tag check">r3b, new</span><small>r3's key is the only “No” among three “Yes” options; h5 gives a reason in every option. r3b keeps the bank with four options that give none</small></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption">O (both sets, a newcomer), L: L's first run (k1 and k2, then the clock ran out). Times are from the previous answer to this one. The screening questions q1 and q2 took O 52 s together.</p>
+    <h3>The items in full</h3>
+    <div class="pairs">
+      <div class="pair"><h4>Interval width and √n</h4><div class="two"><div class="qitem chosen"><div class="qid">k1 (chosen)</div><p>You estimate the true average of a noisy measurement twice, once from 10 readings and once from 1,000 readings. Compared with the 95% confidence interval from 1,000 readings, how wide is the interval from 10 readings?</p><ol><li>About as wide</li><li>About 2 times as wide</li><li class="key">About 10 times as wide</li><li>About 100 times as wide</li><li>I don&#x27;t know</li></ol></div><div class="qitem"><div class="qid">h1</div><p>A 95% confidence interval for an average, based on 25 readings, is 2.0 wide. About how many readings would make it 0.5 wide, if the readings vary as much as before?</p><ol><li>About 50</li><li>About 100</li><li class="key">About 400</li><li>About 1,600</li><li>I don&#x27;t know</li></ol></div></div><p class="why">k1: the same idea without a calculation (h1 needs: 4 times narrower takes 16 times the readings).</p></div>
+      <div class="pair"><h4>Logarithmic growth</h4><div class="two"><div class="qitem chosen"><div class="qid">k2 (chosen)</div><p>A quantity equals ln(t). As t goes from 10 to 100, it rises by about 2.3. How much further must t grow for the quantity to rise by another 2.3?</p><ol><li>It never rises by another 2.3</li><li>By about 90, to t = 190</li><li>By about 180, to t = 280</li><li class="key">By about 900, to t = 1,000</li><li>I don&#x27;t know</li></ol></div><div class="qitem"><div class="qid">h2</div><p>A quantity equals ln(t). At t = 50 it is about 3.9, and at t = 500 it is about 6.2. At about which t does it reach 8.5?</p><ol><li>It never gets there: it levels off</li><li>At about t = 950</li><li class="key">At about t = 5,000</li><li>At about t = 1,000</li><li>I don&#x27;t know</li></ol></div></div><p class="why">k2: either works; k2 states the step.</p></div>
+      <div class="pair"><h4>Small samples land at both ends</h4><div class="two"><div class="qitem"><div class="qid">r1</div><p>A country ranks its 1,000 schools by this year&#x27;s average exam score. Schools have between 20 and 2,000 students. Suppose all schools teach equally well, so a school&#x27;s average differs only because of which students happen to attend. The top 50 schools turn out to be mostly small schools. Which schools most likely make up the bottom 50?</p><ol><li>Mostly large schools</li><li class="key">Mostly small schools</li><li>Schools of all sizes, in proportion to how common they are</li><li>Mostly medium-sized schools</li><li>I don&#x27;t know</li></ol></div><div class="qitem chosen"><div class="qid">h3 (chosen)</div><p>Restaurant A has an average of 4.8 stars from 5 reviews; restaurant B has 4.6 stars from 500 reviews. Which restaurant&#x27;s true average is more likely to be above 4.9, and which is more likely to be below 4.5?</p><ol><li>Above 4.9: A; below 4.5: B</li><li class="key">A for both</li><li>B for both</li><li>Above 4.9: B; below 4.5: A</li><li>I don&#x27;t know</li></ol></div></div><p class="why">h3: r1 is Wainer&#x27;s textbook example of small schools; h3 asks the same thing in a new setting and in half the words.</p></div>
+      <div class="pair"><h4>Picking the best result picks up luck</h4><div class="two"><div class="qitem"><div class="qid">r2</div><p>A company tries 20 new suppliers with one delivery each. The suppliers truly differ in quality, and each delivery&#x27;s quality also varies by chance. The company gives a second order to the supplier whose first delivery was best. What should it expect from that second delivery?</p><ol><li>As good as the first delivery</li><li>Better than the first delivery</li><li class="key">Worse than the first, still above the average supplier</li><li>Worse than the first, and below the average supplier</li><li>I don&#x27;t know</li></ol></div><div class="qitem chosen"><div class="qid">h4 (chosen, reworded 13 Nov)</div><p>Shops X and Y each try out the same 20 suppliers, then give a big order to the one that did best. X tried each supplier once, Y ten times. Whose big order will likely fall further below how its supplier did in the trial?</p><ol><li>Y&#x27;s</li><li>About the same for both</li><li>Neither: both will match the trial</li><li class="key">X&#x27;s</li><li>I don&#x27;t know</li></ol></div></div><p class="why">h4: r2&#x27;s key (“worse than the first, still above the average supplier”) is the cautious middle option, which a guesser picks without the idea; h4&#x27;s two likely answers are opposites, X&#x27;s or Y&#x27;s. Reworded with shops and “did best”; the same options and key.</p></div>
+      <div class="pair"><h4>You only learn about what you choose</h4><div class="two"><div class="qitem"><div class="qid">r3</div><p>A bank grants loans only to applicants its scoring rule rates as safe, and records whether each loan is repaid. Can the bank find out from these records whether its rule turns away many people who would have repaid?</p><ol><li class="key">No, not from these records alone</li><li>Yes, from these records alone</li><li>Yes, once it has enough records</li><li>Yes, if it also records the rejected applicants&#x27; incomes</li><li>I don&#x27;t know</li></ol></div><div class="qitem"><div class="qid">h5</div><p>A company hires only applicants who score above 70 on an entry test. Among the people it hired, the test score barely predicts how well they do the job. Can the company conclude that the test is useless for choosing staff?</p><ol><li>Yes: among the people hired, the score barely predicts performance</li><li>Yes, provided it has data on many employees</li><li class="key">No: everyone hired scored above 70, so the data hide what the score does</li><li>No: it should first check that the test was marked correctly</li><li>I don&#x27;t know</li></ol></div><div class="qitem chosen"><div class="qid">r3b (chosen, new 13 Nov)</div><p>A bank lends only to applicants its scoring rule rates as safe, and records whether each loan is repaid. So far 97% have been repaid. Does the rule turn away many people who would have repaid? What do the bank&#x27;s records show?</p><ol><li>That it turns away few of them</li><li>That it turns away many of them</li><li class="key">Nothing, however many loans it records</li><li>Nothing yet; more years of records will show it</li><li>I don&#x27;t know</li></ol></div></div><p class="why">r3b: r3&#x27;s key was the only “No” among three “Yes” options, and the question nearly gave it away; h5 gives a reason in every option. r3b keeps the bank: two readings of the 97% (few, many) and two answers on whether more records help, none with a reason.</p></div>
+    </div>
+    <h3>Recommendation</h3>
+    <div class="prose">
+      <p><b>q1, q2, then k1, k2, h3, h4 (reworded), r3b (new)</b>, as built on 13 Nov: one set for everyone, so no assignment and no twin effects. O took about 5 minutes for items like these, so <b>7 minutes</b> under a hard clock. Keep the screening questions first and uncounted, on the same page.</p>
+      <p><b>Learning gain.</b> Don't add items to match the test's seven: with percentages the count doesn't matter, and two more prerequisite items wouldn't make the pretest measure what the test measures. Report pretest % and test % side by side, with one sentence saying the pretest measures the prerequisites. Run the comparison of conditions on the test with the pretest as a covariate. The two minutes saved go to the test, whose reliability limits that comparison directly.</p>
+    </div>
+  </section>
+
+  <section id="time">
+    <p class="eyebrow">Questions 5 and 6</p>
+    <h2>Times for each step, and the hour</h2>
+    <p class="short">Learners finished reading and teaching well inside the times set, and the test took about as long as allowed. The minutes saved pay for seven test and seven pretest items in about an hour.</p>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 900px">
+        <thead><tr><th>Step (min:s)</th><th>O</th><th>A</th><th>L, second run</th><th>P</th><th>L, first run</th><th class="num">Setup now</th><th class="num">Proposed</th></tr></thead>
+        <tbody>
+          <tr><td class="name">Pretest</td><td>9:17<small>12 questions</small></td><td>0:25<small>clicked through</small></td><td>skipped</td><td>4:50<small>8 questions</small></td><td>5:01<small>cut, 5 of 8</small></td><td class="num">8</td><td class="num hl">7<small>9 questions</small></td></tr>
+          <tr><td class="name">Reading</td><td>9:37</td><td>19:31<small>10 min away</small></td><td>2:26<small>second time</small></td><td>8:07<small>older text</small></td><td>10:01<small>cut</small></td><td class="num">12</td><td class="num hl">10</td></tr>
+          <tr><td class="name">Teaching Kai</td><td>11:32<small>2 questions left</small></td><td>8:40<small>by voice</small></td><td>8:12</td><td>16:28<small>older questions</small></td><td>10:14<small>cut</small></td><td class="num">16</td><td class="num hl">12</td></tr>
+          <tr><td class="name">Practice</td><td>4:24<small>3 right</small></td><td>5:27<small>Kai 3 right</small></td><td>skipped</td><td>17:01<small>Kai wrong 3 times</small></td><td>10:01<small>cut</small></td><td class="num">12</td><td class="num hl">12</td></tr>
+          <tr><td class="name">Test</td><td>19:34<small>13:02 for form A, 6:31 for B</small></td><td>13:46<small>10:40 and 3:05</small></td><td>12:15<small>8:52, then skipped</small></td><td>19:40<small>10 items</small></td><td>10:01<small>cut, 6 of 10</small></td><td class="num">12</td><td class="num hl">15<small>7 items</small></td></tr>
+          <tr><td class="name">Questions after</td><td>0:46</td><td>0:26</td><td>skipped</td><td>1:16</td><td>1:15</td><td class="num">4</td><td class="num hl">4</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total</td><td>54:25</td><td>47:48</td><td>23:58</td><td>66:05</td><td>45:20</td><td class="num">64</td><td class="num">60</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <figure class="budget" id="budget" aria-label="The session's minutes per step, on one scale from 0 to 70 minutes">
+      <ul class="legend">
+        <li><i style="background: var(--seg-neutral)"></i>Pretest and questions after</li>
+        <li><i style="background: var(--red)"></i>Reading</li>
+        <li><i style="background: var(--yellow)"></i>Teaching Kai</li>
+        <li><i style="background: var(--green)"></i>Practice</li>
+        <li><i style="background: var(--blue)"></i>Test</li>
+      </ul>
+      <div class="brow">
+        <div class="blabel"><b>Study setup now</b><span>recommended times, 64 min</span></div>
+        <div class="track" role="img" aria-label="Study setup now: pretest 8, reading 12, teaching 16, practice 12, test 12, questions after 4; 64 minutes">
+          <span class="seg s-pre" style="--a:0;--w:8" tabindex="0" data-tip="Pretest: 8 min"><i>8</i></span>
+          <span class="seg s-read" style="--a:8;--w:12" tabindex="0" data-tip="Reading: 12 min"><i>12</i></span>
+          <span class="seg s-teach" style="--a:20;--w:16" tabindex="0" data-tip="Teaching Kai: 16 min"><i>16</i></span>
+          <span class="seg s-prac" style="--a:36;--w:12" tabindex="0" data-tip="Practice: 12 min"><i>12</i></span>
+          <span class="seg s-test" style="--a:48;--w:12" tabindex="0" data-tip="Test: 12 min (5 items)"><i>12</i></span>
+          <span class="seg s-after" style="--a:60;--w:4" tabindex="0" data-tip="Questions after the test: about 4 min"><i>4</i></span>
+          <span class="hour"></span>
+        </div>
+      </div>
+      <div class="brow">
+        <div class="blabel"><b>Proposed</b><span>7 pretest and 7 test items, 60 min</span></div>
+        <div class="track" role="img" aria-label="Proposed: pretest 7, reading 10, teaching 12, practice 12, test 15, questions after 4; 60 minutes">
+          <span class="seg s-pre" style="--a:0;--w:7" tabindex="0" data-tip="Pretest: 7 min (2 screening questions and 7 items)"><i>7</i></span>
+          <span class="seg s-read" style="--a:7;--w:10" tabindex="0" data-tip="Reading: 10 min"><i>10</i></span>
+          <span class="seg s-teach" style="--a:17;--w:12" tabindex="0" data-tip="Teaching Kai: 12 min"><i>12</i></span>
+          <span class="seg s-prac" style="--a:29;--w:12" tabindex="0" data-tip="Practice: 12 min (3 problems)"><i>12</i></span>
+          <span class="seg s-test" style="--a:41;--w:15" tabindex="0" data-tip="Test: 15 min (7 items)"><i>15</i></span>
+          <span class="seg s-after" style="--a:56;--w:4" tabindex="0" data-tip="Questions after the test: about 4 min"><i>4</i></span>
+          <span class="hour"></span>
+        </div>
+      </div>
+      <div class="brow">
+        <div class="blabel"><b>O, as run</b><span>12 pretest and 10 test items, 55 min</span></div>
+        <div class="track" role="img" aria-label="O as run: pretest 9.3, reading 9.6, teaching 11.5, practice 4.4, test 19.6, questions after 0.8; 55 minutes">
+          <span class="seg s-pre" style="--a:0;--w:9.3" tabindex="0" data-tip="Pretest: 9:17 (12 questions)"><i>9</i></span>
+          <span class="seg s-read" style="--a:9.3;--w:9.6" tabindex="0" data-tip="Reading: 9:37"><i>10</i></span>
+          <span class="seg s-teach" style="--a:18.9;--w:11.5" tabindex="0" data-tip="Teaching Kai: 11:32"><i>12</i></span>
+          <span class="seg s-prac" style="--a:30.4;--w:4.4" tabindex="0" data-tip="Practice: 4:24 (direct, all right at the first try)"><i>4</i></span>
+          <span class="seg s-test" style="--a:34.8;--w:19.6" tabindex="0" data-tip="Test: 19:34 (both forms, 10 items)"><i>20</i></span>
+          <span class="seg s-after" style="--a:54.4;--w:0.8" tabindex="0" data-tip="Questions after the test: 0:46 (ratings only)"><i>1</i></span>
+          <span class="hour"></span>
+        </div>
+      </div>
+      <div class="axis" aria-hidden="true">
+        <div></div>
+        <div class="ticks">
+          <span style="left:0">0</span><span style="left:calc(10/70*100%)">10</span><span style="left:calc(20/70*100%)">20</span><span style="left:calc(30/70*100%)">30</span><span style="left:calc(40/70*100%)">40</span><span style="left:calc(50/70*100%)">50</span><span class="h" style="left:calc(60/70*100%)">1 hour</span>
+        </div>
+      </div>
+    </figure>
+    <p class="caption">Minutes per step on one scale. The table above holds the same numbers. Questions after the test: about 4 minutes is a guess, since nobody has answered the three open questions yet.</p>
+
+    <h3>What was measured</h3>
+    <ul class="prose">
+      <li><b>Pretest:</b> about 45 seconds a question (O: seven in 5:10, five in 4:06). Two screening questions and seven items take about 6½ minutes.</li>
+      <li><b>Reading:</b> about 9½ minutes for the three chapters, O and A alike (A's 19:31 includes 10 minutes away from the tab).</li>
+      <li><b>Teaching:</b> 8 to 12 minutes on the current questions. O stopped with two questions left. His first message alone took 5 minutes; P's took 4½ and L's first 3¾.</li>
+      <li><b>Practice:</b> 4½ to 5½ minutes when every first try is right. A wrong first try with its correction takes 5 to 6.</li>
+      <li><b>Test:</b> about 2 minutes an item on the first form (O 13:02 for five, with revisions; L 8:52), quicker on a second.</li>
+    </ul>
+    <h3>Soft or strict</h3>
+    <div class="prose">
+      <p>Keep soft timing, as in the pilot. Reading and teaching end on their own (the text closes, Kai runs out of questions), and a hard stop on the pretest or the test turns slow answers into wrong ones: under the first run's limits L lost 3 pretest and 4 test answers. If the M4's strict limits stay, give the pretest 8 and the test 17 minutes as a margin for the slowest.</p>
+      <p>A fourth practice problem or an eighth test item would each add about 2 minutes.</p>
+    </div>
+  </section>
+
+  <section id="feedback">
+    <p class="eyebrow">Question 7</p>
+    <h2>Other pilot feedback</h2>
+    <div class="scroll">
+      <table class="tbl" style="min-width: 860px">
+        <thead><tr><th>What came up</th><th>Where</th><th>Status</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td>“Not nearly enough time in every section!”</td><td>L, first run</td><td><span class="tag done">Done</span></td><td>Longer times and a soft clock since 4 November.</td></tr>
+          <tr><td>“'l' and 'I' look identical” in ln t</td><td>L, first run</td><td><span class="tag done">Done</span></td><td>ln is set in a serif face.</td></tr>
+          <tr><td>Kai asked again what was answered (“I just said that.”)</td><td>P</td><td><span class="tag done">Done</span></td><td>Covered questions are skipped; no repeats in the three later runs.</td></tr>
+          <tr><td>Doubt whether a year is long enough in T1</td><td>O's reason</td><td><span class="tag done">Done</span></td><td>“In the long run, over many years”.</td></tr>
+          <tr><td>Would have liked to be told to take notes</td><td>L, first run</td><td><span class="tag open">Open</span></td><td>Decide. The lesson's intro says “all from memory”: say “please don't take notes” outright, and ask after the test whether they wrote anything down or used other help.</td></tr>
+          <tr><td>The manipulation check is unclear</td><td>2 of 4 “I'm not sure”, the direct learner among them</td><td><span class="tag open">Open</span></td><td>“In practice, the right/wrong light judged: my own answers / Kai's answers / I'm not sure”.</td></tr>
+          <tr><td>Kai repeats an old note before a new question</td><td>L, second run, turns 4, 6 and 8: “Ich round you pick the option with the highest average score of yours.” before a bonus question</td><td><span class="tag open">Open</span></td><td>The reaction prompt sees the whole notebook; tell it to react only to the last message.</td></tr>
+          <tr><td>Kai right with a wrong step</td><td>A's P3: “the bonus shrinks over time”, yet the right answer</td><td><span class="tag open">Open</span></td><td>Accept and log it, or check each step against the notes (the plan's verifier).</td></tr>
+          <tr><td>The first message takes 4 to 5 minutes</td><td>O, P, L's first run</td><td><span class="tag open">Optional</span></td><td>Ask for the setup “in a sentence or two”. No practice problem needs the setup facts.</td></tr>
+          <tr><td>The open questions after the test</td><td>Added after the last run; nobody has answered them</td><td><span class="tag open">Open</span></td><td>The new participant answers them.</td></tr>
+          <tr><td>Learners accept Kai's answers</td><td>Calls matched the light 6 of 12 times</td><td><span class="tag finding">Finding</span></td><td>A result for the secondary question; nothing to change.</td></tr>
+          <tr><td>Rules mixed up on the test</td><td>O, on greedy items: “the bonus lets it try a again”</td><td><span class="tag finding">Finding</span></td><td>The greedy items catch it; nothing to change.</td></tr>
+          <tr><td>Confident and wrong</td><td>O: understanding 7 of 7, test 4 of 10; practice “helped” 7, against 2, 3 and 5 from the recursive runs</td><td><span class="tag finding">Finding</span></td><td>For the comparison of judged and measured understanding.</td></tr>
+          <tr><td>Time away from the tab counts as step time</td><td>A, 10 minutes while reading</td><td><span class="tag finding">Analysis</span></td><td>Subtract it when analysing times.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="plan">
+    <h2>Using the last pilot resources</h2>
+    <div class="prose">
+      <p>One newcomer is left, plus the earlier pilots as reviewers. The newcomer is the only chance to see the final setup through fresh eyes, so everything that can be checked without them should be checked first.</p>
+    </div>
+    <ol class="plan">
+      <li><b>Decide and change.</b> Recommendations 1 and 3 to 7. Then <code>pnpm content validate</code>, the tests, <code>pnpm eval:judge</code> with the three credits above added as labelled cases (expected: partial), and <code>pnpm eval:sim --solve</code> on the current and the trimmed questions (about $2). The trimmed questions are script.json with every follow list emptied and “again” removed.</li>
+      <li><b>Returning pilots try the unseen items.</b> O hasn't seen V1, V19, V7 or V20; L hasn't seen V19 or V20. Each answers them as in the test, with a reason, says what was unclear, and notes the time per item. A and R each work out V19's key on their own. These check wording and keys; their scores say little about difficulty, since they learned the topic days ago.</li>
+      <li><b>The newcomer runs the final setup.</b> Recursive condition, on a trial code from Study setup so the session runs as a participant's would, with soft timing to see natural durations. Explain nothing beyond the welcome page. Afterwards, five minutes of questions: Was any question or text unclear? Where did you feel rushed? When Kai was wrong, could you see why? Did you write anything down or use anything else? How long did the questions at the end take?</li>
+      <li><b>Read the session.</b> Each step's time against the proposed; Kai's first tries (from the teaching, or planted) and whether the corrections fixed them; the calls; the test answers with their reasons; the three open questions.</li>
+      <li><b>Freeze and switch.</b> On the deployed Study setup: both pretest sets off, both forms off, the follow-up test off, Kai's mind off, help from the lesson off, fixed questions on, soft timing with the new times. Then make one-use codes with random conditions.</li>
+    </ol>
+    <div class="prose">
+      <p>If one more newcomer turns up, run them in the direct condition: direct practice has only O's run, on the older problems.</p>
+    </div>
+  </section>
+
+  <footer>
+    <h2>How the checks were made</h2>
+    <ul>
+      <li><b>Kai's practice:</b> each notebook was rebuilt from the verdicts and wrong beliefs on its session page, then <code>gate()</code> and <code>caveatFor()</code> decided Kai's first try on P7, P3 and P2. Gate open counts as right, as in every <code>eval:sim</code> run with the gate open (34 of 34). The stricter-keys column turns the three credits without the key into partial; the no-follow-ups column drops the answers given to follow-ups.</li>
+      <li><b>Key checks:</b> candidate patterns for lock-in, UCB's rule and a pick shrinking its bonus, tried on eleven quotes from the pilots.</li>
+      <li><b>Power:</b> simulated learners whose ability the condition shifts by d; items answered through a logistic model with 15 to 20% guessing and difficulties near the middle; reasons scored 0 to 2 from the same ability with their own noise; Welch's t-test, two-sided, 5%.</li>
+    </ul>
+  </footer>
+</div>
+<div id="tip" role="tooltip" hidden></div>
+<script>
+(() => {
+  const tip = document.getElementById("tip");
+  const show = (el, x, y) => {
+    tip.textContent = el.dataset.tip;
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    const left = Math.min(Math.max(8, x + 12), window.innerWidth - r.width - 8);
+    const top = y - r.height - 12 < 8 ? y + 16 : y - r.height - 12;
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+  };
+  const hide = () => { tip.hidden = true; };
+  document.querySelectorAll("[data-tip]").forEach((el) => {
+    el.addEventListener("pointermove", (e) => show(el, e.clientX, e.clientY));
+    el.addEventListener("pointerleave", hide);
+    el.addEventListener("focus", () => { const r = el.getBoundingClientRect(); show(el, r.left + r.width / 2, r.top); });
+    el.addEventListener("blur", hide);
+  });
+  window.addEventListener("scroll", hide, { passive: true });
+  // a segment's minutes are printed inside only when they fit with room to spare
+  const fit = () => {
+    document.querySelectorAll(".seg i").forEach((i) => {
+      i.hidden = false;
+      i.hidden = i.offsetWidth + 6 > i.parentElement.clientWidth;
+    });
+  };
+  fit();
+  window.addEventListener("resize", fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();
+</script>
