@@ -1010,8 +1010,8 @@ if (existsSync(logFile)) {
   const timedTest = evs.find((e) => e.t === "grade" && e.times?.length === 2 && e.skipped === true);
   const stepTimes = new Set(evs.filter((e) => e.t === "client_step_time").map((e) => e.step));
   check(
-    timedPre && timedPre.times.every((t) => t.limitMs === 8 * 60_000) && timedTest && timedTest.times.every((t) => t.limitMs === 12 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
-    "the pilot logs every part's time against its own (pretest 8 and test 12 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
+    timedPre && timedPre.times.every((t) => t.limitMs === 8 * 60_000) && timedTest && timedTest.times.every((t) => t.limitMs === 16 * 60_000) && ["watch", "teach", "practice"].every((k) => stepTimes.has(k)) && has("client_debug_skip"),
+    "the pilot logs every part's time against its own (pretest 8 and test 16 minutes a part, with the answers; the lesson, teaching and practice from the browser) and each debug skip",
   );
 } else check(false, "research log written to .data/events.jsonl");
 
