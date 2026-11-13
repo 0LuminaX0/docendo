@@ -39,10 +39,11 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
     // form). Both forms can still be switched on for calibrating items (no follow-up test then: no form is left for it).
     pretest: { on: true, both: false, minutes: 7 },
     watch: { on: true, parts: defaultLesson(pack), minutes: 12 },
-    teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: true, minutes: pack.script?.minutes ?? 10 },
+    teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: false, minutes: pack.script?.minutes ?? 10 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
     test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 16, review: false },
-    timing: { soft: true },
+    // the study as it will run (2026-11-13): hard limits, Kai's mind hidden; the pilot runs on its shared code
+    timing: { soft: false },
     survey: { on: true },
     sessionDays: Math.round(config.sessionHours / 24),
     tools: { calculator: true, voice: true, help: false },
@@ -68,18 +69,20 @@ export function merge(stored: Record<string, unknown> | null): Settings {
       test: { ...block("test"), both: base.test.both, followUp: base.test.followUp, minutes: base.test.minutes },
     };
   }
-  // a version saved before the times decided on 2026-11-13 (it has no test.review, added that day) takes the
-  // defaults' times (pretest 7, lesson 12, teaching 12, practice 12, test 16); everything else it set stays
+  // a version saved before 2026-11-13 (it has no test.review, added that day) takes that day's decisions: the times
+  // (pretest 7, lesson 12, teaching 12, practice 12, test 16) and the study's switches (one pretest set and one test
+  // form, hard limits, Kai's mind hidden; the pilot runs on its shared code); everything else it set stays
   const savedTest = typeof saved.test === "object" && saved.test !== null ? (saved.test as Record<string, unknown>) : null;
   if (stored && Object.keys(stored).length && "timing" in stored && !(savedTest && "review" in savedTest)) {
     const block = (k: "pretest" | "watch" | "teach" | "practice") => (typeof saved[k] === "object" && saved[k] !== null ? (saved[k] as Record<string, unknown>) : {});
     saved = {
       ...saved,
-      pretest: { ...block("pretest"), minutes: base.pretest.minutes },
+      pretest: { ...block("pretest"), both: false, minutes: base.pretest.minutes },
       watch: { ...block("watch"), minutes: base.watch.minutes },
-      teach: { ...block("teach"), minutes: base.teach.minutes },
+      teach: { ...block("teach"), mind: false, minutes: base.teach.minutes },
       practice: { ...block("practice"), minutes: base.practice.minutes },
-      test: { ...(savedTest ?? {}), minutes: base.test.minutes },
+      test: { ...(savedTest ?? {}), both: false, minutes: base.test.minutes },
+      timing: { soft: false },
     };
   }
   const out: Record<string, unknown> = { ...base };
