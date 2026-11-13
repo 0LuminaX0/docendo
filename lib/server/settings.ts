@@ -68,6 +68,20 @@ export function merge(stored: Record<string, unknown> | null): Settings {
       test: { ...block("test"), both: base.test.both, followUp: base.test.followUp, minutes: base.test.minutes },
     };
   }
+  // a version saved before the times decided on 2026-11-13 (it has no test.review, added that day) takes the
+  // defaults' times (pretest 7, lesson 12, teaching 12, practice 12, test 16); everything else it set stays
+  const savedTest = typeof saved.test === "object" && saved.test !== null ? (saved.test as Record<string, unknown>) : null;
+  if (stored && Object.keys(stored).length && "timing" in stored && !(savedTest && "review" in savedTest)) {
+    const block = (k: "pretest" | "watch" | "teach" | "practice") => (typeof saved[k] === "object" && saved[k] !== null ? (saved[k] as Record<string, unknown>) : {});
+    saved = {
+      ...saved,
+      pretest: { ...block("pretest"), minutes: base.pretest.minutes },
+      watch: { ...block("watch"), minutes: base.watch.minutes },
+      teach: { ...block("teach"), minutes: base.teach.minutes },
+      practice: { ...block("practice"), minutes: base.practice.minutes },
+      test: { ...(savedTest ?? {}), minutes: base.test.minutes },
+    };
+  }
   const out: Record<string, unknown> = { ...base };
   for (const k of Object.keys(base) as (keyof Settings)[]) {
     if (k === "topic") continue; // resolved above: a pack this server has
