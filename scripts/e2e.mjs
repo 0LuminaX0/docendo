@@ -1033,7 +1033,8 @@ if (existsSync(staticDir)) {
   check(!leaked.length, `the browser bundle holds no solution, explanation, test question or lesson fact (${secrets.length} checked${leaked.length ? `; found: ${leaked.slice(0, 3).join(" | ")}` : ""})`);
 }
 
-await browser.close();
+// on Windows puppeteer's close can spin forever after the checks are done (2026-11-14): give it 5 s, then end Chrome
+if (!(await Promise.race([browser.close().then(() => true), wait(5000).then(() => false)]))) browser.process()?.kill();
 stopServer();
 console.log(checks.join("\n"));
 console.log(errors.length ? "PAGE ERRORS:\n" + errors.join("\n") : "no page errors");

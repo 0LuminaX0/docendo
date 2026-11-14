@@ -189,6 +189,23 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
       err("graph", `${f.id}: its evidence pattern doesn't compile (${String(e).slice(0, 80)})`);
     }
   }
+  // an example credits the fact it shows only through that fact's evidence, so it must name a fact of its own idea
+  // that has one; true remarks must compile
+  for (const n of bundle?.nodes ?? []) {
+    for (const f of n.facts) {
+      if (!f.exampleOf) continue;
+      const of = n.facts.find((g) => g.id === f.exampleOf);
+      if (!of) err("graph", `${f.id}: exampleOf ${f.exampleOf} is not a fact of ${n.id}`);
+      else if (!of.evidence) err("graph", `${f.id}: exampleOf ${f.exampleOf}, which has no evidence pattern to check the example against`);
+    }
+    for (const r of [...(n.trueRemarks ?? []), ...n.facts.flatMap((f) => f.against ?? [])]) {
+      try {
+        new RegExp(r, "iu");
+      } catch (e) {
+        err("graph", `${n.id}: a trueRemarks or against pattern doesn't compile (${String(e).slice(0, 80)})`);
+      }
+    }
+  }
   // how Kai says each assumption when it guesses: a hunch for every assume (and assumeVague)
   for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
     if (f.assume && !f.hunch) warn("graph", `${f.id} has an assumption but no hunch: Kai would recite the assumption as a rule`);

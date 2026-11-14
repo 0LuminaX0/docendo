@@ -116,6 +116,14 @@ export const Fact = z.object({
   // a check in code around the judge: a pattern (case-insensitive) a message must match for the fact to count as
   // correct (else partial), for a key the judge tends to overlook (the bonus's slowing growth, ε's fixed rate)
   evidence: z.string().min(3).optional(),
+  // this fact is a worked example of another fact of the same idea: when the judge credits the example as correct and
+  // its sentences hold the other fact's evidence, the other fact counts as correct too (2026-11-14: a learner's lock-in
+  // example, "…greedy never goes back to it", went to the example alone and left lock-in partial)
+  exampleOf: FactId.optional(),
+  // the fact's wrong reading in words (patterns, case-insensitive): a "correct" verdict for a message that also says
+  // one is only partial, as when the judge records the contradiction itself (2026-11-14: "the one with the best average
+  // is the one to keep picking … greedy can just stick with its favourite" was credited as greedy's rule)
+  against: z.array(z.string().min(3)).optional(),
 });
 export type Fact = z.infer<typeof Fact>;
 
@@ -146,6 +154,10 @@ export const Node = z.object({
   lexicon: z.array(z.string().min(1)),
   misconception: Misconception.nullable(),
   probes: Probes,
+  // true statements about this idea that the judge tends to record as wrong beliefs (patterns, case-insensitive): a
+  // misconception on this idea whose sentence, or the one before it, matches one is dropped (logged). A check in code
+  // around the judge, like `evidence`.
+  trueRemarks: z.array(z.string().min(3)).optional(),
 });
 export type Node = z.infer<typeof Node>;
 
@@ -231,7 +243,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), given: z.boolean().optional(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), evidence: z.string().optional() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), given: z.boolean().optional(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), evidence: z.string().optional(), exampleOf: z.string().optional(), against: z.array(z.string()).optional() });
 export const BundleNode = z.object({
   inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),
@@ -243,6 +255,7 @@ export const BundleNode = z.object({
   lexicon: z.array(z.string()),
   misconception: z.object({ id: z.string(), says: z.string(), truth: z.string() }).nullable(),
   probes: z.object({ open: z.string(), why: z.string(), whatIf: z.string(), compute: z.string() }),
+  trueRemarks: z.array(z.string()).optional(),
   // where the learner-facing videos cover this node (seconds), for the help card
   help: z.array(z.object({ video: z.string(), start: z.number(), end: z.number() })),
 });

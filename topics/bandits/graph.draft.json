@@ -205,7 +205,13 @@
           "text": "Greedy picks the option with the highest average in every round. It keeps updating the averages, and when another option's average overtakes the favourite's, greedy switches to that option.",
           "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
           "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it.",
-          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial."
+          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial.",
+          "against": [
+            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\b(?:stick|stay|keep|settle)(?:s|ing|ed)?\\b (?:with|on|at|there)\\b[^.!?]{0,40}\\b(?:forever|for good|for ever|for the rest|from then on|no matter what|permanently)\\b",
+            "\\b(?:never|won'?t|doesn'?t|does not|will not) (?:ever )?switch(?:es|ing)?\\b(?=\\s*(?:[.,;:!?)]|$|and\\b|but\\b|to (?:anything|another|any other|a different|something)\\b|away\\b|again\\b|at all\\b|once\\b))",
+            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\bsticks? with (?:its|the|their) (?:favou?rite|first (?:leader|winner|pick|choice))\\b(?![^.!?]{0,40}\\b(?:until|unless|as long as|while|till)\\b)",
+            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\b(?:keeps?|stays?) (?:picking|choosing|going with|on) (?:the same|that same|its first|the first)\\b[^.!?]{0,30}\\b(?:forever|for good|all the time|no matter what)\\b"
+          ]
         },
         {
           "id": "n05.f2",
@@ -227,7 +233,11 @@
         "why": "Why would I ever pull an arm that looks worse?",
         "whatIf": "What if two arms are tied on their average, what does this rule do?",
         "compute": "My averages so far are 7, 8 and 5. Which arm does greedy pick next, and when does it pick the 5 one again?"
-      }
+      },
+      "trueRemarks": [
+        "\\b(?:only|just|merely) (?:got|was|been|had been|happened to be) lucky\\b|\\blucky (?:leader|favou?rite|streak)\\b|\\b(?:leader|favou?rite) (?:only |just )?(?:got|was|had been) lucky\\b",
+        "\\b(?:arm|option|one|truck|machine|it)\\b[^.!?]{0,25}\\b(?:being|is being|keeps being|we keep|it keeps|you keep|greedy keeps) (?:pulled|picked|chosen|played|pulling|picking|choosing|playing|tried|trying|sampled)\\b[^.!?]{0,80}\\b(?:converg\\w*|correct\\w*|falls?|fell|drops?|comes? (?:back )?down|goes? down|sinks?|settles?|moves? towards?|true (?:mean|average|value))"
+      ]
     },
     {
       "id": "n06",
@@ -254,7 +264,8 @@
           "id": "n06.f2",
           "required": true,
           "ask": "Can you show me with an example how that could actually happen?",
-          "text": "Example: if truck A is truly the best but its first lunch is poor, greedy eats at the other trucks from then on and never finds out."
+          "text": "Example: if truck A is truly the best but its first lunch is poor, greedy eats at the other trucks from then on and never finds out.",
+          "exampleOf": "n06.f1"
         },
         {
           "id": "n06.f3",
@@ -276,7 +287,11 @@
         "why": "Why wouldn't greedy just try the other arm again later?",
         "whatIf": "What if the best arm had paid really well on its first try instead?",
         "compute": "If restaurant 2 averages 8 and restaurant 1 averages 10, and I'm stuck at restaurant 2 for 297 days, how much happiness do I miss out on?"
-      }
+      },
+      "trueRemarks": [
+        "\\b(?:only|just|merely) (?:got|was|been|had been|happened to be) lucky\\b|\\blucky (?:leader|favou?rite|streak)\\b|\\b(?:leader|favou?rite) (?:only |just )?(?:got|was|had been) lucky\\b",
+        "\\b(?:arm|option|one|truck|machine|it)\\b[^.!?]{0,25}\\b(?:being|is being|keeps being|we keep|it keeps|you keep|greedy keeps) (?:pulled|picked|chosen|played|pulling|picking|choosing|playing|tried|trying|sampled)\\b[^.!?]{0,80}\\b(?:converg\\w*|correct\\w*|falls?|fell|drops?|comes? (?:back )?down|goes? down|sinks?|settles?|moves? towards?|true (?:mean|average|value))"
+      ]
     },
     {
       "id": "n07",
@@ -558,7 +573,8 @@
           "text": "Each time an option is picked, its bonus shrinks (its n grows); picks of other options do not shrink it.",
           "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
           "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not.",
-          "key": "picking an option shrinks that option's own bonus (and picking others doesn't)."
+          "key": "picking an option shrinks that option's own bonus (and picking others doesn't).",
+          "evidence": "\\bshr[iau]nk\\w*|\\bsmall(?:er|est)?\\b|\\btiny\\b|\\blow(?:er|ers|ered|ering)?\\b|\\bless\\b|\\bdecreas\\w*|\\breduc\\w*|\\bdrop(?:s|s?ped|ping)?\\b|\\b(?:go|goes|going|went|gone) down\\b|\\bfall(?:s|ing)?\\b|\\bdiminish\\w*|\\bdwindl\\w*|\\bdecay\\w*|\\bsinks?\\b|\\bfewer\\b|\\bless often\\b|1\\s*/\\s*√?\\s*n|/\\s*n\\b|\\bover n\\b|\\bdivided by\\b|\\binvers\\w*|\\bthe more\\b[^.!?]{0,60}\\bthe (?:smaller|lower|less)\\b"
         },
         {
           "id": "n12.f2",
@@ -570,7 +586,13 @@
           "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
           "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often.",
           "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial.",
-          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarith\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*"
+          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarith\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*",
+          "against": [
+            "(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b[^.!?]{0,60}\\b(?:stays?|remains?|keeps?|is|are)\\b[^.!?]{0,25}\\b(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))",
+            "(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b[^.!?]{0,60}(?:\\bdon'?t|\\bdoesn'?t|\\bdo not|\\bdoes not|\\bwon'?t|\\bwill not|\\bnever)\\s(?:\\w+\\s)?(?:change|grow|move|increase|rise)\\b",
+            "\\b(?:skip|skips|skipped|unpicked|ignored|neglected)\\b[^.!?]{0,50}\\b(?:stays?|remains?|keeps?)\\b[^.!?]{0,25}(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))",
+            "\\bbonus(?:es)?\\b[^.!?]{0,30}\\b(?:stays?|remains?|is|are)\\b (?:\\w+ )?(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))[^.!?]{0,40}(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b"
+          ]
         }
       ],
       "lexicon": [

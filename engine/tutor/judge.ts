@@ -63,6 +63,13 @@ export function screenMisconceptions(bundle: Bundle, message: string, list: (Non
     const fact = real && isAbout(bundle, quote, real) ? real : null;
     if (real && !fact) dropped.push({ fact: `${real} (misconception un-pinned: not about it)`, quote: quote.slice(0, 200) });
     const node = fact ? fact.split(".")[0]! : m.node;
+    // a true remark about the idea that the judge took for a wrong belief (the idea's trueRemarks; 2026-11-14: "if
+    // another arm only got lucky, the average of the arm being pulled converges and greedy switches" was recorded in 2
+    // of 3 runs despite the prompt naming it)
+    if (isTrueRemark(bundle, node, message, quote) || (node !== m.node && isTrueRemark(bundle, m.node, message, quote))) {
+      dropped.push({ fact: `${node} (misconception dropped: a true remark)`, quote: quote.slice(0, 200) });
+      continue;
+    }
     if (!kept.some((k) => k.node === node && k.quote === quote)) kept.push({ ...m, node, fact, quote, belief: m.belief.slice(0, 300) });
   }
   return { kept, dropped };
@@ -84,20 +91,114 @@ export function isAbout(bundle: Bundle, quote: string, factId: string): boolean 
   return tokens(quote).some((t) => words.has(t));
 }
 
-/** The sentence(s) of the message that hold the quote (the whole message if it can't be placed). */
-export function sentencesOf(message: string, quote: string): string {
+/**
+ * The sentence(s) of the message that hold the quote (the whole message if it can't be placed), widened by `after`
+ * sentences that follow and `before` sentences that precede.
+ */
+export function sentencesOf(message: string, quote: string, after = 0, before = 0): string {
   const i = message.toLowerCase().indexOf(quote.toLowerCase());
   if (i < 0) return message;
   // abbreviations ("e.g.", "i.e.", "etc.") don't end a sentence: blank their dots for the search (same length)
   const flat = message.replace(/\b(?:e\.g|i\.e|etc|vs|approx|resp)\./giu, (m) => m.replace(/\./g, "_"));
-  const before = flat.slice(0, i);
-  const start = Math.max(before.search(/[^.!?\n]*$/u), 0);
-  const tail = flat.slice(i + quote.length);
-  const stop = tail.search(/[.!?\n](?:\s|$)/u);
-  return message.slice(start, stop < 0 ? message.length : i + quote.length + stop + 1);
+  let start = Math.max(flat.slice(0, i).search(/[^.!?\n]*$/u), 0);
+  for (let b = 0; b < before && start > 0; b++) {
+    // over the end of the sentence before, back to the end of the one before that
+    const head = flat.slice(0, start).replace(/[.!?\n\s]+$/u, "");
+    start = head ? Math.max(head.search(/[^.!?\n]*$/u), 0) : 0;
+  }
+  let stop = i + quote.length;
+  for (let a = 0; a <= after; a++) {
+    const rest = flat.slice(stop);
+    const lead = a === 0 ? 0 : rest.search(/\S/u); // the next sentence starts at its first character
+    const end = lead < 0 ? -1 : rest.slice(lead).search(/[.!?\n](?:\s|$)/u);
+    if (end < 0) return message.slice(start);
+    stop += lead + end + 1;
+  }
+  return message.slice(start, stop);
 }
 
 const factOf = (bundle: Bundle, id: string) => bundle.nodes.flatMap((n) => n.facts).find((f) => f.id === id);
+
+type Log = { fact: string; quote: string }[];
+
+/** A fact's evidence pattern, or null (none, or it doesn't compile: then it isn't checked, logged). */
+function evidenceOf(bundle: Bundle, id: string, log: Log): RegExp | null {
+  const ev = factOf(bundle, id)?.evidence;
+  if (!ev) return null;
+  try {
+    return new RegExp(ev, "iu");
+  } catch {
+    log.push({ fact: id, quote: "(its evidence pattern doesn't compile: not checked)" });
+    return null;
+  }
+}
+
+/**
+ * A worked example the judge credits as correct also credits the fact it shows (`exampleOf`), when the example's
+ * sentences (with the one before and the two after) hold that fact's evidence: the judge tends to file a learner's
+ * example under the example fact alone ("If the best truck has one bad lunch at the start, greedy might never go back
+ * to it, so it never finds out it's actually the best" went to n06.f2, leaving lock-in partial or missing, 2026-11-14).
+ * It lifts a missing or partial verdict, never a wrong one (an example doesn't overrule a contradiction). Logged.
+ */
+export function creditExamples<T extends Judgement["facts"][number]>(bundle: Bundle, message: string, facts: T[], log: Log): T[] {
+  let out = facts;
+  for (const ex of facts) {
+    const target = ex.verdict === "correct" ? factOf(bundle, ex.fact)?.exampleOf : undefined;
+    if (!target) continue;
+    const has = out.find((v) => v.fact === target);
+    if (has && has.verdict !== "partial") continue;
+    const re = evidenceOf(bundle, target, log);
+    if (!re || !re.test(sentencesOf(message, ex.quote, 2, 1))) continue;
+    const lifted = { ...(has ?? ex), fact: target, verdict: "correct" as const, keyQuote: ex.quote };
+    out = has ? out.map((v) => (v === has ? lifted : v)) : [...out, lifted];
+    log.push({ fact: `${target} (correct through its example ${ex.fact})`, quote: ex.quote.slice(0, 160) });
+  }
+  return out;
+}
+
+/**
+ * A message that also states the fact's wrong reading (its `against` patterns) doesn't teach the fact: a "correct"
+ * verdict is partial, as when the judge records that contradiction itself (below, `torn`), and a "partial" one is
+ * dropped, since the learner taught the wrong reading, not a vague version of the fact (a vague reading can open a
+ * practice gate). The judge doesn't always see it (2026-11-14: "the one with the best average is the one to keep picking
+ * … greedy can just stick with its favourite" was credited as greedy's rule; "Flashcards and Listening don't get picked,
+ * so their bonuses and scores don't change" got the growing bonus as partial, which opened p2's gate). The whole message
+ * counts: the contradiction often comes a sentence or two later. Logged.
+ */
+export function contradicted<T extends Judgement["facts"][number]>(bundle: Bundle, message: string, facts: T[], log: Log): T[] {
+  return facts.flatMap((v) => {
+    const pats = v.verdict === "correct" || v.verdict === "partial" ? (factOf(bundle, v.fact)?.against ?? []) : [];
+    const hit = pats.map((p) => {
+      try {
+        return new RegExp(p, "iu").exec(message)?.[0];
+      } catch {
+        return undefined;
+      }
+    }).find(Boolean);
+    if (!hit) return [v];
+    log.push({ fact: v.fact, quote: `${v.quote.slice(0, 120)} (${v.verdict === "correct" ? "correct → partial" : "partial dropped"}: the message also says "${hit.slice(0, 60)}")` });
+    return v.verdict === "correct" ? [{ ...v, verdict: "partial" as const }] : [];
+  });
+}
+
+/**
+ * A true remark the judge recorded as a wrong belief: the idea's `trueRemarks` pattern matches the misconception's
+ * sentence or the one before it (the remark's condition often sits in the sentence before: "…another arm only got lucky,
+ * then over many rounds the average of the arm being pulled converges to its true mean. Greedy will eventually switch
+ * arms…").
+ */
+export function isTrueRemark(bundle: Bundle, node: string, message: string, quote: string): boolean {
+  const pats = bundle.nodes.find((n) => n.id === node)?.trueRemarks ?? [];
+  if (!pats.length) return false;
+  const around = sentencesOf(message, quote, 0, 1);
+  return pats.some((p) => {
+    try {
+      return new RegExp(p, "iu").test(around);
+    } catch {
+      return false;
+    }
+  });
+}
 
 const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 
@@ -226,6 +327,9 @@ intent, the main thing the message does:
 
 export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number } = {}): Promise<Judgement> {
   // the lesson's facts first; the ideas around it after, so a message that fits a lesson fact is credited to it
+  // not each fact's `assume` as a "common wrong belief" (tried again 2026-11-14: it didn't pin "never switches" to
+  // greedy's rule, which `against` in code now catches, and it made the judge read "keeps sticking with whatever has the
+  // best average" as a wrong belief, shutting p7 for a terse learner)
   const line = (n: Bundle["nodes"][number]) => n.facts.map((f) => `[${f.id}] ${f.text}${f.key ? `\n   KEY for "correct": ${f.key}` : ""}`);
   const lessonFacts = bundle.nodes.filter((n) => n.inLesson !== false).flatMap(line);
   const around = bundle.nodes.filter((n) => n.inLesson === false).flatMap(line);
@@ -263,26 +367,32 @@ export function settleReply(bundle: Bundle, message: string, kaiLast: string, re
     if (v.verdict !== "correct" || !factOf(bundle, v.fact)?.key) return v;
     const words = v.keyQuote?.trim() ? (findQuote(message, v.keyQuote) ?? sentenceLike(message, v.keyQuote)) : null;
     if (words) return { ...v, keyQuote: words };
+    // the judge sometimes copies the KEY itself as keyQuote (2026-11-14: in 3 of 6 runs on "…which could prevent the
+    // Greedy rule from choosing this option again"): then the credited words stand in, when their own sentences hold
+    // the fact's evidence (no wider: the key must be in what the judge quoted)
+    const key = factOf(bundle, v.fact)?.key ?? "";
+    const ev = v.keyQuote?.trim() && overlap(v.keyQuote, key) >= 0.6 ? evidenceOf(bundle, v.fact, dropped) : null;
+    if (ev?.test(sentencesOf(message, v.quote))) {
+      dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (the judge copied the key as its key words: the credited words carry it)` });
+      return { ...v, keyQuote: v.quote };
+    }
     dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: ${v.keyQuote?.trim() ? `its key words "${v.keyQuote.slice(0, 80)}" aren't in the message` : "no words stating the key"})` });
     return { ...v, verdict: "partial" as const };
   });
-  // the check around the judge: a fact with `evidence` counts as correct only when the sentence that carries the
-  // credited words has it (else partial; a pattern that doesn't compile is skipped and logged)
-  const kept = keyed.map((v) => {
-    const ev = v.verdict === "correct" ? factOf(bundle, v.fact)?.evidence : undefined;
-    if (!ev) return v;
-    let re: RegExp;
-    try {
-      re = new RegExp(ev, "iu");
-    } catch {
-      dropped.push({ fact: v.fact, quote: "(its evidence pattern doesn't compile: not checked)" });
-      return v;
-    }
-    // the sentence with the credited words, or the one with the key's words
-    if (re.test(sentencesOf(message, v.quote)) || (v.keyQuote && re.test(sentencesOf(message, v.keyQuote)))) return v;
+  // the check around the judge: a fact with `evidence` counts as correct only when the stretch of the answer around
+  // the credited words has it (else partial; a pattern that doesn't compile is skipped and logged)
+  const evidenced = keyed.map((v) => {
+    const re = v.verdict === "correct" ? evidenceOf(bundle, v.fact, dropped) : null;
+    if (!re) return v;
+    // the credited words' sentence with the one before and the two after, or the same around the key's words: a learner
+    // who explains states the point, then says why (2026-11-14: "Greedy can lock in if the first tries are very unlucky.
+    // This happens, for example, when … Then greedy … never corrects this misconception about the best arm." was
+    // partial when only the first sentence was checked). An answer with no such words anywhere stays partial.
+    if (re.test(sentencesOf(message, v.quote, 2, 1)) || (v.keyQuote && re.test(sentencesOf(message, v.keyQuote, 2, 1)))) return v;
     dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: no evidence of the key)` });
     return { ...v, verdict: "partial" as const };
   });
+  const kept = contradicted(bundle, message, creditExamples(bundle, message, evidenced, dropped), dropped);
   const mis = screenMisconceptions(bundle, message, reply.misconceptions ?? []);
   // what Kai writes down for each: the learner's words, made a statement that stands alone (notes.ts)
   const notesDropped: Refusal[] = [];
