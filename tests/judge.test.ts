@@ -153,6 +153,23 @@ describe("lock-in explained with its reason or an example (checks around the jud
     for (const ok of ["the bonus of an option you don't pick keeps growing, just more slowly", "Flashcards and Listening weren't picked, so their bonuses don't shrink; they grow a little.", "picking other options doesn't change its bonus, and it keeps growing over time"])
       expect(verdictOf(settleReply(bundle, ok, "", reply([v("n12.f2", "partial", ok.slice(0, 30))])), "n12.f2"), ok).toBe("partial");
   });
+  it("credits UCB's rule and the shrinking bonus in spoken words (R's pilot run, 2026-11-14)", () => {
+    // spoken by voice: "takes a dip" is a direction, "gets higher than the other ones, then it picks" and "surpasses
+    // B's average and then gets picked" are picking the highest score
+    const t4 = "And the bonus makes it so that it continues growing if it's not the way that is structured is it will continue growing growing if it's not picked. However, if it's picked, it will take a dip and not grow infinitely.";
+    expect(verdictOf(settleReply(bundle, t4, "", reply([v("n12.f1", "correct", "if it's picked, it will take a dip and not grow infinitely")])), "n12.f1")).toBe("correct");
+    const t5 = "It gives the bonus because it basically increases the average of that um option every round and once it gets higher than the other ones, then it picks and picks that one.";
+    expect(verdictOf(settleReply(bundle, t5, "", reply([v("n11.f1", "correct", "once it gets higher than the other ones, then it picks and picks that one")])), "n11.f1")).toBe("correct");
+    const fix = "UCB bonus keep growing because the formula is squared root of (ln(t)/n), and t is the number of the round and n is the number of times the option was picked. So option A will keep growing until it surpasses B's average and then gets picked.";
+    expect(verdictOf(settleReply(bundle, fix, "", reply([v("n11.f1", "correct", "So option A will keep growing until it surpasses B's average and then gets picked")])), "n11.f1")).toBe("correct");
+    // an average and a bonus without the pick stays partial
+    const half = "Basically UCB has a portion which is the current average that it has for that option and then a bonus. And the bonus makes it so that it continues growing if it's not picked.";
+    expect(verdictOf(settleReply(bundle, half, "", reply([v("n11.f1", "correct", "UCB has a portion which is the current average that it has for that option and then a bonus")])), "n11.f1")).toBe("partial");
+  });
+  it("drops the division by zero as a wrong belief: it is why UCB tries each option once (R's pilot run)", () => {
+    const m = "Uh, yes. So, every option needs to be picked at least once because on UCB, if it is not picked once, at the start, then it will cause problems because it is mathematically impossible to divide by zero.";
+    for (const node of ["n11", "n03"]) expect(settleReply(bundle, m, "", reply([], [mis(node, "it will cause problems because it is mathematically impossible to divide by zero")])).misconceptions, node).toEqual([]);
+  });
   it("keeps the real belief that greedy's averages fix themselves and it always ends up on the best", () => {
     for (const m of [
       "Greedy is fine in the long run, the averages fix themselves and it ends up at the best truck.",

@@ -149,7 +149,10 @@
         "why": "Why is the average the right thing to look at, and not just the last reward?",
         "whatIf": "What if the best restaurant gave me a really bad meal on my first visit, just by bad luck?",
         "compute": "An arm gave rewards 2, 9 and 4. What's my estimate for it?"
-      }
+      },
+      "trueRemarks": [
+        "\\bdivi\\w* by (?:zero|0)\\b|\\bzero division\\b|\\bdivision by (?:zero|0)\\b"
+      ]
     },
     {
       "id": "n04",
@@ -506,7 +509,7 @@
           "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
           "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times.",
           "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial.",
-          "evidence": "\\bhighest\\b|\\blargest\\b|\\bbiggest\\b|\\bgreatest\\b|\\bmax\\w*|\\btop\\b|\\bbest (?:score|total|sum|value|number|result|one|option|arm)\\b|\\bargmax\\b|\\bwins?\\b|\\bwinner\\b|\\bwhichever (?:is |has |gives |scores )?(?:the )?(?:higher|bigger|larger|greater)\\b|\\b(?:pick|choos|tak|select|go|went)\\w* (?:for |with )?the (?:higher|bigger|larger|greater)\\b"
+          "evidence": "\\bhighest\\b|\\blargest\\b|\\bbiggest\\b|\\bgreatest\\b|\\bmax\\w*|\\btop\\b|\\bbest (?:score|total|sum|value|number|result|one|option|arm)\\b|\\bargmax\\b|\\bwins?\\b|\\bwinner\\b|\\bwhichever (?:is |has |gives |scores )?(?:the )?(?:higher|bigger|larger|greater)\\b|\\b(?:pick|choos|tak|select|go|went)\\w* (?:for |with )?the (?:higher|bigger|larger|greater)\\b|\\b(?:higher|bigger|larger|greater) than (?:all |any |each |every )?(?:of )?(?:the )?(?:others?|rest|other (?:ones?|options?|arms?|scores?))\\b|\\bsurpass\\w*|\\bovertak\\w*|\\bexceed\\w*|\\boutscor\\w*|\\bbeats? (?:all )?(?:the )?(?:others?|rest)\\b"
         },
         {
           "id": "n11.f2",
@@ -553,7 +556,10 @@
         "why": "Why add something to the average instead of just using the average?",
         "whatIf": "What if two arms have the same average but one was tried 100 times and the other once?",
         "compute": "After 10 rounds, arm A was tried 5 times with average 0.6 and arm B 3 times with average 0.7. Which does UCB1 pick? (ln(10) ≈ 2.3)"
-      }
+      },
+      "trueRemarks": [
+        "\\bdivi\\w* by (?:zero|0)\\b|\\bzero division\\b|\\bdivision by (?:zero|0)\\b"
+      ]
     },
     {
       "id": "n12",
@@ -574,7 +580,7 @@
           "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
           "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not.",
           "key": "picking an option shrinks that option's own bonus (and picking others doesn't).",
-          "evidence": "\\bshr[iau]nk\\w*|\\bsmall(?:er|est)?\\b|\\btiny\\b|\\blow(?:er|ers|ered|ering)?\\b|\\bless\\b|\\bdecreas\\w*|\\breduc\\w*|\\bdrop(?:s|s?ped|ping)?\\b|\\b(?:go|goes|going|went|gone) down\\b|\\bfall(?:s|ing)?\\b|\\bdiminish\\w*|\\bdwindl\\w*|\\bdecay\\w*|\\bsinks?\\b|\\bfewer\\b|\\bless often\\b|1\\s*/\\s*√?\\s*n|/\\s*n\\b|\\bover n\\b|\\bdivided by\\b|\\binvers\\w*|\\bthe more\\b[^.!?]{0,60}\\bthe (?:smaller|lower|less)\\b"
+          "evidence": "\\bshr[iau]nk\\w*|\\bsmall(?:er|est)?\\b|\\btiny\\b|\\blow(?:er|ers|ered|ering)?\\b|\\bless\\b|\\bdecreas\\w*|\\breduc\\w*|\\bdrop(?:s|s?ped|ping)?\\b|\\b(?:go|goes|going|went|gone) down\\b|\\bfall(?:s|ing)?\\b|\\bdiminish\\w*|\\bdwindl\\w*|\\bdecay\\w*|\\bsinks?\\b|\\bfewer\\b|\\bless often\\b|1\\s*/\\s*√?\\s*n|/\\s*n\\b|\\bover n\\b|\\bdivided by\\b|\\binvers\\w*|\\bthe more\\b[^.!?]{0,60}\\bthe (?:smaller|lower|less)\\b|\\bdip(?:s|ped|ping)?\\b"
         },
         {
           "id": "n12.f2",
