@@ -5,7 +5,7 @@
     {
       "id": "q3",
       "kind": "background",
-      "prompt": "Have you passed a course on probability or statistics?",
+      "prompt": "Have you taken a course on probability or statistics?",
       "options": [
         "Yes",
         "I'm taking one now",
