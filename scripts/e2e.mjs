@@ -291,8 +291,10 @@ while (turns < 32) {
   const node = bundle.nodes.find((n) => n.id === s?.chat?.state?.focus) ?? bundle.nodes[0];
   // vary quality: every 4th answer is vague, so Kai gets confused sometimes
   const facts = node.facts.filter((f) => f.teachable).map((f) => f.text);
-  // and every 4th (offset 1) explains just one fact, the case where Kai only partly gets it
-  const msg = turns % 4 === 3 || !facts.length ? "Hmm, I'm not sure how to explain that one." : turns % 4 === 1 ? facts[0] : facts.join(" ");
+  // and every 4th (offset 1) explains just one fact, the case where Kai only partly gets it; so does the first answer
+  // about an idea with two facts until Kai has shown that (2026-11-16: six questions end teaching in six messages)
+  const half = turns % 4 === 1 || (!moods.has("okay") && facts.length >= 2);
+  const msg = turns % 4 === 3 || !facts.length ? "Hmm, I'm not sure how to explain that one." : half ? facts[0] : facts.join(" ");
   await page.focus("#msg");
   await page.keyboard.type(msg.slice(0, 1100));
   await page.keyboard.press("Enter");
@@ -314,7 +316,9 @@ while (turns < 32) {
     await wait(300);
     await shot(page, "04-mind-midway", true);
     await page.click(".seg button:nth-child(1)");
-    await page.waitForSelector("#msg");
+    // the chat again: the message box, or Kai's closing if that message ended teaching (2026-11-16: six questions
+    // with follow-ups can end on the sixth message)
+    await page.waitForSelector("#msg, .ready");
     sawMind = true;
   }
   if (turns === 2 && (await page.$(".help:not([disabled])"))) {
