@@ -82,13 +82,16 @@ describe("the post-test items", () => {
     }
     expect(argmax([ucb(7.2, 80, 300, 0.1), ucb(6.5, 6, 300, 0.1)])).toBe(0);
     expect(argmax([ucb(7.2, 80, 300, 5), ucb(6.5, 6, 300, 5)])).toBe(1);
-    // V19: A's ratings never fall below 7 − 2 = 5, above B's trial 4 and C's 1, so greedy picks A, the truly best, every
-    // round; every UCB pick of B or C then costs rating (B 6 and C 3 against A's 7)
-    expect(7 - 2).toBeGreaterThan(Math.max(4, 1));
-    expect(argmax([7, 6, 3])).toBe(0);
-    // ...and UCB does leave A: with the usual setting (c = √2), once A has been picked about 400 times, B's bonus after
-    // its one try carries it past A; it keeps growing without limit, so this happens again and again
-    expect(argmax([ucb(7, 399, 403), ucb(4, 1, 403), ucb(1, 1, 403)])).toBe(1);
+    // V19: A's shares never fall below 0.7 − 0.1 = 0.6, above B's trial 0.5 and C's 0.2, so greedy puts A, the truly best,
+    // in front every day; every UCB pick of B or C then costs (B 0.6 and C 0.3 against A's 0.7)
+    expect(0.7 - 0.1).toBeGreaterThan(Math.max(0.5, 0.2));
+    expect(argmax([0.7, 0.6, 0.3])).toBe(0);
+    // ...and UCB leaves A at once, so the totals don't stay level: with the lesson's formula (no c), on the second day after
+    // the trials (round 5, A picked twice, its average at most 0.8) B's bonus after its one try carries it past A; an unpicked
+    // bonus keeps growing, so this happens again and again and UCB never catches up. On points out of 10 (the version before
+    // 2026-11-16) the same rule keeps UCB on A for about 10,000 days, which made "about the same" all but true.
+    expect(argmax([ucb(0.8, 2, 5, 1), ucb(0.5, 1, 5, 1), ucb(0.2, 1, 5, 1)])).toBe(1);
+    expect(argmax([ucb(9, 2, 5, 1), ucb(4, 1, 5, 1), ucb(1, 1, 5, 1)])).toBe(0);
     // V21: X (UCB) picks the worst option about as often in each tenfold-longer period (picks grow like ln t), Y at a fixed
     // 5% of every period, Z stops, W (greedy) only on its trial
     const logs = q("v21").table!.rows.map((r) => r.slice(1).map((v) => Number(v.replace(/,/g, ""))));

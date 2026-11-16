@@ -186,26 +186,26 @@
       "form": "A",
       "title": "The price of exploring",
       "kind": "choice",
-      "prompt": "Two vending machines each choose which of three snacks to put in the front slot every day: one uses greedy, the other UCB. A snack's daily sales score always lands within 2 points of its true average, which the machines don't know: A 7, B 6 and C 3. On the three trial days both machines happen to get the same scores: A 9, B 4 and C 1. In the long run, which machine can expect the higher total score?",
+      "prompt": "Two vending machines each choose which of three snacks to put in the front slot every day: one uses greedy, the other UCB. A snack's daily score always lands within 0.1 of its true average: A 0.7, B 0.6 and C 0.3. On the three trial days both machines happen to get the same scores: A 0.8, B 0.5 and C 0.2. On average, which machine can expect the higher total score?",
       "options": [
-        "The greedy machine",
-        "The UCB machine",
-        "About the same for both",
-        "It depends on A's next few scores"
+        "The greedy machine, from the start",
+        "The UCB machine, from the start",
+        "Neither: the totals stay level",
+        "The UCB machine, but only after many days"
       ],
       "answer": 0,
       "dontKnow": true,
       "reason": true,
-      "explain": "After the trials, greedy's favourite is A, which is truly the best. A's scores never fall below 5, so its average stays above B's 4 and C's 1, and greedy picks A every day: B's and C's averages are never corrected, but here that costs nothing. UCB keeps coming back to B and C now and then, because their bonuses keep growing while they aren't picked, and each of those days scores lower on average than A would. So greedy collects more: exploring has a price when the first favourite happens to be the right one.",
-      "rubric": "Greedy stays on A, which is truly the best (A's average can't fall below 5, above B's 4); UCB keeps spending some days on B and C (their bonuses keep growing), and those cost score.",
+      "explain": "After the trials, greedy's favourite is A, which is truly the best. A's scores never fall below 0.6, so its average stays above B's 0.5 and C's 0.2, and greedy puts A in front every day: B's and C's averages are never corrected, but here that costs nothing. UCB puts B in front as early as the second day after the trials, because B's bonus after one try lifts it over A, and an unpicked option's bonus keeps growing. So UCB keeps coming back to B and C, ever more rarely but without end, and each of those days scores lower on average than A would. Greedy is ahead from the start and stays ahead: exploring has a price when the first favourite happens to be the right one.",
+      "rubric": "Greedy stays on A, which is truly the best (A's average can't fall below 0.6, above B's 0.5); UCB keeps spending days on B and C (their bonuses keep growing), each costing score, so it never catches up.",
       "diagnosis": [
         "correct",
         "learner: exploring always pays, so UCB always does better than greedy",
-        "Kai: F11 (an unpicked bonus stays the same, so UCB soon stops trying B and C) or learner: exploring costs nothing once the best is found",
-        "learner: overlooks that A's average can't fall below 5, above B's 4, so greedy never leaves A"
+        "Kai: F10 (every bonus shrinks as days pass, picked or not, so UCB never leaves A) or learner: UCB only explores while it is unsure which option is best",
+        "learner: exploring is an investment that pays off later (UCB beats greedy in the long run)"
       ],
       "estimate": 0.35,
-      "note": "Rewritten 2026-11-12 (Phil): the same mechanism without the setting c (which leaves the lesson) and without the podcasts and listens (V14 has podcasts): vending machines, in the long run. The key follows from the lesson's rules: greedy never leaves A (A's scores of at least 5 keep its average above B's 4), and UCB must come back to B and C again and again, since an unpicked bonus grows without limit, and each of those days costs. Before (podcasts, 1,000 listens, c fitted to ratings 0 to 10, 200 simulated runs): UCB behind greedy in 189 of 200; in the long run UCB's extra picks of B and C keep growing (like ln t) while greedy's cost stays zero."
+      "note": "Rewritten 2026-11-12 (Phil): the same mechanism without the setting c (which leaves the lesson) and without the podcasts and listens (V14 has podcasts): vending machines, in the long run. The key follows from the lesson's rules: greedy never leaves A (A's scores of at least 5 keep its average above B's 4), and UCB must come back to B and C again and again, since an unpicked bonus grows without limit, and each of those days costs. Before (podcasts, 1,000 listens, c fitted to ratings 0 to 10, 200 simulated runs): UCB behind greedy in 189 of 200; in the long run UCB's extra picks of B and C keep growing (like ln t) while greedy's cost stays zero. 2026-11-16, after R's pilot run (Phil's review): scores between 0 and 1 instead of points out of 10, the question \"On average, which machine can expect the higher total score?\", and options that say when. With the lesson's formula (no c) and points out of 10, UCB didn't put B in front until about day 10,000 (simulated), so \"About the same for both\" was all but true, and \"It depends on A's next few scores\" was true of a single run (R chose it after first picking the key). The wrong options now name Kai's F10 belief (no bonus grows, so UCB never leaves A) and the belief that exploring pays off later. Simulated (100 runs, real scores for both machines, the lesson's formula): greedy put A in front every day; UCB put B in front on the second day after the trials in every run; greedy was ahead in 100 of 100 runs on days 5, 30, 1,000 and 100,000, by 0.5, 2.5, 29 and 119 (of totals of 3.5, 21, 700 and 70,000). Sessions before this answered the old version (the export keeps each answer's version)."
     },
     {
       "id": "v01",
