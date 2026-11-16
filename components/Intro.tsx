@@ -89,7 +89,7 @@ export default function Intro({
           {copy.studyLine && <span className="eyebrow">{copy.studyLine}</span>}
           <h1 className="title">{copy.headline}</h1>
           <p className="lede">
-            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. {limits.soft ? "About" : "At most"} {totalMinutes} minutes in all
+            {flow.includes("watch") ? `You'll ${lessonKind === "text" ? "read" : "watch"} a short lesson, then explain it to Kai, a classmate who missed the lecture.` : "You'll explain a topic to Kai, a classmate who missed the lecture."} Kai only knows what you tell it, so the better you explain, the more it understands. About {totalMinutes} minutes in all
             {pretestItems ? `, starting with ${count(pretestItems, "quick question")} (${pretestMinutes} minutes)` : ""}.{" "}
             {limits.soft
               ? "Each part has a suggested time, shown as a clock at the top of the page. If you need longer, keep going: the clock just counts on."
