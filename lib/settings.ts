@@ -23,7 +23,7 @@ export type LessonPart = z.infer<typeof LessonPart>;
 /** A question after the final test (a topic pack's survey.json). */
 // text: an open question (optional, up to 2,000 characters), for the qualitative analysis (2026-11-05). condition: asked
 // only in that practice (a team session: the view it practised in)
-export const SurveyItem = z.object({ id: z.string(), kind: z.enum(["scale", "choice", "text"]), prompt: z.string(), hint: z.string().optional(), low: z.string().optional(), high: z.string().optional(), options: z.array(z.string()).optional(), condition: z.enum(["direct", "recursive"]).optional() });
+export const SurveyItem = z.object({ id: z.string(), kind: z.enum(["scale", "choice", "text"]), prompt: z.string(), hint: z.string().optional(), low: z.string().optional(), high: z.string().optional(), options: z.array(z.string()).optional(), points: z.number().int().min(2).max(10).optional(), condition: z.enum(["direct", "recursive"]).optional() });
 export type SurveyItem = z.infer<typeof SurveyItem>;
 
 /** What a topic pack says to participants in its own words (topics/<slug>/copy.json). */

@@ -29,6 +29,8 @@ export default function Results() {
   const items = useTestItems(allowed, setError);
   if (!allowed || !saved || !saved.result || !items) return <div className="center">{error ?? "Loading…"}</div>;
   const delayed = saved.phase === "delayed";
+  // the rating and the last word are the survey's last questions (2026-11-16): the box below only when none were asked
+  const asked = !delayed && !!survey;
 
   const r = saved.result;
   const missed = r.items.filter((x) => !x.correct).length;
@@ -94,7 +96,7 @@ export default function Results() {
             </p>
           </div>
           {kaiThanks}
-          <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
+          {!asked && <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />}
           {saved.team && restart}
         </main>
       </div>
@@ -142,7 +144,7 @@ export default function Results() {
         )}
 
         {/* asked while the session is fresh: at the bottom of a long review most people never reached it */}
-        <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />
+        {!asked && <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />}
 
         <div className="review-head">
           <h2>Your answers</h2>

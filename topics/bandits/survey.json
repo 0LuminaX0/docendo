@@ -1,5 +1,5 @@
 {
-  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers); not after the delayed test. Scales run 1 to 7. 'lightScale' is the manipulation check (2026-11-13, a scale in place of the choice 'lights', where 2 of 4 pilot learners chose \"I'm not sure\"): in the direct condition the practice's right/wrong light is about the learner's own answers (expected near 1), in the recursive one about Kai's (near 7). 'calls' (recursive only, `condition`): what the learner's call on Kai's answer rested on, to tell trusting Kai from not reading its steps (the pilot's calls matched the light 6 of 12 times). 'leak': whether Kai seemed to know something it wasn't told (the leak check's view from the learner). 'help': notes or other help besides a dictionary, against the rule that everything is from memory. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed. Anything else goes in the feedback box on the last page.",
+  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers); not after the delayed test. Scales run 1 to 7. 'lightScale' is the manipulation check (2026-11-13, a scale in place of the choice 'lights', where 2 of 4 pilot learners chose \"I'm not sure\"): in the direct condition the practice's right/wrong light is about the learner's own answers (expected near 1), in the recursive one about Kai's (near 7). 'calls' (recursive only, `condition`): what the learner's call on Kai's answer rested on, to tell trusting Kai from not reading its steps (the pilot's calls matched the light 6 of 12 times). 'leak': whether Kai seemed to know something it wasn't told (the leak check's view from the learner). 'help': notes or other help besides a dictionary, against the rule that everything is from memory. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed. Last (2026-11-16, moved from the results page so the questions after the test are one list, not one round after another): the rating of the session, 1 to 5 as before (`points`), and anything else the learner wants to tell us; both are also logged as the feedback event. The results page keeps its own feedback box only when no questions were asked (the follow-up test, or the survey switched off).",
   "items": [
     {
       "id": "effort",
@@ -93,6 +93,20 @@
       "kind": "text",
       "prompt": "In the practice problems, how did you decide what to do after an answer was marked wrong?",
       "hint": "Describe one moment and your reasoning."
+    },
+    {
+      "id": "rating",
+      "kind": "scale",
+      "points": 5,
+      "prompt": "How was the session overall?",
+      "low": "Not good",
+      "high": "Great"
+    },
+    {
+      "id": "anything",
+      "kind": "text",
+      "prompt": "Anything else you would like to tell us?",
+      "hint": "What was confusing, what Kai did well or badly, anything the questions above didn't cover."
     }
   ]
 }

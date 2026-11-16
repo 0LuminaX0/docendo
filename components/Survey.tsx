@@ -26,6 +26,11 @@ export default function Survey({ onDone }: { onDone: () => void }) {
   const send = (skipped: boolean) => {
     const answers = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, typeof v === "string" ? v.trim().slice(0, 2000) : v]).filter(([, v]) => v !== ""));
     track("survey", { skipped, ...(skipped ? {} : answers) }); // one field per question (scales 1 to 7; choices: the option's index; open: the text)
+    // the rating and the last word (2026-11-16: moved here from the results page, so the questions after the test are
+    // one list) also go as the feedback event, for the admin panel's Feedback page and the export's feedback table
+    const rating = typeof answers.rating === "number" ? answers.rating : null;
+    const text = typeof answers.anything === "string" ? answers.anything : "";
+    if (!skipped && (rating !== null || text)) track("feedback", { rating, text: text.slice(0, 1500) });
     flush();
     onDone();
   };
@@ -52,8 +57,8 @@ export default function Survey({ onDone }: { onDone: () => void }) {
               <div className="survey-scale" role="radiogroup" aria-labelledby={`sv-${q.id}`}>
                 <span className="survey-end">{q.low}</span>
                 <span className="survey-dots">
-                  {[1, 2, 3, 4, 5, 6, 7].map((v) => (
-                    <button key={v} type="button" role="radio" aria-checked={a[q.id] === v} aria-label={`${v} of 7`} className={a[q.id] === v ? "on" : ""} onClick={() => setA((x) => ({ ...x, [q.id]: v }))}>
+                  {Array.from({ length: q.points ?? 7 }, (_, k) => k + 1).map((v) => (
+                    <button key={v} type="button" role="radio" aria-checked={a[q.id] === v} aria-label={`${v} of ${q.points ?? 7}`} className={a[q.id] === v ? "on" : ""} onClick={() => setA((x) => ({ ...x, [q.id]: v }))}>
                       {v}
                     </button>
                   ))}
