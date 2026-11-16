@@ -4,7 +4,7 @@ import { checkPractice, packFor } from "@/lib/server/content";
 import { State } from "@/engine/tutor/state";
 import { applyJudgement } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
-import { caveatFor, solve, type Solution } from "@/engine/tutor/solve";
+import { caveatFor, caveatOpen, solve, type Solution } from "@/engine/tutor/solve";
 import type { LlmCall } from "@/engine/llm";
 import { parseNumber } from "@/content/practice";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
@@ -42,6 +42,7 @@ const Body = z.discriminatedUnion("action", [
     step: z.string().max(600), // the step the learner clicked as faulty, Kai's words (the judge reads the correction in its light)
     clicks: z.array(z.number().int().min(0).max(10)).max(30), // every step the learner clicked, in order
     msOnProblem: z.number().int().min(0).max(24 * 3600_000).optional(),
+    wrongSoFar: z.number().int().min(0).max(20).optional(), // as for "solve", counted before this problem
   }),
 ]);
 
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     const onCall = (c: LlmCall) => calls.push(c);
     const t0 = Date.now();
     let state = body.data.state;
+    const before = state; // Kai's notebook before a correction
     let judged: unknown = null;
     if (body.data.action === "reteach") {
       const msg = body.data.message;
@@ -104,7 +106,11 @@ export async function POST(req: NextRequest) {
     const errors: string[] = []; // every failed try, in order (a slip, a right answer without the facts, a timeout)
     // the problem's caveat: first tries only, when Kai would otherwise solve every problem (P7's: this one) and its
     // notes leave the caveat open (engine/tutor/solve.ts: caveatFor)
-    const caveat = body.data.action === "solve" ? caveatFor(pack.practice, item, state, body.data.wrongSoFar ?? 0) : undefined;
+    // On the retry (2026-11-16) the first try's caveat stays in play while the corrected notes still leave it open:
+    // without that, any correction at all ("sdas") was enough for Kai to get P7 right, since the misreading was planted
+    // in the first try only. A correction that says the point in any words is followed (the solver is told to).
+    const first = caveatFor(pack.practice, item, before, body.data.wrongSoFar ?? 0);
+    const caveat = body.data.action === "solve" ? first : first && caveatOpen(first, state) ? first : undefined;
     const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, caveat, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
     const error = errors.at(-1) ?? null;
     const attempt = body.data.action === "solve" ? 1 : 2;

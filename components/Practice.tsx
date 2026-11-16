@@ -239,7 +239,9 @@ export default function Practice({ items }: { items: Item[] }) {
     setKai(q.id, (k) => ({ ...k, correction: message }));
     // the judge reads the correction in the light of Kai's whole first try
     const tried = `${first.steps.map((s) => s.text).join(" ")} My answer: ${first.answer}.`;
-    const d = await call<{ solution: KaiAttempt; state: State }>({ action: "reteach", id: q.id, state: saved.chat.state, message, step: tried.slice(-600), clicks: [], msOnProblem: ms });
+    // as for the first try: the server works out whether the first try had the problem's caveat in play
+    const wrongSoFar = Object.entries(state.kai ?? {}).filter(([k, e]) => k !== q.id && e.attempts[0] && !e.attempts[0].correct).length;
+    const d = await call<{ solution: KaiAttempt; state: State }>({ action: "reteach", id: q.id, state: saved.chat.state, message, step: tried.slice(-600), clicks: [], msOnProblem: ms, wrongSoFar });
     setBusy(false);
     if (!d) return setKai(q.id, (k) => ({ ...k, correction: null }));
     // Kai's notebook now holds the correction too, for the problems that follow
