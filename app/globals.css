@@ -958,7 +958,9 @@ textarea.dictating::placeholder { color: transparent; }
 .survey-list li { display: flex; flex-direction: column; gap: 12px; padding-bottom: 22px; border-bottom: 1px solid #eef0f3; }
 .survey-list .qt { margin: 0; font-weight: 600; font-size: 16.5px; line-height: 1.5; display: flex; gap: 12px; }
 .survey-n { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--sunk); display: grid; place-items: center; font: 700 12.5px var(--font-display), sans-serif; color: var(--ink-2); margin-top: 1px; }
-.survey-scale { display: grid; grid-template-columns: 110px auto 110px; align-items: center; gap: 14px; padding-left: 38px; }
+/* the circles centred under the question, each end label beside its end (equal label columns keep the circles centred;
+   2026-11-16: an auto middle column filled the width, so the circles sat left and the high end drifted to the far edge) */
+.survey-scale { display: grid; grid-template-columns: 120px max-content 120px; justify-content: center; align-items: center; gap: 14px; }
 .survey-end { font-size: 13px; color: var(--muted); }
 .survey-end:first-child { text-align: right; }
 .survey-dots { display: flex; gap: 8px; }
@@ -973,7 +975,7 @@ textarea.dictating::placeholder { color: transparent; }
 .survey-choices button { border-radius: 99px; padding: 9px 16px; }
 .survey-skip { color: var(--muted); font-weight: 500; }
 @media (max-width: 640px) {
-  .survey-scale { grid-template-columns: 1fr 1fr; padding-left: 0; }
+  .survey-scale { grid-template-columns: 1fr 1fr; justify-content: stretch; }
   .survey-dots { grid-column: 1 / -1; grid-row: 1; justify-content: space-between; }
   .survey-end:first-child { text-align: left; }
   .survey-end:last-child { text-align: right; }
