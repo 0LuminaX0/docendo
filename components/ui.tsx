@@ -158,7 +158,7 @@ export function VideoFrame({ videoId, title, start = 0, end, autoplay = false }:
   );
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Modal({ title, onClose, children, className }: { title: string; onClose: () => void; children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     ref.current?.focus();
@@ -168,7 +168,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
   }, [onClose]);
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className={`modal${className ? ` ${className}` : ""}`}>
         <header>
           <h2>{title}</h2>
           <button ref={ref} className="iconbtn" onClick={onClose} aria-label="Close" title="Close (Esc)">

@@ -72,7 +72,8 @@ export type KaiAttempt = { steps: KaiStep[]; answer: string; correct: boolean; n
 export type KaiEntry = { attempts: KaiAttempt[]; clicks: number[]; correction: string | null; ms?: number };
 
 // one problem at a time, in order; `current` is its index. `view` is the condition a team session looks at.
-export type PracticeState = { startedAt: number | null; current?: number; items: Record<string, PracticeEntry>; kai?: Record<string, KaiEntry>; view?: Condition };
+// current: the problem on screen; furthest: the furthest one reached (the learner can go back and forth among those, 2026-11-16)
+export type PracticeState = { startedAt: number | null; current?: number; furthest?: number; items: Record<string, PracticeEntry>; kai?: Record<string, KaiEntry>; view?: Condition };
 export const blankEntry = (): PracticeEntry => ({ work: "", answer: "", checks: 0, correct: null });
 
 export type Saved = {

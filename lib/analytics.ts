@@ -233,6 +233,11 @@ export function tables(events: Ev[]) {
       practiceSolutions: of("practice_solution").length, // older sessions only: solutions now come after the test
       practiceTimeUp: of("client_practice_time_up").length > 0,
       practiceLeftSec: first("client_practice_leave")?.leftMs != null ? Math.round(Number(first("client_practice_leave")!.leftMs) / 1000) : null,
+      // going back over the problems with the time left (2026-11-16): problems opened again and the seconds on them, and
+      // how often the pop-up "Go on to the final test?" (going on with time left) was answered "Keep preparing"
+      practiceRevisits: count(of("client_practice_problem_show"), (e) => e.revisit === true),
+      practiceReviewSec: Math.round(sum(of("client_practice_problem_leave").filter((e) => e.revisit === true).map((e) => Number(e.ms ?? 0))) / 1000),
+      practiceKeptPreparing: count(of("client_practice_ready"), (e) => e.go === false),
       pretestScore: first("pretest")?.score ?? null, // knowledge items right, of pretestOf
       pretestOf: first("pretest")?.of ?? null,
       pretestDontKnow: first("pretest")?.dontKnow ?? null,
@@ -359,8 +364,9 @@ export function tables(events: Ev[]) {
         kaiCallsRight: of("client_practice_kai_call").filter((e) => e.id === id && e.agreed === true).length,
         kaiCalls: of("client_practice_kai_call").filter((e) => e.id === id).length,
         firstTryCorrect: checks.length ? !!checks[0]!.correct : null,
-        // direct feedback: the learner's sentence on why their right answer is right (2026-11-12)
-        explanation: first("client_practice_explain", (e) => e.id === id)?.text ?? null,
+        // direct feedback: the learner's sentence on why their right answer is right (2026-11-12); the latest, since a
+        // learner going back over the problems may rewrite it (2026-11-16)
+        explanation: of("client_practice_explain").filter((e) => e.id === id).at(-1)?.text ?? null,
         retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
         skipped: of("client_practice_skip").some((e) => e.id === id),
         checks: checks.length,

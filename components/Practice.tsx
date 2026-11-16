@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowRight, BookOpen, Check, Lightbulb, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Check, Lightbulb, Play } from "lucide-react";
 import { StepClock, stepTime } from "./StepClock";
 import DebugSkip from "./DebugSkip";
 import { Header, Modal, VideoFrame, mmss } from "./ui";
@@ -30,6 +30,14 @@ const KEYS = "ABCDEF";
  * a wrong answer the learner finds the faulty step and reteaches once, and Kai
  * tries again. Same problems, time and number of tries. Worked solutions come
  * after the final test in both. When the time runs out, the test starts.
+ *
+ * The whole time is for preparing (2026-11-16: the direct condition finished
+ * far sooner than the recursive one). Both conditions are told to use the time
+ * left to go back over the problems and prepare for the test; the problems
+ * already reached open again (Previous, or the marks at the top), while a new
+ * one opens only from the one before it, so first visits keep the fixed order.
+ * Going to the test with time left asks first whether more preparation would
+ * help ("Keep preparing" is the default).
  */
 export default function Practice({ items }: { items: Item[] }) {
   const { practiceMinutes: minutes, practiceTries: tries, flow, lessonKind, help, limits } = useStudySettings();
@@ -46,7 +54,10 @@ export default function Practice({ items }: { items: Item[] }) {
   const [error, setError] = useState<string | null>(null);
   const [watching, setWatching] = useState<{ id: string; moments: Moment[]; k: number } | null>(null);
   const [reading, setReading] = useState<{ id: string; passages: Required<Passage>[]; k: number } | null>(null);
-  const shownAt = useRef<{ id: string; at: number } | null>(null);
+  const [ready, setReady] = useState(false); // the pop-up "Go on to the final test?" is open (going on with time left)
+  // revisit: a problem shown again (going back over the problems)
+  const shownAt = useRef<{ id: string; at: number; revisit: boolean } | null>(null);
+  const explained = useRef<Record<string, string>>({}); // direct: the sentence on why, as last logged per problem
 
   // the clock starts on the first visit and keeps running across reloads
   useEffect(() => {
@@ -63,6 +74,7 @@ export default function Practice({ items }: { items: Item[] }) {
   const mode: Condition = team ? (state.view ?? saved?.condition ?? "direct") : (saved?.condition ?? "direct");
   const index = Math.min(state.current ?? 0, items.length - 1);
   const q = items[index]!;
+  const furthest = Math.min(Math.max(state.furthest ?? 0, index), items.length - 1); // problems up to it open again
   const total = minutes * 60_000;
   const left = Math.min(total, Math.max(0, total - (now - (state.startedAt ?? now))));
   const past = !!state.startedAt && left === 0; // the time has run out
@@ -81,15 +93,17 @@ export default function Practice({ items }: { items: Item[] }) {
         const e = p.items[s.id] ?? blankEntry();
         return { ...x, practice: { ...p, items: { ...p.items, [s.id]: { ...e, ms: (e.ms ?? 0) + ms } } } };
       });
-      track("practice_problem_leave", { id: s.id, ms, why });
+      track("practice_problem_leave", { id: s.id, ms, why, revisit: s.revisit });
     },
     [update],
   );
   useEffect(() => {
     if (!allowed || !saved || over) return;
     if (shownAt.current?.id === q.id) return;
-    shownAt.current = { id: q.id, at: Date.now() };
-    track("practice_problem_show", { id: q.id, index, round: q.round, leftMs: left });
+    // shown before: behind the furthest problem reached, or left once already (first visits come in order)
+    const revisit = index < furthest || (state.items[q.id]?.ms ?? 0) > 0;
+    shownAt.current = { id: q.id, at: Date.now(), revisit };
+    track("practice_problem_show", { id: q.id, index, round: q.round, leftMs: left, revisit });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, !!saved, q.id, over]);
   useEffect(() => {
@@ -115,7 +129,7 @@ export default function Practice({ items }: { items: Item[] }) {
         firstTry: es.filter((e) => e.firstCorrect).length,
         tried: es.filter((e) => e.checks > 0).length,
         explained: es.filter((e) => e.why?.trim()).length, // direct: right answers with their reason
-        reached: Math.min((p?.current ?? 0) + 1, items.length),
+        reached: Math.min(Math.max(p?.furthest ?? 0, p?.current ?? 0) + 1, items.length),
       });
       const n = nextOf("practice");
       update((s: Saved) => ({ ...s, step: s.step === "practice" ? n.step : s.step }));
@@ -130,11 +144,12 @@ export default function Practice({ items }: { items: Item[] }) {
   const started = useRef<string | null>(null);
   const kaiTried = saved?.practice?.kai?.[q.id]?.attempts.length ?? 0;
   useEffect(() => {
-    if (!allowed || !saved?.chat.state || mode !== "recursive" || over || kaiTried || started.current === q.id) return;
+    // busy: another request is still out (it would refuse this one), so wait for it
+    if (!allowed || !saved?.chat.state || mode !== "recursive" || over || kaiTried || busy || started.current === q.id) return;
     started.current = q.id;
     solveRef.current();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowed, mode, over, q.id, kaiTried]);
+  }, [allowed, mode, over, q.id, kaiTried, busy]);
 
   const moved = useRef(false);
   useEffect(() => {
@@ -271,17 +286,44 @@ export default function Practice({ items }: { items: Item[] }) {
     </button>
   );
 
-  function next() {
-    if (unexplained && !over) return;
-    if (explain) track("practice_explain", { id: q.id, attempt: e.checks, chars: e.why!.trim().length, text: e.why!.trim().slice(0, 2000) });
-    if (last) return goTest("done");
-    leaveProblem(finished ? "next" : "skip");
-    if (!finished) track("practice_skip", { id: q.id, checks: e.checks });
+  // moving on waits for Kai (or the check) to finish, and in the direct condition for the sentence on why
+  const held = !!busy || (unexplained && !over);
+
+  /** Direct: the sentence on why, logged as the learner leaves the problem (again after a later visit only if it changed). */
+  function logExplain() {
+    const t = e.why?.trim();
+    if (!explain || !t || explained.current[q.id] === t) return;
+    explained.current[q.id] = t;
+    track("practice_explain", { id: q.id, attempt: e.checks, chars: t.length, text: t.slice(0, 2000) });
+  }
+
+  /** To another problem: any one already reached (back over them), or the next one (first visits keep the fixed order). */
+  function go(to: number, via: "button" | "bar") {
+    if (held || to === index || to < 0 || to >= items.length || to > furthest + 1) return;
+    logExplain();
+    leaveProblem(via === "bar" ? "jump" : to < index ? "back" : finished ? "next" : "skip");
+    if (to > index && !finished) track("practice_skip", { id: q.id, checks: e.checks });
     update((s: Saved) => {
       const p = s.practice ?? { startedAt: Date.now(), items: {} };
-      return { ...s, practice: { ...p, current: index + 1 } };
+      return { ...s, practice: { ...p, current: to, furthest: Math.max(p.furthest ?? 0, p.current ?? 0, to) } };
     });
+    setReady(false);
     window.scrollTo({ top: 0 });
+  }
+
+  function next() {
+    if (held) return;
+    if (!last) return go(index + 1, "button");
+    // with time left, ask first whether more preparation would help (past the time, soft clocks: straight on)
+    if (past) return (logExplain(), goTest("done"));
+    setReady(true);
+  }
+
+  /** The answer to the pop-up "Go on to the final test?". */
+  function answerReady(goOn: boolean) {
+    track("practice_ready", { go: goOn, leftMs: left, index, reached: furthest + 1 });
+    setReady(false);
+    if (goOn) (logExplain(), goTest("done"));
   }
 
   const lit = e.correct === true ? "on" : e.correct === false ? "off" : "";
@@ -298,6 +340,11 @@ export default function Practice({ items }: { items: Item[] }) {
             : `You have ${tries} tries.`;
 
   const clock = <StepClock left={left} over={past} overMs={overMs} soft={soft} what="practice" />;
+
+  // the same words in both conditions: the whole time is for preparing for the test
+  const prepare = <b className="prepare">When you&apos;re through, use the time left to go back over the problems and prepare for the final test.</b>;
+  const lesson = !flow.includes("watch") ? null : text ? "read" : "watched";
+  const minsLeft = Math.ceil(left / 60_000);
 
   return (
     <div className="shell">
@@ -326,13 +373,13 @@ export default function Practice({ items }: { items: Item[] }) {
             {mode === "recursive" ? (
               <>
               <p className="lede">
-                Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {soft ? `About ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}; solutions after the final test.
+                Kai solves each problem using only its notebook: what you taught it. When it&apos;s wrong, you write one correction and it tries again. {soft ? `About ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}; solutions after the final test. {prepare}
               </p>
               </>
             ) : (
               <p className="lede">
                 {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}
-                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right, and after a right answer you say in a sentence why. Solutions after the final test.
+                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right, and after a right answer you say in a sentence why. Solutions after the final test. {prepare}
               </p>
             )}
           </div>
@@ -346,16 +393,22 @@ export default function Practice({ items }: { items: Item[] }) {
                   if (x.round !== r) return null;
                   const xe = entry(x.id);
                   const xk = kaiOf(x.id);
+                  // open: reached and not on screen, so it can be opened again ("skip": reached and left unfinished)
+                  const open = i <= furthest && i !== index;
                   const st =
                     mode === "recursive"
-                      ? xk.attempts.some((a) => a.correct && a.call !== undefined) ? "ok" : xk.attempts[1]?.call !== undefined ? "no" : i < index ? "skip" : ""
-                      : xe.correct === true ? "ok" : xe.checks >= tries ? "no" : i < index ? "skip" : "";
+                      ? xk.attempts.some((a) => a.correct && a.call !== undefined) ? "ok" : xk.attempts[1]?.call !== undefined ? "no" : open ? "skip" : ""
+                      : xe.correct === true ? "ok" : xe.checks >= tries ? "no" : open ? "skip" : "";
+                  const label = `Problem ${i + 1}${st === "ok" ? ", correct" : st === "no" ? ", not solved" : st === "skip" ? ", not finished" : ""}`;
                   return (
                     <li key={x.id} className={`${st}${i === index ? " now" : ""}`} aria-current={i === index ? "step" : undefined}>
-                      <span className="sr-only">
-                        Problem {i + 1}
-                        {st === "ok" ? ", correct" : st === "no" ? ", not solved" : st === "skip" ? ", skipped" : ""}
-                      </span>
+                      {open ? (
+                        <button type="button" onClick={() => go(i, "bar")} disabled={held} title={`${label}: ${x.title}`}>
+                          <span className="sr-only">Open {label.charAt(0).toLowerCase() + label.slice(1)}</span>
+                        </button>
+                      ) : (
+                        <span className="sr-only">{label}</span>
+                      )}
                     </li>
                   );
                 })}
@@ -464,7 +517,12 @@ export default function Practice({ items }: { items: Item[] }) {
         )}
 
         <div className="submitbar">
-          <button className={`btn${finished ? " primary" : ""}`} onClick={next} disabled={unexplained && !over}>
+          {index > 0 && (
+            <button className="btn ghost back" onClick={() => go(index - 1, "button")} disabled={held}>
+              <ArrowLeft size={17} /> Previous
+            </button>
+          )}
+          <button className={`btn go${finished ? " primary" : ""}`} onClick={next} disabled={held}>
             {last ? "Go to the final test" : finished ? "Next problem" : "Skip this problem"} <ArrowRight size={17} />
           </button>
           {unexplained && !over && <span className="answered">Say in a sentence why it&apos;s right, then go on.</span>}
@@ -474,6 +532,43 @@ export default function Practice({ items }: { items: Item[] }) {
           {error && <p className="error" role="alert">{error}</p>}
         </div>
       </main>
+      {ready && (
+        // going on with time left: a pop-up asks first ("Keep preparing" is the first button; closing it keeps preparing too)
+        <Modal title="Go on to the final test?" className="narrow" onClose={() => answerReady(false)}>
+          <div className="prac-ready">
+            <p>
+              {left > 0 ? (
+                <>
+                  You still have <b>{minsLeft > 1 ? count(minsLeft, "minute") : "about a minute"}</b> of practice time. Use it to prepare for the test as well as you can:
+                </>
+              ) : (
+                "Before you go on, make sure you're as prepared for the test as you can be:"
+              )}
+            </p>
+            <ul>
+              {mode === "recursive" ? (
+                <li>Go back over the problems, Kai&apos;s tries and its notebook. Could you explain why each of Kai&apos;s answers was right or wrong?</li>
+              ) : (
+                <li>Go back over the problems and your answers. Could you explain why each right answer is right?</li>
+              )}
+              <li>Recall what you {lesson ? `${lesson} and what you ` : ""}taught Kai: how each idea works, and why.</li>
+              <li>Think about what the test could ask, and how you would answer and explain it.</li>
+            </ul>
+            <p className="note">You can open any problem again with Previous or the marks at the top.</p>
+            <p>
+              The final test is from memory, and once it starts you can&apos;t come back to practice. <b>Go on only when you&apos;re sure more preparation won&apos;t help.</b>
+            </p>
+            <div className="prac-ready-row">
+              <button className="btn primary" onClick={() => answerReady(false)}>
+                <ArrowLeft size={17} /> Keep preparing
+              </button>
+              <button className="btn ghost" onClick={() => answerReady(true)}>
+                Yes, go to the test <ArrowRight size={17} />
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
       {reading && (
         <Modal title={reading.passages[reading.k]!.title} onClose={() => (track("practice_hint_close", { id: reading.id }), setReading(null))}>
           <div className="passage" onCopy={(e) => (e.preventDefault(), track("read_copy_attempt", { kind: "copy", where: "practice" }))} onCut={(e) => e.preventDefault()}>

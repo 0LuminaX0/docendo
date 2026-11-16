@@ -349,7 +349,8 @@ await page.click(".ready .btn.primary");
 await page.waitForFunction(() => location.pathname === "/practice");
 await page.waitForSelector(".pq");
 const nextProblem = async (n) => {
-  await page.$eval(".submitbar .btn", (e) => e.click());
+  await page.waitForFunction(() => { const b = document.querySelector(".submitbar .btn.go"); return b && !b.disabled; });
+  await page.$eval(".submitbar .btn.go", (e) => e.click());
   await page.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, n);
 };
 // click Check only once React has re-rendered with the answer (the button is disabled until then)
@@ -373,10 +374,10 @@ try {
 }
 check((await page.$$(".prog li")).length === practiceItems.length, `practice shows ${practiceItems.length} problems`);
 // after a right answer the learner says in a sentence why it's right before going on (any text counts)
-const held = await page.$eval(".submitbar .btn", (b) => b.disabled);
+const held = await page.$eval(".submitbar .btn.go", (b) => b.disabled);
 await page.focus(`#${practiceItems[0].id}-why`);
 await page.keyboard.type("B's average fell below A's, so greedy switched.");
-await page.waitForFunction(() => !document.querySelector(".submitbar .btn")?.disabled);
+await page.waitForFunction(() => !document.querySelector(".submitbar .btn.go")?.disabled);
 check(held, "after a right answer, practice asks why it's right and goes on once there's a sentence");
 await nextProblem(1);
 // p2: a wrong option twice; between the tries, rewatch the lesson moment
@@ -405,7 +406,26 @@ await peek.waitForSelector(".mind-page", { timeout: 8000 }).catch(() => {});
 check(mindLink && (await peek.evaluate(() => location.pathname)) === "/mind", "the debug session (shared code) keeps Kai's mind open during practice, with a link in the corner");
 await peek.close();
 for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
-await page.$eval(".submitbar .btn", (e) => e.click());
+// the time left is for preparing (2026-11-16, both conditions): the problems already reached open again (the marks at
+// the top, Previous), and going to the test with time left asks first in a pop-up; "Keep preparing" stays on the page
+const prepLede = await page.$eval(".prac-title .lede .prepare", (e) => e.textContent).catch(() => "");
+await page.$eval(".prog li:first-child button", (e) => e.click());
+await page.waitForFunction(() => document.querySelector(".prog li")?.classList.contains("now"));
+const backRight = !!(await page.$(".pq .bulb.on")) && (await page.$eval(`#${practiceItems[0].id}-why`, (e) => e.value)).length > 0;
+for (let n = 1; n < practiceItems.length; n++) await nextProblem(n);
+await page.$eval(".submitbar .btn.back", (e) => e.click());
+await page.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, practiceItems.length - 2);
+await nextProblem(practiceItems.length - 1);
+await page.$eval(".submitbar .btn.go", (e) => e.click());
+await page.waitForSelector(".prac-ready");
+await shot(page, "07g-practice-ready");
+await page.$eval(".prac-ready .btn.primary", (e) => e.click());
+await page.waitForSelector(".scrim", { hidden: true });
+const keptOn = (await page.evaluate(() => location.pathname)) === "/practice";
+check(/prepare for the final test/.test(prepLede) && backRight && keptOn, "practice says to use the time left to prepare; the problems already reached open again (the marks, Previous) as they were left, and going to the test with time left asks first (Keep preparing stays)");
+await page.$eval(".submitbar .btn.go", (e) => e.click());
+await page.waitForSelector(".prac-ready");
+await page.$eval(".prac-ready .btn.ghost", (e) => e.click());
 await page.waitForFunction(() => location.pathname === "/exercises");
 await page.waitForSelector(".q");
 // the learner's own order, all from one form; every question offers "I don't know" and asks for the reason
@@ -496,12 +516,21 @@ check(kaiWrong && hasNotebook && /notes don't cover|notes only say|guess|imagine
 await wait(2500); // the steps and the new notes finish appearing
 await shot(skip, "07e-kai-second-try");
 // on to the test and the results: they report Kai's outcome on the problems Kai worked on
+// moving on waits while Kai is still solving the problem on screen
+const skipGo = async () => {
+  await skip.waitForFunction(() => { const b = document.querySelector(".submitbar .btn.go"); return b && !b.disabled; }, { timeout: 60000 });
+  await skip.$eval(".submitbar .btn.go", (e) => e.click());
+};
 for (let n = 1; n < practiceItems.length; n++) {
-  await skip.$eval(".submitbar .btn", (e) => e.click());
+  await skipGo();
   await skip.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, n);
 }
-await skip.$eval(".submitbar .btn", (e) => e.click());
+await skipGo();
+await skip.waitForSelector(".prac-ready");
+const readyKai = await skip.$eval(".modal .prac-ready", (e) => e.textContent);
+await skip.$eval(".prac-ready .btn.ghost", (e) => e.click());
 await skip.waitForFunction(() => location.pathname === "/exercises");
+check(/Kai's tries and its notebook/.test(readyKai), "the recursive view asks before the test too, pointing to Kai's tries and notebook");
 await skip.waitForSelector(".q");
 const nq = (await skip.$$(".q")).length;
 for (let i = 1; i <= nq; i++) await skip.$eval(`.q:nth-of-type(${i}) .opt input`, (e) => e.click()).catch(() => {});
@@ -988,7 +1017,7 @@ if (existsSync(logFile)) {
   const since = runStarted.toISOString();
   const evs = readFileSync(logFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.at >= since);
   const has = (t) => evs.some((e) => e.t === t);
-  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", textLesson ? "client_read_continue" : "client_watch_continue_early", "client_skip_confirm", "client_survey"];
+  const need = ["session_start", "pretest", "chat_turn", "practice_check", "practice_hint", "notebook_snapshot", "client_practice_problem_leave", "client_practice_skip", "client_practice_ready", "practice_kai_solve", "practice_kai_reteach", "grade", "client_page_view", "client_message_send", textLesson ? "client_read_continue" : "client_watch_continue_early", "client_skip_confirm", "client_survey"];
   const missing = need.filter((t) => !has(t));
   // the open questions after the test reach the log in the learner's words
   check(evs.some((e) => e.t === "client_survey" && /day by day table/.test(e.helped ?? "")), "the open questions after the test are logged in the learner's words");
