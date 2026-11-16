@@ -28,8 +28,9 @@ describe("the text lesson", () => {
   });
 
   it("states no consequence the practice or test items ask learners to work out", () => {
-    // regret is not taught; that an ignored option comes back, or that greedy corrects a too-high start, is for the items
-    for (const phrase of [/regret/i, /comes? back/i, /picked again/i, /corrects? itself/i, /too.high/i, /logarithmic/i]) expect(text, String(phrase)).not.toMatch(phrase);
+    // regret is not taught; that an ignored option comes back, or that greedy corrects a too-high start, is for the items;
+    // so is that the worst option comes back ever more rarely (P8, V21)
+    for (const phrase of [/regret/i, /comes? back/i, /picked again/i, /corrects? itself/i, /too.high/i, /logarithmic/i, /less often|more rarely|longer gaps|gaps? (?:get|grow)s? longer/i]) expect(text, String(phrase)).not.toMatch(phrase);
   });
 
   it("counts a message as copied only at a long run of the text's words", () => {

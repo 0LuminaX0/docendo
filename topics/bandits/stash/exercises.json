@@ -1,6 +1,6 @@
 {
   "title": "Stashed test items (not served)",
-  "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: 2026-11-12: one final test for everyone (form A, seven items) and the pilot's candidates as form B; T16 (too easy), T4 (V14 took its place) and V20 (c leaves the lesson) taken out, V14, V15 and T7 back in. 2026-11-06: v16 (which options could greedy and UCB pick) and v18 (round 9) taken out of form B, which asked what form A's T4 and T16 ask; v19 (the price of exploring) and v20 (ratings out of 100, greedy against UCB) took their places. Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other.",
+  "note": "Items taken out of the final test, kept with their keys, rubrics, diagnoses and notes. The app never loads this folder. To use one again, move it back into ../exercises.json. History: 2026-11-12: one final test for everyone (form A, seven items) and the pilot's candidates as form B; T16 (too easy), T4 (V14 took its place) and V20 (c leaves the lesson) taken out, V14, V15 and T7 back in. 2026-11-06: v16 (which options could greedy and UCB pick) and v18 (round 9) taken out of form B, which asked what form A's T4 and T16 ask; v19 (the price of exploring) and v20 (ratings out of 100, greedy against UCB) took their places. Since 2026-11-05 the lesson is greedy and UCB only (ε-greedy left out), and each form has five items asked in a fixed order, from understanding greedy to a changed UCB: form A T1 (greedy), T11 (a changed greedy: optimistic start, V1 moved), T12 (UCB's rule, inverse: V5 moved), T4 (one UCB round, rewritten: the bonus formula not given, every option a set of options), T6 (a changed UCB: the bonus stops growing); form B the twins V11, V12, V13, V14 and V4 (ordinary UCB in the long run). No anchor: T10 = V9 was about ε-greedy. Every other item is marked off: kept with its key and notes, never served. Before: Five items a form since 2026-11-05 (the session cut to about 40 minutes; Phil's pilot run took 20 minutes for ten): form A T1, T2, T4, T6 and T10, form B V1, V2, V4, V5 and V9, the same five ideas in each (greedy's lock-in, ε-greedy's random pick, UCB's pick, the bonus over the rounds, the anchor on c). The others are marked off: kept with their keys and notes, never served. The team's post-test (2 November 2026): form A holds T1 to T10 (version 1, estimated 48% correct), form B holds V1 to V10 (version 2, harder, estimated 35%). Goal G only (how greedy, ε-greedy and UCB choose), in settings the lesson and the practice don't use. Every item states predictions only, offers \"I don't know\" (graded wrong) and asks for the reason in one or two sentences, scored later against the rubric: 2 points when both named elements are present, 1 for one, 0 otherwise. kind multi: select all that apply, right only if exactly the true statements are selected. Each wrong option is the prediction of a named misconception (diagnosis: Kai's assumption for a fact, or a known learner one). type: near or far transfer (form A); what makes a form B item harder. estimate: the team's guess of the share correct, to compare with the pilot. v09 is the same item as t10 (same), the anchor that shows whether the groups taking each form differ: a session that takes both forms answers it once and it counts for both. Pilot (settings, test.both): every session takes both forms after the lesson, its own form first, so the order alternates within each condition. Otherwise a session takes one form, and a follow-up test the other. 2026-11-16: V4 (UCB keeps returning to the worst option, with ever longer gaps) taken out of the final test: its idea is practised in P8 (the radio playlists), and V21 took its place, asking it in another form.",
   "items": [
     {
       "id": "v11",
@@ -776,6 +776,35 @@
       ],
       "estimate": 0.3,
       "note": "New 2026-11-06 in v18's place (v18 asked what t04 and t16 already settle: in one round the bonuses differ only through the tries). The team's T10 (stashed t10, the old anchor) with greedy in ε-greedy's place: the only item in either form on c (n11.f2). Simulated again (four songs, true averages 0.7, 0.6, 0.5 and 0.3, ratings spread around them with sd 0.25, 2,000 rounds, 200 runs): with c = 0.5 the UCB app ended mostly on a worse song in 0 runs at the original scale and in 42 after multiplying by 100 (c = 1.41: 0 and 38); it spent 8.6% of rounds away from its own favourite before and 0.5% after, about greedy's 0.4%. Greedy's picks are exactly the same at both scales. Taken out 2026-11-12: c leaves the lesson."
+    },
+    {
+      "id": "v04",
+      "goal": "G",
+      "type": "harder",
+      "section": "UCB",
+      "form": "A",
+      "title": "Forever",
+      "kind": "choice",
+      "prompt": "UCB runs forever on four options. Option D is clearly the worst, and by round 10,000 UCB's averages show this. How does UCB treat D from then on?",
+      "options": [
+        "D is picked again only if its average rises",
+        "After some round, D is no longer picked",
+        "D keeps being picked, with ever longer gaps",
+        "D is picked at a roughly fixed share of rounds"
+      ],
+      "answer": 2,
+      "dontKnow": true,
+      "reason": true,
+      "explain": "While D is not picked, its bonus keeps growing with the round number, without limit. So D's score eventually beats the best option's, and D is picked again. Each pick shrinks D's bonus, and the regrowth gets ever slower, so each gap is longer than the last.",
+      "rubric": "The bonus of an unpicked option grows without limit; each pick shrinks it, and regrowth slows.",
+      "diagnosis": [
+        "learner: UCB treated like greedy",
+        "Kai: F11 (an unpicked bonus stays the same), or F10 (every bonus shrinks over time)",
+        "correct",
+        "Kai: F11 vague (the bonus grows at a steady rate)"
+      ],
+      "estimate": 0.4,
+      "note": "The twin of T6 (2026-11-05): both ask how an option the averages show to be worse fares from then on, T6 under a changed bonus, V4 under ordinary UCB. Taken out of the final test 2026-11-16: its idea went into practice as P8 (the radio playlists, a near twin of it), and V21 took its place, asking the same idea in another form."
     }
   ]
 }

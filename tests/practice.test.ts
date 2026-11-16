@@ -4,6 +4,7 @@ import practiceJson from "../topics/bandits/practice.json";
 import stashedJson from "../topics/bandits/stash/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile, caveatsOf, checkPractice, parseNumber } from "../content/practice";
+import { gapsAround, mean, picksOf } from "./bandit-sim";
 
 const bundle = Bundle.parse(bundleJson);
 const practiceFile = PracticeFile.parse(practiceJson);
@@ -50,11 +51,31 @@ describe("practice problems", () => {
     expect([...winners].sort()).toEqual([0, 1]);
   });
 
-  it("are three in use, in one round (the others switched off, kept)", () => {
+  it("p8: the lesson's UCB plays the least-liked playlist about every 100 hours around hour 1,000, far less often around hour 50,000, and still plays it then", () => {
+    // the stem's numbers, recomputed: four playlists truly averaging 0.7, 0.6, 0.5 and 0.3 (Jazz), scores spread with
+    // sd 0.25 and kept between 0 and 1, the lesson's formula (average + √(ln t / n)), 20 seeded runs of 60,000 hours
+    const p8 = item("p8");
+    expect(p8.prompt).toMatch(/Around hour 1,000, UCB played Jazz about once every 100 hours/);
+    expect(p8.prompt).toMatch(/around hour 50,000\?$/);
+    expect(p8.options![p8.answer]).toBe("Far less often than once every 100 hours");
+    const runs = Array.from({ length: 20 }, (_, s) => picksOf("ucb", [0.7, 0.6, 0.5, 0.3], 60_000, s + 1, 3));
+    const early = runs.map((p) => mean(gapsAround(p, 1000)));
+    const late = runs.map((p) => mean(gapsAround(p, 50_000)));
+    expect(mean(early)).toBeGreaterThan(60); // "about once every 100 hours"
+    expect(mean(early)).toBeLessThan(150);
+    runs.forEach((p, i) => {
+      expect(p.some((t) => t > 40_000), `run ${i + 1}: still played`).toBe(true); // not "not at all"
+      expect(late[i]!, `run ${i + 1}: far less often`).toBeGreaterThan(5 * early[i]!); // not "as before", not "more often"
+    });
+  });
+
+  it("are four in use, in one round (the others switched off, kept)", () => {
     // since 2026-11-05 greedy and UCB only: greedy after a lucky start (the caveat both pilot learners missed on the
-    // test), greedy against UCB, what one pick does to every score
+    // test), greedy against UCB, what one pick does to every score, and (since 2026-11-16) UCB over a long run, the
+    // only one that needs the bonus's growth to slow down
     const used = practice.items;
-    expect(used.map((p) => p.id)).toEqual(["p7", "p3", "p2"]);
+    expect(used.map((p) => p.id)).toEqual(["p7", "p3", "p2", "p8"]);
+    expect(practice.minutes).toBe(17);
     expect(new Set(used.map((p) => p.round))).toEqual(new Set([1]));
     const need = new Set(used.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))));
     expect([...need].sort()).toEqual(["n05.f1", "n06.f1", "n11.f1", "n12.f1", "n12.f2"]);
@@ -97,7 +118,7 @@ describe("pretest", () => {
   });
 
   it("doesn't reuse the practice or test items' settings, so it doesn't prime them", () => {
-    for (const q of items) expect(q.prompt, q.id).not.toMatch(/food truck|headline|slot machine|banner|coffee|podcast|study app|festival|exercise type|cake|audio tour|page layout|thumbnail|canteen|subject line|recipe|greedy|UCB|ε/i);
+    for (const q of items) expect(q.prompt, q.id).not.toMatch(/food truck|headline|slot machine|banner|coffee|podcast|study app|festival|exercise type|cake|audio tour|page layout|thumbnail|canteen|subject line|recipe|playlist|radio|greedy|UCB|ε/i);
   });
 });
 
@@ -220,8 +241,18 @@ describe("Kai solving practice problems (recursive feedback)", () => {
           expect(s.steps.find((x) => x.text.includes(hunchFor(bundle, b)!))!.text).toMatch(/^My notes only say "/);
         }
       }
-    // the bonus "grows" without "ever more slowly": enough to see that it grows (p2, p3), not to see the gaps grow (p6)
+    // the bonus "grows" without "ever more slowly": enough to see that it grows (p2, p3), not to see the gaps grow (p6,
+    // p8: a steady rate keeps Jazz coming back at the same pace, option A)
     expect(gate(item("p2"), taughtState(item("p2").needs!, ["n12.f2"])).canBeRight).toBe(true);
+    expect(gate(item("p3"), taughtState(item("p3").needs!, ["n12.f2"])).canBeRight).toBe(true);
+    expect(gate(item("p8"), taughtState(item("p8").needs!, ["n12.f2"])).canBeRight).toBe(false);
+    expect(offlineSolve(bundle, item("p8"), taughtState(item("p8").needs!, ["n12.f2"])).answer).toBe("A");
+    // without UCB's rule Kai goes for the option tried the fewest times, Jazz: more plays (D); without the bonus's
+    // shrinking, or its growth, nothing brings Jazz back (B); with an empty notebook UCB's rule decides (D)
+    expect(offlineSolve(bundle, item("p8"), taughtState(["n12.f1", "n12.f2"])).answer).toBe("D");
+    expect(offlineSolve(bundle, item("p8"), taughtState(["n11.f1", "n12.f2"])).answer).toBe("B");
+    expect(offlineSolve(bundle, item("p8"), taughtState(["n11.f1", "n12.f1"])).answer).toBe("B");
+    expect(offlineSolve(bundle, item("p8"), initialState(bundle)).answer).toBe("D");
     expect(offlineSolve(bundle, item("p6"), taughtState(item("p6").needs!, ["n12.f2"])).answer).toBe("B");
     expect(offlineSolve(bundle, item("p6"), taughtState(item("p6").needs!.filter((n) => n !== "n12.f2"))).answer).toBe("D");
   });
@@ -477,6 +508,20 @@ describe("the caveats (Kai fails at least once, never against its notes)", () =>
     expect(caveatFor(practice.items, p3, everything, 0)).toEqual(c3);
     expect(caveatFor(practice.items, p3, everything, 1)).toBeUndefined();
     expect(caveatFor(practice.items, p3, taughtState(needed.filter((f) => f !== "n12.f2")), 0)).toBeUndefined(); // P3 itself fails anyway
+    // P8 (2026-11-16) comes last and needs the bonus's growth to slow down: taught without the slowing, P3 and P2 are
+    // still solved but P8 would fail anyway, so their caveats stay out (Kai fails P8 from the gap instead); P8 has no
+    // caveat; P7's comes into play all the same (alone)
+    const p8 = item("p8");
+    const slowingLeftOut = taughtState(needed, ["n12.f2"]);
+    expect([p3, p2].map((p) => gate(p, slowingLeftOut).canBeRight)).toEqual([true, true]);
+    expect(gate(p8, slowingLeftOut).canBeRight).toBe(false);
+    expect(caveatFor(practice.items, p3, slowingLeftOut, 0)).toBeUndefined();
+    expect(caveatFor(practice.items, p2, slowingLeftOut, 0)).toBeUndefined();
+    expect(caveatsOf(p8)).toEqual([]);
+    expect(caveatFor(practice.items, p8, everything, 0)).toBeUndefined();
+    expect(caveatFor(practice.items, p7, withNotes(terse, slowingLeftOut), 0)?.id).toBe("sticks");
+    // the slowing taught: P2's caveat waits for P8's gate, which is open
+    expect(caveatFor(practice.items, p2, everything, 0)).toEqual(c2);
     // "grows when not picked for a long time" leaves one round open; "grows every round" doesn't
     const long = withNotes({ "n12.f2": "the bonus of an option that isn't picked for a long time keeps growing, more and more slowly" });
     expect(caveatOpen(c2, long)).toBe(true);
