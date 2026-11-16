@@ -163,7 +163,7 @@ export async function takeScriptTurn(
   const at = restart ? 0 : Math.min(saved?.at ?? 0, n - 1);
   const pos: Pos = restart
     ? { at: 0, more: false, again: 0, skipped: [], back: false, probe: null, probed: [], covered: [], repeats: 0, ids: idsOf(script) }
-    : { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: (saved?.skipped ?? []).filter((i) => i < n), back: saved?.back ?? false, probe: saved?.probe ?? null, probed: saved?.probed ?? [], covered: saved?.covered ?? [], repeats: saved?.repeats ?? 0, ids: saved?.ids };
+    : { at, more: saved?.more ?? false, again: saved?.again ?? 0, skipped: (saved?.skipped ?? []).filter((i) => i < n), back: saved?.back ?? false, probe: saved?.probe ?? null, probed: saved?.probed ?? [], covered: saved?.covered ?? [], repeats: saved?.repeats ?? 0, asked: saved?.asked ?? 0, ids: saved?.ids };
   const q = script.questions[at]!;
   const L = script.lines;
   const words = input.message.split(/\s+/).filter(Boolean).length;
@@ -177,7 +177,13 @@ export async function takeScriptTurn(
   const notAnswer = j.intent === "ask_kai" || j.intent === "off_topic";
   const toKai: Reaction = j.intent === "ask_kai" ? "askedKai" : "again";
   const isAnswer = j.intent === "explain" || j.intent === "answer";
-  const probe = isAnswer && !restart ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length) : undefined;
+  // a follow-up for each target not taught yet: left out, vague, or answered with a wrong belief (2026-11-16: Kai
+  // believes it, and asking once more how the rule goes is a fair question to it; a correct answer then retires the
+  // belief. A wrong transcript, "the one with the lowest average", had stood without a second chance)
+  // At most `maxFollowUps` of them as messages of their own (the study's time): a question opened with its follow-up
+  // (begunOn) replaces a question and doesn't count
+  const budget = (pos.asked ?? 0) < (script.maxFollowUps ?? Number.POSITIVE_INFINITY);
+  const probe = isAnswer && !restart && budget ? q.follow.find((f) => q.targets.includes(f.fact) && !taught(state, f.fact) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length) : undefined;
   let kind: Reaction;
   let stay: "more" | "again" | "probe" | "repeat" | null = null;
   if (notAnswer && pos.again < 1 && !restart) (stay = "again"), (kind = toKai);
@@ -213,7 +219,7 @@ export async function takeScriptTurn(
     tail = probe!.text;
     nextId = q.id;
     move = { type: "followUp", node: q.node, seed: tail, fact: probe!.fact };
-    state = { ...state, script: { ...pos, again: 0, probe: probe!.fact, probed: [...pos.probed, probe!.fact] } };
+    state = { ...state, script: { ...pos, again: 0, probe: probe!.fact, probed: [...pos.probed, probe!.fact], asked: (pos.asked ?? 0) + 1 } };
   } else if (stay === "repeat") {
     tail = q.again!.text;
     nextId = q.id;

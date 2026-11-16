@@ -11,9 +11,7 @@ export const Intent = z.enum(["explain", "answer", "ask_kai", "unsure", "move_on
 export type Judgement = {
   intent: z.infer<typeof Intent>;
   // note: the point as a whole sentence around the learner's words (null when the judge gave none or it failed the check)
-  // keyQuote: for a fact with a key judged correct, the learner's words that state the key (logged; code checks they
-  // are in the message, else the fact is only partial)
-  facts: { fact: string; verdict: Verdict; quote: string; note?: string | null; keyQuote?: string }[];
+  facts: { fact: string; verdict: Verdict; quote: string; note?: string | null }[];
   // wrong beliefs the learner stated, open-ended (no fixed list); `belief` is the judge's summary, for the log only
   // fact: the lesson fact it contradicts (null: none listed)
   misconceptions?: { node: string; quote: string; belief: string; note?: string | null; fact?: string | null }[];
@@ -38,7 +36,7 @@ function replySchema(bundle: Bundle) {
     // first, the message split into its separate claims: makes the model weigh each one (log only)
     claims: z.array(z.string()),
     intent: Intent,
-    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string(), keyQuote: z.string(), before: z.string(), after: z.string() })),
+    facts: z.array(z.object({ fact: z.enum(ids as [string, ...string[]]), verdict: Verdict, quote: z.string(), before: z.string(), after: z.string() })),
     misconceptions: z.array(z.object({ node: z.enum(nodes as [string, ...string[]]), fact: z.enum(["none", ...ids] as [string, ...string[]]), quote: z.string(), belief: z.string(), before: z.string(), after: z.string() })).optional(),
   });
   replyCache.set(bundle, schema);
@@ -118,68 +116,6 @@ export function sentencesOf(message: string, quote: string, after = 0, before = 
 }
 
 const factOf = (bundle: Bundle, id: string) => bundle.nodes.flatMap((n) => n.facts).find((f) => f.id === id);
-
-type Log = { fact: string; quote: string }[];
-
-/** A fact's evidence pattern, or null (none, or it doesn't compile: then it isn't checked, logged). */
-function evidenceOf(bundle: Bundle, id: string, log: Log): RegExp | null {
-  const ev = factOf(bundle, id)?.evidence;
-  if (!ev) return null;
-  try {
-    return new RegExp(ev, "iu");
-  } catch {
-    log.push({ fact: id, quote: "(its evidence pattern doesn't compile: not checked)" });
-    return null;
-  }
-}
-
-/**
- * A worked example the judge credits as correct also credits the fact it shows (`exampleOf`), when the example's
- * sentences (with the one before and the two after) hold that fact's evidence: the judge tends to file a learner's
- * example under the example fact alone ("If the best truck has one bad lunch at the start, greedy might never go back
- * to it, so it never finds out it's actually the best" went to n06.f2, leaving lock-in partial or missing, 2026-11-14).
- * It lifts a missing or partial verdict, never a wrong one (an example doesn't overrule a contradiction). Logged.
- */
-export function creditExamples<T extends Judgement["facts"][number]>(bundle: Bundle, message: string, facts: T[], log: Log): T[] {
-  let out = facts;
-  for (const ex of facts) {
-    const target = ex.verdict === "correct" ? factOf(bundle, ex.fact)?.exampleOf : undefined;
-    if (!target) continue;
-    const has = out.find((v) => v.fact === target);
-    if (has && has.verdict !== "partial") continue;
-    const re = evidenceOf(bundle, target, log);
-    if (!re || !re.test(sentencesOf(message, ex.quote, 2, 1))) continue;
-    const lifted = { ...(has ?? ex), fact: target, verdict: "correct" as const, keyQuote: ex.quote };
-    out = has ? out.map((v) => (v === has ? lifted : v)) : [...out, lifted];
-    log.push({ fact: `${target} (correct through its example ${ex.fact})`, quote: ex.quote.slice(0, 160) });
-  }
-  return out;
-}
-
-/**
- * A message that also states the fact's wrong reading (its `against` patterns) doesn't teach the fact: a "correct"
- * verdict is partial, as when the judge records that contradiction itself (below, `torn`), and a "partial" one is
- * dropped, since the learner taught the wrong reading, not a vague version of the fact (a vague reading can open a
- * practice gate). The judge doesn't always see it (2026-11-14: "the one with the best average is the one to keep picking
- * … greedy can just stick with its favourite" was credited as greedy's rule; "Flashcards and Listening don't get picked,
- * so their bonuses and scores don't change" got the growing bonus as partial, which opened p2's gate). The whole message
- * counts: the contradiction often comes a sentence or two later. Logged.
- */
-export function contradicted<T extends Judgement["facts"][number]>(bundle: Bundle, message: string, facts: T[], log: Log): T[] {
-  return facts.flatMap((v) => {
-    const pats = v.verdict === "correct" || v.verdict === "partial" ? (factOf(bundle, v.fact)?.against ?? []) : [];
-    const hit = pats.map((p) => {
-      try {
-        return new RegExp(p, "iu").exec(message)?.[0];
-      } catch {
-        return undefined;
-      }
-    }).find(Boolean);
-    if (!hit) return [v];
-    log.push({ fact: v.fact, quote: `${v.quote.slice(0, 120)} (${v.verdict === "correct" ? "correct → partial" : "partial dropped"}: the message also says "${hit.slice(0, 60)}")` });
-    return v.verdict === "correct" ? [{ ...v, verdict: "partial" as const }] : [];
-  });
-}
 
 /**
  * A true remark the judge recorded as a wrong belief: the idea's `trueRemarks` pattern matches the misconception's
@@ -300,7 +236,6 @@ For every fact the message explains, return:
 - fact: its id only, e.g. "n03.f2".
 - verdict: "correct" if the message gets the idea across. Be generous: informal wording, an analogy, a worked example or a short answer to the classmate's question all count, as long as the core idea is right. "partial" only if a key part of the fact is missing or it is too vague to tell. Some facts have a KEY: be generous about wording, examples and notation, but not about the key: a message that gets the general idea without the key is "partial". "wrong" if it says something that contradicts the fact.
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words). A short reply like "no, only the one you picked" is read in the light of the classmate's question, but the quote must still come from the teacher's message.
-- keyQuote: only for a fact that has a KEY and that you mark "correct": the exact words from the teacher's message that state the key itself, copied character for character (often the same words as quote, sometimes other words of the message). If no words in the message state the key, the fact is "partial", not "correct". Leave keyQuote empty ("") for every other verdict and for facts without a KEY.
 - before, after: the classmate writes the quote into their notebook, and it must still make sense when read alone later. So give the few words that go before and after the quote to make it one whole sentence (code puts them together: before + quote + after). Add only what the quote leaves implicit, taken from the classmate's question or the rest of the teacher's message: what "it" or "they" stands for, what the quote answers. Usually 2 to 8 words, often only before. Fill them whenever the quote doesn't say what it is about: it starts with "it", "they", "with", "and", a verb ("picks the…"), or it continues a sentence that began earlier in the message. Never add an idea, a term or a number the teacher didn't say, never use the wording of the facts above, and don't correct or improve the quote. If the quote already reads as a whole statement that names its subject, leave both empty. Never repeat the quote's words in before or after.
   Examples. Classmate: "So what does greedy keep track of for each truck?" Teacher: "you store its average" → before "For each truck greedy tries,", after "". Classmate: "Does greedy ever go back to a truck that looked bad at first?" Teacher: "nope, never" → before "Going back to a truck that looked bad at first, for greedy:", after "". Teacher: "and never tries the others again" (earlier in the message: "Greedy always goes to the best average") → before "Greedy", after "".
 A short "no" or "nope" counts when it clearly answers the classmate's question as asked ("nope, never" to "would I ever go back?"). When it only says they don't know ("nope, no idea", "not this either", "me neither" after an "I don't know"), it is "unsure": credit nothing for it.
@@ -309,7 +244,7 @@ Only include facts the message actually addresses. Most messages address 0–3 f
 Credit every fact the message explains, whether or not it answers what the classmate just asked: teachers often move on to another idea, and that still counts.
 A message often mixes a right part and a wrong part, e.g. "UCB adds a bonus to each average and picks the highest total, and the bonus grows every time you pick it": credit the right part as "correct" for its fact (quoting just that part) and record the wrong part under misconceptions. A wrong part never cancels a right one. That is about different facts. Within ONE fact it is the other way round: a fact is "correct" only if nothing in the message contradicts any part of it. If the message gets one part of a fact and contradicts another (the fact says greedy switches when another option's average overtakes, the message says greedy stays with the first leader for good), that fact is "wrong", and the contradicting words are a misconception.
 
-misconceptions: every belief in the message that is wrong about the topic. Record whatever the teacher gets wrong, but only what is wrong: a true statement that goes beyond the facts above (e.g. "random exploring will eventually try the best option again", "UCB never gets stuck", "if the leader only got lucky, greedy keeps picking it, its average falls back towards its true value and greedy switches": an option that keeps being picked has its average corrected; only one that is never picked again keeps a wrong average), an opinion or a comparison is not a misconception, and neither is loose or incomplete wording, nor a wrong detail that the fact doesn't speak about (an exact rate, formula or number: "the bonus shrinks linearly with each pick" gets the fact, that picking shrinks it, right). For each:
+misconceptions: every belief in the message that is wrong about the topic. Record whatever the teacher gets wrong, but only what is wrong: a true statement that goes beyond the facts above (e.g. "random exploring will eventually try the best option again", "UCB never gets stuck", "if the leader only got lucky, greedy keeps picking it, its average falls back towards its true value and greedy switches": an option that keeps being picked has its average corrected; only one that is never picked again keeps a wrong average), an opinion or a comparison is not a misconception, and neither is loose or incomplete wording (calling a score "the average", "the value" or "the reward" in passing, e.g. "the bonus inflates the averages of the options that are not picked", is wording, not a belief), nor a wrong detail that the fact doesn't speak about (an exact rate, formula or number: "the bonus shrinks linearly with each pick" gets the fact, that picking shrinks it, right). For each:
 - node: the id of the idea it is about, e.g. "n07" (the part before the dot in the fact ids).
 - fact: the id of the fact above that it contradicts, e.g. "n07.f2" for "exploring never picks the favourite"; "none" if it contradicts none of them.
 - quote: the exact words from the teacher's message that state it, copied character for character (at most 25 words).
@@ -326,10 +261,10 @@ intent, the main thing the message does:
 - "off_topic": chit-chat, or messages that make no sense. Never use it for a question to Kai.`;
 
 export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number } = {}): Promise<Judgement> {
-  // the lesson's facts first; the ideas around it after, so a message that fits a lesson fact is credited to it
-  // not each fact's `assume` as a "common wrong belief" (tried again 2026-11-14: it didn't pin "never switches" to
-  // greedy's rule, which `against` in code now catches, and it made the judge read "keeps sticking with whatever has the
-  // best average" as a wrong belief, shutting p7 for a terse learner)
+  // the lesson's facts first; the ideas around it after, so a message that fits a lesson fact is credited to it. Each
+  // fact's KEY tells the judge what makes it correct rather than partial; not its `assume` as a "common wrong belief"
+  // (tried 2026-11-03 and 2026-11-14: it made the judge read a terse "keeps sticking with whatever has the best
+  // average" as a wrong belief)
   const line = (n: Bundle["nodes"][number]) => n.facts.map((f) => `[${f.id}] ${f.text}${f.key ? `\n   KEY for "correct": ${f.key}` : ""}`);
   const lessonFacts = bundle.nodes.filter((n) => n.inLesson !== false).flatMap(line);
   const around = bundle.nodes.filter((n) => n.inLesson === false).flatMap(line);
@@ -353,46 +288,21 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
 }
 
 /**
- * The checks in code around the judge's reply: quotes in the learner's words, the key's words, the evidence a key
- * needs, wrong beliefs pinned to their fact, one reading per message, and Kai's notes. Separate from the model call so
- * it can be tested.
+ * The checks in code around the judge's reply: quotes in the learner's words, wrong beliefs pinned to their fact (a
+ * true remark dropped), one reading per message, and Kai's notes. Separate from the model call so it can be tested.
+ *
+ * The verdict itself is the model's, read against each fact's KEY in its prompt. From 2026-11-12 to 2026-11-16 code
+ * second-guessed it with word lists: a "correct" verdict became "partial" unless the judge's key words were in the
+ * message (keyQuote), unless a pattern per fact (`evidence`) matched the sentence, and whenever a pattern of the fact's
+ * wrong reading (`against`) matched the message. They were added so that terse pilot answers ("can lock in after an
+ * unlucky start", "a mean and a bonus") wouldn't count in full. In the study's first runs they turned clear spoken
+ * answers partial for good ("it will take a dip", "once it gets higher than the other ones, then it picks that one", "a
+ * chance we gotten lucky"), and two developers who knew the topic reached 2 of 7 facts and had Kai fail the practice
+ * problems whose facts they had taught. Taken out (2026-11-16): the model judges, and Kai's follow-up questions
+ * (script.json) ask for what is still vague, which is how a classmate gets a terse answer completed.
  */
 export function settleReply(bundle: Bundle, message: string, kaiLast: string, reply: Reply): Judgement {
-  const { kept: quoted, dropped } = screenQuotes(bundle, message, reply.facts);
-  // a fact with a key counts as correct only when the judge points to the learner's words that state the key, and those
-  // words are in the message (2026-11-12: the pilot's judge credited "there is the UCB rule, which applies bonuses" as
-  // UCB's rule, whose key is picking the highest score). The model judges what the words mean; code only checks they
-  // are the learner's. A verdict without key words, or with words not in the message, is partial (logged).
-  const keyed = quoted.map((v) => {
-    if (v.verdict !== "correct" || !factOf(bundle, v.fact)?.key) return v;
-    const words = v.keyQuote?.trim() ? (findQuote(message, v.keyQuote) ?? sentenceLike(message, v.keyQuote)) : null;
-    if (words) return { ...v, keyQuote: words };
-    // the judge sometimes copies the KEY itself as keyQuote (2026-11-14: in 3 of 6 runs on "…which could prevent the
-    // Greedy rule from choosing this option again"): then the credited words stand in, when their own sentences hold
-    // the fact's evidence (no wider: the key must be in what the judge quoted)
-    const key = factOf(bundle, v.fact)?.key ?? "";
-    const ev = v.keyQuote?.trim() && overlap(v.keyQuote, key) >= 0.6 ? evidenceOf(bundle, v.fact, dropped) : null;
-    if (ev?.test(sentencesOf(message, v.quote))) {
-      dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (the judge copied the key as its key words: the credited words carry it)` });
-      return { ...v, keyQuote: v.quote };
-    }
-    dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: ${v.keyQuote?.trim() ? `its key words "${v.keyQuote.slice(0, 80)}" aren't in the message` : "no words stating the key"})` });
-    return { ...v, verdict: "partial" as const };
-  });
-  // the check around the judge: a fact with `evidence` counts as correct only when the stretch of the answer around
-  // the credited words has it (else partial; a pattern that doesn't compile is skipped and logged)
-  const evidenced = keyed.map((v) => {
-    const re = v.verdict === "correct" ? evidenceOf(bundle, v.fact, dropped) : null;
-    if (!re) return v;
-    // the credited words' sentence with the one before and the two after, or the same around the key's words: a learner
-    // who explains states the point, then says why (2026-11-14: "Greedy can lock in if the first tries are very unlucky.
-    // This happens, for example, when … Then greedy … never corrects this misconception about the best arm." was
-    // partial when only the first sentence was checked). An answer with no such words anywhere stays partial.
-    if (re.test(sentencesOf(message, v.quote, 2, 1)) || (v.keyQuote && re.test(sentencesOf(message, v.keyQuote, 2, 1)))) return v;
-    dropped.push({ fact: v.fact, quote: `${v.quote.slice(0, 160)} (correct → partial: no evidence of the key)` });
-    return { ...v, verdict: "partial" as const };
-  });
-  const kept = contradicted(bundle, message, creditExamples(bundle, message, evidenced, dropped), dropped);
+  const { kept, dropped } = screenQuotes(bundle, message, reply.facts);
   const mis = screenMisconceptions(bundle, message, reply.misconceptions ?? []);
   // what Kai writes down for each: the learner's words, made a statement that stands alone (notes.ts)
   const notesDropped: Refusal[] = [];

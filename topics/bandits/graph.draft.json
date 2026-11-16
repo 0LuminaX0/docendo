@@ -208,13 +208,7 @@
           "text": "Greedy picks the option with the highest average in every round. It keeps updating the averages, and when another option's average overtakes the favourite's, greedy switches to that option.",
           "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
           "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it.",
-          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial.",
-          "against": [
-            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\b(?:stick|stay|keep|settle)(?:s|ing|ed)?\\b (?:with|on|at|there)\\b[^.!?]{0,40}\\b(?:forever|for good|for ever|for the rest|from then on|no matter what|permanently)\\b",
-            "\\b(?:never|won'?t|doesn'?t|does not|will not) (?:ever )?switch(?:es|ing)?\\b(?=\\s*(?:[.,;:!?)]|$|and\\b|but\\b|to (?:anything|another|any other|a different|something)\\b|away\\b|again\\b|at all\\b|once\\b))",
-            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\bsticks? with (?:its|the|their) (?:favou?rite|first (?:leader|winner|pick|choice))\\b(?![^.!?]{0,40}\\b(?:until|unless|as long as|while|till)\\b)",
-            "(?<!(?:n't|\\bnot|\\bnever|\\bno longer)\\s(?:just\\s|only\\s|simply\\s|really\\s)?)\\b(?:keeps?|stays?) (?:picking|choosing|going with|on) (?:the same|that same|its first|the first)\\b[^.!?]{0,30}\\b(?:forever|for good|all the time|no matter what)\\b"
-          ]
+          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial."
         },
         {
           "id": "n05.f2",
@@ -260,15 +254,13 @@
           "text": "Lock-in: once an option's average is too low, greedy never picks it again, so its average is never corrected, even if it is truly the best option (for example after one unlucky first try).",
           "assume": "If greedy keeps going, the averages correct themselves over time, so greedy finds the best option in the end.",
           "hunch": "My hunch is that it sorts itself out: if greedy keeps going, the averages even out and it ends up on the best one.",
-          "key": "the best option can look worse after an unlucky start, greedy then never picks it again, so its average is never corrected.",
-          "evidence": "\\bnever\\b|\\bagain\\b|\\bany ?more\\b|\\bno longer\\b|\\bforever\\b|\\bfor good\\b|\\bignor\\w*|\\bstops? (?:pick|choos|tr[yi]|select|pull|play|sampl|explor|look|check)\\w*|\\b(?:not|no|never|cannot|\\w+n['’]?t)\\b(?:\\s+\\S+){0,4}?\\s+(?:pick|choos|chos|tr[yi]|select|pull|play|sampl|explor|revisit|correct|updat|fix|recover|return|go(?:es)? back|come back|find out|learn|see|check|test)\\w*|\\bstays? (?:too |that |so )?(?:low|wrong|bad|underestimat\\w*)|\\bstuck at\\b|\\bunderestimat\\w*|\\buncorrected\\b"
+          "key": "the best option can look worse after an unlucky start, greedy then never picks it again, so its average is never corrected."
         },
         {
           "id": "n06.f2",
           "required": true,
           "ask": "Can you show me with an example how that could actually happen?",
-          "text": "Example: if truck A is truly the best but its first lunch is poor, greedy eats at the other trucks from then on and never finds out.",
-          "exampleOf": "n06.f1"
+          "text": "Example: if truck A is truly the best but its first lunch is poor, greedy eats at the other trucks from then on and never finds out."
         },
         {
           "id": "n06.f3",
@@ -315,8 +307,7 @@
           "text": "ε-greedy makes a random pick with a fixed probability ε (for example 0.1) in every round, early and late, however reliable its averages are; otherwise it picks the option with the highest average.",
           "assume": "ε-greedy explores less and less once its averages become reliable.",
           "hunch": "I'd imagine it explores less as it goes, once it's more sure of its averages.",
-          "key": "the random pick happens with a fixed probability (ε) in every round, and that probability does not shrink over time. \"It sometimes picks at random\" without the fixed rate is partial.",
-          "evidence": "\\bfixed\\b|\\bconstant\\b|\\bthe same\\b|\\bnever (?:chang|decreas|shrink|go(?:es)? down|drop)\\w*|\\b(?:doesn'?t|does not|won'?t|will not) (?:chang|decreas|shrink|go down|drop)\\w*|\\bstays?\\b|\\b(?:every|each) (?:single )?(?:round|time|day|step|turn|visit|visitor|pick|week|night|go)\\b|\\bper (?:round|day|step|turn)\\b|\\balways\\b|\\bforever\\b|whole time|all the time|\\bthroughout\\b|still explores|keeps? exploring|no matter|\\bregardless\\b|even after|early and late|\\bunchanged\\b|(?:%|percent) of (?:the )?(?:time|rounds|days|picks|visits)\\b|of the (?:time|rounds)\\b|\\b(?:probability|chance|rate) (?:of )?(?:0?[.,]\\d+|\\d+ ?%|\\d+ percent)|\\b0?[.,]\\d+ (?:chance|probability)\\b|\\b\\d+ ?% (?:chance|probability)\\b"
+          "key": "the random pick happens with a fixed probability (ε) in every round, and that probability does not shrink over time. \"It sometimes picks at random\" without the fixed rate is partial."
         },
         {
           "id": "n07.f2",
@@ -508,8 +499,7 @@
           "text": "UCB gives each option a score, its average plus a bonus, and picks the option with the highest score. There is no randomness: the same history always gives the same pick.",
           "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
           "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times.",
-          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial.",
-          "evidence": "\\bhighest\\b|\\blargest\\b|\\bbiggest\\b|\\bgreatest\\b|\\bmax\\w*|\\btop\\b|\\bbest (?:score|total|sum|value|number|result|one|option|arm)\\b|\\bargmax\\b|\\bwins?\\b|\\bwinner\\b|\\bwhichever (?:is |has |gives |scores )?(?:the )?(?:higher|bigger|larger|greater)\\b|\\b(?:pick|choos|tak|select|go|went)\\w* (?:for |with )?the (?:higher|bigger|larger|greater)\\b|\\b(?:higher|bigger|larger|greater) than (?:all |any |each |every )?(?:of )?(?:the )?(?:others?|rest|other (?:ones?|options?|arms?|scores?))\\b|\\bsurpass\\w*|\\bovertak\\w*|\\bexceed\\w*|\\boutscor\\w*|\\bbeats? (?:all )?(?:the )?(?:others?|rest)\\b"
+          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial."
         },
         {
           "id": "n11.f2",
@@ -530,8 +520,7 @@
           "required": true,
           "ask": "What is that extra part of the score for?",
           "text": "The bonus gives options tried only a few times the benefit of the doubt: UCB treats each option as if it were as good as it could plausibly be, the upper end of a confidence interval around its average.",
-          "key": "an average from few tries is unsure, so the option could really be better than it looks, and the bonus gives it that benefit of the doubt (treats it as good as it plausibly could be). \"It makes UCB explore\" or \"it favours options tried less\" without the doubt about the average is partial.",
-          "evidence": "\\bunsure\\b|\\buncertain\\w*|\\bnot (?:yet |really |that |so |very |fully )?(?:sure|certain|reliable|accurate|precise|trustworthy)\\b|\\bunreliab\\w*|\\binaccura\\w*|\\bimprecise\\b|\\b(?:trust|rely|relia)\\w*|\\bbenefit of the doubt\\b|\\bdoubt\\w*|\\boptimis\\w*|\\boptimiz\\w*|\\bconfiden\\w*|\\bplausib\\w*|\\b(?:could|might|may|can|possibly|perhaps|maybe)\\b[^.;!?]{0,30}\\b(?:better|best|good|great|higher|wrong|off|misleading|underrated|underestimat\\w*|unlucky|lucky)\\b|\\b(?:actually|really|truly|secretly) (?:better|good|the best)\\b|\\bunderestimat\\w*|\\bunlucky\\b|\\bluck\\b|\\bby chance\\b|\\bnois[ey]\\w*|\\bdon['’]?t know\\b|\\bdo not know\\b|\\bunknown\\b|\\b(?:less|little|not enough|limited|insufficient|more) (?:information|info|data|evidence|knowledge)\\b|\\bsmall sample\\b|\\bmislead\\w*"
+          "key": "an average from few tries is unsure, so the option could really be better than it looks, and the bonus gives it that benefit of the doubt (treats it as good as it plausibly could be). \"It makes UCB explore\" or \"it favours options tried less\" without the doubt about the average is partial."
         }
       ],
       "lexicon": [
@@ -579,8 +568,7 @@
           "text": "Each time an option is picked, its bonus shrinks (its n grows); picks of other options do not shrink it.",
           "assume": "Every bonus shrinks as rounds pass, whether its option is picked or not.",
           "hunch": "I'd guess every bonus just shrinks as the rounds go by, picked or not.",
-          "key": "picking an option shrinks that option's own bonus (and picking others doesn't).",
-          "evidence": "\\bshr[iau]nk\\w*|\\bsmall(?:er|est)?\\b|\\btiny\\b|\\blow(?:er|ers|ered|ering)?\\b|\\bless\\b|\\bdecreas\\w*|\\breduc\\w*|\\bdrop(?:s|s?ped|ping)?\\b|\\b(?:go|goes|going|went|gone) down\\b|\\bfall(?:s|ing)?\\b|\\bdiminish\\w*|\\bdwindl\\w*|\\bdecay\\w*|\\bsinks?\\b|\\bfewer\\b|\\bless often\\b|1\\s*/\\s*√?\\s*n|/\\s*n\\b|\\bover n\\b|\\bdivided by\\b|\\binvers\\w*|\\bthe more\\b[^.!?]{0,60}\\bthe (?:smaller|lower|less)\\b|\\bdip(?:s|ped|ping)?\\b"
+          "key": "picking an option shrinks that option's own bonus (and picking others doesn't)."
         },
         {
           "id": "n12.f2",
@@ -591,14 +579,7 @@
           "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
           "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
           "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often.",
-          "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial.",
-          "evidence": "\\b(?:slow|slower|slowly|slowing)\\b|less and less|\\bby less\\b|\\bless each\\b|\\bsmaller (?:and smaller|each|every|over)|(?:growth|increase|steps?|gaps?) (?:get|gets|getting|become|becomes) smaller|\\b(?:log|logs|logarith\\w*|ln)\\b|\\bdiminish\\w*|\\bflatten\\w*|\\btaper\\w*|\\bdecelerat\\w*|\\blevel(?:s|ling|ing)? off\\b|\\bsqrt\\b|square root|√|\\bgentl\\w*|\\bsub-?linear\\w*",
-          "against": [
-            "(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b[^.!?]{0,60}\\b(?:stays?|remains?|keeps?|is|are)\\b[^.!?]{0,25}\\b(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))",
-            "(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b[^.!?]{0,60}(?:\\bdon'?t|\\bdoesn'?t|\\bdo not|\\bdoes not|\\bwon'?t|\\bwill not|\\bnever)\\s(?:\\w+\\s)?(?:change|grow|move|increase|rise)\\b",
-            "\\b(?:skip|skips|skipped|unpicked|ignored|neglected)\\b[^.!?]{0,50}\\b(?:stays?|remains?|keeps?)\\b[^.!?]{0,25}(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))",
-            "\\bbonus(?:es)?\\b[^.!?]{0,30}\\b(?:stays?|remains?|is|are)\\b (?:\\w+ )?(?:the same|unchanged|constant|fixed|put|where (?:it|they) (?:was|were)|as (?:it|they) (?:was|were))[^.!?]{0,40}(?:\\bnot|n't|\\bnever|\\bun)[ -]?(?:get |being |been )?(?:pick|picked|choose|chosen|chose|pull|pulled|select|selected|try|tried|play|played)\\b"
-          ]
+          "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial."
         }
       ],
       "lexicon": [

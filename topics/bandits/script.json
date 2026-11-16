@@ -1,5 +1,5 @@
 {
-  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. No question about the setup since 2026-11-12 (it was the first question from 2026-11-05): Kai's opening says it remembers it from the slides, the setup's two facts are background again, and teaching is 12 minutes. One question per idea in the lesson's order, which is the text's (greedy, where greedy ends up, why ever pick what doesn't look best, UCB, why a bonus, UCB over many rounds; what sets the bonus's size left with c, 2026-11-13), then anything else; since 2026-11-05 the lesson leaves ε-greedy out, and its question and the comparison with UCB went with it. The two why-questions (2026-11-05) ask for the reason behind a rule rather than the rule: that is where explaining builds understanding. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again). No follow-ups since 2026-11-12: a fact the learner leaves out or explains only vaguely stays that way in Kai's notebook, so Kai's mistakes in practice come from the learner's teaching (in the pilot the bonus facts practice needs were stated precisely only when a follow-up asked for them by name). The questions with their follow-ups are in stash/script-2026-11-05-follow-ups.json; the engine still supports `follow`. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question left unanswered comes back once at the end, if its facts are still missing. Kai's opening (2026-11-05, from Phil's proposal): a test tomorrow, and the ideas behind the rules rather than formulas. \"Anything else?\" is asked again, up to twice, while the answers give Kai something new to write down.",
+  "note": "Kai's teaching questions, built on the lesson's graph (2026-11-05, after the pilot). Every word Kai asks is here, the same for everyone; only which of these questions comes next is chosen, by a fixed rule in code (engine/tutor/script.ts) from what Kai has written down, and logged. No question about the setup since 2026-11-12 (it was the first question from 2026-11-05): Kai's opening says it remembers it from the slides, the setup's two facts are background again, and teaching is 12 minutes. One question per idea in the lesson's order, which is the text's (greedy, where greedy ends up, why ever pick what doesn't look best, UCB, why a bonus, UCB over many rounds; what sets the bonus's size left with c, 2026-11-13), then anything else; since 2026-11-05 the lesson leaves ε-greedy out, and its question and the comparison with UCB went with it. The two why-questions (2026-11-05) ask for the reason behind a rule rather than the rule: that is where explaining builds understanding. Each names the teachable facts it is there for (`targets`): a question whose facts are already taught is skipped (a learner who explained lock-in while answering the greedy question isn't asked about it again). Six questions since 2026-11-16, with follow-ups (`follow`) for the facts the practice problems need, at most `maxFollowUps` a session, so a session is 7 to 10 messages (the study's time is the limit: learners speak their answers, and teaching has 12 minutes). The reason to pick what doesn't look best is asked in the same message as where greedy ends up (learners answered both with the same thought), and the question on UCB over many rounds asks what happens to the bonus whether an option gets picked or not, so one answer can cover both bonus facts. After an answer, each target not taught yet (left out, vague, or answered with a wrong belief) gets its own fixed follow-up, once, naming the rule and no answer, while the budget lasts; a short complete answer gets none. Follow-ups had been taken out 2026-11-12 so that Kai's practice mistakes would come from the teaching alone; without them nobody asked for the bonus facts by name and two developers who knew the topic reached 2 of 7 facts. The version without them is described in stash/script-2026-11-05-follow-ups.json's note. Kai never asks a question naming a lesson term the learner hasn't used yet (the same check as Kai's free replies), so the bonus questions come only once the learner has talked about UCB's bonus. They are a novice's questions, written down from the slides (Kai knows the rules' names and the setup, which the lesson's given facts state, and nothing else): none says what a rule does or what goes wrong. Before each question Kai reacts in its own words (a model writes that line from the notebook, term-checked; the question is never rewritten). A question left unanswered comes back once at the end, if its facts are still missing. Kai's opening (2026-11-05, from Phil's proposal): a test tomorrow, and the ideas behind the rules rather than formulas. \"Anything else?\" is asked again, up to twice, while the answers give Kai something new to write down.",
   "opening": "Hi! I'm Kai. I missed the lecture on multi-armed bandits, and there's a test on it tomorrow. I remember the setup from the slides: each round you pick one of a few options, the pick gives a random result, and you only see how the one you picked did. What I don't get is how the rules decide, so I wrote down some questions. I'm not great at maths, so what the rules do and why helps me more than formulas.",
   "minutes": 12,
   "shortWords": 15,
@@ -19,21 +19,20 @@
       "text": "The first rule is called greedy. How does it decide what to pick each round?",
       "targets": [
         "n05.f1"
+      ],
+      "follow": [
+        {
+          "fact": "n05.f1",
+          "text": "And in later rounds, once it has seen more results, how does greedy choose then?"
+        }
       ]
     },
     {
       "id": "greedy-long",
       "node": "n06",
-      "text": "If greedy keeps going like that for many rounds, where does it end up?",
+      "text": "If greedy keeps going like that for many rounds, where does it end up? And is there ever a good reason to pick an option that doesn't look best right now?",
       "targets": [
-        "n06.f1"
-      ]
-    },
-    {
-      "id": "explore",
-      "node": "n08",
-      "text": "Is there ever a good reason to pick an option that doesn't look best right now?",
-      "targets": [
+        "n06.f1",
         "n08.f1"
       ]
     },
@@ -43,6 +42,12 @@
       "text": "The last one is UCB. How does it decide which option to pick?",
       "targets": [
         "n11.f1"
+      ],
+      "follow": [
+        {
+          "fact": "n11.f1",
+          "text": "So in the end, which option does UCB actually go for?"
+        }
       ]
     },
     {
@@ -56,10 +61,20 @@
     {
       "id": "ucb-long",
       "node": "n12",
-      "text": "And if UCB keeps going for many rounds, how does that play out?",
+      "text": "And if UCB keeps going for many rounds, how does that play out? What happens to each option's bonus as the rounds go by, whether it gets picked or not?",
       "targets": [
         "n12.f1",
         "n12.f2"
+      ],
+      "follow": [
+        {
+          "fact": "n12.f1",
+          "text": "What happens to an option's bonus each time it gets picked?"
+        },
+        {
+          "fact": "n12.f2",
+          "text": "And what happens to the bonus of an option that isn't picked for a long time?"
+        }
       ]
     },
     {
@@ -68,7 +83,7 @@
       "text": "Is there anything else I should know before I try some problems on my own?",
       "again": {
         "text": "Thanks! Anything else, or anything you think I might have misunderstood?",
-        "max": 2
+        "max": 1
       }
     }
   ],
@@ -83,5 +98,6 @@
     "back": "Can we go back to one I'm still stuck on?",
     "ready": "Thanks, I think I've got it now. Here's what I wrote down:",
     "readyEmpty": "Thanks! My notes are still pretty empty, but let's try some problems."
-  }
+  },
+  "maxFollowUps": 3
 }
