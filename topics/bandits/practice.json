@@ -47,12 +47,39 @@
           ]
         }
       ],
-      "caveat": {
-        "about": "An option's average moves towards its own true average only while it is featured. A's 7.5 is a little below A's true 8, so A's days of about 8 pull A's average up, not down, and it stays above B's 7, which no longer changes because B isn't featured.",
-        "misreading": "A's 7.5 also came from a single day, so once A is featured its average will come down the way B's did after its lucky 9, fall below B's 7, and then greedy goes back to B.",
-        "answer": 2,
-        "covered": "(?:closer|close|nearer|towards?|approach\\w*|converg\\w*|settl\\w*|tends?)\\b[^.]{0,40}\\b(?:true|real|actual|underlying)\\b[^.]{0,15}\\b(?:average|mean|value|quality|score)s?\\b|\\b(?:true|real|actual) (?:average|mean|value)s?\\b[^.]{0,40}\\b(?:approach\\w*|converg\\w*|reach\\w*|get close)|\\beven(?:s|ed|ing)? (?:themselves )?out\\b|\\bmore (?:reliable|accurate|precise)\\b"
-      }
+      "caveat": [
+        {
+          "id": "sticks",
+          "about": "Greedy compares the averages anew every day, so its favourite can change: when the favourite's average falls below another flavour's, greedy switches to that one. Leading after the trials doesn't make a flavour the favourite for good.",
+          "misreading": "B won the trials, so B is greedy's favourite, and greedy sticks with its favourite: A and C fell behind in the trials, so greedy doesn't go back to them. One weaker day for B doesn't change that.",
+          "answer": 0,
+          "covered": "\\bswitch\\w*|\\bovertak\\w*|\\btakes? (?:over )?the lead\\b|\\b(?:new|another|different) (?:leader|favou?rite|best one)\\b|\\bchang\\w* (?:its |the |their )?(?:favou?rite|pick|choice|mind|leader)\\b|\\bfavou?rite (?:can |could |may |might |will )?(?:chang|switch)\\w*|\\b(?:every|each) (?:single )?(?:round|day|time|turn|step|pick)\\b|\\banew\\b|\\bso far\\b|\\bcurrent(?:ly)?\\b|\\bright now\\b|\\bat (?:that|the|this|any) (?:moment|point|time)\\b|\\b(?:updat|recalculat|recomput)\\w*|\\b(?:falls?|fell|drops?|dropped|goes? down|went down|sinks?|gets? (?:lower|worse))\\b[^.]{0,30}\\b(?:below|under|beneath|lower than|less than)\\b|\\b(?:goes|go|moves?|turns?) (?:back |over )?to (?:the |another |a |that )?(?:other|new|better|next|higher)\\b|\\bno longer (?:the )?(?:best|highest|top|favou?rite)\\b",
+          "ideas": [
+            "n05",
+            "n06"
+          ],
+          "alone": true,
+          "opening": "Greedy features the flavour that looks best. After the three trial days B leads with 9, ahead of A's 7.5 and C's 5."
+        },
+        {
+          "id": "lockin",
+          "about": "What tells lock-in apart from switching: only a featured flavour's average moves, towards that flavour's true average, while one that isn't featured keeps its average. So lock-in needs an average stuck below the other flavours' true averages. Here B's lucky start keeps falling towards B's true 6, below A's 7.5, so greedy switches to A, and A, now featured, stays ahead around its true 8.",
+          "misreading": "My notes give greedy two rules that pull different ways here: it switches when another flavour's average gets higher, and a flavour that starts badly is never picked again. A started worse than B, so I take it this is lock-in for A: greedy doesn't go back to A and keeps featuring B.",
+          "answer": 0,
+          "covered": "(?:closer|close|nearer|towards?|approach\\w*|converg\\w*|settl\\w*|tends?)\\b[^.]{0,40}\\b(?:true|real|actual|underlying)\\b[^.]{0,15}\\b(?:average|mean|value|quality|score)s?\\b|\\b(?:true|real|actual) (?:average|mean|value)s?\\b[^.]{0,40}\\b(?:approach\\w*|converg\\w*|reach\\w*|get close)|\\beven(?:s|ed|ing)? (?:themselves )?out\\b|\\bmore (?:reliable|accurate|precise)\\b|\\b(?:below|under|beneath|lower than|less than)\\b[^.]{0,40}\\b(?:true|real|actual|underlying) (?:average|mean|value)s?\\b|\\b(?:featured|picked|chosen|pulled|played|tried|sampled)\\b[^.]{0,30}\\b(?:average|mean)s?\\b[^.]{0,30}\\b(?:corrects? itself|gets? corrected|is corrected|falls? back|comes? back down|sinks? back)\\b|\\bcorrects? itself\\b|\\bself-correct\\w*",
+          "ideas": [
+            "n03",
+            "n05",
+            "n06",
+            "n16"
+          ],
+          "requires": [
+            "n06.f1"
+          ],
+          "alone": true,
+          "opening": "Greedy features the flavour with the highest average. After day 4, B's average is (9 + 5) / 2 = 7, and A's is still 7.5."
+        }
+      ]
     },
     {
       "id": "p3",

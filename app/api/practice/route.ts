@@ -102,8 +102,8 @@ export async function POST(req: NextRequest) {
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [] };
     }
     const errors: string[] = []; // every failed try, in order (a slip, a right answer without the facts, a timeout)
-    // the problem's caveat: first tries only, when Kai would otherwise solve every problem and its notes leave the
-    // caveat open (engine/tutor/solve.ts: caveatFor)
+    // the problem's caveat: first tries only, when Kai would otherwise solve every problem (P7's: this one) and its
+    // notes leave the caveat open (engine/tutor/solve.ts: caveatFor)
     const caveat = body.data.action === "solve" ? caveatFor(pack.practice, item, state, body.data.wrongSoFar ?? 0) : undefined;
     const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, caveat, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
     const error = errors.at(-1) ?? null;
@@ -126,6 +126,7 @@ export async function POST(req: NextRequest) {
 
       by: sol.by, // model, or offline (demo mode, or the model failed)
       caveat: sol.caveat ?? null, // the problem's caveat in play: misread (Kai read the gap in its notes the wrong way) or covered (its notes said it); keep apart in the analysis
+      caveatId: sol.caveatId ?? null, // which one (P7 since 2026-11-16: "sticks", greedy keeps its trial winner; "lockin", lock-in applied to A)
       error, // the last failed try
       errors, // every failed try, in order
       msOnProblem: body.data.msOnProblem ?? null,

@@ -3,7 +3,7 @@ import bundleJson from "../topics/bandits/bundle.json";
 import practiceJson from "../topics/bandits/practice.json";
 import stashedJson from "../topics/bandits/stash/practice.json";
 import { Bundle } from "../content/schema";
-import { PracticeFile, checkPractice, parseNumber } from "../content/practice";
+import { PracticeFile, caveatsOf, checkPractice, parseNumber } from "../content/practice";
 
 const bundle = Bundle.parse(bundleJson);
 const practiceFile = PracticeFile.parse(practiceJson);
@@ -102,7 +102,7 @@ describe("pretest", () => {
 });
 
 import { initialState, type State } from "../engine/tutor/state";
-import { beliefFor, caveatFor, caveatOpen, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Solution } from "../engine/tutor/solve";
+import { beliefFor, caveatFor, caveatOpen, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Caveat, type Solution } from "../engine/tutor/solve";
 
 // a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
 const taughtState = (facts: string[], vague: string[] = []): State => ({
@@ -427,39 +427,76 @@ describe("the dashboard's comparison of the conditions", () => {
 
 describe("the caveats (Kai fails at least once, never against its notes)", () => {
   const [p7, p3, p2] = ["p7", "p3", "p2"].map(item) as [ReturnType<typeof item>, ReturnType<typeof item>, ReturnType<typeof item>];
+  const [sticks, lockin] = caveatsOf(p7) as [Caveat, Caveat];
+  const [c3, c2] = [caveatsOf(p3)[0]!, caveatsOf(p2)[0]!];
   const needed = [...new Set(practice.items.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))))];
   const everything = taughtState(needed);
-  const withNotes = (words: Record<string, string>) => ({ ...everything, notebook: everything.notebook.map((e) => (words[e.fact] ? { ...e, words: words[e.fact]! } : e)) });
-  it("come into play only when Kai would solve this problem and every one after it, and hasn't been wrong yet", () => {
-    expect(caveatFor(practice.items, p7, everything, 0)).toEqual(p7.caveat);
-    expect(caveatFor(practice.items, p7, everything, 1)).toBeUndefined(); // Kai already failed one: nothing added
-    // a later problem will fail anyway (its fact missing): nothing added here
-    const thin = taughtState(needed.filter((f) => f !== "n12.f2"));
-    expect(caveatFor(practice.items, p7, thin, 0)).toBeUndefined();
+  const withNotes = (words: Record<string, string>, state = everything) => ({ ...state, notebook: state.notebook.map((e) => (words[e.fact] ? { ...e, words: words[e.fact]! } : e)) });
+  // greedy's rule as most learners put it (R's pilot run, 2026-11-14), and with the switch said
+  const terse = { "n05.f1": "Greedy picks the best option it knows" };
+  const switches = { "n05.f1": "greedy takes whichever option has the highest average, and if another one's average gets higher it switches" };
+  const lock = { "n06.f1": "if the best one is unlucky at first its average is too low, greedy never picks it again, so it never finds out" };
+  it("P7: greedy keeping its trial winner, for everyone whose notes leave switching open, whatever comes after (2026-11-16)", () => {
+    expect(caveatFor(practice.items, p7, withNotes(terse), 0)?.id).toBe("sticks");
+    // a later problem will fail anyway (its fact missing): P7's comes into play all the same (alone)
+    expect(caveatFor(practice.items, p7, withNotes(terse, taughtState(["n05.f1"])), 0)?.id).toBe("sticks");
+    expect(caveatFor(practice.items, p7, withNotes(terse), 1)).toBeUndefined(); // Kai already failed one: nothing added
+    // greedy's rule not taught (or only partly): no caveat, Kai fails from the gap (the same answer, as a guess)
+    expect(caveatFor(practice.items, p7, taughtState(["n06.f1"]), 0)).toBeUndefined();
+    expect(caveatFor(practice.items, p7, taughtState(["n05.f1"], ["n05.f1"]), 0)).toBeUndefined();
   });
-  it("are left alone where the notes say them, in the learner's words, and the next open one comes into play", () => {
-    // P7 (2026-11-12): an average moves towards its option's true average while it is picked; said in other words
-    const evens = withNotes({ "n05.f1": "greedy takes the highest average every round, and the more often an option is picked, the closer its average gets to its true average" });
-    expect(caveatOpen(p7.caveat!, evens)).toBe(false);
-    expect(caveatFor(practice.items, p7, evens, 0)).toBeUndefined();
-    // lock-in explained as "never picks it again, so its average is never corrected" says P3's point, not P7's
+  it("P7: lock-in applied to A when the notes say greedy switches and lock-in, but not what tells the two apart", () => {
+    expect(caveatFor(practice.items, p7, withNotes({ ...switches, ...lock }), 0)?.id).toBe("lockin");
+    expect(caveatFor(practice.items, p7, withNotes({ ...switches, ...lock }, taughtState(["n05.f1", "n06.f1"])), 0)?.id).toBe("lockin");
+    // a partly taught lock-in is a note to misread too
+    expect(caveatFor(practice.items, p7, withNotes({ ...switches, "n06.f1": "greedy can get stuck after an unlucky start" }, taughtState(["n05.f1", "n06.f1"], ["n06.f1"])), 0)?.id).toBe("lockin");
+    // no lock-in note: nothing to misread, Kai solves P7 from its notes
+    expect(caveatFor(practice.items, p7, withNotes(switches, taughtState(["n05.f1"])), 0)).toBeUndefined();
+    // what tells them apart said, in a learner's words: Kai follows its notes
+    for (const apart of [
+      "lock-in only happens when the best option's average is stuck below the other option's true average",
+      "greedy never picks it again, but an option it keeps picking gets closer to its true average, so a lucky leader comes back down",
+      "the average of the option being picked corrects itself, the ignored one never gets corrected",
+    ])
+      expect(caveatFor(practice.items, p7, withNotes({ ...switches, "n06.f1": apart }), 0), apart).toBeUndefined();
+  });
+  it("P7: tell notes that say greedy can change its favourite from notes that don't", () => {
+    for (const w of ["Greedy picks the best option it knows", "greedy always goes for the highest average", "It exploits the option that looks best.", "Greedy just takes whichever option has the best average", "greedy never explores, it only picks the best one"])
+      expect(caveatOpen(sticks, withNotes({ "n05.f1": w })), w).toBe(true);
+    for (const w of ["greedy picks the highest average every round", "it takes the best average so far", "if another option's average gets higher it switches", "when B's average falls below A's, greedy goes to A", "the favourite can change", "it keeps updating the averages and takes the top one", "only picks the best one that it currently knows", "a new leader means a new pick"])
+      expect(caveatOpen(sticks, withNotes({ "n05.f1": w })), w).toBe(false);
+    // only notes on greedy and lock-in count: "every time" in a note on UCB's bonus isn't greedy switching
+    expect(caveatOpen(sticks, withNotes({ ...terse, "n12.f1": "every time you pick an option its bonus gets smaller" }))).toBe(true);
+    expect(caveatFor(practice.items, p7, withNotes({ ...switches, ...lock, "n12.f2": "an option's bonus keeps growing, so it gets closer to its true average in the end" }), 0)?.id).toBe("lockin");
+  });
+  it("P3 and P2: only when Kai would solve every problem from there and hasn't been wrong yet", () => {
+    // lock-in explained as "never picks it again, so its average is never corrected" says P3's point
     const said = withNotes({ "n06.f1": "if the best one has an unlucky first try greedy never picks it again, so its average is never corrected" });
-    expect(caveatOpen(p7.caveat!, said)).toBe(true);
-    expect(caveatOpen(p3.caveat!, said)).toBe(false);
+    expect(caveatOpen(c3, said)).toBe(false);
     expect(caveatFor(practice.items, p3, said, 0)).toBeUndefined();
-    // P7's point taught, P3's left open: P3's comes into play
-    expect(caveatFor(practice.items, p3, evens, 0)).toEqual(p3.caveat);
+    expect(caveatFor(practice.items, p3, everything, 0)).toEqual(c3);
+    expect(caveatFor(practice.items, p3, everything, 1)).toBeUndefined();
+    expect(caveatFor(practice.items, p3, taughtState(needed.filter((f) => f !== "n12.f2")), 0)).toBeUndefined(); // P3 itself fails anyway
     // "grows when not picked for a long time" leaves one round open; "grows every round" doesn't
     const long = withNotes({ "n12.f2": "the bonus of an option that isn't picked for a long time keeps growing, more and more slowly" });
-    expect(caveatOpen(p2.caveat!, long)).toBe(true);
-    expect(caveatOpen(p2.caveat!, withNotes({ "n12.f2": "every round the bonus of an unpicked option grows a little, ever more slowly" }))).toBe(false);
+    expect(caveatOpen(c2, long)).toBe(true);
+    expect(caveatOpen(c2, withNotes({ "n12.f2": "every round the bonus of an unpicked option grows a little, ever more slowly" }))).toBe(false);
   });
   it("make Kai read the gap the wrong way, as its own understanding, and be right without one", async () => {
-    const off = offlineSolve(bundle, p2, everything, p2.caveat);
+    const off = offlineSolve(bundle, p2, everything, c2);
     expect([off.correct, off.caveat, off.answer]).toEqual([false, "misread", "C"]);
-    expect(off.steps.map((s) => s.text).join(" ")).toContain(p2.caveat!.misreading);
+    expect(off.steps.map((s) => s.text).join(" ")).toContain(c2.misreading);
     expect(off.steps.map((s) => s.text).join(" ")).not.toMatch(/guess|don't cover/i);
-    expect((await solve(bundle, p2, everything, { demo: true, caveat: p2.caveat })).caveat).toBe("misread");
+    expect((await solve(bundle, p2, everything, { demo: true, caveat: c2 })).caveat).toBe("misread");
     expect((await solve(bundle, p2, everything, { demo: true })).correct).toBe(true);
+    // P7's two: B for good (option A), each its own opening, the lock-in one citing the lock-in note
+    for (const c of [sticks, lockin]) {
+      const state = withNotes({ ...(c === sticks ? terse : switches), ...lock });
+      const o = offlineSolve(bundle, p7, state, c);
+      expect([o.correct, o.caveat, o.caveatId, o.answer]).toEqual([false, "misread", c.id, "A"]);
+      expect(o.steps[0]!.text).toBe(c.opening);
+      expect(o.steps.map((s) => s.text).join(" ")).not.toMatch(/guess|don't cover/i);
+      if (c === lockin) expect(o.steps[1]!.notes.map((n) => o.notes[n - 1])).toContain(lock["n06.f1"]);
+    }
   });
 });
