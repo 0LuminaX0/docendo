@@ -35,13 +35,13 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
     // a session of about an hour (2026-11-05; the pilot's setup, both pretest sets and both test forms, ran past an
     // hour and a half): the pretest of seven questions (7 since 2026-11-13: about 5 minutes in the pilot, under a hard
     // clock), the lesson (12), teaching (12 since 2026-11-12, script.json), three practice problems (12, practice.json)
-    // and the final test of seven items (16 since 2026-11-13: the pilots took 1.8 to 2.6 minutes a question on a first
-    // form). Both forms can still be switched on for calibrating items (no follow-up test then: no form is left for it).
+    // and the final test of seven items (17 since 2026-11-16: 16 from 2026-11-13, but the pilots took 1.8 to 2.6
+    // minutes a question on a first form, and R, an expert, needed 16:05 for the seven). Both forms can still be switched on for calibrating items (no follow-up test then: no form is left for it).
     pretest: { on: true, both: false, minutes: 7 },
     watch: { on: true, parts: defaultLesson(pack), minutes: 12 },
     teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: false, minutes: pack.script?.minutes ?? 10 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
-    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 16, review: false },
+    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 17, review: false },
     // the study as it will run (2026-11-13): hard limits, Kai's mind hidden; the pilot runs on its shared code
     timing: { soft: false },
     survey: { on: true },
@@ -70,7 +70,7 @@ export function merge(stored: Record<string, unknown> | null): Settings {
     };
   }
   // a version saved before 2026-11-13 (it has no test.review, added that day) takes that day's decisions: the times
-  // (pretest 7, lesson 12, teaching 12, practice 12, test 16) and the study's switches (one pretest set and one test
+  // (pretest 7, lesson 12, teaching 12, practice 12, test 17 since 2026-11-16) and the study's switches (one pretest set and one test
   // form, hard limits, Kai's mind hidden; the pilot runs on its shared code); everything else it set stays
   const savedTest = typeof saved.test === "object" && saved.test !== null ? (saved.test as Record<string, unknown>) : null;
   if (stored && Object.keys(stored).length && "timing" in stored && !(savedTest && "review" in savedTest)) {

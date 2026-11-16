@@ -46,10 +46,10 @@ export function sessionSecret(): string {
 
 export class ConfigError extends Error {}
 
-// 2026-11-13: PILOT_CODE isn't set on the deployment yet, so the team code runs the pilot (both test forms, soft
-// clocks). To revert, set this to false (or ACCESS_AS_PILOT=0 on the server): the team code then runs the study as it
-// will run again (one form, hard clocks).
-const ACCESS_AS_PILOT_DEFAULT = true;
+// From 2026-11-13 to 2026-11-16 the team code ran the pilot (both test forms, soft clocks: PILOT_CODE wasn't on the
+// deployment). Since the study started (2026-11-16) it runs the study as it will run (one form, hard clocks). For the
+// pilot's tests again: PILOT_CODE on the server, or ACCESS_AS_PILOT=1 (or this true) and a redeploy.
+const ACCESS_AS_PILOT_DEFAULT = false;
 
 export const config = {
   demo: !env.OPENROUTER_API_KEY || env.DOCENDO_DEMO === "1",
