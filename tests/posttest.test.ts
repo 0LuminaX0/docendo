@@ -97,17 +97,30 @@ describe("the post-test items", () => {
     // 2026-11-16) the same rule keeps UCB on A for about 10,000 days, which made "about the same" all but true.
     expect(argmax([ucb(0.8, 2, 5, 1), ucb(0.5, 1, 5, 1), ucb(0.2, 1, 5, 1)])).toBe(1);
     expect(argmax([ucb(9, 2, 5, 1), ucb(4, 1, 5, 1), ucb(1, 1, 5, 1)])).toBe(0);
-    // V21: X (UCB) picks the worst option about as often in each tenfold-longer period (picks grow like ln t), Y at a fixed
-    // 3% of every period, Z stops, W (greedy) only on its trial
-    const logs = q("v21").table!.rows.map((r) => r.slice(1).map((v) => Number(v.replace(/,/g, ""))));
+    // V21: Y (UCB) picks the worst option about as often in each roughly tenfold longer period (picks grow like ln t), X at
+    // a fixed 3% of every period, W stops, Z (greedy) only on its trial. The columns don't follow the stem's order
+    // (greedy, UCB, the others), and the Length column states each period's rounds.
+    const v21 = q("v21");
+    const num = (v: string) => Number(v.replace(/[^\d]/g, ""));
+    const lengths = v21.table!.rows.map((r) => {
+      const [lo, hi] = r[0]!.replace(/,/g, "").match(/\d+/g)!.map(Number);
+      expect(num(r[1]!), r[0]).toBe(hi! - lo! + 1);
+      return num(r[1]!);
+    });
+    expect(lengths).toEqual([1000, 9000, 90000]);
+    const logs = v21.table!.rows.map((r) => r.slice(2).map(num));
     const col = (k: number) => logs.map((r) => r[k]!);
-    const lengths = [1000, 9000, 90000];
-    expect(col(0)).toEqual([1, 0, 0]);
-    expect(col(2).map((n, i) => n / lengths[i]!)).toEqual([0.03, 0.03, 0.03]);
-    expect(col(3).at(-1)).toBe(0);
-    expect(col(3)).toEqual([...col(3)].sort((a, b) => b - a)); // Z dies out
-    // the first period doesn't tell X, Y and Z apart (only how they go on does)
-    expect(Math.max(col(1)[0]!, col(2)[0]!, col(3)[0]!) - Math.min(col(1)[0]!, col(2)[0]!, col(3)[0]!)).toBeLessThanOrEqual(5);
+    const [STOPS, STEADY, UCB, GREEDY] = [0, 1, 2, 3];
+    expect(v21.table!.head.slice(2)).toEqual(["Log W", "Log X", "Log Y", "Log Z"]);
+    expect(v21.options![v21.answer as number]).toBe("Greedy Z, UCB Y");
+    expect(new Set(v21.options!.map((o) => o.split("UCB ")[1])).size).toBe(4); // each log is UCB in one option
+    expect(col(GREEDY)).toEqual([1, 0, 0]);
+    expect(col(STEADY).map((n, i) => n / lengths[i]!)).toEqual([0.03, 0.03, 0.03]);
+    expect(col(STOPS).at(-1)).toBe(0);
+    expect(col(STOPS)).toEqual([...col(STOPS)].sort((a, b) => b - a)); // it dies out
+    // the first period doesn't tell the three that pick it again apart (only how they go on does)
+    const firsts = [STOPS, STEADY, UCB].map((k) => col(k)[0]!);
+    expect(Math.max(...firsts) - Math.min(...firsts)).toBeLessThanOrEqual(5);
     // X recomputed (2026-11-16) with the lesson's formula (average + √(ln t / n), no c): four options truly averaging 0.7,
     // 0.6, 0.5 and 0.3, scores spread with sd 0.25 and kept between 0 and 1, 20 seeded runs of 100,000 rounds. The mean
     // count in each period is within a third of X's, and the counts stay level (picks grow like ln t). V21's earlier X
@@ -116,10 +129,10 @@ describe("the post-test items", () => {
     const periods = [[1, 1000], [1001, 10000], [10001, 100000]] as const;
     const runs = Array.from({ length: 20 }, (_, s) => picksOf("ucb", means, 100_000, s + 1, 3));
     const per = periods.map(([lo, hi]) => mean(runs.map((p) => p.filter((t) => t >= lo && t <= hi).length)));
-    per.forEach((m, i) => expect(Math.abs(m - col(1)[i]!) / col(1)[i]!, `X in period ${i + 1}: ${m}`).toBeLessThan(1 / 3));
+    per.forEach((m, i) => expect(Math.abs(m - col(UCB)[i]!) / col(UCB)[i]!, `Y in period ${i + 1}: ${m}`).toBeLessThan(1 / 3));
     expect(Math.max(...per) / Math.min(...per)).toBeLessThan(1.6);
-    for (const p of runs) expect(p.some((t) => t > 10_000)).toBe(true); // UCB never stops (Z isn't UCB)
-    // greedy (W): the worst option only on its trial in most runs, and never after round 1,000 (Y isn't greedy: it can't
+    for (const p of runs) expect(p.some((t) => t > 10_000)).toBe(true); // UCB never stops (W isn't UCB)
+    // greedy (Z): the worst option only on its trial in most runs, and never after round 1,000 (X isn't greedy: it can't
     // keep coming back at a steady share, since each pick pulls the worst option's average down to its true one)
     const greedy = Array.from({ length: 40 }, (_, s) => picksOf("greedy", means, 10_000, s + 1, 3));
     expect(greedy.filter((p) => p.length === 1).length).toBeGreaterThanOrEqual(30);

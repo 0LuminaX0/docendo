@@ -157,10 +157,11 @@
       "form": "A",
       "title": "Four logs",
       "kind": "choice",
-      "prompt": "Four logs count how often the worst of four options was picked in three periods, one run each. Each period is ten times as long as the one before. One log comes from greedy and one from UCB; the other two come from programs that follow neither rule.",
+      "prompt": "Four logs count how often the worst of four options was picked in three periods, one run each. One log comes from greedy and one from UCB; the other two come from programs that follow neither rule.",
       "table": {
         "head": [
-          "Rounds",
+          "Period",
+          "Length",
           "Log W",
           "Log X",
           "Log Y",
@@ -168,48 +169,51 @@
         ],
         "rows": [
           [
-            "1 to 1,000",
-            "1",
-            "31",
+            "Rounds 1 to 1,000",
+            "1,000 rounds",
+            "32",
             "30",
-            "32"
+            "31",
+            "1"
           ],
           [
-            "1,001 to 10,000",
-            "0",
-            "24",
+            "Rounds 1,001 to 10,000",
+            "9,000 rounds",
+            "9",
             "270",
-            "9"
+            "24",
+            "0"
           ],
           [
-            "10,001 to 100,000",
+            "Rounds 10,001 to 100,000",
+            "90,000 rounds",
             "0",
-            "22",
             "2,700",
+            "22",
             "0"
           ]
         ]
       },
       "question": "Which log comes from greedy, and which from UCB?",
       "options": [
-        "Greedy W, UCB Y",
-        "Greedy Y, UCB X",
-        "Greedy W, UCB X",
-        "Greedy W, UCB Z"
+        "Greedy Z, UCB W",
+        "Greedy Z, UCB X",
+        "Greedy Z, UCB Y",
+        "Greedy X, UCB Z"
       ],
       "answer": 2,
       "dontKnow": true,
       "reason": true,
-      "explain": "W is greedy: once the worst option's average is behind after its one trial, greedy never picks it again, since it only ever takes the favourite (W: the trial pick, then none). X is UCB: each pick shrinks the worst option's bonus, and while it isn't picked the bonus grows back, ever more slowly, so UCB keeps coming back with ever longer gaps (a similar number of picks in each period, although each is ten times as long). Y picks it at the same share of every period (3%), which neither rule does: greedy picks the worst option only while its average is on top, and each pick pulls that average down towards its true value, below the others'. Z stops picking it, which UCB doesn't, since an unpicked bonus grows without limit.",
-      "rubric": "Greedy stops after the trial (it never picks an option to learn about it); UCB keeps returning with ever longer gaps (about the same number of picks in each tenfold-longer period: the bonus grows back ever more slowly).",
+      "explain": "Z is greedy: once the worst option's average is behind after its one trial, greedy never picks it again, since it only ever takes the favourite (Z: the trial pick, then none). Y is UCB: each pick shrinks the worst option's bonus, and while it isn't picked the bonus grows back, ever more slowly, so UCB keeps coming back with ever longer gaps (a similar number of picks in each period, although each is about ten times as long). X picks it at the same share of every period (3%), which neither rule does: greedy picks an option in unbroken stretches while its average is on top, so it either stops picking the worst option after a few early stretches or, locked in on it, takes nearly every round; it never comes back at a steady rate. W stops picking it, which UCB doesn't, since an unpicked bonus grows without limit.",
+      "rubric": "Greedy stops after the trial (it never picks an option to learn about it); UCB keeps returning with ever longer gaps (about the same number of picks in each roughly tenfold longer period: the bonus grows back ever more slowly).",
       "diagnosis": [
+        "Kai: F11 (an unpicked bonus stays the same, so UCB stops picking the worst option), or F10 (every bonus shrinks over time)",
         "Kai: F11 vague (the bonus grows at a steady rate, so a neglected option comes back at regular intervals)",
-        "learner: greedy keeps trying other options now and then",
         "correct",
-        "Kai: F11 (an unpicked bonus stays the same, so UCB stops picking the worst option), or F10 (every bonus shrinks over time)"
+        "learner: mixes up the two rules (greedy keeps trying other options; UCB settles on the best after the trials)"
       ],
       "estimate": 0.45,
-      "note": "New 2026-11-12 (Phil's idea): match logs of picks of the worst option to the rules, with two logs that fit neither, so no option looks unlikely. In the final test since 2026-11-16, in V4's place and after T6: V4's idea (UCB's ever longer gaps) is practised in P8 (the radio playlists) in one concrete case, so the test asks it in another form, read from data, and adds greedy's log. Numbers redone that day with the lesson's formula (average + √(ln t / n)): four options with true averages 0.7, 0.6, 0.5 and 0.3, rewards spread around them with sd 0.25 and kept between 0 and 1, 40 runs per rule. UCB picked the worst option 31, 24 and 22 times on average in the three periods (single runs 20 to 47, 15 to 40, 13 to 39): about the same number in each tenfold-longer period, since picks grow like ln t. Greedy picked it only on its trial in 35 of 40 runs. Before, X was t14's simulation with c = √2 (52, 55 and 45), which the lesson no longer has. Y (a fixed 3%: what a program exploring at a fixed rate gives) and Z (stopping, as T6's changed UCB does) are made up: neither rule produces them. tests/posttest.test.ts recomputes the numbers."
+      "note": "New 2026-11-12 (Phil's idea): match logs of picks of the worst option to the rules, with two logs that fit neither, so no option looks unlikely. In the final test since 2026-11-16, in V4's place and after T6: V4's idea (UCB's ever longer gaps) is practised in P8 (the radio playlists) in one concrete case, so the test asks it in another form, read from data, and adds greedy's log. Numbers redone that day with the lesson's formula (average + √(ln t / n)): four options with true averages 0.7, 0.6, 0.5 and 0.3, rewards spread around them with sd 0.25 and kept between 0 and 1, 40 runs per rule. UCB picked the worst option 31, 24 and 22 times on average in the three periods (single runs 20 to 47, 15 to 40, 13 to 39): about the same number in each roughly tenfold longer period, since picks grow like ln t. Greedy picked it only on its trial in 35 of 40 runs. Before, UCB's log was t14's simulation with c = √2 (52, 55 and 45), which the lesson no longer has. The steady log (a fixed 3%: what a program exploring at a fixed rate gives) and the stopping log (as T6's changed UCB does) are made up: neither rule produces them. Greedy can't give the steady one either: in 2,000 runs of 100,000 rounds it either stopped picking the worst option or locked in on it and took whole periods, never a steady share, even with the worst option nearly as good as the next; but averaged over many runs its lock-ins add up to a steady share, so the stem keeps \"one run each\". Reviewed the same day: the columns scrambled (they had followed the stem's order, greedy, UCB, then the others; now W stops, X is the steady share, Y is UCB and Z greedy) and the options ordered by their UCB log, the key still (c); the option \"Greedy Y, UCB X\" became the two rules mixed up (now \"Greedy X, UCB Z\"), so each log is UCB in exactly one option and the key is no longer the combination the other options share most; and a Length column, so the periods' different lengths can't be missed, in place of \"Each period is ten times as long as the one before\" (1,000 to 9,000 is nine times). tests/posttest.test.ts recomputes the numbers."
     },
     {
       "id": "v19",
