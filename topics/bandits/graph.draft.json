@@ -208,7 +208,7 @@
           "text": "Greedy picks the option with the highest average in every round. It keeps updating the averages, and when another option's average overtakes the favourite's, greedy switches to that option.",
           "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
           "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it.",
-          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial."
+          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It picks the best option\" (best by what, and when?), \"it settles on the best one\" or \"it sticks with whichever looked best early on\" is partial, even as an answer to a question that says \"each round\"."
         },
         {
           "id": "n05.f2",

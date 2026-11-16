@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "e1a533151d0afdac",
-  "builtAt": "2026-11-16T10:24:31.915Z",
+  "hash": "06eaee69c937c655",
+  "builtAt": "2026-11-16T15:01:51.290Z",
   "goals": [
     {
       "id": "G",
@@ -301,7 +301,7 @@
           "ask": "Once I have those numbers, what's the simplest rule for choosing?",
           "assume": "Greedy settles on whichever option leads after the first tries and sticks with it for good, without ever switching.",
           "hunch": "I'd guess greedy just goes with whichever looks best after the first tries and stays with it.",
-          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It settles on the best one\" or \"it sticks with whichever looked best early on\" is partial."
+          "key": "it takes whichever option has the highest average at that moment, every round anew (\"the best average so far, each day/every time\" is enough: switching follows from it). \"It picks the best option\" (best by what, and when?), \"it settles on the best one\" or \"it sticks with whichever looked best early on\" is partial, even as an answer to a question that says \"each round\"."
         },
         {
           "id": "n05.f2",
