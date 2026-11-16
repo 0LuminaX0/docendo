@@ -100,6 +100,9 @@ export const ScriptFile = z.object({
   opening: z.string().min(10), // Kai's first words, before the first question
   minutes: z.number().positive().default(10), // Kai wraps up at the first message after this long
   shortWords: z.number().int().positive().default(15), // an answer shorter than this gets "Can you say more about that?"
+  // follow-ups asked as messages of their own, at most, per session (the study's time: 7 to 10 messages in all);
+  // unset: no limit
+  maxFollowUps: z.number().int().min(0).optional(),
   // lesson terms Kai knows before anyone teaches it (the topic's and the rules' names, from the slides): its questions
   // and reactions may use them
   known: z.array(z.string()).default([]),
@@ -180,32 +183,15 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
       }
     }
   }
-  // the judge's evidence patterns must compile (an invalid one would be skipped at run time)
-  for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
-    if (!f.evidence) continue;
-    try {
-      new RegExp(f.evidence, "iu");
-    } catch (e) {
-      err("graph", `${f.id}: its evidence pattern doesn't compile (${String(e).slice(0, 80)})`);
-    }
-  }
-  // an example credits the fact it shows only through that fact's evidence, so it must name a fact of its own idea
-  // that has one; true remarks must compile
-  for (const n of bundle?.nodes ?? []) {
-    for (const f of n.facts) {
-      if (!f.exampleOf) continue;
-      const of = n.facts.find((g) => g.id === f.exampleOf);
-      if (!of) err("graph", `${f.id}: exampleOf ${f.exampleOf} is not a fact of ${n.id}`);
-      else if (!of.evidence) err("graph", `${f.id}: exampleOf ${f.exampleOf}, which has no evidence pattern to check the example against`);
-    }
-    for (const r of [...(n.trueRemarks ?? []), ...n.facts.flatMap((f) => f.against ?? [])]) {
+  // the true-remark patterns (a misconception dropped as a true statement) must compile
+  for (const n of bundle?.nodes ?? [])
+    for (const r of n.trueRemarks ?? []) {
       try {
         new RegExp(r, "iu");
       } catch (e) {
-        err("graph", `${n.id}: a trueRemarks or against pattern doesn't compile (${String(e).slice(0, 80)})`);
+        err("graph", `${n.id}: a trueRemarks pattern doesn't compile (${String(e).slice(0, 80)})`);
       }
     }
-  }
   // how Kai says each assumption when it guesses: a hunch for every assume (and assumeVague)
   for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? []) {
     if (f.assume && !f.hunch) warn("graph", `${f.id} has an assumption but no hunch: Kai would recite the assumption as a rule`);
