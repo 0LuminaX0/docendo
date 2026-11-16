@@ -292,7 +292,8 @@ while (turns < 32) {
   // vary quality: every 4th answer is vague, so Kai gets confused sometimes
   const facts = node.facts.filter((f) => f.teachable).map((f) => f.text);
   // and every 4th (offset 1) explains just one fact, the case where Kai only partly gets it
-  const msg = turns % 4 === 3 || !facts.length ? "Hmm, I'm not sure how to explain that one." : turns % 4 === 1 ? facts[0] : facts.join(" ");
+  // (offset 1: the first half of one fact, which the demo judge rates partial, so Kai's "okay" face shows)
+  const msg = turns % 4 === 3 || !facts.length ? "Hmm, I'm not sure how to explain that one." : turns % 4 === 1 ? facts[0].split(" ").slice(0, Math.ceil(facts[0].split(" ").length / 2)).join(" ") : facts.join(" ");
   await page.focus("#msg");
   await page.keyboard.type(msg.slice(0, 1100));
   await page.keyboard.press("Enter");
@@ -314,7 +315,7 @@ while (turns < 32) {
     await wait(300);
     await shot(page, "04-mind-midway", true);
     await page.click(".seg button:nth-child(1)");
-    await page.waitForSelector("#msg");
+    await page.waitForSelector("#msg, .ready"); // with six questions (2026-11-16) Kai may be done by now
     sawMind = true;
   }
   if (turns === 2 && (await page.$(".help:not([disabled])"))) {
