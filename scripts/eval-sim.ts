@@ -220,7 +220,7 @@ async function simulate(p: Persona): Promise<Run> {
       // as the practice route does: a caveat comes into play when Kai would otherwise solve every problem
       const caveat = caveatFor(items, it, s, wrongSoFar);
       const first = await solve(bundle, it, s, { demo: false, onCall, caveat });
-      if (first.caveat) (run.caveats ??= []).push(`${it.id}:${first.caveat}`);
+      if (first.caveat) (run.caveats ??= []).push(`${it.id}${first.caveatId ? `/${first.caveatId}` : ""}:${first.caveat}`);
       if (!first.correct) wrongSoFar++;
       if (first.gate.canBeRight && !first.caveat) (openTried++, first.correct ? openRight++ : log.push(`[practice ${it.id}] gate open but Kai wrong (${first.by}), answered ${first.answer}: ${first.steps.map((x) => x.text).join(" | ")}`));
       if (first.correct) {
@@ -237,7 +237,7 @@ async function simulate(p: Persona): Promise<Run> {
       s = applyJudgement(s, j);
       const second = await solve(bundle, it, s, { demo: false, onCall });
       if (second.correct) afterFix++;
-      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}`);
+      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveatId ?? ""} ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}`);
     }
     run.solved = solved;
     run.failedOnce = solved < items.length;

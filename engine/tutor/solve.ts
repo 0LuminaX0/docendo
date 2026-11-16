@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Bundle } from "../../content/schema";
-import { checkPractice, parseNumber, type PracticeItem } from "../../content/practice";
+import { caveatsOf, checkPractice, parseNumber, type Caveat, type PracticeItem } from "../../content/practice";
 import { chatJson, MODELS, type OnCall } from "../llm";
 import { forbiddenTerms } from "./admit";
 import { activeMisconceptions, latest, notesOf, type State } from "./state";
@@ -46,8 +46,9 @@ export type Solution = {
   // the problem's caveat was in play (Kai would otherwise have solved every problem): "misread", Kai read the gap
   // in its notes the plausible wrong way; "covered", its notes said it after all and Kai followed them
   caveat?: "misread" | "covered";
+  caveatId?: string; // which of the problem's caveats (P7 has two: "sticks", "lockin")
 };
-export type Caveat = NonNullable<PracticeItem["caveat"]>;
+export type { Caveat };
 
 const LETTERS = "ABCDEF";
 const lowerFirst = (t: string) => (/^[A-Z][a-z]/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t).replace(/[.\s]+$/u, "");
@@ -225,7 +226,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     const misread = item.kind === "choice" ? LETTERS.indexOf(answer) === caveat.answer : sameNumber(answer, caveat.answer);
     if (!misread && !isRight(item, answer)) throw new Error(`the solver's answer is neither the key nor the caveat's misreading (answered ${answer})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
-    return { steps, answer, correct: !misread, notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, caveat: misread ? "misread" : "covered" };
+    return { steps, answer, correct: !misread, notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, caveat: misread ? "misread" : "covered", caveatId: caveat.id };
   }
   if (guess) {
     // the conclusion must be the guess's own, reached without a turnaround
@@ -297,16 +298,18 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, c
   const facts = latest(state);
   const g = gate(item, state);
   if (caveat && g.canBeRight) {
-    // the caveat (offered only when the notes leave it open): the worked solution's first step, then the misreading
+    // the caveat (offered only when the notes leave it open): its opening (else the worked solution's first step),
+    // then the misreading, citing the notes it reads the wrong way
     const s = item.steps[0]!;
-    const cite = s.facts.map((f) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0)).filter((n) => n > 0);
+    const noteOf = (f: string) => (facts.get(f) ? notes.indexOf(facts.get(f)!.words) + 1 : 0);
+    const cite = s.facts.map(noteOf).filter((n) => n > 0);
     const steps: Step[] = [
-      { text: s.text, notes: [...new Set(cite)] },
-      { text: caveat.misreading, notes: [] },
+      { text: caveat.opening ?? s.text, notes: [...new Set(cite)] },
+      { text: caveat.misreading, notes: [...new Set((caveat.requires ?? []).map(noteOf).filter((n) => n > 0))] },
       { text: item.kind === "choice" ? `So I'd say ${LETTERS[caveat.answer]}: ${lowerFirst(item.options![caveat.answer]!)}.` : `So I'd say ${answerText(item, caveat.answer)}.`, notes: [] },
     ];
     const answer = item.kind === "choice" ? LETTERS[caveat.answer]! : String(caveat.answer);
-    return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess: null, caveat: "misread" };
+    return { steps, answer, correct: isRight(item, answer), notes, leaked: [], by: "offline", gate: g, guess: null, caveat: "misread", caveatId: caveat.id };
   }
   // as in the gate: a wrong belief blocks the fact it contradicts (none: nothing; older notebooks: its idea)
   const blocking = activeMisconceptions(state).filter((m) => m.fact !== null);
@@ -405,19 +408,33 @@ export async function solve(
  * problem and every one after it (the gate open for each) and hasn't been wrong yet, the first problem whose caveat its
  * notes leave open (the caveat's `covered` pattern finds nothing) puts it in play: Kai reads the gap the plausible
  * wrong way, never against a note (the solver model makes the final call and follows notes that say it).
+ * A problem's caveats are tried in order (2026-11-16, P7): one the notes cover passes to the next, one whose `requires`
+ * Kai has no note on is skipped, and one marked `alone` needs only this problem's gate open (P7: that greedy can change
+ * its favourite, for everyone whose notes leave it open, not only those who would solve everything).
  */
 export function caveatFor(items: PracticeItem[], item: PracticeItem, state: State, wrongSoFar: number): Caveat | undefined {
-  if (!item.caveat || wrongSoFar > 0) return undefined;
+  const list = caveatsOf(item);
+  if (!list.length || wrongSoFar > 0 || !gate(item, state).canBeRight) return undefined;
   const at = items.findIndex((p) => p.id === item.id);
-  if (!items.slice(Math.max(0, at)).every((p) => gate(p, state).canBeRight)) return undefined;
-  return caveatOpen(item.caveat, state) ? item.caveat : undefined;
+  const rest = () => items.slice(Math.max(0, at)).every((p) => gate(p, state).canBeRight);
+  const noted = latest(state);
+  for (const c of list) {
+    if (!c.alone && !rest()) continue;
+    if ((c.requires ?? []).some((f) => !["correct", "partial"].includes(noted.get(f)?.verdict ?? ""))) continue;
+    if (caveatOpen(c, state)) return c;
+  }
+  return undefined;
 }
 
-/** Do Kai's notes leave the caveat open (no note matches its pattern)? */
+/** Do Kai's notes leave the caveat open (no note matches its pattern; with `ideas`, no note on those ideas)? */
 export function caveatOpen(c: Caveat, state: State): boolean {
   try {
     const re = new RegExp(c.covered, "iu");
-    return !notesOf(state).some((n) => re.test(n));
+    const on = (id: string) => c.ideas!.includes(id.split(".")[0]!);
+    const notes = c.ideas
+      ? [...[...latest(state).values()].filter((e) => on(e.fact)), ...activeMisconceptions(state).filter((m) => on(m.node))].map((e) => e.note || e.words)
+      : notesOf(state);
+    return !notes.some((n) => re.test(n));
   } catch {
     return false; // a broken pattern never puts a caveat in play (pnpm content validate catches it)
   }

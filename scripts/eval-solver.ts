@@ -14,7 +14,11 @@
 //   skipped       nothing taught                                     → the option the first needed fact's assumption leads to
 //   misconception the last needed fact stated wrongly (its misconception, in a learner's words) → a wrong option
 //   unlisted (--unlisted) every teachable fact but one the problem doesn't need → the key
-// Keep a problem only if: full right ≥ 9/10, each "without" at its predicted option ≥ 8/10, unlisted unchanged.
+//   caveat <id>   notes that leave the problem's planted point open (P7: greedy's rule without the switch; the
+//                 switch and lock-in without what tells them apart), the caveat in play as in the app → its misreading
+//   said <id>     the point said in words the caveat's pattern misses, the caveat in play → the key (Kai follows notes)
+// Keep a problem only if: full right ≥ 9/10, each "without" at its predicted option ≥ 8/10, unlisted unchanged; a
+// caveat misread ≥ 8/10, its "said" case right ≥ 9/10 (else the solver goes against a note).
 // Also counted: answered by the model (not the offline fallback), 2 to 5 steps (2 or 3 with an empty notebook), a step that says Kai is guessing
 // where a fact is missing, and lesson terms Kai used that its notes didn't give it (leaks). With --audit the judge
 // model reads every attempt that lacked a fact and says whether a step states or uses a fact Kai wasn't told.
@@ -32,7 +36,8 @@ for (const f of [".env", ".env.local"]) {
 const { Bundle } = await import("../content/schema");
 const { PracticeFile, checkPractice } = await import("../content/practice");
 const { initialState } = await import("../engine/tutor/state");
-const { beliefFor, solve } = await import("../engine/tutor/solve");
+const { beliefFor, caveatFor, solve } = await import("../engine/tutor/solve");
+const { caveatsOf } = await import("../content/practice");
 const { chatJson, MODELS } = await import("../engine/llm");
 
 const args = process.argv.slice(2);
@@ -45,7 +50,8 @@ const unlisted = args.includes("--unlisted");
 const only = opt("--items")?.split(",");
 
 const bundle = Bundle.parse(JSON.parse(readFileSync("topics/bandits/bundle.json", "utf8")));
-const items = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items.filter((p) => !only || only.includes(p.id));
+const allItems = PracticeFile.parse(JSON.parse(readFileSync("topics/bandits/practice.json", "utf8"))).items;
+const items = allItems.filter((p) => !only || only.includes(p.id));
 const facts = new Map(bundle.nodes.flatMap((n) => n.facts.map((f) => [f.id, f] as const)));
 const teachable = bundle.nodes.filter((n) => n.inLesson !== false).flatMap((n) => n.facts.filter((f) => f.required && f.teachable && f.assume).map((f) => f.id));
 const LETTERS = "ABCDEF";
@@ -83,15 +89,28 @@ const WRONG: Record<string, { node: string; words: string }> = {
   "n12.f2": { node: "n12", words: "the bonus of an option you don't pick stays where it was" },
 };
 
+// the caveats' notebooks (2026-11-16): per caveat id, the words that leave its point open ("open") and that say it in
+// words its pattern misses ("said"); every other needed fact as in SAID
+const CAVEAT_NOTES: Record<string, { open: Record<string, string>; said: Record<string, string> }> = {
+  sticks: {
+    open: { "n05.f1": "greedy always goes for the option with the best average" },
+    said: { "n05.f1": "greedy goes with whichever average is on top, and when a fresh leader appears it replaces the old favourite" },
+  },
+  lockin: {
+    open: {},
+    said: { "n06.f1": "greedy locks out a good option after a bad start only while that option's average stays under what the others really get; a leader that was just lucky drops back once greedy keeps featuring it" },
+  },
+};
+
 type Entry = { fact: string; verdict: "correct" | "partial"; words: string; turn: number };
-const entry = (fact: string, verdict: "correct" | "partial", turn: number): Entry => ({ fact, verdict, words: (verdict === "partial" ? VAGUE[fact] : SAID[fact]) ?? `something about ${fact}`, turn });
-const notebook = (correct: string[], vague: string[] = []) => ({
+const entry = (fact: string, verdict: "correct" | "partial", turn: number, words: Record<string, string> = {}): Entry => ({ fact, verdict, words: words[fact] ?? (verdict === "partial" ? VAGUE[fact] : SAID[fact]) ?? `something about ${fact}`, turn });
+const notebook = (correct: string[], vague: string[] = [], words: Record<string, string> = {}) => ({
   ...initialState(bundle),
   turn: correct.length + vague.length,
-  notebook: [...correct.map((f, i) => entry(f, "correct", i + 1)), ...vague.map((f, i) => entry(f, "partial", correct.length + i + 1))],
+  notebook: [...correct.map((f, i) => entry(f, "correct", i + 1, words)), ...vague.map((f, i) => entry(f, "partial", correct.length + i + 1, words))],
 });
 
-type Case = { item: (typeof items)[number]; name: string; state: ReturnType<typeof initialState>; expect: number | "wrong"; lacking: string[] };
+type Case = { item: (typeof items)[number]; name: string; state: ReturnType<typeof initialState>; expect: number | "wrong"; lacking: string[]; caveat?: ReturnType<typeof caveatsOf>[number] };
 const cases: Case[] = [];
 for (const item of items) {
   const needs = item.needs ?? [];
@@ -110,6 +129,22 @@ for (const item of items) {
   if (unlisted)
     for (const f of teachable.filter((x) => !needs.includes(x)))
       cases.push({ item, name: `unlisted ${f}`, state: notebook(teachable.filter((x) => x !== f)), expect: key, lacking: [] });
+  // the caveats, chosen as the practice route does (every problem's needs taught, so a caveat that waits for the
+  // problems after it comes into play too); a notebook that doesn't bring its caveat into play is reported, not run
+  const everyNeed = [...new Set(allItems.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|")[0]!)))];
+  for (const c of caveatsOf(item)) {
+    const words = CAVEAT_NOTES[c.id ?? ""];
+    for (const [kind, w] of [["caveat", words?.open ?? {}], ["said", words?.said]] as const) {
+      if (!w) continue;
+      const state = notebook([...new Set([...everyNeed, ...(c.requires ?? [])])], [], w);
+      const inPlay = caveatFor(allItems, item, state, 0);
+      if (inPlay !== c) {
+        console.log(`  (${item.id} ${kind} ${c.id}: its notebook brings ${inPlay?.id ?? "no caveat"} into play, not this one: skipped)`);
+        continue;
+      }
+      cases.push({ item, name: `${kind} ${c.id ?? ""}`.trim(), state, expect: kind === "caveat" ? c.answer : key, lacking: [], caveat: c });
+    }
+  }
 }
 
 // the auditor: did Kai state or use a fact it wasn't told, and did it say plainly that it was guessing?
@@ -144,12 +179,13 @@ for (const model of models) {
     let cost = 0;
     let why = "";
     const t0 = Date.now();
-    const s = await solve(bundle, c.item, c.state, { demo: false, onCall: (x) => (cost += x.usage.costUsd ?? 0), onError: (e) => (why = String(e).slice(0, 160)) });
+    const s = await solve(bundle, c.item, c.state, { demo: false, caveat: c.caveat, onCall: (x) => (cost += x.usage.costUsd ?? 0), onError: (e) => (why = String(e).slice(0, 160)) });
     const ms = Date.now() - t0;
     const k = LETTERS.indexOf(s.answer);
     const asExpected = c.expect === "wrong" ? !s.correct : k === c.expect;
     const text = s.steps.map((x) => x.text);
-    const row: Row = { model, item: c.item.id, case: c.name, lacking: c.lacking.length, expected: c.expect === "wrong" ? "wrong" : LETTERS[c.expect]!, answer: s.answer, asExpected, byModel: s.by === "model", steps: s.steps.length, guessing: c.lacking.length ? text.some((t) => GUESSING.test(t)) : true, leaked: s.leaked, ms, cost, why, text };
+    // a caveat's misreading is Kai's own understanding: "guessing" there counts against it (reported apart)
+    const row: Row = { model, item: c.item.id, case: c.name, lacking: c.lacking.length, expected: c.expect === "wrong" ? "wrong" : LETTERS[c.expect]!, answer: s.answer, asExpected, byModel: s.by === "model", steps: s.steps.length, guessing: c.lacking.length || c.caveat ? text.some((t) => GUESSING.test(t)) : true, leaked: s.leaked, ms, cost, why, text };
     if (audit && c.lacking.length && s.by === "model") row.audit = await auditOf(c, text, (x) => (row.cost += x)).catch(() => undefined);
     rows.push(row);
   };
@@ -184,6 +220,12 @@ for (const model of models) {
     console.log(`  ${item.id} ${keep ? "keep" : "CHECK"}: full ${share(full, (x) => x.asExpected)}; ${withouts.map(({ n, xs }) => `without ${n} ${share(xs, (x) => x.asExpected)}`).join(", ")}${unl.length ? `; unlisted ${share(unl, (x) => x.asExpected)}` : ""}`);
     for (const name of [...new Set(q.map((x) => x.case))].filter((n) => n.startsWith("vague") || n === "skipped" || n.startsWith("misconception")))
       console.log(`      ${name.padEnd(22)} ${share(by(name), (x) => x.asExpected)} (expected ${by(name)[0]!.expected}; got ${[...new Set(by(name).map((x) => x.answer))].join(", ")})`);
+    // the caveats: misread ≥ 8/10 where the notes leave the point open, followed ≥ 9/10 where they say it otherwise
+    for (const name of [...new Set(q.map((x) => x.case))].filter((n) => n.startsWith("caveat") || n.startsWith("said"))) {
+      const xs = by(name);
+      const ok = xs.filter((x) => x.asExpected).length >= Math.ceil((name.startsWith("said") ? 0.9 : 0.8) * xs.length);
+      console.log(`      ${name.padEnd(22)} ${share(xs, (x) => x.asExpected)} ${ok ? "ok" : "CHECK"} (expected ${xs[0]!.expected}; got ${[...new Set(xs.map((x) => x.answer))].join(", ")}; by the model ${share(xs, (x) => x.byModel)}${name.startsWith("caveat") ? `; says it is guessing ${share(xs, (x) => x.guessing)}` : ""})`);
+    }
   }
   const why = r.filter((x) => x.why).map((x) => `${x.item}/${x.case}: ${x.why}`);
   if (why.length) console.log(`  fallbacks:\n    ${why.slice(0, 10).join("\n    ")}${why.length > 10 ? `\n    … ${why.length - 10} more` : ""}`);
