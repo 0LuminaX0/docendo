@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, BookOpen, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
 import { Header, KaiFace } from "./ui";
-import { newSession, post, save, useSaved } from "@/lib/client/store";
+import { keepNumber, keptNumber, newSession, post, save, useSaved } from "@/lib/client/store";
 import { useStudySettings } from "./SettingsContext";
 import { count } from "@/lib/words";
 import { barsOf, currentStep, firstStep, pathOf, stepName } from "@/lib/flow";
@@ -14,7 +14,8 @@ const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: List
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, reading time and video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
 
-type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean; soft?: boolean };
+// number: a participant code for everyone gives each person a participant number of their own
+type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean; soft?: boolean; number?: string };
 
 export default function Intro({
   accessRequired,
@@ -56,15 +57,19 @@ export default function Intro({
     setInfo(null);
     // team sessions: ?pid=… in the link joins the session with our other data (a participant's code does this itself)
     const pid = new URLSearchParams(window.location.search).get("pid")?.slice(0, 40) || undefined;
+    // the participant number this browser had before, if any: logged, so a person starting again can be told apart
+    const prior = followUp ? null : keptNumber();
     const r = await post<Started>("/api/session", {
       consent: true,
       ...(followUp ? { followUp } : accessRequired ? { accessCode: code } : {}),
       ...(pid && /^[A-Za-z0-9_-]+$/.test(pid) ? { pid } : {}),
+      ...(prior ? { prior: prior.slice(0, 20) } : {}),
     });
     setBusy(false);
     // 409: the code is known and its tests are done, or the follow-up isn't open yet: a message, not an error
     if (!r.ok) return r.status === 409 ? setInfo(r.error) : setError(r.error);
-    const s = { ...newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition, !!r.data.debug), ...(typeof r.data.soft === "boolean" ? { soft: r.data.soft } : {}) };
+    if (r.data.number) keepNumber(r.data.number);
+    const s = { ...newSession(r.data.token, r.data.expiresAt, r.data.demo, r.data.team, r.data.condition, !!r.data.debug), ...(typeof r.data.soft === "boolean" ? { soft: r.data.soft } : {}), ...(r.data.number ? { number: r.data.number } : {}) };
     if (r.data.phase === "delayed") {
       save({ ...s, phase: "delayed", step: "exercises" });
       router.push("/exercises");
@@ -174,6 +179,8 @@ export default function Intro({
               </form>
             ) : null}
             {followUp && Date.now() < followUp && !info && <p className="note">Your follow-up test is scheduled for {opensText}.</p>}
+            {/* a session started with a participant code for everyone: the person's number, also here for someone who stopped early */}
+            {saved?.number && !info && <p className="note">Your participant number: <b className="pnum">{saved.number}</b></p>}
             {info && <p className="info" role="status">{info}</p>}
             {error && <p className="error" role="alert">{error}</p>}
           </div>

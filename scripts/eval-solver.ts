@@ -105,7 +105,7 @@ const CAVEAT_NOTES: Record<string, { open: Record<string, string>; said: Record<
   // said in words the pattern misses
   slowing: {
     open: { "n12.f2": "the exploration bonus grows when an option is not being picked" },
-    said: { "n12.f2": "an unpicked option's bonus keeps rising, but each extra hour adds a little less than the hour before" },
+    said: { "n12.f2": "an unpicked option's bonus keeps rising, but it needs more and more hours to rise by the same amount" },
   },
 };
 

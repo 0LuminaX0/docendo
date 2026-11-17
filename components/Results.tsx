@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Brain, CalendarClock, Check, Heart, Minus, RotateCcw, X } from "lucide-react";
+import { Brain, CalendarClock, Check, Copy, Heart, IdCard, Minus, RotateCcw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Header, KaiFace } from "./ui";
 import { useGuard } from "./useGuard";
@@ -95,6 +95,7 @@ export default function Results() {
               {r.parts && r.parts.length > 1 ? ` (${r.parts.map((p, k) => `part ${k + 1}: ${p.score} of ${p.of}`).join(", ")})` : ""}.
             </p>
           </div>
+          {saved.number && <NumberCard number={saved.number} />}
           {kaiThanks}
           {!asked && <Feedback sent={!!saved.feedbackSent} onSent={() => update((x) => ({ ...x, feedbackSent: true }))} />}
           {saved.team && restart}
@@ -127,6 +128,8 @@ export default function Results() {
           {kaiThanks}
         </div>
 
+        {saved.number && <NumberCard number={saved.number} />}
+
         {/* the follow-up test: when to come back, and how (only for a code that names this person) */}
         {!delayed && r.followUp && (
           <section className="followup-card" aria-labelledby="fu-h">
@@ -137,7 +140,7 @@ export default function Results() {
                 {r.followUp.opensAt <= Date.now()
                   ? "Your follow-up test is open now."
                   : `From ${new Date(r.followUp.opensAt).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}, you can take a follow-up test.`}{" "}
-                It has {r.of} new questions on the same ideas and takes about {r.of} minutes. Come back to this site on this device, or enter the same access code. It helps us see what stays with you over time.
+                It has {r.of} new questions on the same ideas and takes about {r.of} minutes. Come back to this site on this device, or enter {saved.number ? "your participant number as the code" : "the same access code"}. It helps us see what stays with you over time.
               </p>
             </div>
           </section>
@@ -283,6 +286,40 @@ export default function Results() {
 }
 
 /** An optional word at the end, for the study team (shown in the admin panel). */
+/**
+ * A participant code for everyone: the person's own participant number, the one way to find their data again (they are
+ * known to us by nothing else): to have it deleted, or for a follow-up test. Also kept in the browser.
+ */
+function NumberCard({ number }: { number: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <section className="number-card" aria-labelledby="pn-h">
+      <IdCard size={22} aria-hidden="true" />
+      <div>
+        <h2 id="pn-h">Your participant number</h2>
+        <div className="number-row">
+          <span className="pnum">{number}</span>
+          <button
+            type="button"
+            className="btn small"
+            onClick={() =>
+              void navigator.clipboard?.writeText(number).then(
+                () => (setCopied(true), track("number_copy")),
+                () => {},
+              )
+            }
+          >
+            {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <p>
+          Please note it down or take a screenshot. Your data is kept under this number and nothing else, so it is how we can find it: to delete it if you ask us to, or if we invite you to a follow-up test.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function Feedback({ sent, onSent }: { sent: boolean; onSent: () => void }) {
   const [rating, setRating] = useState<number | null>(null);
   const [text, setText] = useState("");

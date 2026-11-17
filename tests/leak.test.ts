@@ -21,7 +21,7 @@ import practiceJson from "../topics/bandits/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile, caveatsOf } from "../content/practice";
 import { initialState, type State } from "../engine/tutor/state";
-import { caveatFor, gate, offlineSolve, pointLeak, solve } from "../engine/tutor/solve";
+import { backstopLeak, caveatFor, gate, offlineSolve, pointLeak, solve } from "../engine/tutor/solve";
 
 const bundle = Bundle.parse(bundleJson);
 const practice = PracticeFile.parse(practiceJson);
@@ -111,8 +111,82 @@ describe("Kai never hands the learner the point it misreads (2026-11-17)", () =>
     const second = await solve(bundle, p8, session5, { demo: false, caveat: caveatFor(practice.items, p8, session5, 1) });
     expect([second.by, second.answer, second.caveat]).toEqual(["model", "A", "misread"]);
     expect(said(second)).toBe(said(clean));
-    // the solver is told not to name the point or what its notes leave out
-    expect(prompts.at(-1)).toMatch(/never mention it or any reading other than yours, and never say what your notes don't say or leave out/);
+    // the solver is told not to name another reading or what its notes leave out, and is never told the point itself
+    expect(prompts.at(-1)).toMatch(/Never mention any other reading, and never say what your notes don't say or leave out/);
+    expect(prompts.at(-1)).not.toContain(caveatsOf(p8)[0]!.about);
+  });
+
+  it("never tells the model writing Kai's steps any caveat's point (2026-11-17)", async () => {
+    // every caveat of every problem, in play: the prompt carries the misreading, never the point it misreads
+    replies.push(clean);
+    const all: State = { ...session5, notebook: [...session5.notebook, { fact: "n06.f1", verdict: "correct", words: "greedy can get stuck on an option that looks worse than it is", turn: 6 }] };
+    for (const p of practice.items)
+      for (const c of caveatsOf(p)) {
+        prompts.length = 0;
+        await solve(bundle, p, all, { demo: false, caveat: c }).catch(() => undefined);
+        expect(prompts.length, `${p.id} ${c.id ?? ""}`).toBeGreaterThan(0);
+        for (const x of prompts) {
+          expect(x, `${p.id} ${c.id ?? ""}`).not.toContain(c.about);
+          expect(x).toContain(c.misreading);
+        }
+      }
+  });
+
+  it("finds the slowing however it is put, and Kai's notes leaving things out however that is put", () => {
+    const step = (text: string) => [{ text, notes: [] }];
+    for (const t of [
+      "the bonus grows more slowly as time goes on",
+      "the bonus keeps growing, but by less each hour",
+      "each extra hour adds a bit less to the bonus",
+      "the increases get smaller over time",
+      "the gaps between plays get longer",
+      "it takes longer to catch up at hour 50,000",
+      "with diminishing returns",
+      "the bonus grows but at a decreasing rate",
+      "the bonus rises quickly at first and then barely",
+      "it grows by smaller and smaller amounts",
+      "the bonus grows sub-linearly, like a square root",
+      "the rate at which the bonus grows drops over time",
+    ])
+      expect(pointLeak(p8, session5, step(t), false), t).toMatch(/slowing/);
+    for (const t of [
+      "My notes say nothing about how fast it grows",
+      "There's no mention in my notes of greedy switching",
+      "I don't see anything in my notes about switching",
+      "My notes don't really say whether greedy compares again",
+      "My notes have nothing on whether the pace changes",
+      "my notes aren't clear on whether greedy re-checks",
+      "My notes only talk about the first days",
+      "I wasn't told whether greedy can switch",
+      "Whether greedy switches later isn't in my notes",
+    ])
+      expect(pointLeak(item("p7"), session5, step(t), true), t).toMatch(/leave out/);
+  });
+
+  it("sets aside an attempt at another problem, right or wrong, that states the slowing while the notes leave it open", async () => {
+    const p2 = item("p2");
+    const right = {
+      steps: [
+        { text: "Dialogues was picked, so its bonus shrinks and its score falls.", notes: [5] },
+        { text: "Flashcards and Listening weren't picked, so their bonuses grow, though more slowly as the rounds go on.", notes: [4] },
+        { text: "So Dialogues' score falls and the other two rise slightly.", notes: [] },
+      ],
+      answer: "1",
+    };
+    const plain = { ...right, steps: right.steps.map((x, i) => (i === 1 ? { ...x, text: "Flashcards and Listening weren't picked, so their bonuses grow a little." } : x)) };
+    replies.push(right, plain);
+    const errors: string[] = [];
+    const s = await solve(bundle, p2, session5, { demo: false, items: practice.items, onError: (e) => errors.push(String(e)) });
+    expect(errors[0]).toMatch(/leak:.*p8's slowing/);
+    expect([s.by, s.correct]).toEqual(["model", true]);
+    expect(said(s)).not.toMatch(/slow/i);
+    // taught: saying it is following the notes
+    const taught: State = { ...session5, notebook: [...session5.notebook, { fact: "n12.f2", verdict: "correct", words: "the bonus keeps growing but slower and slower", turn: 6 }] };
+    expect(backstopLeak(practice.items, p2, taught, right.steps)).toBeNull();
+    expect(backstopLeak(practice.items, p2, session5, right.steps)).toMatch(/slowing/);
+    // and nothing the offline attempt writes at another problem states it (pnpm content validate checks the same)
+    for (const p of practice.items.filter((x) => x.id !== "p8"))
+      for (const st of [session5, initialState(bundle)]) expect(backstopLeak(practice.items, p, st, offlineSolve(bundle, p, st, caveatFor(practice.items, p, st, 0)).steps), p.id).toBeNull();
   });
 
   it("holds the backstop when the caller passes no caveat (a page from before a deploy)", async () => {

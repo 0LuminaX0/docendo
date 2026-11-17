@@ -2,6 +2,7 @@
 //   pnpm events export              all events → data/export-<time>/ (JSONL + CSV tables)
 //   pnpm events export --from f.jsonl   use a local events file instead of Upstash
 //   pnpm events summary             a quick overview in the terminal
+//   pnpm events audit [--llm]       did Kai show anyone something it wasn't taught? (scripts/audit.ts)
 // Reads Upstash Redis when UPSTASH_REDIS_REST_URL/TOKEN are set (.env), otherwise .data/events.jsonl.
 // The output contains what learners wrote: keep it out of git (data/ is ignored) and share it carefully.
 
@@ -59,6 +60,9 @@ if (cmd === "export") {
   writeFileSync(join(dir, "events.jsonl"), events.map((e) => JSON.stringify(e)).join("\n") + "\n");
   for (const [name, rows] of Object.entries(t)) writeFileSync(join(dir, `${name}.csv`), toCsv(rows));
   console.log(`wrote ${dir}: events.jsonl (${events.length}), ${Object.entries(t).map(([n, r]) => `${n}.csv (${r.length})`).join(", ")}`);
+} else if (cmd === "audit") {
+  const { audit } = await import("./audit");
+  await audit(events, { llm: rest.includes("--llm") });
 } else {
   const done = t.sessions.filter((s) => s.testScore !== null);
   console.log(`${events.length} events, ${t.sessions.length} sessions, ${done.length} finished the test`);

@@ -82,6 +82,9 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
         <p className="note" style={{ marginTop: 10 }}>
           Participant: the study. Trial run: exactly a participant&apos;s session, counted with the tests (to try the study yourself). Team: the test shortcuts and the &quot;You solve / Kai solves&quot; switch.
         </p>
+        <p className="note">
+          <b>One code for everyone:</b> make 1 participant code, Random, with no limit on uses (leave the field empty). It gets 8 characters instead of 6. Each person who starts with it gets a participant number of their own (shown at the end, kept in their browser, and the session&apos;s id in the log), and its uses are assigned in shuffled blocks of 4, two per condition, so the conditions never differ by more than two.
+        </p>
         {error && <p className="error" role="alert">{error}</p>}
       </section>
 
@@ -97,7 +100,7 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
           <tbody>
             {shown.map((c) => (
               <tr key={c.id} className={c.active ? "" : "off"}>
-                <td><code>{c.code}</code></td>
+                <td><code>{c.code}</code>{!c.team && c.maxUses !== 1 && <span className="note"> for everyone</span>}</td>
                 <td>{c.label || <span className="note">–</span>}</td>
                 <td>
                   <select className="input adm-inline" value={kindOf(c)} disabled={busy} onChange={(e) => void run({ action: "update", code: c.code, team: e.target.value === "team", trial: e.target.value === "trial" })}>
@@ -122,7 +125,7 @@ export default function CodeManager({ initial }: { initial: Code[] }) {
                     c.uses
                   )}
                   {c.maxUses ? ` of ${c.maxUses}` : ""}
-                  {c.condition === "random" && c.draw && <span className="note"> (first: {c.draw})</span>}
+                  {c.condition === "random" && (c.maxUses === 1 ? c.draw && <span className="note"> (first: {c.draw})</span> : <span className="note"> (blocks of 4)</span>)}
                 </td>
                 <td>
                   <button type="button" className="linkish" disabled={busy} onClick={() => void run({ action: "update", code: c.code, active: !c.active })}>

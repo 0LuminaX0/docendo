@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { ConfigError, config } from "@/lib/server/env";
+import { ConfigError, config, sessionSecret } from "@/lib/server/env";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
 import { limit } from "@/lib/server/limit";
 import { codeMatches, issueToken, verifyToken, type Entry } from "@/lib/server/token";
 import { deviceOf, record } from "@/lib/server/events";
-import { readCode, type Condition } from "@/lib/codes";
+import { formatNumber, isShared, readCode, readNumber, type Condition } from "@/lib/codes";
 import { conditionFor, findCode, useCode } from "@/lib/server/admindata";
 import { DEFAULT_TOPIC, otherForm, packFor } from "@/lib/server/content";
-import { followUpOpens, getParticipant, nextAssignment, putParticipant, type Participant } from "@/lib/server/participants";
+import { followUpOpens, freshNumber, getParticipant, nextAssignment, putParticipant, type Participant } from "@/lib/server/participants";
 import { getSettings } from "@/lib/server/settings";
 import type { Settings } from "@/lib/settings";
 import { flowOf } from "@/lib/flow";
@@ -21,9 +21,30 @@ const Body = z.object({
   accessCode: z.string().max(64).optional(),
   pid: z.string().regex(/^[A-Za-z0-9_-]{1,40}$/).optional(), // team sessions: an id from the link (?pid=…), to join with other data
   followUp: z.string().max(400).optional(), // a finished session's token on the same device: start its delayed test
+  prior: z.string().max(20).optional(), // the participant number this browser had before (a person starting again)
 });
 // the wording the learner agreed to is in components/Intro.tsx (CONSENT); change this date when it changes
 const CONSENT_VERSION = "2026-11-02"; // the note now names reading time (the text lesson)
+
+// The participant number cookie (2026-11-17): set by the server when a participant code for everyone starts a session
+// (only after the consent), sent back by the browser with its next start, so a second start in the same browser is
+// linked to the first even if the page's own storage was cleared or never sent. HttpOnly: the page's scripts never
+// see it. It holds the number only, and lasts 60 days (the study, and a follow-up test after it).
+const NUMBER_COOKIE = "docendo_pn";
+
+/**
+ * The participant number this browser had before: the cookie first, else the one the page kept (`prior`). Only a
+ * number we gave out counts (a record made through a participant code for everyone), so nothing made up reaches the log.
+ */
+async function priorOf(req: NextRequest, sent: string | undefined): Promise<{ priorNumber: string; priorFrom: "cookie" | "browser" | "both" } | null> {
+  const cookie = readNumber(req.cookies.get(NUMBER_COOKIE)?.value ?? "");
+  const page = readNumber(sent ?? "");
+  for (const n of [cookie, page]) {
+    if (!n || !(await getParticipant(n).catch(() => null))?.code) continue;
+    return { priorNumber: n, priorFrom: cookie === n && page === n ? "both" : cookie === n ? "cookie" : "browser" };
+  }
+  return null;
+}
 
 const day = (ms: number) => new Date(ms).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Zurich" });
 
@@ -41,7 +62,7 @@ async function delayedTest(p: Participant, req: NextRequest, st: { settings: Set
   const who = { cond: p.cond, entry: p.trial ? ("trial" as const) : ("participant" as const), pid: p.pid, form: otherForm(p.form), phase: "delayed" as const, topic: pack.slug };
   const { token, sid, expiresAt } = issueToken(who, st.settings.sessionDays);
   record({ t: "session_start", sid, pid: p.pid, condition: p.cond, entry: who.entry, phase: "delayed", form: who.form, topic: pack.slug, consent: CONSENT_VERSION, settings: st.version, daysSinceTest: Math.round((Date.now() - Date.parse(p.testAt)) / 864e5 * 10) / 10, openedEarly: !!p.opensAt, demo: config.demo, device: deviceOf(req.headers.get("user-agent")) });
-  return ok({ token, expiresAt, demo: config.demo, team: false, condition: p.cond, phase: "delayed" });
+  return ok({ token, expiresAt, demo: config.demo, team: false, condition: p.cond, phase: "delayed", ...(p.code ? { number: formatNumber(p.pid) } : {}) });
 }
 
 /** Start a session: returns a signed token the other endpoints require. */
@@ -68,6 +89,14 @@ export async function POST(req: NextRequest) {
   // access get the direct condition
   const given = body.data.accessCode ?? "";
   const stored = given ? await findCode(given).catch(() => null) : null;
+  // a participant number (a person who started with a shared participant code) in the code field: they come back,
+  // for the follow-up test. It never starts a session of the study again
+  const number = !stored ? readNumber(given) : null;
+  const numbered = number ? await getParticipant(number).catch(() => null) : null;
+  if (numbered?.code) {
+    const d = await delayedTest(numbered, req, st);
+    return d ?? fail(409, "That is your participant number. There is no follow-up test open for it at the moment.");
+  }
   const participant = !stored && config.codeSecret && given ? readCode(config.codeSecret, given) : null;
   let who: { cond: Condition; entry: Entry; pid: string | null };
   let debug = false; // the shared codes (ACCESS_CODE, PILOT_CODE) only: a skip button on every step, for trying the flow without the clocks
@@ -76,8 +105,10 @@ export async function POST(req: NextRequest) {
   let pilot: boolean | null = null;
   if (stored && !stored.active) return fail(401, "That access code is no longer active.");
   let code: { id: string; label: string; use: number } | null = null;
-  // a code that names one person (a one-use code, or a participant code) keeps a record, for the delayed test
-  const person = stored ? (stored.maxUses === 1 && !stored.team ? stored.id : null) : (participant?.id ?? null);
+  // a code that names one person (a one-use code, or a participant code) keeps a record, for the delayed test; a shared
+  // participant code gives each person a number of their own, with its record (below)
+  const shared = !!stored && isShared(stored);
+  let person = stored ? (stored.maxUses === 1 && !stored.team ? stored.id : null) : (participant?.id ?? null);
   const known = person ? await getParticipant(person).catch(() => null) : null;
   if (known) {
     const d = await delayedTest(known, req, st);
@@ -87,7 +118,10 @@ export async function POST(req: NextRequest) {
     const use = await useCode(stored);
     if (stored.maxUses && use > stored.maxUses) return fail(401, "That access code has already been used.");
     code = { id: stored.id, label: stored.label, use };
-    who = { cond: conditionFor(stored, use), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: stored.id };
+    // a shared code: a new participant number for this person, the session's pid; random conditions in permuted
+    // blocks of 4 over the code's uses, so every 4 starts split 2 and 2
+    if (shared) person = await freshNumber();
+    who = { cond: conditionFor(stored, use, sessionSecret()), entry: stored.team ? "team" : stored.trial ? "trial" : "participant", pid: person ?? stored.id };
   } else if (participant) who = { cond: participant.condition, entry: "participant", pid: participant.id };
   else if (config.pilotCode && codeMatches(given, config.pilotCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = true);
   else if (config.accessCode && codeMatches(given, config.accessCode)) (who = { cond: "direct", entry: "team", pid: body.data.pid ?? null }), (debug = true), (pilot = config.accessAsPilot);
@@ -116,7 +150,9 @@ export async function POST(req: NextRequest) {
     // the clocks: the pilot's code soft (suggested times, nothing ends), the other shared code hard limits, as the study
     // runs (2026-11-13); everyone else follows Study setup
     const soft = pilot ?? undefined;
-    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), startedAt: new Date().toISOString() });
+    // a participant code for everyone: the number this browser had before, if any (logged below)
+    const prior = shared ? await priorOf(req, body.data.prior) : null;
+    if (person && !known) await putParticipant({ pid: person, cond: who.cond, form, topic: pack.slug, ...(shared ? { code: stored!.id } : {}), ...(who.entry === "trial" ? { trial: true } : {}), ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), startedAt: new Date().toISOString() });
     const { token, sid, expiresAt } = issueToken({ ...who, form, phase: "main", topic: pack.slug, ...(both ? { both: true } : {}), ...(pre ? { pre } : {}), preBoth, ...(soft !== undefined ? { soft } : {}) }, st.settings.sessionDays);
     record({
       t: "session_start",
@@ -132,6 +168,10 @@ export async function POST(req: NextRequest) {
       settings: st.version, // the study settings this session started under (admin panel, Settings)
       entry: who.entry, // participant (own code), trial (a dry run's code), team (shared or team code) or open
       code, // a code made in the admin panel: its id, label and which use this is (never the code itself)
+      // a shared code: the participant number this browser had before, if any (the same person starting again, or
+      // someone else on the same computer), and where it came from (the cookie, the page's storage, or both); the pid is
+      // this session's own number
+      ...(shared ? { priorNumber: prior?.priorNumber ?? null, priorFrom: prior?.priorFrom ?? null } : {}),
       demo: config.demo,
       ...(debug ? { debug: true } : {}), // the shared code: steps may be skipped (logged as debug_skip)
       ...(pilot ? { pilot: true } : {}), // the pilot's code: every pretest set and both test forms
@@ -142,7 +182,10 @@ export async function POST(req: NextRequest) {
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
     // trial codes get a participant's experience: no shortcuts, no condition switch
-    return ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond, ...(debug ? { debug: true } : {}), ...(soft !== undefined ? { soft } : {}) });
+    // number: a shared code's participant number, shown to the person at the end (and kept in the browser)
+    const res = ok({ token, expiresAt, demo: config.demo, team: who.entry === "team" || who.entry === "open", condition: who.cond, ...(debug ? { debug: true } : {}), ...(soft !== undefined ? { soft } : {}), ...(shared && person ? { number: formatNumber(person) } : {}) });
+    if (shared && person) res.cookies.set(NUMBER_COOKIE, person, { httpOnly: true, sameSite: "lax", secure: req.nextUrl.protocol === "https:", path: "/", maxAge: 60 * 86_400 });
+    return res;
   } catch (e) {
     if (e instanceof ConfigError) return fail(500, "The server isn't fully configured yet.");
     throw e;

@@ -7,7 +7,7 @@ import { Redis } from "@upstash/redis";
 import { config } from "./env";
 import { EVENTS_KEY } from "./events";
 import { tables, type Ev } from "../analytics";
-import { balancedDraws } from "../codes";
+import { balancedDraws, isShared } from "../codes";
 export { conditionFor } from "../codes";
 
 // Data for the admin panel: the research log (read back from where
@@ -49,8 +49,10 @@ export async function loadTables() {
 }
 
 // ---------- access codes made in the admin panel ----------
-// A code has a condition (direct, recursive, or random: alternating per use, so uses stay balanced), may turn
-// on the team's test shortcuts, and may be limited to a number of uses. Sessions log the code's id, not the code.
+// A code has a condition (direct, recursive, or random), may turn on the team's test shortcuts, and may be limited to
+// a number of uses. Random: a one-use code takes the condition drawn for it in its batch (balanced blocks of 4); a
+// shared code (more uses, not a team code: one code for everyone, 2026-11-17) assigns each start in permuted blocks of
+// 4 over its uses (lib/codes.ts: conditionFor). Sessions log the code's id, not the code.
 
 export type CodeCondition = "direct" | "recursive" | "random";
 export type StoredCode = {
@@ -147,9 +149,12 @@ export async function createCodes(opts: { count: number; prefix: string; label: 
   const existing = new Set((await listCodes()).map((c) => keyOf(c.code)));
   const made: StoredCode[] = [];
   const draws = balancedDraws(opts.count);
+  // a shared code goes to everyone, so it is longer: 8 characters (31^8, about 40 bits) against 6 for a code that
+  // names one person; with 10 wrong tries per 15 minutes per network, neither can be guessed
+  const len = isShared(opts) ? 8 : 6;
   while (made.length < opts.count) {
-    const tail = Array.from({ length: 6 }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
-    const code = prefix ? `${prefix}-${tail}` : `${tail.slice(0, 3)}-${tail.slice(3)}`;
+    const tail = Array.from({ length: len }, () => ALPHABET[randomInt(ALPHABET.length)]).join("");
+    const code = prefix ? `${prefix}-${tail}` : `${tail.slice(0, len / 2)}-${tail.slice(len / 2)}`;
     if (existing.has(keyOf(code))) continue;
     existing.add(keyOf(code));
     made.push({ id: `c${tail}`, code, label: opts.label.slice(0, 60), condition: opts.condition, ...(opts.condition === "random" ? { draw: draws[made.length] } : {}), team: opts.team, ...(opts.trial && !opts.team ? { trial: true } : {}), maxUses: opts.maxUses, active: true, createdAt: new Date().toISOString() });

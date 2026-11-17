@@ -24,7 +24,7 @@ export default async function Page() {
     {
       name: "Participant codes",
       on: true,
-      how: "Made below, one per person (or with more uses). The code sets the condition: direct, recursive, or random, which draws balanced blocks of 4. No shortcuts. A one-use code names one person, so they can come back for the follow-up test with it.",
+      how: "Made below: one code for everyone (no limit on uses), or one per person. The code sets the condition: direct, recursive, or random, in balanced blocks of 4 (over a batch of one-use codes, or over the uses of a code for everyone). No shortcuts. A one-use code names one person; a code for everyone gives each person a participant number of their own (shown at the end, the session's id in the log). Either way they can come back for the follow-up test, with the code or the number.",
       counted: "The study: the Dashboard's default view.",
       sessions: main.filter((s) => s.entry === "participant" && !s.demo).length,
     },

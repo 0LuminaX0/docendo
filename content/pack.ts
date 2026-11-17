@@ -197,6 +197,19 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
       for (const f of c.requires ?? []) if (bundle && !facts.has(f)) err("practice.json", `${name} requires ${f}, which isn't a fact in the bundle`);
       for (const n of c.ideas ?? []) if (bundle && !bundle.nodes.some((x) => x.id === n)) err("practice.json", `${name} reads the notes on ${n}, which isn't an idea in the bundle`);
       if (caveats.length > 1 && !c.id) err("practice.json", `${name} needs an id (the log names which caveat was in play)`);
+      // a backstop's point may not be stated at any other problem either (backstopLeak in engine/tutor/solve.ts): nothing
+      // the offline attempt writes there (worked steps, misreadings, openings, wrong rules) nor any hunch may state it,
+      // and notes in its leak's words must count as saying it (else Kai quoting the learner's own note is set aside)
+      if (c.always && leakRe) {
+        for (const q of practice?.items ?? []) {
+          if (q.id === p.id) continue;
+          const texts = [...q.steps.map((s) => s.text), ...caveatsOf(q).flatMap((x) => [x.misreading, x.opening ?? ""]), ...(q.beliefs ?? []).map((b) => b.belief)];
+          for (const t of texts) if (leakRe.test(t)) err("practice.json", `${q.id} says "${t.slice(0, 60)}…", which states ${name}'s point (its leak pattern)`);
+        }
+        for (const f of bundle?.nodes.flatMap((n) => n.facts) ?? [])
+          for (const t of [f.hunch, f.hunchVague, f.assume, f.assumeVague]) if (t && leakRe.test(t)) err("graph", `${f.id}'s guess "${t.slice(0, 60)}…" states ${name}'s point (its leak pattern)`);
+        if (!c.covered.includes(c.leak!)) err("practice.json", `${name}'s covered pattern must include its leak pattern`);
+      }
     }
   }
   // the true-remark patterns (a misconception dropped as a true statement) must compile

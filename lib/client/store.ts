@@ -85,6 +85,7 @@ export type Saved = {
   condition?: Condition; // from the participant's code (team sessions: direct, with a switch on the practice page)
   debug?: boolean; // started with the shared code (ACCESS_CODE): a skip button on every step (components/DebugSkip.tsx)
   soft?: boolean; // the clocks, fixed by a shared code (PILOT_CODE: suggested times; ACCESS_CODE: hard limits); else Study setup
+  number?: string; // started with a participant code for everyone: this person's participant number ("4821 7730"), shown at the end
   startedAt: number;
   step: "pretest" | "watch" | "teach" | "practice" | "exercises" | "results";
   phase?: "main" | "delayed"; // delayed: the follow-up test only (a session of its own, days after the main one)
@@ -186,6 +187,24 @@ export function useSaved(): [Saved | null | undefined, (f: (s: Saved) => Saved) 
     if (cur) save(f(cur));
   }, []);
   return [value, update];
+}
+
+// The participant number also outlives the session in this browser (Start over, or the session's expiry): a new start
+// sends it along, so the log shows a browser starting again (priorNumber on session_start).
+const NUMBER_KEY = "docendo:number:v1";
+export function keepNumber(n: string) {
+  try {
+    localStorage.setItem(NUMBER_KEY, n);
+  } catch {
+    // private mode or full storage: the session itself still has it
+  }
+}
+export function keptNumber(): string | null {
+  try {
+    return localStorage.getItem(NUMBER_KEY);
+  } catch {
+    return null;
+  }
 }
 
 export function newSession(token: string, expiresAt: number, demo: boolean, team = true, condition: Condition = "direct", debug = false): Saved {

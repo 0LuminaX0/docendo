@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         : wrongSoFar === undefined
           ? undefined
           : caveatOnRetry(pack.practice, item, body.data.state, state, wrongSoFar);
-    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, caveat, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
+    const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, caveat, items: pack.practice, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
     const error = errors.at(-1) ?? null;
     const attempt = body.data.action === "solve" ? 1 : 2;
     record({

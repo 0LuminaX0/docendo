@@ -28,7 +28,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const find = (q.q ?? "").trim().toLowerCase().slice(0, 60);
   const all = t.sessions
     .filter((s) => !q.cond || String(s.practiceView ?? s.condition) === q.cond)
-    .filter((s) => !find || [s.sid, s.pid, s.codeLabel].some((v) => String(v ?? "").toLowerCase().includes(find)))
+    // a participant number as the person writes it ("4821 7730") finds its pid ("48217730") and every start from the
+    // same browser (firstNumber); a code's id finds its sessions
+    .filter((s) => !find || [s.sid, s.pid, s.codeLabel, s.codeId, s.firstNumber].some((v) => [find, find.replace(/[\s-]/g, "")].some((f) => f && String(v ?? "").toLowerCase().includes(f))))
     .sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
   const page = Math.max(0, Number(q.page ?? 0) || 0);
   const rows = all.slice(page * PAGE, page * PAGE + PAGE);
@@ -81,7 +83,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
               return (
                 <tr key={String(s.sid)}>
                   <td>{when(s.startedAt)}</td>
-                  <td>{String(s.pid ?? "–")} {s.codeLabel ? <span className="note">“{String(s.codeLabel)}”</span> : null} <span className="note">{String(s.entry ?? "")}{s.demo ? ", demo" : ""}{s.phase === "delayed" ? ", follow-up" : ""}</span></td>
+                  <td>{String(s.pid ?? "–")} {s.codeLabel ? <span className="note">“{String(s.codeLabel)}”</span> : null} <span className="note">{String(s.entry ?? "")}{s.demo ? ", demo" : ""}{s.phase === "delayed" ? ", follow-up" : ""}{Number(s.browserStarts ?? 0) > 1 ? `, start ${String(s.startNo)} of ${String(s.browserStarts)} in this browser` : ""}</span></td>
                   {topics.length > 1 && <td>{String(s.topic)}</td>}
                   <td><span className={`adm-pill ${rec ? "rec" : "dir"}`}>{rec ? "recursive" : "direct"}</span></td>
                   <td>{String(s.reachedStep)}</td>

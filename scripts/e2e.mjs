@@ -22,7 +22,7 @@ if (!BASE) {
     process.exit(1);
   }
   // a team code and an admin password, so the start page asks for a code and the admin panel can be checked
-  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, ACCESS_AS_PILOT: "0", PILOT_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200" };
+  const safe = { DELAYED_TEST_DAYS: "0.00002" /* the follow-up test opens about 2 s after the final test */, OPENROUTER_API_KEY: "", DOCENDO_DEMO: "1", UPSTASH_REDIS_REST_URL: "", UPSTASH_REDIS_REST_TOKEN: "", KV_REST_API_URL: "", KV_REST_API_TOKEN: "", ACCESS_CODE: TEAM_CODE, ACCESS_AS_PILOT: "0", PILOT_CODE, CODE_SECRET: "", ADMIN_PASSWORD: ADMIN_PW, SESSION_TURNS_PER_MIN: "200", IP_SESSIONS_PER_HOUR: "300" };
   if (await fetch("http://localhost:3199").then(() => true, () => false)) {
     console.error("Port 3199 is already in use (a leftover test server?). Stop it first: kill $(lsof -ti tcp:3199)");
     process.exit(1);
@@ -838,6 +838,65 @@ else {
   const used = await post("/api/session", { accessCode: code, consent: true });
   const twice = await post("/api/session", { accessCode: code, consent: true });
   check(noConsent.status === 400, "a session doesn't start without the study consent, whatever the browser sends");
+
+  // one participant code for everyone (2026-11-17): every start gets a participant number of its own, every 4 starts
+  // split 2 and 2 between the conditions, the number typed as the code doesn't start the study again, and the
+  // welcome page and the thank-you page show the number. A second start from the same browser is linked to the first:
+  // through the server's cookie and the page's storage, and through the cookie alone once the storage is wiped
+  {
+    const everyone = (await post("/api/admin/codes", { action: "create", count: 1, prefix: "", label: "e2e everyone", condition: "random", team: false, maxUses: null })).json.codes?.[0];
+    const starts = [];
+    for (let i = 0; i < 8; i++) starts.push(await post("/api/session", { accessCode: everyone.code.toLowerCase(), consent: true, ...(i ? { prior: starts[i - 1].json.number } : {}) }));
+    const nums = starts.map((x) => x.json.number);
+    const conds = starts.map((x) => x.json.condition);
+    const back = await post("/api/session", { accessCode: nums[0].replace(" ", "-"), consent: true });
+    const ctx = await browser.createBrowserContext();
+    const p = await ctx.newPage();
+    await p.setViewport({ width: 1366, height: 900 });
+    p.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    const startHere = async () => {
+      await p.goto(BASE + "/", { waitUntil: "load" });
+      await p.waitForSelector("#code");
+      await p.type("#code", everyone.code);
+      await p.click(".consent input");
+      await p.click("button[type=submit]");
+      await p.waitForFunction(() => location.pathname === "/pretest");
+    };
+    await startHere();
+    const mine = await p.evaluate(() => [JSON.parse(localStorage.getItem("docendo:session:v1")).number, localStorage.getItem("docendo:number:v1")]);
+    await p.goto(BASE + "/", { waitUntil: "load" });
+    await p.waitForSelector(".intro-go .pnum");
+    const onWelcome = await p.$eval(".intro-go .pnum", (e) => e.textContent);
+    const onOneScreen = await p.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1);
+    await shot(p, "13-welcome-number");
+    // the end of the session, as the study runs it (no review): the thank-you page shows the number with a copy button
+    await p.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem("docendo:session:v1"));
+      localStorage.setItem("docendo:session:v1", JSON.stringify({ ...s, step: "results", surveyDone: true, result: { score: 0, of: 7, items: [], review: false } }));
+    });
+    await p.goto(BASE + "/results", { waitUntil: "load" });
+    await p.waitForSelector(".number-card .pnum");
+    const atEnd = await p.$eval(".number-card .pnum", (e) => e.textContent);
+    await shot(p, "13b-thanks-number", true);
+    // the same browser starts again with its storage wiped: only the server's cookie (HttpOnly) is left to link it
+    const cookie = (await ctx.cookies()).find((c) => c.name === "docendo_pn");
+    await p.evaluate(() => localStorage.clear());
+    await startHere();
+    const second = await p.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).number);
+    await p.close();
+    await post("/api/admin/codes", { action: "delete", code: everyone.code });
+    // the log (a local server: .data/events.jsonl, written right after each response)
+    await wait(1500);
+    const log = join(process.cwd(), ".data", "events.jsonl");
+    const digits = (n) => n.replace(/\D/g, "");
+    const startOf = (n) => (existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : []).find((e) => e.t === "session_start" && e.pid === digits(n));
+    const linked = !existsSync(log) || (startOf(nums[0])?.priorNumber === null && startOf(nums[1])?.priorNumber === digits(nums[0]) && startOf(nums[1])?.priorFrom === "both" && startOf(second)?.priorNumber === digits(mine[0]) && startOf(second)?.priorFrom === "cookie");
+    check(cookie?.httpOnly === true && cookie?.value === digits(mine[0]) && second !== mine[0] && linked, `a second start from the same browser is linked to the first: the server's number cookie (HttpOnly) and the page's storage, and the cookie alone after the storage is wiped (${second} after ${mine[0]})`);
+    check(
+      everyone.code.replace(/-/g, "").length === 8 && starts.every((x) => x.status === 200) && new Set(nums).size === 8 && nums.every((n) => /^[1-9]\d{3} \d{4}$/.test(n)) && [0, 4].every((b) => conds.slice(b, b + 4).filter((c) => c === "direct").length === 2) && back.status === 409 && /participant number/.test(back.json.error) && mine[0] === mine[1] && onWelcome === mine[0] && atEnd === mine[0] && onOneScreen,
+      `one participant code for everyone: 8 characters, 8 starts with 8 numbers (${nums.slice(0, 2).join(", ")}, …), conditions ${conds.map((c) => c[0]).join("")} (2 and 2 in every 4), a number typed as the code gets "${back.json.error}"; the number kept in the browser, on the welcome page (still one screen) and on the thank-you page`,
+    );
+  }
 
   // the delayed test: this code's participant takes the final test, comes back with the same code once the follow-up
   // is open (about 2 s on this server), and gets the other form, with the "studied it since?" question first

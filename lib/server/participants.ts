@@ -3,14 +3,15 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Redis } from "@upstash/redis";
 import { config } from "./env";
-import type { Condition } from "../codes";
+import { newNumber, type Condition } from "../codes";
 import type { Form } from "./content";
 import { hashOf } from "./admindata";
 
 // What the server keeps per participant, for the delayed test: the condition, which test form they took first, and
-// when each test was taken. Only for codes that name one person (a one-use code from the admin panel, or a participant
-// code): a shared code names nobody. Upstash when configured (the study), else .data/participants.json. No names,
-// no codes: the key is the code's id, as in the research log.
+// when each test was taken. For codes that name one person (a one-use code from the admin panel, or a participant
+// code), keyed by the code's id; for a shared participant code (one code for everyone, 2026-11-17), keyed by the
+// participant number the person got when they started (the session's pid). The team's shared codes name nobody.
+// Upstash when configured (the study), else .data/participants.json. No names, no codes.
 
 export type Participant = {
   pid: string;
@@ -19,6 +20,7 @@ export type Participant = {
   pre?: string; // the pretest's set (with every set on, the one taken first); older records: none
   both?: boolean; // the final test had both forms (a pilot): no delayed test, nothing unseen is left
   trial?: boolean; // a dry run's code: the delayed test works the same, counted with the tests
+  code?: string; // a shared code's id: the pid is a participant number the person got with it
   topic?: string; // the topic pack of the first session (older records: the default topic); the delayed test keeps it
   startedAt: string;
   testAt?: string; // the final test was graded (the delayed test opens some days later)
@@ -50,6 +52,14 @@ export async function getParticipant(pid: string): Promise<Participant | null> {
     return v ? (typeof v === "string" ? (JSON.parse(v) as Participant) : (v as Participant)) : null;
   }
   return (await readData()).participants[pid] ?? null;
+}
+
+/** A participant number no one has yet (lib/codes.ts: newNumber; 90 million of them, so a clash is rare). */
+export async function freshNumber(): Promise<string> {
+  for (;;) {
+    const n = newNumber();
+    if (!(await getParticipant(n))) return n;
+  }
 }
 
 /** Everyone the server keeps a record for, newest first. */

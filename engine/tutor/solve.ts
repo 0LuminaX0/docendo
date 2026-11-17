@@ -145,7 +145,7 @@ Solve the problem using ONLY your notes, thinking aloud like a student:
 - answer: for a question with options, the number of the option you choose (1, 2, 3 or 4); for a number question, just the number.`;
 
 // a misconception or a vague note: the model solves freely, its notes lead it
-const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say so and guess like a beginner; never fill the gap with what you think the right rule is.`;
+const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say that you're not sure and guess like a beginner; never fill the gap with what you think the right rule is, and never hint at what it might be.`;
 
 // a guess is a beginner's hunch, not a rule: said once, briefly and unsure, in Kai's own words, and without blaming the
 // classmate. With next to nothing in the notes Kai keeps it short: a beginner doing their best, not a worked solution
@@ -177,14 +177,30 @@ const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes,
 // signs that the model argued its way to the key and then turned around
 const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
 
-// the caveat: a nuance the notes may leave open. Kai follows its notes where they say it, in any words; where they
-// don't, it reads the gap this way, as its own understanding (never "I'm guessing", never against a note)
+// the caveat: a nuance the notes leave open (the code decides that: caveatOpen). Kai reads the gap this way, as its own
+// understanding (never "I'm guessing", never against a note). The model writing Kai's steps is never told the point
+// itself (2026-11-17): told it so that it could find it in the notes, it named it as missing ("My notes don't say that
+// this build-up gets slower over time") and the learner copied it into the correction. A misreading is a definite claim
+// ("sticks with its favourite", "at a steady pace"), so a note that says the point contradicts it, and Kai follows the note.
 const CAVEAT = (c: Caveat, item: PracticeItem) =>
-  `\n\nOne point matters here: ${c.about} Read your notes carefully for it. If they say it, in any words, follow them. If they leave it open, you understand it this way, as a student naturally would from your notes: "${c.misreading}" Then your answer is ${conclusion(item, c.answer)}. Never go against what a note says, and don't call it a guess: it is simply how you read your notes. If you read it this way, write as someone who has never heard of the point above: never mention it or any reading other than yours, and never say what your notes don't say or leave out.`;
+  `\n\nYou understand your notes this way here, as a student naturally would: "${c.misreading}" Then your answer is ${conclusion(item, c.answer)}. Never go against what a note says: if one of your notes plainly says otherwise, follow that note. Don't call it a guess: it is simply how you read your notes. Never mention any other reading, and never say what your notes don't say or leave out.`;
 
 // Kai saying what its notes leave out, in a misreading: it names the point by its absence (2026-11-17, a team test:
-// "My notes don't say that this build-up gets slower over time, so I take it at a steady pace")
-const SILENT = /\b(?:my )?notes (?:don'?t|do not|doesn'?t|does not|never) (?:say|mention|cover|tell|specify|state|explain|address|talk about|go into)\b|\b(?:nothing|not) in my notes\b|\bmy notes (?:are silent|leave)\b|\bmy notes (?:only|just) say\b/i;
+// "My notes don't say that this build-up gets slower over time, so I take it at a steady pace"). Widened the same day:
+// the first pattern missed 10 of 12 ordinary ways to say it ("my notes say nothing about", "no mention of", "I wasn't told")
+const SILENT = new RegExp(
+  [
+    String.raw`\bnotes? (?:don'?t|do not|doesn'?t|does not|didn'?t|did not|never)\b(?: \w+){0,2}? (?:say|mention|cover|tell|specify|state|explain|address|talk|go|include|discuss|show|give|clarify|spell|describe)`,
+    String.raw`\bnotes? (?:say|says|said|mention|have|has|give|gives) (?:nothing|little|no)\b`,
+    String.raw`\bnotes? (?:are|is|were|was) (?:silent|quiet|unclear|vague)\b|\bnotes? (?:are|is|were|was)(?:n'?t| not) (?:clear|specific|explicit|sure)\b`,
+    String.raw`(?:\bnot|n'?t|\bnothing|\bno)\b[^.]{0,40}\bin (?:my|the) notes\b`,
+    String.raw`\bno mention\b`,
+    String.raw`\bmy notes (?:leave|only|just)\b`,
+    String.raw`\b(?:i|we) (?:wasn'?t|weren'?t|was not|were not|haven'?t been|have not been|never got) told\b`,
+    String.raw`\bnobody (?:told|said)\b`,
+  ].join("|"),
+  "i",
+);
 
 /**
  * Why a wrong attempt would hand the learner something it wasn't taught (2026-11-17), else null. In a caveat's
@@ -194,19 +210,43 @@ const SILENT = /\b(?:my )?notes (?:don'?t|do not|doesn'?t|does not|never) (?:say
  * aren't checked: they follow notes that say it. A leak is a broken rule: the try is retried, then the offline attempt
  * (fixed wording) answers.
  */
+/** Where a text says what Kai's notes leave out ("my notes don't say…", "I wasn't told…"), else null. */
+export const notesLeaveOut = (text: string): string | null => SILENT.exec(text)?.[0] ?? null;
+
 export function pointLeak(item: PracticeItem, state: State, steps: Step[], misread: boolean): string | null {
   const text = steps.map((s) => s.text).join(" ");
   const silent = misread ? SILENT.exec(text) : null;
   if (silent) return `in its misreading it said what its notes leave out ("${silent[0]}")`;
   for (const c of caveatsOf(item)) {
-    if (!c.leak || !caveatOpen(c, state)) continue;
-    let m: RegExpExecArray | null = null;
-    try {
-      m = new RegExp(c.leak, "iu").exec(text);
-    } catch {
-      continue; // pnpm content validate catches a broken pattern
+    const m = c.leak && caveatOpen(c, state) ? leakIn(c, text) : null;
+    if (m) return `it stated ${c.id ?? "the caveat"}'s point, which its notes leave open ("${m}")`;
+  }
+  return null;
+}
+
+/** Where a caveat's `leak` pattern finds its point in a text, else null. */
+function leakIn(c: Caveat, text: string): string | null {
+  try {
+    return new RegExp(c.leak!, "iu").exec(text)?.[0] ?? null;
+  } catch {
+    return null; // pnpm content validate catches a broken pattern
+  }
+}
+
+/**
+ * A backstop's point (a caveat marked `always` with a `leak` pattern: P8's slowing, a part of a fact) stated in an
+ * attempt at ANOTHER problem, right or wrong, while Kai's notes leave it open, else null (2026-11-17). The slowing
+ * follows from nothing else a learner teaches, so Kai saying it at P7, P3 or P2 hands it over before P8 (and the final
+ * test's V21). Its own problem is checked by pointLeak.
+ */
+export function backstopLeak(items: PracticeItem[], item: PracticeItem, state: State, steps: Step[]): string | null {
+  const text = steps.map((s) => s.text).join(" ");
+  for (const p of items) {
+    if (p.id === item.id) continue;
+    for (const c of caveatsOf(p)) {
+      const m = c.always && c.leak && caveatOpen(c, state) ? leakIn(c, text) : null;
+      if (m) return `it stated ${p.id}'s ${c.id ?? "caveat"} point, which its notes leave open ("${m}")`;
     }
-    if (m) return `it stated ${c.id ?? "the caveat"}'s point, which its notes leave open ("${m[0]}")`;
   }
   return null;
 }
@@ -414,7 +454,8 @@ export async function solve(
   state: State,
   // deadline: when the caller must have its answer (the practice route: 55 s after the request came in)
   // caveat: the problem's caveat is in play for this attempt (the caller decides: app/api/practice/route.ts)
-  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; caveat?: Caveat; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, caveat?: Caveat) => Promise<Solution> },
+  // items: every practice problem, so that no attempt states another problem's backstop point (backstopLeak)
+  opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; caveat?: Caveat; items?: PracticeItem[]; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, caveat?: Caveat) => Promise<Solution> },
 ): Promise<Solution> {
   // a backstop (`always`) holds whoever calls: with its point left open the worked solution would state what the notes
   // don't hold (a page from before a deploy sends no wrongSoFar with its correction, and the route then passes none)
@@ -434,6 +475,8 @@ export async function solve(
     if (tryNo > 0 && deadline - Date.now() < SOLVE_TRY_MS) break;
     try {
       const s = await model(bundle, item, state, opts.onCall, tryNo > 0, caveat);
+      const cross = opts.items ? backstopLeak(opts.items, item, state, s.steps) : null;
+      if (cross) throw new Error(`leak: ${cross}`);
       if (s.caveat) return s; // checked in llmSolve: the key, or the caveat's misreading
       if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
       if (!s.correct && s.gate.canBeRight) throw new Error(`wrong with every fact it needs (answered ${s.answer}): a slip`);

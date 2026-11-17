@@ -73,6 +73,40 @@ function timeColumns(evs: Ev[]): Record<string, number | null> {
   return out;
 }
 
+/**
+ * Starts from one browser with a participant code for everyone (2026-11-17): each such session's priorNumber (the
+ * cookie, or the page's storage) points to the number that browser got before, so the starts form a chain. Per
+ * session: firstNumber, the first number that browser got (its own when it is the first); startNo, its place in the
+ * chain; browserStarts, how many starts the chain has. A second start is the same person starting again, or someone
+ * else on the same computer: a flag for the analysis, never a merge. Other sessions: null.
+ */
+function browserStarts(sessions: Record<string, unknown>[]) {
+  const isNumber = (v: unknown) => typeof v === "string" && /^[1-9]\d{7}$/.test(v);
+  const main = sessions.filter((s) => s.phase === "main" && isNumber(s.pid));
+  const before = new Map(main.map((s) => [String(s.pid), isNumber(s.priorNumber) ? String(s.priorNumber) : null]));
+  const chain = (n: string) => {
+    const seen = new Set<string>();
+    let at = n;
+    while (before.get(at) && !seen.has(at)) {
+      seen.add(at);
+      at = before.get(at)!;
+    }
+    return { first: at, no: seen.size + 1 };
+  };
+  const count = new Map<string, number>();
+  for (const s of main) {
+    const { first } = chain(String(s.pid));
+    count.set(first, (count.get(first) ?? 0) + 1);
+  }
+  for (const s of sessions) {
+    const c = s.phase === "main" && isNumber(s.pid) ? chain(String(s.pid)) : null;
+    s.firstNumber = c?.first ?? null;
+    s.startNo = c?.no ?? null;
+    // an earlier start whose session isn't in the log counts as one too
+    s.browserStarts = c ? Math.max(c.no, count.get(c.first) ?? 1) : null;
+  }
+}
+
 export function tables(events: Ev[]) {
   events.sort((a, b) => a.at.localeCompare(b.at) || Number(a.seq ?? 0) - Number(b.seq ?? 0));
   const bySid = new Map<string, Ev[]>();
@@ -107,6 +141,12 @@ export function tables(events: Ev[]) {
       condition: start?.condition ?? "direct", // sessions before conditions existed were all direct
       entry: start?.entry ?? null, // participant (own code), trial, team (shared or team code) or open
       codeLabel: (start?.code as { label?: string } | null | undefined)?.label || null, // the label of a code made in the admin panel
+      codeId: (start?.code as { id?: string } | null | undefined)?.id || null, // its id (a participant code for everyone: pid is the person's number)
+      // a participant code for everyone: the number this browser had before (the same person starting again, or someone
+      // else on the same computer); null: none
+      priorNumber: start?.priorNumber ?? null,
+      priorFrom: start?.priorFrom ?? null, // where the browser's earlier number came from: cookie, browser (the page's storage) or both
+      numberCopied: of("client_number_copy").length, // copied their participant number at the end
       phase: start?.phase ?? "main", // main: the whole session; delayed: the follow-up test on its own, days later
       form: start?.form ?? "A", // the test form this session took (the delayed test takes the other)
       pretestSet: start?.pretestSet ?? null, // the pretest set assigned at the start (balanced with the form; older sessions: none)
@@ -132,6 +172,7 @@ export function tables(events: Ev[]) {
       surveyEnjoy: first("client_survey")?.enjoy ?? null,
       surveyLights: first("client_survey")?.lights ?? null,
       surveyLightScale: first("client_survey")?.lightScale ?? null,
+      surveyDiscouraging: first("client_survey")?.discouraging ?? null, // 2026-11-17: how discouraging a wrong mark in practice was (1 not at all … 7 very)
       surveyCalls: first("client_survey")?.calls ?? null,
       surveyLeak: first("client_survey")?.leak ?? null,
       surveyHelp: first("client_survey")?.help ?? null,
@@ -400,6 +441,7 @@ export function tables(events: Ev[]) {
   }
   // the reasons, for scoring against the rubrics without seeing who wrote them or in which condition: shuffled by ref
   reasons.sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
+  browserStarts(sessions);
   return { sessions, turns, practice, test, video, feedback, reasons };
 }
 
@@ -593,6 +635,9 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     { key: "test", label: "Final test in under 2 minutes", sids: sessions.filter((s) => num(s.minTest) !== null && num(s.minTest)! < 2 && num(s.testScore) !== null).map((s) => String(s.sid)) },
     { key: "away", label: "Away from the tab over 5 minutes", sids: sessions.filter((s) => Number(s.tabAwaySec ?? 0) > 300).map((s) => String(s.sid)) },
     { key: "rl", label: "Excluded by a background answer (left out of the analysis)", sids: sessions.filter((s) => s.excluded === true).map((s) => String(s.sid)) },
+    // a participant code for everyone: the browser's cookie or storage had an earlier participant number (every start
+    // in such a chain is flagged, the first too: the team decides which one counts)
+    { key: "again", label: "Same browser as another session (started again, or a shared computer)", sids: sessions.filter((s) => Number(s.browserStarts ?? 0) > 1).map((s) => String(s.sid)) },
   ];
 
   const finished = sessions.filter((s) => num(s.testScore) !== null && s.excluded !== true);
@@ -611,7 +656,7 @@ export function charts(t: Pick<Tables, "sessions">, opts: { all?: boolean; days?
     // recursive − direct, finished and not excluded; descriptive only: not the study's planned analysis
     comparison: compare(fin("recursive"), fin("direct")),
     // the questions after the test: means per condition, and the manipulation check's answers
-    survey: (["Effort", "Responsible", "Understand", "Practice", "Enjoy", "LightScale"] as const).map((k) => ({
+    survey: (["Effort", "Responsible", "Understand", "Practice", "Enjoy", "LightScale", "Discouraging"] as const).map((k) => ({
       key: k,
       direct: mean(by("direct").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),
       recursive: mean(by("recursive").map((s) => num(s[`survey${k}`])).filter((x): x is number => x !== null)),

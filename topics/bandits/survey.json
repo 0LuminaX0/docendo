@@ -1,5 +1,5 @@
 {
-  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers); not after the delayed test. Scales run 1 to 7. 'lightScale' is the manipulation check (2026-11-13, a scale in place of the choice 'lights', where 2 of 4 pilot learners chose \"I'm not sure\"): in the direct condition the practice's right/wrong light is about the learner's own answers (expected near 1), in the recursive one about Kai's (near 7). 'calls' (recursive only, `condition`): what the learner's call on Kai's answer rested on, to tell trusting Kai from not reading its steps (the pilot's calls matched the light 6 of 12 times). 'leak': whether Kai seemed to know something it wasn't told (the leak check's view from the learner). 'help': notes or other help besides a dictionary, against the rule that everything is from memory. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed. 'beforeCall' (2026-11-17, recursive only, open): how the learner went about a problem before calling Kai's answer, before the light (an answer of their own first, a skim of Kai's steps, or a close reading), in their own words beside the choice 'calls'. Last (2026-11-16, moved from the results page so the questions after the test are one list, not one round after another): anything else the learner wants to tell us, also logged as the feedback event. The rating of the session (1 to 5) was asked before it until 2026-11-17, when it went as a near duplicate of 'enjoy'. The results page keeps its own feedback box only when no questions were asked (the follow-up test, or the survey switched off).",
+  "note": "Asked after the final test and before the score is shown (so the score can't colour the answers); not after the delayed test. Scales run 1 to 7. 'lightScale' is the manipulation check (2026-11-13, a scale in place of the choice 'lights', where 2 of 4 pilot learners chose \"I'm not sure\"): in the direct condition the practice's right/wrong light is about the learner's own answers (expected near 1), in the recursive one about Kai's (near 7). 'discouraging' (2026-11-17, both conditions): how discouraging a wrong mark in practice was, for Okita and Schwartz's (2013, pp. 382–383) ego-protective buffer: when the pupil is wrong, the pupil takes the blame, so the tutor can take the error in; their account expects it lower in the recursive condition. 'calls' (recursive only, `condition`): what the learner's call on Kai's answer rested on, to tell trusting Kai from not reading its steps (the pilot's calls matched the light 6 of 12 times). 'leak': whether Kai seemed to know something it wasn't told (the leak check's view from the learner). 'help': notes or other help besides a dictionary, against the rule that everything is from memory. Three open questions follow (2026-11-05, for the qualitative analysis, in the course's recommended form: a specific moment, what was done next, one decision and its reasoning); optional, not timed. 'decided' asks since 2026-11-17 what the learner thought had gone wrong (whose mistake: their own understanding or teaching, Kai's, the problem's), the only question that asks it in both conditions. 'beforeCall' (2026-11-17, recursive only, open): how the learner went about a problem before calling Kai's answer, before the light (an answer of their own first, a skim of Kai's steps, or a close reading), in their own words beside the choice 'calls'. Last (2026-11-16, moved from the results page so the questions after the test are one list, not one round after another): anything else the learner wants to tell us, also logged as the feedback event. The rating of the session (1 to 5) was asked before it until 2026-11-17, when it went as a near duplicate of 'enjoy'. The results page keeps its own feedback box only when no questions were asked (the follow-up test, or the survey switched off).",
   "items": [
     {
       "id": "effort",
@@ -42,6 +42,13 @@
       "prompt": "In the practice problems, the right/wrong light told me mostly about…",
       "low": "My own understanding",
       "high": "Kai's understanding"
+    },
+    {
+      "id": "discouraging",
+      "kind": "scale",
+      "prompt": "When an answer in practice was marked wrong, how discouraging was it?",
+      "low": "Not at all",
+      "high": "Very"
     },
     {
       "id": "calls",
@@ -99,7 +106,7 @@
       "id": "decided",
       "kind": "text",
       "prompt": "In the practice problems, how did you decide what to do after an answer was marked wrong?",
-      "hint": "Describe one moment and your reasoning."
+      "hint": "Describe one moment: what you thought had gone wrong, and your reasoning."
     },
     {
       "id": "anything",

@@ -1210,6 +1210,14 @@ textarea.dictating::placeholder { color: transparent; }
 .followup-card > svg { flex: none; color: var(--blue-ink); margin-top: 2px; }
 .followup-card h2 { margin: 0 0 4px; font: 700 18px var(--font-display), sans-serif; }
 .followup-card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+/* a participant code for everyone: the person's own number at the end (components/Results.tsx, NumberCard) */
+.number-card { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 16px; background: var(--sunk); color: var(--ink); }
+.number-card > svg { flex: none; color: var(--ink-2); margin-top: 2px; }
+.number-card h2 { margin: 0 0 6px; font: 700 18px var(--font-display), sans-serif; }
+.number-card p { margin: 8px 0 0; font-size: 15px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+.number-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.pnum { font: 700 26px var(--font-display), sans-serif; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; color: var(--ink); }
+.intro-go .pnum { font-size: 15px; letter-spacing: 0.04em; }
 
 /* admin: the follow-up test */
 .fu-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }

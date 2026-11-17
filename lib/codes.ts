@@ -80,17 +80,63 @@ export function generateCodes(secret: string, n: number, block = 4, taken: Set<s
 
 // ---------- codes made in the admin panel (lib/server/admindata.ts stores them) ----------
 
-type PanelCode = { id: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive" };
+type PanelCode = { id: string; condition: "direct" | "recursive" | "random"; draw?: "direct" | "recursive"; maxUses?: number | null };
+
+/** A code more than one person uses (no limit, or more than one use; not a team code): one code for everyone, each
+ * person a participant number of their own (2026-11-17). */
+export const isShared = (c: { team: boolean; maxUses: number | null }) => !c.team && c.maxUses !== 1;
 
 /**
- * The condition for this use: fixed, or for "random" the code's drawn condition on the first use, then
- * alternating. A batch of one-use codes is therefore balanced in blocks of 4, like the HMAC codes.
+ * The condition for this use: fixed, or for "random" on a one-use code the condition drawn when the batch was made
+ * (balanced blocks of 4 within the batch, like the HMAC codes), and on a code with more uses permuted blocks of 4
+ * over its uses (`blockCondition`). `secret` is the server's (SESSION_SECRET); without it (older callers) a code
+ * with more uses alternates from its draw.
  */
-export function conditionFor(c: PanelCode, use: number): "direct" | "recursive" {
+export function conditionFor(c: PanelCode, use: number, secret?: string): Condition {
   if (c.condition !== "random") return c.condition;
   const first = c.draw ?? (c.id.charCodeAt(c.id.length - 1) % 2 ? "recursive" : "direct");
+  if (c.maxUses === 1) return first;
+  if (secret) return blockCondition(secret, c.id, use);
   return use % 2 === 1 ? first : first === "direct" ? "recursive" : "direct";
 }
+
+// the six orders of two direct and two recursive
+const ORDERS: Condition[][] = [
+  ["direct", "direct", "recursive", "recursive"],
+  ["direct", "recursive", "direct", "recursive"],
+  ["direct", "recursive", "recursive", "direct"],
+  ["recursive", "direct", "direct", "recursive"],
+  ["recursive", "direct", "recursive", "direct"],
+  ["recursive", "recursive", "direct", "direct"],
+];
+
+/**
+ * Permuted-block randomisation for a shared code: its uses go in blocks of 4, each block one of the six orders of
+ * two direct and two recursive, chosen by an HMAC of the code's id and the block's number under the server's secret.
+ * So every 4 starts split 2 and 2 (at any moment the two conditions differ by at most 2), the next condition can't be
+ * foreseen without the secret, and nothing needs storing beyond the code's use count (an atomic counter).
+ */
+export function blockCondition(secret: string, id: string, use: number): Condition {
+  const k = Math.floor((use - 1) / 4);
+  return ORDERS[mac(secret, `block:${id}:${k}`).readUInt32BE(0) % ORDERS.length]![(use - 1) % 4]!;
+}
+
+// ---------- participant numbers (sessions started with a shared code) ----------
+// Eight digits, no leading zero: easy to note down, and unlike the access code (letters and digits). The server keeps
+// the person's record under it (lib/server/participants.ts), the log uses it as the session's pid, and the person
+// sees it at the end of the session: to find their data if they ask for it to be deleted, and to come back for a
+// follow-up test (typed in the code field).
+
+export const newNumber = () => String(randomInt(10_000_000, 100_000_000));
+
+/** A typed participant number (spaces and dashes allowed), or null if it doesn't read as one. */
+export function readNumber(raw: string): string | null {
+  const d = raw.replace(/[\s-]/g, "");
+  return /^[1-9]\d{7}$/.test(d) ? d : null;
+}
+
+/** As shown to the person: "4821 7730". */
+export const formatNumber = (n: string) => `${n.slice(0, 4)} ${n.slice(4)}`;
 
 /** Balanced, shuffled blocks of 4 (2 direct, 2 recursive), as long as needed. */
 export function balancedDraws(n: number): ("direct" | "recursive")[] {
