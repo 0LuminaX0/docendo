@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Calculator as CalcIcon } from "lucide-react";
 import { format, sumAtEnd } from "@/lib/calc";
 import { track } from "@/lib/client/log";
-import { useDictation } from "./Dictation";
 import { useStudySettings } from "./SettingsContext";
 
 /**
@@ -12,7 +11,10 @@ import { useStudySettings } from "./SettingsContext";
  * to Kai, the final test). Type a sum and "=" and its result is written after
  * it, like a calculator in a notes app; the line being typed shows its value
  * underneath. A row of keys (× ÷ √ …) can be shown for typing symbols; it is
- * closed by default and stays as the learner left it.
+ * closed by default and stays as the learner left it. Typed only: the correction
+ * to Kai had a mic until 2026-11-17, taken out so that the learner composes it
+ * with care and matches the direct condition's typed sentences (the teaching chat
+ * keeps its mic).
  */
 
 const KEYS: [string, string][] = [
@@ -40,7 +42,6 @@ export default function Scratchpad({
   disabled,
   onUse,
   label,
-  voice,
 }: {
   id: string;
   where: string; // for the log
@@ -52,31 +53,17 @@ export default function Scratchpad({
   disabled?: boolean;
   onUse?: (value: number) => void; // number problems: put the last result in the answer box
   label: string;
-  voice?: "fix"; // a mic for speaking instead of typing (the correction to Kai)
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const { calculator } = useStudySettings(); // the calculator can be switched off (admin panel), in both conditions
-  // voice input (the correction to Kai): the live transcript shows in the field while the learner speaks
-  const dict = useDictation({
-    where: voice ?? "fix",
-    value,
-    field: ref,
-    disabled,
-    onCommit: (next, caret, n) => {
-      if (n) track("practice_fix_dictated", { where, chars: n });
-      onChange(next.slice(0, maxLength));
-      requestAnimationFrame(() => (ref.current?.setSelectionRange(caret, caret), setCaret(caret)));
-    },
-  });
   // the field grows with what is written (from its rows up to about twelve lines), so a long correction or working
   // isn't read through a slot; past that it scrolls
-  const shown = dict.shown;
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight + 2, 340)}px`;
-  }, [shown]);
+  }, [value]);
   const [caret, setCaret] = useState(0);
   const [keys, setKeys] = useState(false);
   useEffect(() => {
@@ -140,19 +127,17 @@ export default function Scratchpad({
       <textarea
         ref={ref}
         id={id}
-        className={`work${dict.active ? " dictating" : ""}`}
+        className="work"
         rows={rows}
         maxLength={maxLength}
         placeholder={placeholder}
-        value={dict.shown}
-        readOnly={dict.active}
+        value={value}
         disabled={disabled}
         spellCheck={false}
-        onChange={(e) => !dict.active && edit(e.target.value, e.target.selectionStart)}
+        onChange={(e) => edit(e.target.value, e.target.selectionStart)}
         onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
         onBlur={(e) => e.target.value && track("practice_work", { where, chars: e.target.value.length, text: e.target.value.slice(0, 2000) })}
       />
-      {dict.ghost}
       <div className="scratch-bar">
         {calculator && (
           <span className="scratch-hint" aria-live="polite">
@@ -166,7 +151,6 @@ export default function Scratchpad({
           </span>
         )}
         <span className="grow" />
-        {voice && dict.button}
         {onUse && lastResult && !disabled && (
           <button type="button" className="linkish" onClick={() => (onUse(Number(lastResult)), track("calc_use", { where, value: lastResult }))}>
             Use {lastResult} as the answer

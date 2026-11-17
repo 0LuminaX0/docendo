@@ -31,7 +31,7 @@ export function useDictation({
   disabled,
   onCommit,
 }: {
-  where: "teach" | "fix";
+  where: "teach"; // the teaching chat only (the correction to Kai had a mic until 2026-11-17)
   value: string;
   field: RefObject<HTMLTextAreaElement | null>;
   disabled?: boolean;
@@ -229,7 +229,7 @@ function Ghost({ field, before, text, after, pending, finishing }: { field: RefO
 }
 
 /** The invitation to talk to Kai: a small dialog over the page, once per page per session. */
-function VoiceIntro({ where, onClose }: { where: "teach" | "fix"; onClose: (choice: "speak" | "type") => void }) {
+function VoiceIntro({ where, onClose }: { where: "teach"; onClose: (choice: "speak" | "type") => void }) {
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose("type");
     window.addEventListener("keydown", key);

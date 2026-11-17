@@ -19,6 +19,7 @@ export const dynamic = "force-dynamic";
 // The transcript goes into the text box, where the learner can edit it before sending. The audio is not kept.
 const MAX_SEC = 120; // the longest recording the browser allows; one clip is at most this
 const MAX_BYTES = 44 + MAX_SEC * 32_000 + 4_096;
+// "fix": the correction to Kai, which had a mic until 2026-11-17; still accepted from a page open across that deploy
 const Where = z.enum(["teach", "fix"]);
 const Kind = z.enum(["preview", "final"]);
 
