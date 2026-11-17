@@ -120,7 +120,10 @@ export const ScriptFile = z.object({
         // the teachable facts it is there to elicit: once all are credited it is skipped, and after an answer each one
         // still missing gets its follow-up (once). Kai never asks a question naming a lesson term the learner hasn't used
         targets: z.array(z.string()).default([]),
-        follow: z.array(z.object({ fact: z.string(), text: z.string().min(10) })).default([]),
+        // `when: "absent"`: only while the learner has said nothing about the fact; anything said (partial, or a wrong
+        // belief) then counts as answered (2026-11-17, the unpicked bonus: its partial means "grows" without the
+        // slowing, which the follow-up doesn't ask for, so it asked again what the learner had just said)
+        follow: z.array(z.object({ fact: z.string(), text: z.string().min(10), when: z.enum(["absent"]).optional() })).default([]),
         // asked again (up to `max` times) while the answers give Kai something new to write down: "anything else?"
         // keeps going until the learner has nothing more, a natural way to say again what Kai seems to have missed
         again: z.object({ text: z.string().min(10), max: z.number().int().min(1).max(5) }).optional(),

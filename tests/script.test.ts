@@ -203,6 +203,41 @@ describe("Kai's teaching questions", () => {
     expect(latest(twice[1]!.state).get("n05.f1")).toBeUndefined();
   });
 
+  it("asks about the unpicked bonus only while the learner has said nothing about it (2026-11-17)", async () => {
+    const LONG = Q.findIndex((q) => q.id === "ucb-long");
+    const start: State = { ...at(LONG), usedTerms: ["bonus", "UCB"] };
+    const unpicked = byId("ucb-long").follow.find((f) => f.fact === "n12.f2")!;
+    expect(unpicked.when).toBe("absent");
+    const said = "the bonus grows if the option is not picked and shrinks when it is picked";
+    const grows = { fact: "n12.f2", verdict: "partial" as const, quote: "" };
+    const picked = { fact: "n12.f1", verdict: "correct" as const, quote: "" };
+    // session 8: "it grows" without the slowing is partial; asking again what happens to an unpicked bonus only
+    // repeated it ("it grows"), so Kai moves on
+    const partial = await talk([{ message: said, say: { intent: "answer", facts: [picked, grows] } }], start);
+    expect(partial[0]!.trace.script).toMatchObject({ probe: null, next: "anything" });
+    // session 6: a wrong belief ("it shrinks"), which a later "it grows" (partial) wouldn't retire: no follow-up either
+    const shrinks = "it shrinks when it's picked, and when it isn't picked it shrinks too";
+    const wrong = { intent: "answer" as const, facts: [picked], misconceptions: [{ node: "n12", fact: "n12.f2", quote: "when it isn't picked it shrinks too", belief: "an unpicked bonus shrinks" }] };
+    const believed = await talk([{ message: shrinks, say: wrong }], start);
+    expect(believed[0]!.trace.script).toMatchObject({ probe: null, next: "anything" });
+    expect(believed[0]!.state.misconceptions).toHaveLength(1);
+    // nothing said about it: the follow-up is what asks for it (without an answer Kai guesses "it stays put" at P2 and P3)
+    const silent = await talk([{ message: "it shrinks each time it gets picked", say: { intent: "answer", facts: [picked] } }], start);
+    expect(asks(silent[0]!, unpicked.text)).toBe(true);
+    expect(silent[0]!.trace.script.probe).toBe("n12.f2");
+    // said earlier (at UCB's question): the question on many rounds counts as answered and is skipped, rather than
+    // opening with that follow-up
+    const early = await talk(
+      [
+        { message: `UCB adds a bonus to each average and picks the highest; ${said}`, say: { intent: "answer", facts: [{ fact: "n11.f1", verdict: "correct", quote: "" }, picked, grows], termsUsed: ["bonus"] } },
+        { message: "so options tried only a few times get the benefit of the doubt", say: ok("n11.f4") },
+      ],
+      at(UCB),
+    );
+    expect(early[1]!.trace.script).toMatchObject({ next: "anything", probe: null });
+    expect(early[1]!.trace.script.covered).toContain("ucb-long");
+  });
+
   it("asks nothing that names a lesson term the learner hasn't used: the bonus question waits for the bonus", async () => {
     // UCB explained without its rule credited: its follow-up first (it names no term), then the bonus question waits
     const r = await talk([{ message: "it picks whichever looks best", say: { intent: "answer" } }, { message: "not sure", say: { intent: "unsure" } }], at(UCB));

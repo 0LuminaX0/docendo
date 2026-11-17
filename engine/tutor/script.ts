@@ -39,17 +39,23 @@ export const idsOf = (script: Script) => script.questions.map((q) => q.id).join(
 
 type Question = Script["questions"][number];
 const taught = (state: State, f: string) => latest(state).get(f)?.verdict === "correct";
-/** The learner has answered it: taught it, or said something wrong about it (Kai believes it, and doesn't ask again). */
-const answered = (state: State, f: string) => taught(state, f) || latest(state).get(f)?.verdict === "wrong" || activeMisconceptions(state).some((m) => m.fact === f);
+/** The learner has said something about the fact: a verdict of any kind, or a wrong belief about it. */
+const said = (state: State, f: string) => latest(state).has(f) || (state.misconceptions ?? []).some((m) => m.fact === f);
+/** Its follow-up is asked only while nothing was said about the fact (`when: "absent"`, 2026-11-17: the unpicked bonus). */
+const absentOnly = (q: Question, f: string) => q.follow.some((x) => x.fact === f && x.when === "absent");
+/** The learner has answered it: taught it, or said something wrong about it (Kai believes it, and doesn't ask again),
+ * or, for a fact whose follow-up is for silence only, said anything about it. */
+const answered = (state: State, f: string, q: Question) =>
+  taught(state, f) || latest(state).get(f)?.verdict === "wrong" || activeMisconceptions(state).some((m) => m.fact === f) || (absentOnly(q, f) && said(state, f));
 /** Every fact the question is there for is answered already. */
-export const isCovered = (state: State, q: Question) => q.targets.length > 0 && q.targets.every((f) => answered(state, f));
+export const isCovered = (state: State, q: Question) => q.targets.length > 0 && q.targets.every((f) => answered(state, f, q));
 /** A question the learner has already started on (said something about one of its facts, vaguely or in part, before Kai
  * got to it): Kai goes straight to the follow-up on what is still missing, instead of asking the whole question again
  * (2026-11-05: learners answered "is there ever a reason to pick what doesn't look best?" with ε-greedy's random picks,
  * and then "How does ε-greedy decide?" read as a repeat). */
 const begunOn = (bundle: Bundle, script: Script, state: State, q: Question) =>
   q.targets.some((f) => latest(state).has(f) || activeMisconceptions(state).some((m) => m.fact === f))
-    ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact) && !untaught(bundle, script, state, f.text).length)
+    ? q.follow.find((f) => q.targets.includes(f.fact) && !answered(state, f.fact, q) && !untaught(bundle, script, state, f.text).length)
     : undefined;
 /** Lesson terms in Kai's words that the learner hasn't used (or Kai hasn't written down), apart from the ones Kai knows. */
 const untaught = (bundle: Bundle, script: Script, state: State, text: string) => {
@@ -182,9 +188,14 @@ export async function takeScriptTurn(
   // believes it, and asking once more how the rule goes is a fair question to it; a correct answer then retires the
   // belief. A wrong transcript, "the one with the lowest average", had stood without a second chance)
   // At most `maxFollowUps` of them as messages of their own (the study's time): a question opened with its follow-up
-  // (begunOn) replaces a question and doesn't count
+  // (begunOn) replaces a question and doesn't count. One marked `when: "absent"` only while nothing was said about its
+  // fact (2026-11-17: the unpicked bonus's partial is "it grows" without the slowing, and its follow-up asked again
+  // whether it grows; after a wrong belief, "it grows" comes out partial and doesn't retire it, so asking gained nothing)
   const budget = (pos.asked ?? 0) < (script.maxFollowUps ?? Number.POSITIVE_INFINITY);
-  const probe = isAnswer && !restart && budget ? q.follow.find((f) => q.targets.includes(f.fact) && !taught(state, f.fact) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length) : undefined;
+  const probe =
+    isAnswer && !restart && budget
+      ? q.follow.find((f) => q.targets.includes(f.fact) && !taught(state, f.fact) && !(f.when === "absent" && said(state, f.fact)) && !pos.probed.includes(f.fact) && !untaught(bundle, script, state, f.text).length)
+      : undefined;
   let kind: Reaction;
   let stay: "more" | "again" | "probe" | "repeat" | null = null;
   if (notAnswer && pos.again < 1 && !restart) (stay = "again"), (kind = toKai);

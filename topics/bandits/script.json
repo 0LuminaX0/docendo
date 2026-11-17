@@ -73,7 +73,8 @@
         },
         {
           "fact": "n12.f2",
-          "text": "And what happens to the bonus of an option that isn't picked for a long time?"
+          "text": "And what happens to the bonus of an option that isn't picked for a long time?",
+          "when": "absent"
         }
       ]
     },
