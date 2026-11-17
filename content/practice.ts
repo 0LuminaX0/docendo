@@ -14,6 +14,7 @@ export const Caveat = z.object({
   requires: z.array(z.string()).optional(),
   ideas: z.array(z.string()).optional(),
   alone: z.boolean().optional(),
+  always: z.boolean().optional(),
   opening: z.string().optional(),
 });
 export type Caveat = z.infer<typeof Caveat>;
@@ -41,7 +42,9 @@ export const PracticeItem = z
     // `requires` the facts Kai must have a note on for the misreading to make sense (it reads that note the wrong way),
     // `ideas` the ideas (node ids) whose notes `covered` reads (else every note: "every time" in a note on UCB's bonus
     // isn't greedy switching), `alone` puts it in play whenever Kai could solve this problem, whatever the problems
-    // after it, and `opening` is the offline attempt's first step (else the worked solution's).
+    // after it, `always` whenever Kai could solve this problem, whatever came before or after and on the retry too
+    // (2026-11-16, P8's slowing: a part of a fact the judge may credit without it, so the gate's backstop rather than
+    // a planted slip), and `opening` is the offline attempt's first step (else the worked solution's).
     caveat: z.union([Caveat, z.array(Caveat).min(1)]).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),

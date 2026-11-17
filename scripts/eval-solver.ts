@@ -15,7 +15,8 @@
 //   misconception the last needed fact stated wrongly (its misconception, in a learner's words) → a wrong option
 //   unlisted (--unlisted) every teachable fact but one the problem doesn't need → the key
 //   caveat <id>   notes that leave the problem's planted point open (P7: greedy's rule without the switch; the
-//                 switch and lock-in without what tells them apart), the caveat in play as in the app → its misreading
+//                 switch and lock-in without what tells them apart; P8: the growth without the slowing), the caveat in
+//                 play as in the app → its misreading
 //   said <id>     the point said in words the caveat's pattern misses, the caveat in play → the key (Kai follows notes)
 // Keep a problem only if: full right ≥ 9/10, each "without" at its predicted option ≥ 8/10, unlisted unchanged; a
 // caveat misread ≥ 8/10, its "said" case right ≥ 9/10 (else the solver goes against a note).
@@ -99,6 +100,12 @@ const CAVEAT_NOTES: Record<string, { open: Record<string, string>; said: Record<
   lockin: {
     open: {},
     said: { "n06.f1": "greedy locks out a good option after a bad start only while that option's average stays under what the others really get; a leader that was just lucky drops back once greedy keeps featuring it" },
+  },
+  // P8's backstop (2026-11-16): the growth credited in full without the slowing (a team test's words), and the slowing
+  // said in words the pattern misses
+  slowing: {
+    open: { "n12.f2": "the exploration bonus grows when an option is not being picked" },
+    said: { "n12.f2": "an unpicked option's bonus keeps rising, but each extra hour adds a little less than the hour before" },
   },
 };
 

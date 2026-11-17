@@ -33,7 +33,7 @@ const { CONFIG } = await import("../engine/tutor/config");
 const { applyJudgement } = await import("../engine/tutor/turn");
 const { llmJudge } = await import("../engine/tutor/judge");
 const { llmReact } = await import("../engine/tutor/writer");
-const { gate, solve, alts, beliefFor, caveatFor } = await import("../engine/tutor/solve");
+const { gate, solve, alts, beliefFor, caveatFor, caveatOnRetry } = await import("../engine/tutor/solve");
 const { checkPractice } = await import("../content/practice");
 const { chatJson, MODELS } = await import("../engine/llm");
 
@@ -234,10 +234,12 @@ async function simulate(p: Persona): Promise<Run> {
         cost,
       );
       const j = await llmJudge(bundle, fix.message, `${first.steps.map((x) => x.text).join(" ").slice(-600)} (That was Kai's attempt at this problem: ${it.prompt}${options})`, onCall);
+      const before = s;
       s = applyJudgement(s, j);
-      const second = await solve(bundle, it, s, { demo: false, onCall });
+      // as the practice route does: the first try's caveat while the correction leaves it open (wrongSoFar as then)
+      const second = await solve(bundle, it, s, { demo: false, onCall, caveat: caveatOnRetry(items, it, before, s, wrongSoFar - 1) });
       if (second.correct) afterFix++;
-      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveatId ?? ""} ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}`);
+      log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveatId ?? ""} ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}${second.caveat ? ` (caveat ${second.caveatId ?? ""} ${second.caveat})` : ""}`);
     }
     run.solved = solved;
     run.failedOnce = solved < items.length;

@@ -123,7 +123,7 @@ describe("pretest", () => {
 });
 
 import { initialState, type State } from "../engine/tutor/state";
-import { beliefFor, caveatFor, caveatOpen, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Caveat, type Solution } from "../engine/tutor/solve";
+import { beliefFor, caveatFor, caveatOnRetry, caveatOpen, chooseGuess, gate, hunchFor, isRight, notesOf, offlineSolve, solve, type Caveat, type Solution } from "../engine/tutor/solve";
 
 // a notebook in which every fact listed is explained (correct) or only vaguely (partial); the learner's words name the fact
 const taughtState = (facts: string[], vague: string[] = []): State => ({
@@ -349,6 +349,55 @@ describe("the gate: Kai can't be right without the facts", () => {
     const earned = async (): Promise<Solution> => ({ ...(await lucky()), gate: gate(p4, ucb) });
     expect((await solve(bundle, p4, ucb, { demo: false, model: earned })).correct).toBe(true);
   });
+
+  it("never lets the offline attempt reach the key with the gate shut, even from a note like the vague reading", () => {
+    // 2026-11-16, a team test on the live site: the notebook below (UCB's pick and both bonus facts taught wrong or
+    // vaguely) had the offline attempt quote "When it gets picked and is good, it grows" on P3 and answer the key, D:
+    // the note matched P3's vague reading of the growing bonus, the one rule there that leads to the key
+    const st: State = {
+      ...initialState(bundle),
+      turn: 8,
+      notebook: [
+        { fact: "n05.f1", verdict: "correct", words: "It still picks the favorite of that round.", turn: 2 },
+        { fact: "n06.f1", verdict: "correct", words: "With an unlucky start, it can lock in on the wrong arms.", turn: 3 },
+        { fact: "n11.f1", verdict: "wrong", words: "The one with the highest bonus", turn: 5 },
+        { fact: "n12.f2", verdict: "partial", words: "A bonus of right arms grows", turn: 7 },
+        { fact: "n12.f1", verdict: "partial", words: "When it gets picked and is good, it grows.", turn: 8 },
+      ],
+      misconceptions: [
+        { node: "n11", fact: "n11.f1", words: "UCB also picks the favorite. Just like greedy does", note: null, turn: 4 },
+        { node: "n12", fact: "n12.f2", words: "the bonus of wrong arms shrinks", note: null, turn: 7 },
+        { node: "n12", fact: "n12.f1", words: "When it gets picked and is good, it grows.", note: null, turn: 8 },
+      ],
+    };
+    for (const id of ["p3", "p2", "p8"]) {
+      const p = item(id);
+      const g = gate(p, st);
+      expect(g.canBeRight, id).toBe(false);
+      const s = offlineSolve(bundle, p, st);
+      expect(s.correct, `${id}: ${s.steps.map((x) => x.text).join(" | ")}`).toBe(false);
+      expect(s.answer).not.toBe(LETTERS[p.answer]);
+      // the guess Kai reasons from (also the one the model is given) leads to a wrong option, and the answer is that
+      // option: the steps and the answer agree
+      for (const seed of ["a", "b", "c", "d", "e", "f"]) {
+        const guess = chooseGuess(p, g, seed)!;
+        expect(checkPractice(p, guess.answer), `${id} guess ${guess.replaces} (${guess.when ?? "both"})`).toBe(false);
+        // and never about a fact taught correctly (greedy's rule and lock-in here)
+        expect(["n05.f1", "n06.f1"], `${id} guesses against a correct note`).not.toContain(guess.replaces);
+      }
+      expect(s.answer).toBe(LETTERS[s.guess!.answer]);
+      // Kai keeps the notes it was taught right: no step says its notes "only" cover lock-in
+      expect(s.steps.map((x) => x.text).join(" ")).not.toMatch(/only say "With an unlucky start/);
+    }
+    // and for every problem, whatever single note stands in for a needed fact: shut gate, wrong answer
+    for (const p of practice.items)
+      for (const b of p.beliefs ?? []) {
+        const words = b.belief.replace(/\.$/, "");
+        const state: State = { ...taughtState((p.needs ?? []).filter((n) => n !== b.replaces)), misconceptions: [{ node: b.replaces.split(".")[0]!, fact: b.replaces, words, note: null, turn: 9 }] };
+        expect(gate(p, state).canBeRight, `${p.id} ${b.replaces}`).toBe(false);
+        expect(offlineSolve(bundle, p, state).correct, `${p.id} misled on ${b.replaces}: “${words}”`).toBe(false);
+      }
+  });
 });
 
 import { summarize, tables, type Ev } from "../lib/analytics";
@@ -461,8 +510,11 @@ describe("the caveats (Kai fails at least once, never against its notes)", () =>
   const [sticks, lockin] = caveatsOf(p7) as [Caveat, Caveat];
   const [c3, c2] = [caveatsOf(p3)[0]!, caveatsOf(p2)[0]!];
   const needed = [...new Set(practice.items.flatMap((p) => (p.needs ?? []).flatMap((n) => n.split("|"))))];
-  const everything = taughtState(needed);
-  const withNotes = (words: Record<string, string>, state = everything) => ({ ...state, notebook: state.notebook.map((e) => (words[e.fact] ? { ...e, words: words[e.fact]! } : e)) });
+  const words = (w: Record<string, string>, state: State) => ({ ...state, notebook: state.notebook.map((e) => (w[e.fact] ? { ...e, words: w[e.fact]! } : e)) });
+  // every needed fact taught, the bonus's growth with its slowing (P8's backstop stays out)
+  const slowing = { "n12.f2": "an option's bonus keeps growing while it isn't picked, but more and more slowly" };
+  const everything = words(slowing, taughtState(needed));
+  const withNotes = (w: Record<string, string>, state = everything) => words(w, state);
   // greedy's rule as most learners put it (R's pilot run, 2026-11-14), and with the switch said
   const terse = { "n05.f1": "Greedy picks the best option it knows" };
   const switches = { "n05.f1": "greedy takes whichever option has the highest average, and if another one's average gets higher it switches" };
@@ -509,17 +561,21 @@ describe("the caveats (Kai fails at least once, never against its notes)", () =>
     expect(caveatFor(practice.items, p3, everything, 1)).toBeUndefined();
     expect(caveatFor(practice.items, p3, taughtState(needed.filter((f) => f !== "n12.f2")), 0)).toBeUndefined(); // P3 itself fails anyway
     // P8 (2026-11-16) comes last and needs the bonus's growth to slow down: taught without the slowing, P3 and P2 are
-    // still solved but P8 would fail anyway, so their caveats stay out (Kai fails P8 from the gap instead); P8 has no
-    // caveat; P7's comes into play all the same (alone)
+    // still solved but P8 would fail anyway, so their caveats stay out (Kai fails P8 from the gap instead); P7's comes
+    // into play all the same (alone)
     const p8 = item("p8");
     const slowingLeftOut = taughtState(needed, ["n12.f2"]);
     expect([p3, p2].map((p) => gate(p, slowingLeftOut).canBeRight)).toEqual([true, true]);
     expect(gate(p8, slowingLeftOut).canBeRight).toBe(false);
     expect(caveatFor(practice.items, p3, slowingLeftOut, 0)).toBeUndefined();
     expect(caveatFor(practice.items, p2, slowingLeftOut, 0)).toBeUndefined();
-    expect(caveatsOf(p8)).toEqual([]);
     expect(caveatFor(practice.items, p8, everything, 0)).toBeUndefined();
     expect(caveatFor(practice.items, p7, withNotes(terse, slowingLeftOut), 0)?.id).toBe("sticks");
+    // the same when the judge credited the growth in full without the slowing (P8's backstop is open: Kai fails P8)
+    const creditedWithout = withNotes({ "n12.f2": "the bonus of an option that isn't picked keeps growing over time" });
+    expect(gate(p8, creditedWithout).canBeRight).toBe(true);
+    expect(caveatFor(practice.items, p3, creditedWithout, 0)).toBeUndefined();
+    expect(caveatFor(practice.items, p2, creditedWithout, 0)).toBeUndefined();
     // the slowing taught: P2's caveat waits for P8's gate, which is open
     expect(caveatFor(practice.items, p2, everything, 0)).toEqual(c2);
     // "grows when not picked for a long time" leaves one round open; "grows every round" doesn't
@@ -543,5 +599,71 @@ describe("the caveats (Kai fails at least once, never against its notes)", () =>
       expect(o.steps.map((s) => s.text).join(" ")).not.toMatch(/guess|don't cover/i);
       if (c === lockin) expect(o.steps[1]!.notes.map((n) => o.notes[n - 1])).toContain(lock["n06.f1"]);
     }
+  });
+
+  // a correction that adds one note (what the judge credits from it), as applyJudgement does
+  const add = (state: State, fact: string, w: string): State => ({ ...state, turn: state.turn + 1, notebook: [...state.notebook, { fact, verdict: "correct" as const, words: w, turn: state.turn + 1 }] });
+  const p8 = item("p8");
+  const [slow] = caveatsOf(p8) as [Caveat];
+  // session 3 of the team's tests (2026-11-16): credited in full, the gate open, no slowing
+  const session3 = "Now the exploration bonus grows when an option is not being picked, but the number of rounds increases and shrinks when the option is being picked.";
+
+  it("P8: the slowing is the gate's backstop, whatever came before (2026-11-16)", async () => {
+    expect([slow.id, slow.always, slow.answer]).toEqual(["slowing", true, 0]);
+    // the same wrong option as Kai's vague reading of the fact (a steady pace)
+    expect(beliefFor(p8, "n12.f2", "vague")!.answer).toBe(slow.answer);
+    for (const w of [session3, "the bonus of an option that isn't picked keeps growing over time", "the bonus slowly grows when you don't pick it"]) {
+      const s = withNotes({ "n12.f2": w });
+      expect(gate(p8, s).canBeRight, w).toBe(true);
+      // in play even after earlier wrong tries: it stands in for the gate, not for a planted slip
+      for (const wrong of [0, 1, 3]) expect(caveatFor(practice.items, p8, s, wrong)?.id, w).toBe("slowing");
+    }
+    // said, in a note on the bonus or in UCB's formula: Kai solves P8
+    expect(caveatFor(practice.items, p8, everything, 2)).toBeUndefined();
+    expect(caveatFor(practice.items, p8, withNotes({ "n12.f2": "the bonus grows when not picked", "n11.f1": "score = average + √(ln t / n), pick the highest" }), 0)).toBeUndefined();
+    // "slowly" in a note on greedy isn't the bonus
+    expect(caveatFor(practice.items, p8, add(withNotes({ "n12.f2": "the bonus grows when not picked" }), "n05.f1", "greedy's averages change more and more slowly"), 0)?.id).toBe("slowing");
+    // the growth taught vaguely or wrongly: the gate is shut, Kai fails from the gap (no caveat)
+    expect(caveatFor(practice.items, p8, taughtState(needed, ["n12.f2"]), 0)).toBeUndefined();
+    // Kai's attempt: the steady reading, citing the note it reads that way, as its own understanding
+    const s = withNotes({ "n12.f2": session3 });
+    const o = offlineSolve(bundle, p8, s, slow);
+    expect([o.correct, o.caveat, o.caveatId, o.answer]).toEqual([false, "misread", "slowing", "A"]);
+    expect(o.steps.map((x) => x.text).join(" ")).toContain(slow.misreading);
+    expect(o.steps.map((x) => x.text).join(" ")).not.toMatch(/guess|don't cover|slowly/i);
+    expect(o.steps[1]!.notes.map((n) => o.notes[n - 1])).toContain(session3);
+    expect((await solve(bundle, p8, s, { demo: true, caveat: slow })).answer).toBe("A");
+  });
+
+  it("keep the first try's misreading on the retry while the correction leaves it open (2026-11-16)", () => {
+    // P7: a correction that says nothing ("sdas" adds no note) leaves Kai's misreading in play; one that says greedy
+    // switches covers it, and the gate decides (Kai is right)
+    const before = withNotes(terse);
+    expect(caveatFor(practice.items, p7, before, 0)?.id).toBe("sticks");
+    expect(caveatOnRetry(practice.items, p7, before, before, 0)?.id).toBe("sticks");
+    expect(caveatOnRetry(practice.items, p7, before, add(before, "n05.f1", "greedy recomputes the favourite every round, so when B's average falls below A's it switches"), 0)).toBeUndefined();
+    // a correction about something else (a note on UCB) doesn't cover it
+    expect(caveatOnRetry(practice.items, p7, before, add(before, "n11.f1", "UCB adds a bonus and takes the highest score"), 0)?.id).toBe("sticks");
+    // the switch said on the retry with a lock-in note there: no second planted misreading comes in
+    const both = withNotes({ ...terse, ...lock });
+    expect(caveatFor(practice.items, p7, both, 0)?.id).toBe("sticks");
+    expect(caveatFor(practice.items, p7, withNotes({ ...switches, ...lock }), 0)?.id).toBe("lockin");
+    expect(caveatOnRetry(practice.items, p7, both, withNotes({ ...switches, ...lock }), 0)).toBeUndefined();
+    // P3: the same, with its own pattern; with an earlier wrong try there was no caveat, so none on the retry
+    expect(caveatOnRetry(practice.items, p3, everything, everything, 0)).toEqual(c3);
+    expect(caveatOnRetry(practice.items, p3, everything, add(everything, "n06.f1", "B never scores below 5, so its average can't fall to A's 3 and greedy never picks A again"), 0)).toBeUndefined();
+    expect(caveatOnRetry(practice.items, p3, everything, everything, 1)).toBeUndefined();
+    // a correction that shuts the gate (a wrong belief about a needed fact): no caveat, Kai fails from its notes
+    const misled = { ...before, misconceptions: [{ node: "n05", fact: "n05.f1", words: "greedy never changes its favourite", turn: before.turn + 1 }] };
+    expect(gate(p7, misled).canBeRight).toBe(false);
+    expect(caveatOnRetry(practice.items, p7, before, misled, 0)).toBeUndefined();
+    // P8's backstop on the retry: the first try failed from the gap (gate shut), the correction is credited without the
+    // slowing ("the correct answer is C" credits nothing: the gate stays shut and Kai fails from the gap again)
+    const gap = taughtState(needed, ["n12.f2"]);
+    expect(caveatOnRetry(practice.items, p8, gap, add(gap, "n12.f2", "the bonus of a playlist that isn't played keeps growing"), 2)?.id).toBe("slowing");
+    expect(caveatOnRetry(practice.items, p8, gap, add(gap, "n12.f2", "the bonus keeps growing but slower and slower, so the gaps between plays get longer"), 2)).toBeUndefined();
+    expect(caveatOnRetry(practice.items, p8, gap, gap, 2)).toBeUndefined();
+    const credited = withNotes({ "n12.f2": session3 });
+    expect(caveatOnRetry(practice.items, p8, credited, credited, 2)?.id).toBe("slowing");
   });
 });

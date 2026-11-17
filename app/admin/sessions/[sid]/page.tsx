@@ -318,9 +318,11 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
                       {" "}
                       ({str(k.by)}
                       {gate?.missing?.length ? `; the notebook lacked ${gate.missing.map((f) => f.split("|").map(factLabel).join(" or ")).join(", ")}` : ""}
-                      {gate?.misled?.length ? `; misled on ${gate.misled.join(", ")}` : ""})
+                      {gate?.misled?.length ? `; misled on ${gate.misled.join(", ")}` : ""}
+                      {k.caveat ? `; caveat ${k.caveatId ? `${str(k.caveatId)} ` : ""}${str(k.caveat)}` : ""})
                     </span>
                   </p>
+                  {Array.isArray(k.errors) && k.errors.length ? <p className="note">The model&apos;s tries set aside: {(k.errors as unknown[]).map((e) => str(e)).join(" / ")}</p> : null}
                   <ol>
                     {((k.steps as { text: string; notes: number[] }[]) ?? []).map((st, j) => (
                       <li key={j}>

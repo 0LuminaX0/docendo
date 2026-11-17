@@ -72,9 +72,15 @@ export default function Exercises() {
   const clock = useDeadline(partStart, testMinutes);
   const timeUpRef = useRef<(() => void) | null>(null);
   const timedOut = useRef<number | null>(null); // the part whose time ran out (hard limits)
+  // a test already graded isn't taken again: coming back to it (the Back button from the results) goes to the results.
+  // 2026-11-16, a team test: back on this page long after its time, the clock handed the test in a second time, empty
+  const graded = !!saved?.result && saved.step === "results";
+  useEffect(() => {
+    if (graded) router.replace("/results");
+  }, [graded, router]);
   // checked after every render: the page may still be loading when the time runs out
   useEffect(() => {
-    if (soft || !clock.over || timedOut.current === (saved?.testPart ?? 0) || !timeUpRef.current) return;
+    if (graded || soft || !clock.over || timedOut.current === (saved?.testPart ?? 0) || !timeUpRef.current) return;
     timedOut.current = saved?.testPart ?? 0;
     timeUpRef.current();
   });
@@ -130,7 +136,7 @@ export default function Exercises() {
 
   /** Hand in the answers: all answered, or (`how`) at a hard limit or a debug skip with what is answered. */
   async function submit(how: "done" | "time" | "skip" = "done") {
-    if (!saved || busy || (how === "done" && answered < total)) return;
+    if (!saved || busy || graded || (how === "done" && answered < total)) return;
     const timedOut = how === "time";
     const skipped = how === "skip";
     setBusy(true);

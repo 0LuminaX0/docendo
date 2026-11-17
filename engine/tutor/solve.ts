@@ -112,9 +112,13 @@ export function chooseGuess(item: PracticeItem, g: Gate, seed: string): Guess | 
     const b = beliefFor(item, n, how);
     if (b && !leadsToKey(item, b.answer)) return b;
   }
-  const all = item.beliefs ?? [];
+  // only wrong rules: a vague reading that leads to the key (P2's, P3's) isn't one (2026-11-16: with every need taught
+  // wrongly, the pick below could land on it, and Kai reasoned its way to the key with the gate shut)
+  const all = (item.beliefs ?? []).filter((b) => !leadsToKey(item, b.answer));
   const ideas = new Set(g.misled.length ? (item.needs ?? []).flatMap(alts).map(ideaOf) : []);
-  const forMissing = all.filter((b) => [...g.absent, ...g.vague].some((n) => alts(n).includes(b.replaces)));
+  // a guess only for a need not taught correctly (left out, vague, or taught wrongly): never against a correct note
+  // (2026-11-16: with lock-in taught right and the bonus taught wrongly, P3's guess could land on lock-in's)
+  const forMissing = all.filter((b) => g.missing.some((n) => alts(n).includes(b.replaces)));
   const pool = forMissing.length ? forMissing : all.filter((b) => ideas.has(ideaOf(b.replaces)));
   const list = pool.length ? pool : all;
   return list.length ? list[pick(seed, list.length)]! : null;
@@ -262,13 +266,18 @@ function leaks(bundle: Bundle, item: PracticeItem, state: State, steps: Step[]):
   return forbiddenTerms(bundle, seen, steps.map((s) => s.text).join(" "));
 }
 
-/** The problem's wrong rule that best matches what the learner said (shared content words), if any match. */
+/**
+ * The problem's wrong rule that best matches what the learner said (shared content words), if any match. Only rules
+ * that lead to a wrong option: a vague reading that still leads to the key (P2's and P3's "the bonus grows") isn't a
+ * wrong rule (2026-11-16: "When it gets picked and is good, it grows" matched it, and Kai answered P3's key with the
+ * gate shut).
+ */
 function closestBelief(item: PracticeItem, said: string): Guess | null {
   const words = (t: string) => new Set(t.toLowerCase().match(/[a-zε]{4,}/g) ?? []);
   const w = words(said);
   let best: Guess | null = null;
   let score = 0;
-  for (const b of item.beliefs ?? []) {
+  for (const b of (item.beliefs ?? []).filter((x) => !leadsToKey(item, x.answer))) {
     const n = [...words(b.belief)].filter((x) => w.has(x)).length;
     if (n > score) (best = b, (score = n));
   }
@@ -352,7 +361,9 @@ export function offlineSolve(bundle: Bundle, item: PracticeItem, state: State, c
     steps.push({ text: guess ? `My notes don't cover this part. ${hunchFor(bundle, guess) ?? `I'm guessing: ${guess.belief}`}` : "My notes don't cover this part, so I'll have to guess.", notes: [] });
     broken = true;
   }
-  const value = g.canBeRight ? item.answer : (followed?.answer ?? guess?.answer ?? wrongAnswer(item, seed));
+  // the gate shut never gives the key, whatever led here (the safety net the model's tries rely on)
+  const chosen = followed?.answer ?? guess?.answer;
+  const value = g.canBeRight ? item.answer : chosen !== undefined && !leadsToKey(item, chosen) ? chosen : wrongAnswer(item, seed);
   const answer = item.kind === "choice" ? LETTERS[value]! : String(Math.round(value * 100) / 100);
   // guessing: "my best guess"; going by what Kai was told: "I'd say"
   const lead = followed ? "So I'd say" : "So my best guess is";
@@ -411,19 +422,46 @@ export async function solve(
  * A problem's caveats are tried in order (2026-11-16, P7): one the notes cover passes to the next, one whose `requires`
  * Kai has no note on is skipped, and one marked `alone` needs only this problem's gate open (P7: that greedy can change
  * its favourite, for everyone whose notes leave it open, not only those who would solve everything).
+ * One marked `always` (P8's slowing, 2026-11-16) is the gate's backstop, not a planted slip: the judge credited the
+ * bonus's growth as taught without the slowing the key asks for (session 3 of the team's tests), the gate opened, and
+ * the model, reading notes that don't say it, answered "as before" three times until the offline attempt answered
+ * right with a step the notes don't hold. So it is in play whenever the gate is open and the notes leave it open,
+ * whether or not Kai has been wrong before, and a problem with one left open counts as one Kai fails (`rest`).
  */
 export function caveatFor(items: PracticeItem[], item: PracticeItem, state: State, wrongSoFar: number): Caveat | undefined {
   const list = caveatsOf(item);
-  if (!list.length || wrongSoFar > 0 || !gate(item, state).canBeRight) return undefined;
+  if (!list.length || !gate(item, state).canBeRight) return undefined;
   const at = items.findIndex((p) => p.id === item.id);
-  const rest = () => items.slice(Math.max(0, at)).every((p) => gate(p, state).canBeRight);
-  const noted = latest(state);
+  const rest = () => items.slice(Math.max(0, at)).every((p) => solvable(p, state));
   for (const c of list) {
-    if (!c.alone && !rest()) continue;
-    if ((c.requires ?? []).some((f) => !["correct", "partial"].includes(noted.get(f)?.verdict ?? ""))) continue;
-    if (caveatOpen(c, state)) return c;
+    if (!c.always && (wrongSoFar > 0 || (!c.alone && !rest()))) continue;
+    if (usable(c, state)) return c;
   }
   return undefined;
+}
+
+/** Would Kai solve this problem from these notes: the gate open and no backstop (`always`) left open? */
+const solvable = (p: PracticeItem, state: State) => gate(p, state).canBeRight && !caveatsOf(p).some((c) => c.always && usable(c, state));
+
+/** Kai has a note on what the misreading reads (`requires`), and its notes leave the point open. */
+const usable = (c: Caveat, state: State) => {
+  const noted = latest(state);
+  return !(c.requires ?? []).some((f) => !["correct", "partial"].includes(noted.get(f)?.verdict ?? "")) && caveatOpen(c, state);
+};
+
+/**
+ * Kai's retry after the learner's correction (2026-11-16). Before, the caveat was for first tries only, so with the
+ * gate open the retry was always right, whatever the correction said (a team test: "sdas" set Kai right, with muddled
+ * reasoning). Now the misreading Kai's first try was given stays in play while the corrected notes still leave its
+ * point open (the solver model follows a correction that says it in words the pattern misses), and a backstop
+ * (`always`) applies to the corrected notes as to any notes. A new planted misreading never comes in on the retry: the
+ * learner corrected what Kai got wrong. `before`: the notes Kai's first try used; `wrongSoFar` as for that try.
+ */
+export function caveatOnRetry(items: PracticeItem[], item: PracticeItem, before: State, after: State, wrongSoFar: number): Caveat | undefined {
+  if (!gate(item, after).canBeRight) return undefined;
+  const first = caveatFor(items, item, before, wrongSoFar);
+  if (first && usable(first, after)) return first;
+  return caveatsOf(item).find((c) => c.always && usable(c, after));
 }
 
 /** Do Kai's notes leave the caveat open (no note matches its pattern; with `ideas`, no note on those ideas)? */

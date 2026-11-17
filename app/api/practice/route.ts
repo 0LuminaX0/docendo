@@ -4,7 +4,7 @@ import { checkPractice, packFor } from "@/lib/server/content";
 import { State } from "@/engine/tutor/state";
 import { applyJudgement } from "@/engine/tutor/turn";
 import { llmJudge, mockJudge } from "@/engine/tutor/judge";
-import { caveatFor, solve, type Solution } from "@/engine/tutor/solve";
+import { caveatFor, caveatOnRetry, solve, type Solution } from "@/engine/tutor/solve";
 import type { LlmCall } from "@/engine/llm";
 import { parseNumber } from "@/content/practice";
 import { clientIp, fail, ok, readBody, sameOrigin } from "@/lib/server/http";
@@ -42,6 +42,9 @@ const Body = z.discriminatedUnion("action", [
     step: z.string().max(600), // the step the learner clicked as faulty, Kai's words (the judge reads the correction in its light)
     clicks: z.array(z.number().int().min(0).max(10)).max(30), // every step the learner clicked, in order
     msOnProblem: z.number().int().min(0).max(24 * 3600_000).optional(),
+    // as for the first try (the other problems' first tries that were wrong): the retry keeps the first try's caveat
+    // while the correction leaves it open. A page from before 2026-11-16 doesn't send it: no caveat on the retry, as then
+    wrongSoFar: z.number().int().min(0).max(20).optional(),
   }),
 ]);
 
@@ -102,9 +105,16 @@ export async function POST(req: NextRequest) {
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [] };
     }
     const errors: string[] = []; // every failed try, in order (a slip, a right answer without the facts, a timeout)
-    // the problem's caveat: first tries only, when Kai would otherwise solve every problem (P7's: this one) and its
-    // notes leave the caveat open (engine/tutor/solve.ts: caveatFor)
-    const caveat = body.data.action === "solve" ? caveatFor(pack.practice, item, state, body.data.wrongSoFar ?? 0) : undefined;
+    // the problem's caveat, when Kai would otherwise solve every problem (P7's: this one; P8's backstop: whenever its
+    // gate is open) and its notes leave the caveat open (engine/tutor/solve.ts: caveatFor); on the retry, the first
+    // try's while the corrected notes still leave it open (caveatOnRetry: before 2026-11-16 any correction set Kai right)
+    const wrongSoFar = body.data.wrongSoFar;
+    const caveat =
+      body.data.action === "solve"
+        ? caveatFor(pack.practice, item, state, wrongSoFar ?? 0)
+        : wrongSoFar === undefined
+          ? undefined
+          : caveatOnRetry(pack.practice, item, body.data.state, state, wrongSoFar);
     const sol: Solution = await solve(bundle, item, state, { demo: config.demo, onCall, deadline: t0 + 55_000, caveat, onError: (e) => errors.push(e instanceof Error ? e.message.slice(0, 300) : String(e)) });
     const error = errors.at(-1) ?? null;
     const attempt = body.data.action === "solve" ? 1 : 2;

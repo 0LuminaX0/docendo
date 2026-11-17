@@ -348,6 +348,22 @@ describe("one reading of a message", () => {
     const kept = consistent({ intent: "answer", facts: [{ fact: "n01.f2", verdict: "partial", quote: "nope, you only find out by trying" }], termsUsed: [] });
     expect(kept.facts).toHaveLength(1);
   });
+  it("keeps an explanation that comes with a hedge (2026-11-16: “I'm not sure what you mean. Greedy just picks the favorite…”)", async () => {
+    const { consistent } = await import("../engine/tutor/judge");
+    const hedged = consistent({
+      intent: "unsure",
+      facts: [{ fact: "n05.f1", verdict: "correct", quote: "it recalculates the favorite every round so it can switch" }],
+      misconceptions: [],
+      termsUsed: [],
+    });
+    expect(hedged.intent).toBe("answer");
+    expect(hedged.facts.map((v) => v.fact)).toEqual(["n05.f1"]);
+    // a short quote, or only a wrong verdict, is still the hedge: nothing is credited
+    expect(consistent({ intent: "unsure", facts: [{ fact: "n05.f1", verdict: "partial", quote: "picks the favorite, I think" }], termsUsed: [] }).facts).toEqual([]);
+    expect(consistent({ intent: "unsure", facts: [{ fact: "n05.f1", verdict: "wrong", quote: "it just stays with the one it liked first, I guess" }], termsUsed: [] }).facts).toEqual([]);
+    // off topic and "move on" stay as they were
+    expect(consistent({ intent: "off_topic", facts: [{ fact: "n05.f1", verdict: "correct", quote: "it recalculates the favorite every round so it can switch" }], termsUsed: [] }).facts).toEqual([]);
+  });
 });
 
 describe("the offline judge on not knowing", () => {

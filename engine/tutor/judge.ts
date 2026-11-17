@@ -326,8 +326,18 @@ const NOT_TEACHING = new Set<Judgement["intent"]>(["unsure", "off_topic", "move_
  * explain a fact or state a misconception. Its verdicts are dropped (and logged), so Kai's reply ("let's leave that
  * part") and Kai's notebook and mind agree. The judge once read "nope, not this either" (after "i dunno") as unsure
  * and, at the same time, as a right answer to Kai's yes/no question.
+ *
+ * A hedge doesn't unsay an explanation, though (2026-11-16, a team test on the live site: "I'm not sure what you mean.
+ * Greedy just picks the favorite. Every round meaning it recalculates the favorite every round so it can switch I'm not
+ * sure. The favorite is the arm with the highest estimated mean at that moment." was classed unsure, so greedy's rule
+ * was lost and Kai said "Fair enough, we can skip that"). A message classed unsure that the judge also credits with a
+ * fact, in a quote of `HEDGED_WORDS` words or more, teaches: it is read as an answer, verdicts and all. A short
+ * "nope, not this either" still teaches nothing. In the learner's favour, like the quote check.
  */
+const HEDGED_WORDS = 6;
 export function consistent(j: Judgement): Judgement {
+  const taughtAnyway = j.intent === "unsure" && j.facts.some((v) => v.verdict !== "wrong" && (v.quote.match(/[\p{L}\p{N}]+/gu) ?? []).length >= HEDGED_WORDS);
+  if (taughtAnyway) return { ...j, intent: "answer" };
   if (!NOT_TEACHING.has(j.intent) || (!j.facts.length && !j.misconceptions?.length)) return j;
   const why = `(dropped: the message is ${j.intent.replace("_", " ")})`;
   return {
