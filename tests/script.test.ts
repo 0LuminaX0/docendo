@@ -350,6 +350,11 @@ describe("Kai's teaching questions", () => {
     // greedy's rule: "the highest" and "each round" only if the learner said so (Kai's own question may have)
     const g = await talk([{ message: "It goes with the best one.", say: vague("n05.f1") }], at(GREEDY), async () => "Hm, so it takes the highest average.");
     expect(g[0]!.trace.leaked).toEqual(["highest"]);
+    // the case lock-in starts from, added to a learner who said greedy sticks with its winner (eval:sim, 2026-11-17)
+    const sticks = "After that it just keeps picking whichever option has the best average so far and never switches. So it's basically try everything once, then stick with the winner.";
+    const l = await talk([{ message: sticks, say: vague("n05.f1") }], at(GREEDY), async () => "Oh, it tries every single one one time and keeps picking the best average. If the first try gets unlucky and gives a low average, greedy stops trying it.");
+    expect(l[0]!.trace.leaked).toEqual(expect.arrayContaining(["unlucky"]));
+    expect(l[0]!.reply).not.toMatch(/unlucky/);
   });
 
   it("writes each note once, the longest of overlapping quotes", () => {

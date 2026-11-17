@@ -113,6 +113,11 @@ export const Fact = z.object({
   // what makes an explanation of it correct rather than partial, for the judge: the point that tells it apart from
   // its beginner's reading (wording, examples and notation are free)
   key: z.string().min(10).optional(),
+  // a second look (2026-11-17): when the judge credits this fact as correct, a call of its own reads that one message
+  // against this fact alone, its key and this note, and can only lower the verdict. For a fact whose sharper key spilled
+  // onto the others in the judge's one prompt (UCB's rule: a stricter key made the judge credit lock-in and the growing
+  // bonus less), and whose false credit hands the rule over in practice (pilot session 8)
+  confirm: z.string().min(10).optional(),
   // (2026-11-12 to 2026-11-16 facts also carried `evidence` and `against`, word patterns that turned the judge's
   // "correct" into "partial", and `exampleOf`; taken out with the checks, see engine/tutor/judge.ts, settleReply)
 });
@@ -234,7 +239,7 @@ export type FrozenGraph = z.infer<typeof FrozenGraph>;
 
 // ---------- app bundle (what the web app reads) ----------
 
-export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), given: z.boolean().optional(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional() });
+export const BundleFact = z.object({ id: z.string(), text: z.string(), required: z.boolean(), teachable: z.boolean(), given: z.boolean().optional(), ask: z.string().optional(), assume: z.string().optional(), assumeVague: z.string().optional(), hunch: z.string().optional(), hunchVague: z.string().optional(), key: z.string().optional(), confirm: z.string().optional() });
 export const BundleNode = z.object({
   inLesson: z.boolean().default(true), // false: an idea around the lesson, shown in Kai's mind, never asked about or counted
   id: z.string(),

@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       // the favourite only if it knows A is the favourite)
       const options = item.kind === "choice" ? ` Options: ${item.options!.map((o, i) => `${"ABCDEF"[i]}) ${o}`).join(" ")}` : "";
       const context = `${body.data.step} (That was Kai's attempt at this problem: ${item.prompt}${options})`;
-      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, context, onCall, { timeoutMs: 15_000, retries: 0 }).catch(() => mockJudge(bundle, msg)); // one try: the solver's tries get the rest of the route's 60 s (solve's deadline)
+      const j = config.demo ? mockJudge(bundle, msg) : await llmJudge(bundle, msg, context, onCall, { timeoutMs: 15_000, retries: 0, correction: true }).catch(() => mockJudge(bundle, msg)); // one try: the solver's tries get the rest of the route's 60 s (solve's deadline)
       state = applyJudgement(state, j);
       judged = { intent: j.intent, facts: j.facts, misconceptions: j.misconceptions ?? [], dropped: j.dropped ?? [], notesDropped: j.notesDropped ?? [] };
     }

@@ -11,6 +11,10 @@ const GROUPS: Record<string, RegExp> = {
   shrinks: /\b(?:shrink\w*|shrank|shrunk|falls?|falling|fell|drops?|dropp\w*|decreas\w*|smaller|reduc\w*|sinks?|sinking|sank|declin\w*|goes down|go down|going down|went down)\b/i,
   switches: /\b(?:switch\w*|overtak\w*|overtook|swap\w*|chang\w* (?:its |their |his |her )?(?:mind|favou?rite|pick|choice)|takes? over|took over|goes back to|go back to|comes? back)\b/i,
   sticks: /\b(?:stick\w*|stuck|lock\w*|forever|for good|never (?:again|tries|tried|picks|picked|goes back|comes back)|stays? with)\b/i,
+  // the case lock-in starts from (2026-11-17, eval:sim: a learner taught that greedy "never switches" and the averages
+  // "even out", and Kai's line added "if the first try gets unlucky and gives a low average, greedy stops trying it",
+  // lock-in itself; "stick" was the learner's, so the group above let it through)
+  unlucky: /\bunluck\w*|\bbad (?:luck|start|first|day|result|lunch|try)\b|\b(?:stops?|stopped|quits?) (?:trying|picking|choosing|going)\b|\bgives? up on\b|\b(?:drops?|dropped|ignores?|ignored) (?:it|them|that one|the other\w*) (?:for good|forever|after)\b/i,
   pace: /\b(?:slow\w*|faster|fast|quick\w*|steady|steadily|gradual\w*|diminish\w*|taper\w*|log|logs|logarithm\w*|ln)\b/i,
   extreme: /\b(?:highest|lowest|maximum|minimum|max|top)\b/i,
   anew: /\b(?:every|each) (?:single )?(?:round|time|day|step|turn|pick)\b|\bso far\b|\banew\b|\bat (?:that|the) moment\b/i,

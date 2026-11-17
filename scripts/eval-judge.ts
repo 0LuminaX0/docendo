@@ -47,6 +47,16 @@ const ALL_CASES: Case[] = [
   // F9: the score and the highest one; its misconception: the least tried
   { msg: "UCB gives every truck a score, its average plus a bonus, and always picks the highest score. There's no randomness in it.", want: { "n11.f1": "correct" }, not: ["n05.f1"] },
   { msg: "UCB always goes to the truck you've tried the fewest times.", not: ["n11.f1"], misconception: true },
+  // the pilots of 2026-11-17: UCB's rule credited from its misconception restated (session 8, a correction in practice:
+  // Kai then got P3 and P8 right and wrote "a bonus on top of the average", which no note said), and from "the best
+  // option with a bonus" (session 6), which leaves out what is added and that the highest total wins
+  { kai: "The last one is UCB. How does it decide which option to pick?", msg: "it picks the one with the highest bonus", not: ["n11.f1"], misconception: true },
+  {
+    kai: "Café 1 uses greedy, so after A's 3 and B's 6 it keeps picking B. My notes say UCB goes for the one with the highest bonus. Both cakes were tried once, so their bonuses stay level and café 2 keeps splitting its days between them. So I'd say B: neither café. (That was Kai's attempt at this problem: Two cafés test the same two new cakes and score each day's sales out of 10. Cake A is truly better: its days usually score between 7 and 9. Cake B's days always score between 5 and 7. On the first two days both cafés try each cake once; in both, A has an unusually bad day (3) and B scores 6. From then on café 1 uses greedy and café 2 uses UCB. Which café ends up selling mostly cake A? Options: A) Both cafés B) Neither café C) Only café 1 D) Only café 2)",
+    msg: "no the highest bonus is UCB, greedy always picks the best mean",
+    not: ["n11.f1"],
+  },
+  { kai: "The last one is UCB. How does it decide which option to pick?", msg: "it always picks the best option but with a bonus", want: { "n11.f1": "partial" } },
   // F14: c, set beforehand; its misconception: the bonus adapts to the observed spread
   { msg: "How big the bonuses are is set beforehand with a constant c, depending on how much the lunches usually vary. It doesn't look at the actual lunches.", want: { "n11.f2": "correct" } },
   { msg: "The bonus is bigger for trucks whose lunches have been all over the place.", not: ["n11.f2"], misconception: true },

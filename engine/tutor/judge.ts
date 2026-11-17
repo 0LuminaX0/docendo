@@ -261,7 +261,9 @@ intent, the main thing the message does:
 - "move_on": asking to move on or saying they're done with this part ("what's next?", "that's it", "next one").
 - "off_topic": chit-chat, or messages that make no sense. Never use it for a question to Kai.`;
 
-export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number } = {}): Promise<Judgement> {
+// limits.correction: the message corrects Kai's attempt at a practice problem (the practice route), so every teachable
+// fact credited as correct gets the second look, not only those marked `confirm`
+export async function llmJudge(bundle: Bundle, message: string, kaiLast: string, onCall?: OnCall, limits: { timeoutMs?: number; retries?: number; correction?: boolean } = {}): Promise<Judgement> {
   // the lesson's facts first; the ideas around it after, so a message that fits a lesson fact is credited to it. Each
   // fact's KEY tells the judge what makes it correct rather than partial; not its `assume` as a "common wrong belief"
   // (tried 2026-11-03 and 2026-11-14: it made the judge read a terse "keeps sticking with whatever has the best
@@ -285,7 +287,66 @@ export async function llmJudge(bundle: Bundle, message: string, kaiLast: string,
     ],
   });
   onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
-  return settleReply(bundle, message, kaiLast, r.data);
+  return secondLook(bundle, message, kaiLast, settleReply(bundle, message, kaiLast, r.data), onCall, limits.correction);
+}
+
+const Look = z.object({ why: z.string(), verdict: z.enum(["correct", "partial", "wrong"]) });
+
+/**
+ * The second look (2026-11-17, the pilots): a fact with `confirm` that the judge credited as correct is read again in a
+ * call of its own, with that fact alone, and the verdict can only go down. Pilot session 8: "no the highest bonus is
+ * UCB, greedy always picks the best mean" was credited as UCB's rule, which restates the wrong belief the learner had
+ * taught (the highest bonus wins), and Kai then got P3 and P8 right and wrote "a bonus on top of the average", which no
+ * note said; session 6's "it always picks the best option but with a bonus" was credited in full too. A sharper key
+ * for UCB's rule fixed those in the judge's one prompt but made it credit other facts less (lock-in, the growing bonus:
+ * 8 of 8 to 1 of 8 on one message), so the judge's prompt and keys stay as they were. A failed call counts as partial:
+ * a vague credit costs the learner a sentence, a false one hands the rule over.
+ */
+export async function secondLook(bundle: Bundle, message: string, kaiLast: string, j: Judgement, onCall?: OnCall, correction = false): Promise<Judgement> {
+  const facts = new Map(bundle.nodes.flatMap((n) => n.facts).map((f) => [f.id, f]));
+  // a correction in practice (eval:sim, the same day): "the other two bonuses just sit there until they're picked", the
+  // wrong belief about the growing bonus, was credited as that fact; the gate opened and Kai's retry was right at once.
+  // There every teachable fact with a key is looked at again; while teaching only those marked `confirm`, so the
+  // judge's recall there stays as it was
+  const looks = j.facts.filter((v) => v.verdict === "correct" && (facts.get(v.fact)?.confirm || (correction && facts.get(v.fact)?.teachable && facts.get(v.fact)?.key)));
+  if (!looks.length) return j;
+  const dropped = [...(j.dropped ?? [])];
+  const lowered = new Map<string, Verdict>();
+  await Promise.all(
+    looks.map(async (v) => {
+      const f = facts.get(v.fact)!;
+      let verdict: Verdict = "partial";
+      let why = "the second look failed";
+      try {
+        const r = await chatJson({
+          model: MODELS.judge,
+          name: "second_look",
+          schema: Look,
+          temperature: 0,
+          maxTokens: 300,
+          timeoutMs: 8_000,
+          retries: 0,
+          messages: [
+            {
+              role: "system",
+              content: `A student teacher is explaining a lesson to a classmate. Check one thing only: does the teacher's message get this fact across?\nFACT: ${f.text}\nKEY for "correct": ${f.key ?? f.text}\n${f.confirm ? `ALSO: ${f.confirm}\n` : ""}Judge what the message says, not what someone who already knows the fact could read into it. A message that corrects the classmate is judged by the rule it states itself.\nAnswer in JSON: why (one sentence: what the message says about this fact), verdict ("correct": it states the key; "partial": it touches the fact but leaves part of the key out, or is too vague to tell; "wrong": it states a rule that contradicts the fact).`,
+            },
+            { role: "user", content: `The classmate (Kai) had just said: "${kaiLast.slice(0, 1400)}"\n\nThe teacher's message:\n"""${message}"""` },
+          ],
+        });
+        onCall?.({ role: "judge", model: MODELS.judge, ms: r.ms, usage: r.usage });
+        verdict = r.data.verdict;
+        why = r.data.why;
+      } catch {
+        // counted as partial (above)
+      }
+      if (verdict !== "correct") lowered.set(v.fact, verdict), dropped.push({ fact: `${v.fact} (correct, the second look: ${verdict}: ${why.slice(0, 160)})`, quote: v.quote });
+    }),
+  );
+  if (!lowered.size) return j;
+  // a fact the second look reads as wrong is partial here: the judge saw a right part, the second look a wrong one, and
+  // the gate needs "correct" either way (a misconception, if the message holds one, is the judge's to record)
+  return { ...j, facts: j.facts.map((v) => (lowered.has(v.fact) ? { ...v, verdict: "partial" as const } : v)), dropped };
 }
 
 /**

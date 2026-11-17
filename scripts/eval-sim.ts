@@ -280,7 +280,7 @@ async function simulate(p: Persona): Promise<Run> {
         [{ role: "kai", text: `I tried this problem: ${it.prompt}${options}\nMy steps: ${first.steps.map((x, i) => `${i + 1}. ${x.text}`).join(" ")}\nMy answer: ${first.answer}. That was wrong. Can you correct me in a sentence or two?` }],
         cost,
       );
-      const j = await llmJudge(bundle, fix.message, `${first.steps.map((x) => x.text).join(" ").slice(-600)} (That was Kai's attempt at this problem: ${it.prompt}${options})`, onCall);
+      const j = await llmJudge(bundle, fix.message, `${first.steps.map((x) => x.text).join(" ").slice(-600)} (That was Kai's attempt at this problem: ${it.prompt}${options})`, onCall, { correction: true });
       const before = s;
       s = applyJudgement(s, j);
       // as the practice route does: the first try's caveat while the correction leaves it open (wrongSoFar as then)

@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "4c7105d5d4116f53",
-  "builtAt": "2026-11-17T10:30:35.012Z",
+  "hash": "2b0fa545a9f0d7e7",
+  "builtAt": "2026-11-17T17:39:36.078Z",
   "goals": [
     {
       "id": "G",
@@ -670,7 +670,8 @@
           "ask": "Is there a smarter way to score each option, instead of picking at random? How is the score made?",
           "assume": "UCB picks the option it is least sure about, the one tried the fewest times, whatever its average.",
           "hunch": "I'd guess UCB just goes for the option it knows least about, the one tried the fewest times.",
-          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial."
+          "key": "each option gets a score (its average plus a bonus) and UCB picks the option with the highest score. \"It adds a bonus\" without picking the highest score is partial.",
+          "confirm": "The score must be the average and the bonus added together, and the option with the highest score wins. Going by the bonus alone (\"the one with the highest bonus\", \"the highest bonus is UCB\") leaves the average out: wrong, also when it is said to correct the classmate. An option or a mean \"with a bonus\", without saying the two are added and the highest total wins (\"the best option but with a bonus\", \"a mean and a bonus\"), is partial."
         },
         {
           "id": "n11.f2",
