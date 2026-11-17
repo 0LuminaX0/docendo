@@ -35,13 +35,13 @@ export function defaults(topic = config.topic ?? DEFAULT_TOPIC): Settings {
     // a session of about an hour (2026-11-05; the pilot's setup, both pretest sets and both test forms, ran past an
     // hour and a half): the pretest of seven questions (7 since 2026-11-13: about 5 minutes in the pilot, under a hard
     // clock), the lesson (12), teaching (12 since 2026-11-12, script.json), four practice problems (17 since 2026-11-16,
-    // practice.json: 12 for three before; 65 minutes in all) and the final test of seven items (17 since 2026-11-16: 16 from 2026-11-13, but the pilots took 1.8 to 2.6
-    // minutes a question on a first form, and R, an expert, needed 16:05 for the seven). Both forms can still be switched on for calibrating items (no follow-up test then: no form is left for it).
+    // practice.json: 12 for three before; 66 minutes in all) and the final test of seven items (18 since 2026-11-17: 17 from 2026-11-16 and 16 from 2026-11-13, but the
+    // pilots took 1.8 to 2.6 minutes a question on a first form, R, an expert, needed 16:05 for the seven, and V21's four logs then replaced V4's one question). Both forms can still be switched on for calibrating items (no follow-up test then: no form is left for it).
     pretest: { on: true, both: false, minutes: 7 },
     watch: { on: true, parts: defaultLesson(pack), minutes: 12 },
     teach: { stopAfterMessages: 12, stopAfterMinutes: 8, fixed: true, mind: false, minutes: pack.script?.minutes ?? 10 },
     practice: { on: true, minutes: config.practiceMinutes ?? pack.practiceFile.minutes, tries: config.practiceTries },
-    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 17, review: false },
+    test: { followUp: false, followUpDays: config.delayedTestDays ?? 7, both: false, minutes: 18, review: false },
     // the study as it will run (2026-11-13): hard limits, Kai's mind hidden; the pilot runs on its shared code
     timing: { soft: false },
     survey: { on: true },
