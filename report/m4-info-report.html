@@ -48,6 +48,10 @@
   .cols li { color: var(--ink2); }
   .fine { font-size: 8.5pt; color: var(--ink2); margin-top: 5pt; padding-top: 5pt; border-top: 0.8pt solid var(--rule); }
   .contact { display: flex; gap: 6pt 22pt; flex-wrap: wrap; margin: 0 0 6pt; }
+  .facts dd .code { display: inline-block; margin: 1pt 0 0; padding: 1pt 5pt; border-radius: 3pt; background: #fde8e6; color: #c42b22; font-size: 11.5pt; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
+  .facts dd a { color: var(--blue); text-decoration: none; }
+  .start ol { margin: 2pt 0 6pt; padding-left: 14pt; } .start li { margin: 0 0 2.5pt; }
+  a.here { color: var(--blue); font-weight: 700; text-decoration: underline; }
   .contact a { color: var(--blue); font-weight: 600; text-decoration: none; }
 </style>
 </head>
@@ -57,9 +61,9 @@
 <p class="lede">Thank you for considering taking part. We are a student team in EPFL's CS-411 Digital Education, studying how people learn by explaining a topic to an AI classmate. Please read this page before you start.</p>
 
 <dl class="facts">
-  <div><dt>Where</dt><dd>docendo-jade.vercel.app<span>with the access code we send you</span></dd></div>
-  <div><dt>When</dt><dd>Tue 17 to Sun 29 November<span>start any time; finish by Sunday 23:59 (Swiss time)</span></dd></div>
-  <div><dt>How long</dt><dd>At most 66 minutes<span>plus about 4 minutes at the end, not timed</span></dd></div>
+  <div><dt>Your access code</dt><dd><span class="code">STUDY2026-NBDMYNN7</span><span>on <a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a></span></dd></div>
+  <div><dt>When</dt><dd>Tue 17 to Sun 29 November<span>finish by Sunday 23:59 (Swiss time)</span></dd></div>
+  <div><dt>How long</dt><dd>At most 66 minutes<span>plus about 4 untimed minutes</span></dd></div>
 </dl>
 
 <div class="box who">
@@ -76,14 +80,14 @@
 <table>
   <tr><td class="s"><span class="chip" style="background:#8a919c"></span>1 Short quiz</td><td class="t">7 min</td><td>A few questions about your background, and some maths and statistics.</td></tr>
   <tr><td class="s"><span class="chip" style="background:var(--red)"></span>2 Read a lesson</td><td class="t">12 min</td><td>A short text on multi-armed bandits, in three chapters.</td></tr>
-  <tr><td class="s"><span class="chip" style="background:var(--yellow)"></span>3 Teach Kai</td><td class="t">12 min</td><td>Explain the lesson to Kai, an AI classmate who missed it, by typing or speaking.</td></tr>
+  <tr><td class="s"><span class="chip" style="background:var(--yellow)"></span>3 Teach Kai</td><td class="t">12 min</td><td>Explain the lesson to Kai, an AI classmate who missed it.</td></tr>
   <tr><td class="s"><span class="chip" style="background:var(--green)"></span>4 Practice</td><td class="t">17 min</td><td>Four practice problems.</td></tr>
   <tr><td class="s"><span class="chip" style="background:var(--blue)"></span>5 Final test</td><td class="t">18 min</td><td>Seven multiple choice questions, each with a short reason.</td></tr>
   <tr><td class="s"><span class="chip" style="background:#c6cbd3"></span>6 Your view</td><td class="t">≈ 4 min</td><td>A few questions on how it went, then your score and the solutions.</td></tr>
 </table>
 
 <div class="box mind">
-  <b>Please plan about 70 uninterrupted minutes</b> somewhere you can concentrate, and take part only once. Every step has a time limit and moves on by itself, so a long break would cut a step short. <b>If you can, sit where you can talk out loud, with a microphone</b>: speaking to Kai is usually easier than typing (typing works too). Use only the website: no search engines, chatbots, notes or copying. A dictionary for English words is fine. <b>Please don't talk about the study</b> with anyone who might take part, until 30 November.
+  <b>Please plan about 70 uninterrupted minutes</b> somewhere you can concentrate, and take part only once. Every step has a time limit and moves on by itself, so a long break would cut a step short. <b>If you can, sit where you can talk out loud, with a microphone</b>: speaking to Kai is usually easier than typing. Use only the website: no search engines, chatbots, notes or copying. A dictionary for English words is fine. <b>Please don't talk about the study</b> with anyone who might take part, until 30 November.
 </div>
 
 <div class="cols">
@@ -91,24 +95,30 @@
 <h2>Your rights</h2>
 <ul>
   <li>Taking part is voluntary and unpaid. You can stop at any time, without giving a reason.</li>
-  <li>There are no known risks.</li>
-  <li>You can have your data deleted until <b>6 December 2026</b>: send us your participant number. After that, anonymous results go to the course staff and may be used in a course report or a scientific paper.</li>
+  <li>You can have your data deleted until <b>6 December 2026</b>: send us your participant number.</li>
 </ul>
 </div>
 <div>
 <h2>What we record</h2>
 <ul>
   <li>Your answers in the quiz, the practice and the test, your messages to Kai, and your answers at the end.</li>
-  <li>How you use the site: pages, clicks, time per step, switching tabs, typing and pasting, attempts to copy the lesson.</li>
-  <li>If you speak to Kai, only the written transcript is kept, not the audio.</li>
+  <li>How you use the site: pages, clicks, time per step, tab switches, typing, pasting and copying.</li>
+  <li>Spoken answers are kept as text only, never as audio.</li>
 </ul>
 </div>
 </div>
 <p class="fine">Everything is stored under a random <b>participant number</b> (note it down at the end), never your name, email, IP address or access code. Your messages to Kai are processed by AI models through OpenRouter, only by providers that do not store them.</p>
 
+<div class="start">
+<h2>How to start</h2>
+<ol>
+  <li>When you have about 70 minutes, open the website (the link in our WhatsApp group, or docendo-jade.vercel.app) and enter the access code from the top of this page. Or simply <a class="here" href="https://docendo-jade.vercel.app/?code=STUDY2026-NBDMYNN7">click here</a>: the website opens with your code filled in.</li>
+  <li>Tick the consent box and press Start. Ticking it confirms that you have read this page and agree to take part.</li>
+</ol>
+</div>
+
 <h2>Questions?</h2>
-<p>Send one of us a direct message (not in the group chat, so nothing reaches other participants), or email any of us:</p>
+<p>Message one of us directly (not in the group chat), or email any of us. Thank you!</p>
 <div class="contact"><a href="mailto:andrii.negrub@epfl.ch">andrii.negrub@epfl.ch</a><a href="mailto:phil.gustke@epfl.ch">phil.gustke@epfl.ch</a><a href="mailto:rafael.gueifaocruz@epfl.ch">rafael.gueifaocruz@epfl.ch</a></div>
-<p>Ticking the consent box on the first page confirms that you have read this page and agree to take part. Thank you!</p>
 </body>
 </html>
