@@ -26,11 +26,10 @@ const KEYS = "ABCDEF";
  * Chapter 3, one problem at a time, in two rounds (round 2 repeats round 1's
  * ideas in new settings). Direct feedback: the learner solves each problem, a
  * first try and one retry, each answered with a right/wrong light; before the
- * retry they say what they think went wrong, and after a right answer why it is
- * right. Recursive
- * feedback (KaiSolve): Kai solves it from its notebook and gets the light; after
- * a wrong answer the learner finds the faulty step and reteaches once, and Kai
- * tries again. Same problems, time and number of tries. Worked solutions come
+ * retry they say what they think went wrong (nothing after a right answer: the
+ * recursive condition writes only when Kai is wrong). Recursive feedback
+ * (KaiSolve): Kai solves it from its notebook and gets the light; after a wrong
+ * answer the learner writes one correction, and Kai tries again. Same problems, time and number of tries. Worked solutions come
  * after the final test in both. When the time runs out, the test starts.
  *
  * The whole time is for preparing (2026-11-16: the direct condition finished
@@ -59,7 +58,6 @@ export default function Practice({ items }: { items: Item[] }) {
   const [ready, setReady] = useState(false); // the pop-up "Go on to the final test?" is open (going on with time left)
   // revisit: a problem shown again (going back over the problems)
   const shownAt = useRef<{ id: string; at: number; revisit: boolean } | null>(null);
-  const explained = useRef<Record<string, string>>({}); // direct: the sentence on why, as last logged per problem
 
   // the clock starts on the first visit and keeps running across reloads
   useEffect(() => {
@@ -130,7 +128,6 @@ export default function Practice({ items }: { items: Item[] }) {
         solved: es.filter((e) => e.correct).length,
         firstTry: es.filter((e) => e.firstCorrect).length,
         tried: es.filter((e) => e.checks > 0).length,
-        explained: es.filter((e) => e.why?.trim()).length, // direct: right answers with their reason
         reflected: es.filter((e) => e.firstCorrect === false && e.mistake?.trim()).length, // direct: wrong first tries with the sentence on what went wrong
         reached: Math.min(Math.max(p?.furthest ?? 0, p?.current ?? 0) + 1, items.length),
       });
@@ -171,15 +168,14 @@ export default function Practice({ items }: { items: Item[] }) {
   // an attempt counts once the learner has made their call on it (until then nothing shows the outcome)
   const kaiDone = (k: KaiEntry) => k.attempts.some((a) => a.correct && a.call !== undefined) || k.attempts[1]?.call !== undefined;
   const finished = mode === "recursive" ? kaiDone(ke) : e.correct === true || e.checks >= tries;
-  // direct feedback: after a right answer the learner says why it is right, in a sentence, before going on (2026-11-12,
-  // as Okita & Schwartz's direct groups explained their rule after each round they won); any text counts
-  const explain = mode === "direct" && e.correct === true;
-  const unexplained = explain && !e.why?.trim();
   // direct feedback: after a wrong first try, before the retry, the learner says what they think went wrong (2026-11-17).
-  // The counterpart of the correction to Kai, so both conditions put a mistake into words before the second try (Okita
-  // & Schwartz's direct groups explained only after rounds they won: a stricter control). Required for the retry, any
-  // text counts; skipping the problem stays open, as in the recursive condition. Locked once the retry is checked
-  const reflect = mode === "direct" && e.firstCorrect === false && e.checks >= 1;
+  // The counterpart of the correction to Kai: both conditions write once per problem, only after a wrong first answer,
+  // and nothing after a right one (until 2026-11-17 a right answer also asked why it is right, as Okita & Schwartz's
+  // direct groups put their rule into words after each round they won: there the rule changed every round, here both
+  // conditions put the rules into words to Kai before practice).
+  // Required for the retry, any text counts; skipping the problem stays open, as in the recursive condition. Locked
+  // once the retry is checked; none with a single try (no retry to write it for)
+  const reflect = mode === "direct" && tries > 1 && e.firstCorrect === false && e.checks >= 1;
   const unreflected = reflect && !finished && !e.mistake?.trim();
   const last =index === items.length - 1;
   const inRound = items.filter((x) => x.round === q.round);
@@ -299,21 +295,12 @@ export default function Practice({ items }: { items: Item[] }) {
     </button>
   );
 
-  // moving on waits for Kai (or the check) to finish, and in the direct condition for the sentence on why
-  const held = !!busy || (unexplained && !over);
-
-  /** Direct: the sentence on why, logged as the learner leaves the problem (again after a later visit only if it changed). */
-  function logExplain() {
-    const t = e.why?.trim();
-    if (!explain || !t || explained.current[q.id] === t) return;
-    explained.current[q.id] = t;
-    track("practice_explain", { id: q.id, attempt: e.checks, chars: t.length, text: t.slice(0, 2000) });
-  }
+  // moving on waits for Kai (or the check) to finish
+  const held = !!busy;
 
   /** To another problem: any one already reached (back over them), or the next one (first visits keep the fixed order). */
   function go(to: number, via: "button" | "bar") {
     if (held || to === index || to < 0 || to >= items.length || to > furthest + 1) return;
-    logExplain();
     leaveProblem(via === "bar" ? "jump" : to < index ? "back" : finished ? "next" : "skip");
     if (to > index && !finished) track("practice_skip", { id: q.id, checks: e.checks });
     update((s: Saved) => {
@@ -328,7 +315,7 @@ export default function Practice({ items }: { items: Item[] }) {
     if (held) return;
     if (!last) return go(index + 1, "button");
     // with time left, ask first whether more preparation would help (past the time, soft clocks: straight on)
-    if (past) return (logExplain(), goTest("done"));
+    if (past) return goTest("done");
     setReady(true);
   }
 
@@ -336,7 +323,7 @@ export default function Practice({ items }: { items: Item[] }) {
   function answerReady(goOn: boolean) {
     track("practice_ready", { go: goOn, leftMs: left, index, reached: furthest + 1 });
     setReady(false);
-    if (goOn) (logExplain(), goTest("done"));
+    if (goOn) goTest("done");
   }
 
   const lit = e.correct === true ? "on" : e.correct === false ? "off" : "";
@@ -393,7 +380,7 @@ export default function Practice({ items }: { items: Item[] }) {
               <p className="lede">
                 {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}
                 {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right.{" "}
-                {tries > 1 ? "Before a retry you say in a sentence what you think went wrong, and after a right answer why it's right." : "After a right answer you say in a sentence why it's right."} Solutions after the final test. {prepare}
+                {tries > 1 ? "After a wrong first try you say in a sentence what you think went wrong, then try again. " : ""}Solutions after the final test. {prepare}
               </p>
             )}
           </div>
@@ -527,18 +514,6 @@ export default function Practice({ items }: { items: Item[] }) {
                   placeholder="Before you try again: the idea you think you misunderstood or got wrong, not just this problem's answer"
                 />
               )}
-              {explain && (
-                <Scratchpad
-                  id={`${q.id}-why`}
-                  where={`practice-why:${q.id}`}
-                  label="Why is this right?"
-                  value={e.why ?? ""}
-                  onChange={(v) => set(q.id, (x) => ({ ...x, why: v }))}
-                  rows={2}
-                  disabled={over}
-                  placeholder="In a sentence: which rule decides it, and how"
-                />
-              )}
             </div>
           </section>
         )}
@@ -552,7 +527,6 @@ export default function Practice({ items }: { items: Item[] }) {
           <button className={`btn go${finished ? " primary" : ""}`} onClick={next} disabled={held}>
             {last ? "Go to the final test" : finished ? "Next problem" : "Skip this problem"} <ArrowRight size={17} />
           </button>
-          {unexplained && !over && <span className="answered">Say in a sentence why it&apos;s right, then go on.</span>}
           <span className="answered">
             Problem {index + 1} of {items.length}
           </span>

@@ -373,12 +373,11 @@ try {
   throw e;
 }
 check((await page.$$(".prog li")).length === practiceItems.length, `practice shows ${practiceItems.length} problems`);
-// after a right answer the learner says in a sentence why it's right before going on (any text counts)
-const held = await page.$eval(".submitbar .btn.go", (b) => b.disabled);
-await page.focus(`#${practiceItems[0].id}-why`);
-await page.keyboard.type("B's average fell below A's, so greedy switched.");
-await page.waitForFunction(() => !document.querySelector(".submitbar .btn.go")?.disabled);
-check(held, "after a right answer, practice asks why it's right and goes on once there's a sentence");
+// after a right answer nothing more is asked (2026-11-17: the learner writes only after a wrong first try, as in the
+// recursive condition), so the next problem opens at once
+const asksWhy = !!(await page.$(`#${practiceItems[0].id}-why, #${practiceItems[0].id}-wrong`));
+const goFree = await page.$eval(".submitbar .btn.go", (b) => !b.disabled);
+check(!asksWhy && goFree, "after a right answer, practice asks nothing more and goes on");
 await nextProblem(1);
 // p2: a wrong option twice; between the tries, rewatch the lesson moment
 const p2 = practiceItems[1];
@@ -418,7 +417,7 @@ for (let n = 2; n < practiceItems.length; n++) await nextProblem(n);
 const prepLede = await page.$eval(".prac-title .lede .prepare", (e) => e.textContent).catch(() => "");
 await page.$eval(".prog li:first-child button", (e) => e.click());
 await page.waitForFunction(() => document.querySelector(".prog li")?.classList.contains("now"));
-const backRight = !!(await page.$(".pq .bulb.on")) && (await page.$eval(`#${practiceItems[0].id}-why`, (e) => e.value)).length > 0;
+const backRight = !!(await page.$(".pq .bulb.on"));
 for (let n = 1; n < practiceItems.length; n++) await nextProblem(n);
 await page.$eval(".submitbar .btn.back", (e) => e.click());
 await page.waitForFunction((k) => document.querySelectorAll(".prog li")[k]?.classList.contains("now"), {}, practiceItems.length - 2);
