@@ -106,7 +106,7 @@ export async function llmWrite(bundle: Bundle, state: State, move: Move, history
 export type Reaction = "answered" | "more" | "again" | "askedKai" | "unsure" | "moveOn" | "end";
 
 const REACT: Record<Reaction, string> = {
-  answered: `React to their answer like a student hearing it for the first time, the way HOW YOU FEEL says. Use only their words and ideas: add no reason, purpose, consequence, case or worry of your own. You can't tell whether they are right, so never say so: you take what they tell you as true.`,
+  answered: `React to their answer like a student hearing it for the first time, the way HOW YOU FEEL says. Use only their words and ideas: add no reason, purpose, consequence, case or worry of your own. You can't tell whether they are right, so never say so: you take what they tell you as true. Never complete their answer: if they said what happens in one case (an option picked, or not picked; early on, or later), don't add the other case, and never say which way something goes (grows, shrinks, switches, sticks, slows down, the highest) unless they said it themselves.`,
   more: `Their answer was short. React in one short sentence: the gist in their words if there is one, or that you'd like a bit more. Your request to say more comes right after your line.`,
   again: `Their message didn't answer your question: it may be a joke, gibberish, small talk or about something else. React lightly and kindly in one short sentence, the way a classmate would, without judging. Your question comes again right after your line.`,
   askedKai: `They asked YOU something. Answer only from your notebook. If your notebook doesn't hold the answer, say honestly that you don't know, that's why you're asking them.`,
@@ -128,7 +128,7 @@ Style: casual and warm, like a student thinking aloud, starting with a small wor
 // how a reaction feels: Kai's own understanding, never a verdict on the explanation (the judge's mood, said as Kai's)
 const FEELS: Record<keyof typeof REACTION, string> = {
   great: "It clicked for you. Say back the gist in a few of their words (at most eight). Don't say you didn't follow anything.",
-  okay: "You partly follow. Say back only the part you got, in a few of their words. Don't name anything you're missing or unsure about.",
+  okay: "You partly follow. Say back only the part you got, in a few of their words. Don't name anything you're missing or unsure about, and don't guess at the rest.",
   confused: "Nothing new clicked. Say kindly, in a few words, that you're not sure you follow yet, without saying what about.",
   neutral: "Calm.",
 };
@@ -147,7 +147,7 @@ export function reactPrompt(bundle: Bundle, state: State, kind: Reaction, histor
       content:
         `WHAT YOU JUST WROTE DOWN FROM THEIR LATEST MESSAGE:\n${notebookLines(bundle, state, state.turn)}\n\nCONVERSATION SO FAR:\n${recent}\n\nHOW YOU FEEL: ${FEELS[mood]}\n\nINSTRUCTION: ${REACT[kind]}` +
         (next ? `\n\n(Your next question is added after your line. Don't lead up to it or hint at what it asks.)` : "") +
-        (avoid.length ? `\n\nDo NOT use these words, they haven't taught you them: ${avoid.join(", ")}.` : "") +
+        (avoid.length ? `\n\nDo NOT use these words, nor anything that means the same: they haven't said them to you: ${avoid.join(", ")}.` : "") +
         `\n\nWrite only Kai's line.`,
     },
   ];

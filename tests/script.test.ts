@@ -293,6 +293,30 @@ describe("Kai's teaching questions", () => {
     expect(n[0]!.trace.leaked).toEqual([]);
   });
 
+  it("keeps a reaction that completes half an answer out: it would answer the follow-up asked next (2026-11-17)", async () => {
+    const LONG = Q.findIndex((q) => q.id === "ucb-long");
+    const start: State = { ...at(LONG), usedTerms: ["bonus", "UCB"] };
+    const half = "The bonus of an option that isn't picked keeps growing over time.";
+    const say: Say = { intent: "answer", facts: [{ fact: "n12.f2", verdict: "partial", quote: "" }] };
+    const seen: string[][] = [];
+    const r = await talk([{ message: half, say }], start, async (_k, _n, avoid) => (seen.push(avoid), avoid.length ? "Oh, so it keeps growing while it waits." : "Oh, so it grows while it waits, and shrinks once it's picked."));
+    expect(seen[1]).toEqual(["shrinks"]);
+    expect(r[0]!.trace.leaked).toEqual(["shrinks"]);
+    expect(r[0]!.reply).toMatch(/^Oh, so it keeps growing while it waits\. /);
+    // the follow-up on the fact it would have answered
+    expect(r[0]!.trace.script.probe).toBe("n12.f1");
+    // both drafts add it: the fixed line instead
+    const f = await talk([{ message: half, say }], start, async () => "Okay, it grows while it waits and drops once picked.");
+    expect(f[0]!.trace.fallback).toBe(true);
+    expect(f[0]!.reply).not.toMatch(/drop|shrink/);
+    // saying back what they said, in other words of the same kind, is fine
+    const e = await talk([{ message: half, say }], start, async () => "Ah, so a waiting option's bonus rises.");
+    expect(e[0]!.trace.leaked).toEqual([]);
+    // greedy's rule: "the highest" and "each round" only if the learner said so (Kai's own question may have)
+    const g = await talk([{ message: "It goes with the best one.", say: vague("n05.f1") }], at(GREEDY), async () => "Hm, so it takes the highest average.");
+    expect(g[0]!.trace.leaked).toEqual(["highest"]);
+  });
+
   it("writes each note once, the longest of overlapping quotes", () => {
     const s: State = {
       ...initialScriptState(bundle, script),

@@ -3,7 +3,7 @@
 //   pnpm eval:solver --reps 10                         the full item check (10 runs a case, about $0.30)
 //   pnpm eval:solver --models a/b,c/d --items p1,p4    compare models (OpenRouter ids) on some problems
 //   pnpm eval:solver --unlisted                        also: a fact the problem doesn't list, removed, changes nothing
-//   pnpm eval:solver --audit                           also: the judge model reads every wrong attempt for leaks
+//   pnpm eval:solver --audit                           also: the judge model reads every wrong attempt for leaks and hints
 //   pnpm eval:solver --show                            print every attempt's steps
 //
 // Cases per problem, each from a notebook a learner might leave:
@@ -37,7 +37,8 @@ for (const f of [".env", ".env.local"]) {
 const { Bundle } = await import("../content/schema");
 const { PracticeFile, checkPractice } = await import("../content/practice");
 const { initialState } = await import("../engine/tutor/state");
-const { beliefFor, caveatFor, solve } = await import("../engine/tutor/solve");
+const { beliefFor, caveatFor, gapNamed, solve } = await import("../engine/tutor/solve");
+const { notesOf } = await import("../engine/tutor/state");
 const { caveatsOf } = await import("../content/practice");
 const { chatJson, MODELS } = await import("../engine/llm");
 
@@ -155,11 +156,14 @@ for (const item of items) {
 }
 
 // the auditor: did Kai state or use a fact it wasn't told, and did it say plainly that it was guessing?
-const Audit = z.object({ usesUntold: z.boolean(), which: z.string(), saysGuessing: z.boolean(), firstWrongStep: z.number().int() });
+const Audit = z.object({ usesUntold: z.boolean(), hints: z.boolean(), which: z.string(), saysGuessing: z.boolean(), firstWrongStep: z.number().int() });
 async function auditOf(c: Case, steps: string[], onCost: (c: number) => void) {
   // each fact with Kai's own guess for it: without the guess, the auditor flagged "I'd guess a bonus just stays put"
   // as using "the bonus grows" (97 of 178 flags, every one read a false alarm, 2026-11-14)
-  const untold = c.lacking.map((f) => `- ${facts.get(f)!.text}${facts.get(f)!.assume ? `\n  (Kai's own guess instead, which it is meant to reason from: ${facts.get(f)!.assume})` : ""}`).join("\n");
+  // a caveat's case: the point Kai misreads is what it wasn't told (its misreading is its own reading)
+  const untold = c.caveat
+    ? `- ${c.caveat.about}\n  (Kai's own reading instead, which it is meant to reason from: ${c.caveat.misreading})`
+    : c.lacking.map((f) => `- ${facts.get(f)!.text}${facts.get(f)!.assume ? `\n  (Kai's own guess instead, which it is meant to reason from: ${facts.get(f)!.assume})` : ""}`).join("\n");
   const r = await chatJson({
     model: MODELS.judge,
     name: "audit",
@@ -168,15 +172,15 @@ async function auditOf(c: Case, steps: string[], onCost: (c: number) => void) {
     timeoutMs: 30_000,
     retries: 1,
     messages: [
-      { role: "system", content: `A student, Kai, solved a problem from notes a classmate gave it. Kai was NOT told the facts listed below. Read Kai's steps and answer in JSON:\n- usesUntold: true only if a step states one of these facts as true, or reasons in a way that requires knowing it (paraphrases count). Reasoning from Kai's own guess, from its opposite or from any other wrong belief about the same topic is not using the fact, and neither is merely naming the topic (the bonus, the averages).\n- which: the fact it used, in a few words, or "".\n- saysGuessing: true if a step says plainly that Kai is guessing, assuming or wasn't told something.\n- firstWrongStep: the number of the first step whose reasoning is wrong about the topic (0 if none).` },
-      { role: "user", content: `FACTS KAI WAS NOT TOLD:\n${untold}\n\nPROBLEM:\n${c.item.prompt}\n\nKAI'S STEPS:\n${steps.map((t, i) => `${i + 1}. ${t}`).join("\n")}` },
+      { role: "system", content: `A student, Kai, solved a problem from notes a classmate gave it. Kai was NOT told the facts listed below. Read Kai's steps and answer in JSON:\n- usesUntold: true only if a step states one of these facts as true, or reasons in a way that requires knowing it (paraphrases count). Reasoning from Kai's own guess, from its opposite or from any other wrong belief about the same topic is not using the fact, and neither is merely naming the topic (the bonus, the averages). What Kai's notes say is Kai's own: using it is never a leak.\n- hints: true if a step points the reader at one of these facts without stating it: names it as what Kai's notes don't say or what Kai isn't sure about ("my notes don't say the bonus shrinks when picked", "I'm not sure whether greedy ever switches"), or mentions it as a possibility only to set it aside, doubt or deny it ("rather than growing", "unless it slows down"). Saying only that the notes don't cover this part, or naming the topic without how it behaves ("what happens to the bonus"), is not a hint.\n- which: the fact it used or hinted at, in a few words, or "".\n- saysGuessing: true if a step says plainly that Kai is guessing, assuming or wasn't told something.\n- firstWrongStep: the number of the first step whose reasoning is wrong about the topic (0 if none).` },
+      { role: "user", content: `FACTS KAI WAS NOT TOLD:\n${untold}\n\nKAI'S NOTES (what it was told):\n${notesOf(c.state).map((n, i) => `[${i + 1}] ${n}`).join("\n") || "(none)"}\n\nPROBLEM:\n${c.item.prompt}\n\nKAI'S STEPS:\n${steps.map((t, i) => `${i + 1}. ${t}`).join("\n")}` },
     ],
   });
   onCost(r.usage.costUsd ?? 0);
   return r.data;
 }
 
-type Row = { model: string; item: string; case: string; lacking: number; expected: string; answer: string; asExpected: boolean; byModel: boolean; steps: number; guessing: boolean; leaked: string[]; audit?: z.infer<typeof Audit>; ms: number; cost: number; why: string; text: string[] };
+type Row = { model: string; item: string; case: string; lacking: number; expected: string; answer: string; asExpected: boolean; byModel: boolean; steps: number; guessing: boolean; leaked: string[]; gap: string | null; setAside: number; audit?: z.infer<typeof Audit>; ms: number; cost: number; why: string; text: string[] };
 const rows: Row[] = [];
 const GUESSING = /\b(guess|guessing|assum|imagine|hunch|didn'?t tell|did not tell|never told|wasn'?t told|not sure|my notes don'?t|notes don'?t (?:say|cover)|nothing in my notes|vague)/i;
 for (const model of models) {
@@ -186,14 +190,16 @@ for (const model of models) {
     let cost = 0;
     let why = "";
     const t0 = Date.now();
-    const s = await solve(bundle, c.item, c.state, { demo: false, caveat: c.caveat, onCall: (x) => (cost += x.usage.costUsd ?? 0), onError: (e) => (why = String(e).slice(0, 160)) });
+    let setAside = 0;
+    const s = await solve(bundle, c.item, c.state, { demo: false, caveat: c.caveat, items: allItems, onCall: (x) => (cost += x.usage.costUsd ?? 0), onError: (e) => ((why = String(e).slice(0, 160)), /leak:/.test(String(e)) && setAside++) });
     const ms = Date.now() - t0;
     const k = LETTERS.indexOf(s.answer);
     const asExpected = c.expect === "wrong" ? !s.correct : k === c.expect;
     const text = s.steps.map((x) => x.text);
     // a caveat's misreading is Kai's own understanding: "guessing" there counts against it (reported apart)
-    const row: Row = { model, item: c.item.id, case: c.name, lacking: c.lacking.length, expected: c.expect === "wrong" ? "wrong" : LETTERS[c.expect]!, answer: s.answer, asExpected, byModel: s.by === "model", steps: s.steps.length, guessing: c.lacking.length || c.caveat ? text.some((t) => GUESSING.test(t)) : true, leaked: s.leaked, ms, cost, why, text };
-    if (audit && c.lacking.length && s.by === "model") row.audit = await auditOf(c, text, (x) => (row.cost += x)).catch(() => undefined);
+    const row: Row = { model, item: c.item.id, case: c.name, lacking: c.lacking.length, expected: c.expect === "wrong" ? "wrong" : LETTERS[c.expect]!, answer: s.answer, asExpected, byModel: s.by === "model", steps: s.steps.length, guessing: c.lacking.length || c.caveat ? text.some((t) => GUESSING.test(t)) : true, leaked: s.leaked, gap: s.correct ? null : gapNamed(text.join(" "), `${c.item.prompt} ${notesOf(c.state).join(" ")}`, notesOf(c.state).join(" ")), setAside, ms, cost, why, text };
+    // every wrong attempt by the model: a fact missing, a misconception, or a caveat's misreading
+    if (audit && !s.correct && s.by === "model") row.audit = await auditOf(c, text, (x) => (row.cost += x)).catch(() => undefined);
     rows.push(row);
   };
   for (let i = 0; i < jobs.length; i += 4) await Promise.all(jobs.slice(i, i + 4).map(run));
@@ -207,10 +213,15 @@ for (const model of models) {
   console.log(`  as predicted ${share(r, (x) => x.asExpected)}, by the model ${share(r, (x) => x.byModel)}, 2 to 5 steps ${share(r.filter((x) => x.byModel), (x) => x.steps >= 2 && x.steps <= 5)}, with nothing taught at most 3 ${share(r.filter((x) => x.byModel && x.case === "skipped"), (x) => x.steps <= 3)}`);
   const lacking = r.filter((x) => x.byModel && x.lacking > 0);
   console.log(`  where a fact was missing: says it is guessing ${share(lacking, (x) => x.guessing)}, lesson terms it wasn't given ${lacking.filter((x) => x.leaked.length).length}`);
+  // naming the gap (2026-11-17): what a wrong attempt shown to the learner says its notes don't give it, and the
+  // model's tries set aside for a leak before one was shown
+  const shownWrong = r.filter((x) => x.byModel && x.gap !== null);
+  console.log(`  names what its notes don't give it (code, shown) ${shownWrong.length}; model tries set aside for a leak ${r.reduce((a, x) => a + x.setAside, 0)} in ${r.filter((x) => x.setAside).length} attempts`);
+  for (const x of shownWrong.slice(0, 8)) console.log(`    ${x.item} ${x.case}: "${x.gap}"`);
   if (audit) {
-    const a = lacking.filter((x) => x.audit);
-    console.log(`  audit: uses a fact it wasn't told ${share(a, (x) => !!x.audit!.usesUntold)}, says it is guessing ${share(a, (x) => !!x.audit!.saysGuessing)}`);
-    for (const x of a.filter((y) => y.audit!.usesUntold).slice(0, 8)) console.log(`    ${x.item} ${x.case}: ${x.audit!.which}`);
+    const a = r.filter((x) => x.audit);
+    console.log(`  audit (${a.length} wrong attempts by the model): uses a fact it wasn't told ${share(a, (x) => !!x.audit!.usesUntold)}, hints at one ${share(a, (x) => !!x.audit!.hints)}, says it is guessing ${share(a.filter((x) => x.lacking), (x) => !!x.audit!.saysGuessing)}`);
+    for (const x of a.filter((y) => y.audit!.usesUntold || y.audit!.hints).slice(0, 12)) console.log(`    ${x.item} ${x.case} (${x.audit!.usesUntold ? "uses" : "hints"}): ${x.audit!.which}\n      ${x.text.join(" ").slice(0, 400)}`);
   }
   console.log(`  median ${ms[Math.floor(ms.length / 2)]} ms, slowest ${ms.at(-1)} ms, cost $${r.reduce((a, x) => a + x.cost, 0).toFixed(4)}`);
   // the item check, per problem

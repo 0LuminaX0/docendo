@@ -1,6 +1,7 @@
 import type { Bundle } from "../../content/schema";
 import type { ScriptFile } from "../../content/pack";
 import { forbiddenTerms } from "./admit";
+import { addedClaims } from "./claims";
 import { CONFIG, type Move, type ReadyReason } from "./policy";
 import { activeMisconceptions, initialState, latest, memo, notesOf, progress, type State } from "./state";
 import { mindView } from "./mind";
@@ -260,14 +261,18 @@ export async function takeScriptTurn(
   let lead = "";
   // the reaction is not what the turn is for: a writer that fails or times out leaves the fixed line
   const react = deps.react && ((avoid: string[]) => deps.react!(bundle, state, kind, history, end ? null : tail, feels, avoid).catch(() => ((fallback = true), "")));
+  // a lesson term the learner hasn't used, or a way a rule goes that this message didn't say (addedClaims: Kai
+  // completing half an answer would answer the follow-up it asks next)
+  const given = [input.message, kaiLast, ...notes, ...(kind === "askedKai" ? notesOf(state) : [])].join("\n");
+  const unsaid = (line: string) => [...untaught(bundle, script, state, line), ...addedClaims(line, given)];
   if (react) {
     lead = await react([]);
     drafts.push(lead);
-    leaked = untaught(bundle, script, state, lead);
+    leaked = unsaid(lead);
     if (leaked.length) {
       lead = await react(leaked);
       drafts.push(lead);
-      const again = untaught(bundle, script, state, lead);
+      const again = unsaid(lead);
       if (again.length) (fallback = true), (lead = "");
       leaked = [...new Set([...leaked, ...again])];
     }

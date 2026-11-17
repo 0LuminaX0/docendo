@@ -4,7 +4,7 @@ import { caveatsOf, checkPractice, parseNumber, type Caveat, type PracticeItem }
 import { chatJson, MODELS, type OnCall } from "../llm";
 import { forbiddenTerms } from "./admit";
 import { activeMisconceptions, latest, notesOf, type State } from "./state";
-import { termsUsed } from "./judge";
+import { findQuote, termsUsed } from "./judge";
 
 // Recursive feedback: Kai solves a practice problem from its notebook alone.
 // The solver model sees only the problem and Kai's numbered notes (the
@@ -144,8 +144,13 @@ Solve the problem using ONLY your notes, thinking aloud like a student:
 - In the last step, say your conclusion in words (not as an option number).
 - answer: for a question with options, the number of the option you choose (1, 2, 3 or 4); for a number question, just the number.`;
 
+// what Kai may say about a gap in its notes (2026-11-17): that there is one, nothing more. Asked to "say plainly that it's
+// your own guess, since your notes don't cover it", the model named what they don't cover ("my notes don't say a bad
+// day makes greedy switch"), and a learner copies that into the correction
+const NO_GAP = ` When you say your notes don't cover something, write exactly "My notes don't cover this part." and nothing more about it: never say what they don't say, what the part is about or which option or case it concerns, never describe what the missing part might be or how it might work, and never mention a possibility you are not going with, not even to doubt or reject it (no "whether it shrinks", "for the picked option", "rather than switching", "unless it slows down").`;
+
 // a misconception or a vague note: the model solves freely, its notes lead it
-const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say that you're not sure and guess like a beginner; never fill the gap with what you think the right rule is, and never hint at what it might be.`;
+const UNSURE = `\n\nYour notes may not tell you everything this problem needs. Where they are silent, say that you're not sure and guess like a beginner; never fill the gap with what you think the right rule is, and never hint at what it might be.${NO_GAP}`;
 
 // a guess is a beginner's hunch, not a rule: said once, briefly and unsure, in Kai's own words, and without blaming the
 // classmate. With next to nothing in the notes Kai keeps it short: a beginner doing their best, not a worked solution
@@ -158,7 +163,7 @@ const fromGuess = (guess: Guess, item: PracticeItem, vague: boolean) => `
 
 ${vague ? "Your notes are vague about one thing this problem needs, and you understood them this way" : "Your notes say nothing about one thing this problem needs. For that part you go with your own guess"}, which you believe:
 "${guess.belief}"
-Reason from your notes and this ${vague ? "understanding" : "guess"}, so that your conclusion follows from it: ${conclusion(item, guess.answer)}. When you first use it, say plainly that ${vague ? "this is how you understood your notes" : "it's your own guess, since your notes don't cover it"}. Never weigh other rules, never mention what the right rule might be, and never change your mind at the end.`;
+Reason from your notes and this ${vague ? "understanding" : "guess"}, so that your conclusion follows from it: ${conclusion(item, guess.answer)}. When you first use it, say plainly that ${vague ? "this is how you understood your notes" : "it's your own guess"}. Never weigh other rules, never mention what the right rule might be, and never change your mind at the end.${NO_GAP}`;
 
 /** How Kai words its guess: the hunch the graph pairs with that assumption (assume → hunch, assumeVague → hunchVague). */
 export function hunchFor(bundle: Bundle, guess: Guess): string | undefined {
@@ -172,7 +177,7 @@ const conclusion = (item: PracticeItem, answer: number) => (item.kind === "choic
 /** The longest one try at solving can take (llmSolve: two attempts of 18 s). */
 export const SOLVE_TRY_MS = 37_000;
 
-const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes, do exactly what is asked above, and check each comparison and calculation before you conclude.`;
+const STRICTER = `\n\nImportant: a previous try went wrong. Use only your notes, do exactly what is asked above, and check each comparison and calculation before you conclude. Say nothing about what your notes leave out beyond "My notes don't cover this part".`;
 
 // signs that the model argued its way to the key and then turned around
 const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|right) (?:answer|rule|option)|(?:but|however),? (?:i(?:'m| am) (?:told|supposed)|i (?:have|need) to (?:pick|choose|go with))|i(?:'ll| will) (?:pick|choose|go with) (?:a |an )?(?:wrong|incorrect|different))/i;
@@ -213,6 +218,80 @@ const SILENT = new RegExp(
 /** Where a text says what Kai's notes leave out ("my notes don't say…", "I wasn't told…"), else null. */
 export const notesLeaveOut = (text: string): string | null => SILENT.exec(text)?.[0] ?? null;
 
+// Naming the gap (2026-11-17): on the guess and misconception paths Kai may say that its notes don't cover something,
+// but only that. A local session had "my notes don't say greedy ever changes its choice after the trials", and a team
+// test "I don't have in my notes that the bonus shrinks, so…": the learner copies the missing rule into the correction
+// and Kai, reading it back, is right for teaching it never got. Kai's notes thin on something (SILENT, plus "my notes
+// lack", "I don't have anything on"), unsure whether something holds, or a possibility named only to set it aside
+// ("rather than growing")
+const THIN = new RegExp(
+  [
+    SILENT.source,
+    String.raw`\bnotes? (?:lack|lacks|miss|misses|are missing|is missing)\b|\b(?:missing|absent) (?:from|in) (?:my|the) notes\b`,
+    String.raw`\b(?:they|it) (?:don'?t|doesn'?t|do not|does not|didn'?t|did not) (?:really |actually )?(?:say|mention|cover|tell|specify|state|explain|address|show|give|describe)\b`,
+    String.raw`\bi (?:don'?t|do not) have (?:anything|any|a note|notes|info\w*)\b`,
+    String.raw`\b(?:not sure|unsure|no idea|can'?t tell|cannot tell|don'?t know|do not know|wonder(?:ing)?)\b[^.;:,]{0,20}?\b(?:whether|if)\b`,
+  ].join("|"),
+  "i",
+);
+const CONTRAST = /\b(?:rather than|instead of|as opposed to)\b/i;
+// words that say the notes are thin, or are about the problem in general, and name no rule
+const GENERIC = new Set(
+  (
+    "the and for with not but nor any all one ones its it's this that these those there here what which who how when where why then than " +
+    "notes note say says said saying mention mentions mentioned cover covers covered tell tells told specify specifies state states explain explains " +
+    "address talk talks include includes discuss show shows give gives clarify spell describe describes nothing little silent quiet unclear vague clear " +
+    "specific specifically explicit explicitly sure leave leaves left only just was wasn were weren never got nobody have has had haven hasn been really " +
+    "anything something much about part parts bit piece happens happen happened work works working behave behaves act acts apply applies applied does " +
+    "doing don doesn didn isn aren can cannot could would will won shall should may might must case problem question situation thing things kind sort " +
+    "quite very more else well way need needs know knows knew see find guess guessing hunch assume assuming idea unsure wonder wondering whether rather " +
+    "instead opposed okay also though too either exactly enough detail details help lot are you your they them their from into over after before ever " +
+    "lack lacks missing absent info information actually exact precise precisely beyond other side point mine own " +
+    "lecture lectures classmate class lesson play plays played out detail details made make makes there from yet"
+  ).split(" "),
+);
+// what the problem talks about anyway (a rule's topic, not how it behaves)
+const TOPIC = new Set(
+  "bonus bonuses average averages score scores option options pick picks picked picking choose chooses chose chosen choosing round rounds rule rules strategy strategies result results reward rewards try tries tried time times step steps value values number greedy ucb bandit bandits".split(" "),
+);
+const RULES = new Set("greedy ucb bandit bandits".split(" "));
+const ONLY_SAY = /\bnotes? (?:only|just) (?:say|says|said|mention|mentions|talk|cover|covers|tell|tells|give|gives)\b/i;
+const stem = (w: string) => w.replace(/ies$/, "y").replace(/(?:ing|ed|es|s)$/, "");
+const wordsOf = (t: string) => (t.toLowerCase().match(/[a-z]+/g) ?? []).filter((w) => w.length >= 3);
+
+/**
+ * Where a wrong attempt names what Kai's notes don't give it, else null: a clause that says the notes are thin (or that
+ * Kai isn't sure whether something holds) and says anything about what is missing beyond generic words, the rules'
+ * names and Kai's own notes said back ("my notes don't say greedy ever changes its choice",
+ * "I'm not sure whether the bonus shrinks", "my notes don't cover what happens to a picked option's bonus": that one
+ * names no rule, but "picked" is the very difference a guess that every bonus shrinks misses); or a possibility named
+ * only to set it aside ("it stays put rather than growing"; there the problem's own words are fine: "instead of
+ * Flashcards"). Saying only that the notes don't cover this part is fine. `known`: the problem's text and Kai's notes.
+ */
+export function gapNamed(text: string, known: string, notes = ""): string | null {
+  const allowed = new Set(wordsOf(known).map(stem));
+  const own = new Set(wordsOf(notes).map(stem));
+  const generic = (w: string) => GENERIC.has(w) || GENERIC.has(stem(w));
+  // about the notes' gap: only generic words and the rules' names (not which option or case: "for Flashcards and
+  // Listening" says it is the options not picked); Kai's own notes only where it
+  // says them back ("my notes just say UCB adds some bonus"), else their words would name the gap ("my notes don't
+  // cover the bonus of an option that isn't picked", with a note on picked options)
+  const thin = (clause: string) => {
+    const back = ONLY_SAY.test(clause);
+    return wordsOf(clause).find((w) => !generic(w) && !RULES.has(w) && !(back && own.has(stem(w))) && !(own.has(stem(w)) && !TOPIC.has(w)));
+  };
+  // a possibility set aside: anything beyond the problem's own words and the topic
+  const aside = (clause: string) => wordsOf(clause).find((w) => !generic(w) && !TOPIC.has(w) && !allowed.has(stem(w)) && !own.has(stem(w)));
+  // a note quoted word for word is Kai's own ("My notes only say “…”"); a guess starts a clause of its own
+  const plain = text.replace(/“[^”]*”|"[^"]*"/g, " ").replace(/(\d)\.(\d)/g, "$1$2").replace(/\b(?=(?:i'?d|i would|i'?ll|i will|my (?:best )?(?:guess|hunch))\b)/gi, "|");
+  for (const clause of plain.split(/[|.;:!?()[\],—–]|\b(?:so|but|because|since|while|though|although|then|which)\b/i)) {
+    if (THIN.test(clause) && thin(clause)) return clause.trim();
+    const c = CONTRAST.exec(clause);
+    if (c && aside(clause.slice(c.index + c[0].length))) return clause.trim();
+  }
+  return null;
+}
+
 export function pointLeak(item: PracticeItem, state: State, steps: Step[], misread: boolean): string | null {
   const text = steps.map((s) => s.text).join(" ");
   const silent = misread ? SILENT.exec(text) : null;
@@ -249,6 +328,50 @@ export function backstopLeak(items: PracticeItem[], item: PracticeItem, state: S
     }
   }
   return null;
+}
+
+/** A wrong attempt that names its gap (gapNamed), as a reason to set it aside, else null. */
+function namedGap(item: PracticeItem, notes: string[], steps: Step[]): string | null {
+  const g = gapNamed(steps.map((s) => s.text).join(" "), `${item.prompt} ${notes.join(" ")}`, notes.join(" "));
+  return g ? `it named what its notes don't give it ("${g}")` : null;
+}
+
+// the judge's reading: the words of the note that say the point, why, and then its call (reasons first: on P7's points
+// a bare yes or no was wrong in 3 of 12 notebooks that leave them open, 2026-11-17)
+const Covers = z.object({ quote: z.string(), why: z.string(), says: z.boolean() });
+
+/**
+ * Does one of Kai's notes say the caveat's point, in any words? Asked in a call of its own when the solver answered the
+ * key while the caveat's pattern finds the point in no note. The judge quotes the words that say it, and code checks
+ * the quote is in a note (findQuote, as for every verdict while teaching). Fails closed: no model, no answer, or a
+ * quote that isn't Kai's counts as no.
+ */
+export async function notesSay(c: Caveat, notes: string[], onCall?: OnCall): Promise<boolean> {
+  if (!notes.length) return false;
+  try {
+    // the solver model, in a call of its own (it never writes Kai's steps here): the judge model's call on the same
+    // notebook flipped from one try to the next on P7's lock-in (1 of 5), this one held (5 of 5)
+    const r = await chatJson({
+      model: MODELS.solver,
+      name: "covers",
+      schema: Covers,
+      temperature: 0,
+      maxTokens: 900,
+      timeoutMs: 15_000,
+      retries: 1,
+      messages: [
+        {
+          role: "system",
+          content: `A student's notes are listed below, in a classmate's words. On a practice problem the student could read them this way: ${JSON.stringify(c.misreading)}\nThat reading misses this point: ${JSON.stringify(c.about)}\nDoes a note say that point, in any words? It counts if a note states the general idea the point rests on; it needn't mention the problem's options or numbers. It doesn't count if the notes only say something on the same topic that leaves the point open, or a different rule from which a careful reader could at best work it out.\nAnswer in JSON: quote (the exact words of the note that say the point, copied, or "" if none), why (one sentence: what those words say, and whether that is the point), says (true only if the quote says the point).`,
+        },
+        { role: "user", content: notes.map((n, i) => `[${i + 1}] ${n}`).join("\n") },
+      ],
+    });
+    onCall?.({ role: "covers", model: MODELS.solver, ms: r.ms, usage: r.usage });
+    return r.data.says && !!r.data.quote.trim() && notes.some((n) => findQuote(n, r.data.quote) !== null);
+  } catch {
+    return false;
+  }
 }
 
 export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false, caveat?: Caveat): Promise<Solution> {
@@ -299,8 +422,13 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     const misread = item.kind === "choice" ? LETTERS.indexOf(answer) === caveat.answer : sameNumber(answer, caveat.answer);
     if (!misread && !isRight(item, answer)) throw new Error(`the solver's answer is neither the key nor the caveat's misreading (answered ${answer})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
-    const leak = misread ? pointLeak(item, state, steps, true) : null;
+    const leak = misread ? (pointLeak(item, state, steps, true) ?? namedGap(item, notes, steps)) : null;
     if (leak) throw new Error(`leak: ${leak}`);
+    // the key while the notes leave the point open (by the caveat's pattern): right only if a note says it in other
+    // words. The model writing Kai's steps is never told the point (2026-11-17), so it can't make that call; it read
+    // P8 right from notes without the slowing ("its bonus keeps shrinking, so it takes longer to win again each time").
+    // The judge model, told the point, reads the notes
+    if (!misread && !(await notesSay(caveat, notes, onCall))) throw new Error(`leak: right with ${caveat.id ?? "the caveat"}'s point, which no note says`);
     return { steps, answer, correct: !misread, notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, caveat: misread ? "misread" : "covered", caveatId: caveat.id };
   }
   if (guess) {
@@ -309,7 +437,7 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     if (!lands) throw new Error(`the solver didn't follow its guess (answered ${answer}, the guess leads to ${answerText(item, guess.answer)})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
   }
-  const leak = isRight(item, answer) ? null : pointLeak(item, state, steps, false);
+  const leak = isRight(item, answer) ? null : (pointLeak(item, state, steps, false) ?? namedGap(item, notes, steps));
   if (leak) throw new Error(`leak: ${leak}`);
   return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess };
 }

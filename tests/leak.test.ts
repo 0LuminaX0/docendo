@@ -1,15 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The solver's model, replaced: each test queues the replies it should give (the last one repeats), and every prompt
-// it was sent is kept
+// it was sent is kept. The judge's check whether a note says a caveat's point ("covers") answers `covers` and is kept
+// apart: it is told the point, the model writing Kai's steps never is
 const replies: unknown[] = [];
 const prompts: string[] = [];
+const judged: string[] = [];
+let covers = { quote: "", why: "", says: false };
 vi.mock("../engine/llm", async (original) => {
   const real = await original<typeof import("../engine/llm")>();
   return {
     ...real,
-    chatJson: vi.fn(async (opts: { messages: { content: string }[] }) => {
-      prompts.push(opts.messages.map((m) => m.content).join("\n"));
+    chatJson: vi.fn(async (opts: { name: string; messages: { content: string }[] }) => {
+      const text = opts.messages.map((m) => m.content).join("\n");
+      if (opts.name === "covers") return (judged.push(text), { data: covers, usage: { promptTokens: 0, completionTokens: 0 }, ms: 1 });
+      prompts.push(text);
       const data = replies.length > 1 ? replies.shift() : replies[0];
       return { data, usage: { promptTokens: 0, completionTokens: 0 }, ms: 1 };
     }),
@@ -21,7 +26,7 @@ import practiceJson from "../topics/bandits/practice.json";
 import { Bundle } from "../content/schema";
 import { PracticeFile, caveatsOf } from "../content/practice";
 import { initialState, type State } from "../engine/tutor/state";
-import { backstopLeak, caveatFor, gate, offlineSolve, pointLeak, solve } from "../engine/tutor/solve";
+import { backstopLeak, caveatFor, gapNamed, gate, offlineSolve, pointLeak, solve } from "../engine/tutor/solve";
 
 const bundle = Bundle.parse(bundleJson);
 const practice = PracticeFile.parse(practiceJson);
@@ -65,6 +70,8 @@ const said = (s: { steps: { text: string }[] }) => s.steps.map((x) => x.text).jo
 beforeEach(() => {
   replies.length = 0;
   prompts.length = 0;
+  judged.length = 0;
+  covers = { quote: "", why: "", says: false };
 });
 
 describe("Kai never hands the learner the point it misreads (2026-11-17)", () => {
@@ -206,5 +213,110 @@ describe("Kai never hands the learner the point it misreads (2026-11-17)", () =>
     const s = await solve(bundle, p8, vague, { demo: false, onError: (e) => errors.push(String(e)) });
     expect(errors[0]).toMatch(/leak:.*slowing/);
     expect([s.by, s.answer]).toEqual(["model", "A"]);
+  });
+});
+
+describe("no wrong attempt names what its notes don't give it (2026-11-17)", () => {
+  const p7 = item("p7");
+  const p2 = item("p2");
+  const given = (p: typeof p7, s: State) => `${p.prompt} ${s.notebook.map((e) => e.words).join(" ")}`;
+  const empty = initialState(bundle);
+
+  it("finds a gap named by what it lacks, and passes a gap only acknowledged", () => {
+    const leaks: [typeof p7, string][] = [
+      // a local session (2026-11-05) and the team's report (2026-11-17)
+      [p7, "Day 4 gives B a 5, but my notes don't say greedy ever changes its choice after the trials, so I'll assume it keeps B."],
+      [p2, "I don't have in my notes that the bonus shrinks, so I will guess it grows."],
+      [p2, "I'm not sure whether a picked option's bonus shrinks, so I'd guess every bonus stays put."],
+      [p2, "I'd guess the bonus of Flashcards just stays put rather than growing."],
+      [p7, "My notes don't say a bad day makes greedy switch."],
+      [p8, "My notes don't say how big the bonuses are or how quickly they shrink."],
+      // naming the topic points too: "picked" is the very difference a guess that every bonus shrinks misses
+      [p2, "My notes don't say what happens to a bonus when its option is picked, so this is my own guess."],
+      [p2, "My notes say nothing about how these bonuses change."],
+    ];
+    for (const [p, t] of leaks) expect(gapNamed(t, given(p, empty)), t).not.toBeNull();
+    const fine: [typeof p7, string][] = [
+      [p2, "My notes don't cover this part, so I'd guess every bonus just shrinks as the rounds go by, picked or not."],
+      [p2, "My notes don't cover this part."],
+      [p8, "I don't have anything from the lecture to work with here, so I'll keep it simple."],
+      [p7, "My notes say “greedy picks the best”, but I'm not sure how that applies here. I'd guess greedy just goes with whichever looks best after the first tries and stays with it."],
+      [p2, "UCB picked Dialogues instead of Flashcards."],
+    ];
+    for (const [p, t] of fine) expect(gapNamed(t, given(p, empty)), t).toBeNull();
+    // what the notes say is Kai's own: "my notes only say “…”" quotes them
+    const vague: State = { ...empty, notebook: [{ fact: "n12.f1", verdict: "partial", words: "the bonus changes when you pick something", turn: 1 }] };
+    expect(gapNamed("My notes only say “the bonus changes when you pick something”. The way I picture it, the bonus grows at a steady pace.", given(p2, vague))).toBeNull();
+  });
+
+  it("lets Kai say its notes back, but not use their words to name the gap", () => {
+    const picked = "every time you pick an option its bonus gets smaller, picking the others doesn't make it smaller";
+    const k = `${p2.prompt} ${picked}`;
+    expect(gapNamed("My notes don't cover what happens to the bonus of an option that isn't picked.", k, picked)).not.toBeNull();
+    expect(gapNamed("My notes just say every time you pick an option its bonus gets smaller.", k, picked)).toBeNull();
+    // nor which options it concerns: the ones not picked
+    expect(gapNamed("My notes don't cover this part for Flashcards and Listening.", k, picked)).not.toBeNull();
+  });
+
+  it("never names one in the offline attempt, whatever the notebook", () => {
+    const wrongly: State = { ...session5, misconceptions: [{ node: "n05", fact: "n05.f1", words: "greedy picks the best one after the first tries and then always stays with it", turn: 6 }] };
+    const thin: State = { ...empty, turn: 1, notebook: [{ fact: "n12.f2", verdict: "partial", words: "the bonus of an option you don't pick grows over time", turn: 1 }] };
+    for (const p of practice.items)
+      for (const s of [empty, thin, wrongly, session5]) {
+        const o = offlineSolve(bundle, p, s, caveatFor(practice.items, p, s, 0));
+        if (!o.correct) expect(gapNamed(said(o), given(p, s)), `${p.id}: ${said(o)}`).toBeNull();
+      }
+  });
+
+  it("sets aside a guess that names its gap, shows the next clean try, and tells the model not to", async () => {
+    const naming = { steps: [{ text: "My notes don't say greedy ever changes its choice after the trials.", notes: [] }, { text: "I'd guess greedy just goes with whichever looks best after the first tries and stays with it, so it keeps B.", notes: [] }], answer: "1" };
+    const plain = { steps: [{ text: "My notes don't cover this part.", notes: [] }, { text: "I'd guess greedy just goes with whichever looks best after the first tries and stays with it, so it keeps B.", notes: [] }], answer: "1" };
+    replies.push(naming, plain);
+    const errors: string[] = [];
+    const s = await solve(bundle, p7, empty, { demo: false, onError: (e) => errors.push(String(e)) });
+    expect(errors[0]).toMatch(/leak:.*named what its notes don't give it/);
+    expect([s.by, s.answer, said(s)]).toEqual(["model", "A", said(plain)]);
+    expect(prompts[0]).toMatch(/never say what they don't say/);
+    // every try names it: the offline attempt's fixed wording
+    replies.length = 0;
+    replies.push(naming);
+    const off = await solve(bundle, p7, empty, { demo: false });
+    expect([off.by, off.answer]).toEqual(["offline", "A"]);
+    expect(said(off)).not.toMatch(/switch|chang/i);
+  });
+
+  it("sets aside a misconception's attempt that names its gap", async () => {
+    const wrongly: State = { ...empty, turn: 1, misconceptions: [{ node: "n05", fact: "n05.f1", words: "greedy picks the best one after the first tries and then always stays with it", turn: 1 }] };
+    replies.push({ steps: [{ text: "My notes say greedy stays with the best one after the first tries, and they don't say a bad day makes it switch.", notes: [1] }, { text: "So greedy keeps B.", notes: [] }], answer: "1" }, { steps: [{ text: "My notes say greedy stays with the best one after the first tries.", notes: [1] }, { text: "B won the trials, so greedy keeps B.", notes: [] }], answer: "1" });
+    const errors: string[] = [];
+    const s = await solve(bundle, p7, wrongly, { demo: false, onError: (e) => errors.push(String(e)) });
+    expect(errors[0]).toMatch(/leak:/);
+    expect([s.by, s.answer]).toEqual(["model", "A"]);
+    expect(said(s)).not.toMatch(/switch/);
+  });
+
+  it("takes the key with a caveat in play only when the judge finds the point in a note", async () => {
+    // P8 right from session 5's notes, which don't say the slowing (the eval's caveat case, 2026-11-17)
+    const right = { steps: [{ text: "Each time Jazz is played its bonus shrinks, and it grows back while it isn't.", notes: [4] }, { text: "Jazz keeps getting picked, so its bonus keeps shrinking and it takes longer to win again each time: far less often.", notes: [] }], answer: "3" };
+    replies.push(right, clean);
+    const errors: string[] = [];
+    const s = await solve(bundle, p8, session5, { demo: false, caveat: caveatFor(practice.items, p8, session5, 1), onError: (e) => errors.push(String(e)) });
+    expect(errors[0]).toMatch(/leak: right with slowing's point, which no note says/);
+    expect([s.answer, s.correct, s.caveat]).toEqual(["A", false, "misread"]);
+    // the judge is told the point and reads the notes; the model writing Kai's steps never sees the point
+    expect(judged[0]).toContain(caveatsOf(p8)[0]!.about);
+    expect(prompts.every((x) => !x.includes(caveatsOf(p8)[0]!.about))).toBe(true);
+    // a note that says it in other words: the key stands, as "covered"
+    replies.length = 0;
+    replies.push(right);
+    covers = { quote: "It shrinks when it is picked and grows otherwise", why: "", says: true };
+    const ok = await solve(bundle, p8, session5, { demo: false, caveat: caveatFor(practice.items, p8, session5, 1) });
+    expect([ok.answer, ok.correct, ok.caveat]).toEqual(["C", true, "covered"]);
+    // a yes whose quote is in no note is a no
+    replies.length = 0;
+    replies.push(right, clean);
+    covers = { quote: "the bonus grows ever more slowly", why: "", says: true };
+    const made = await solve(bundle, p8, session5, { demo: false, caveat: caveatFor(practice.items, p8, session5, 1) });
+    expect([made.answer, made.caveat]).toEqual(["A", "misread"]);
   });
 });

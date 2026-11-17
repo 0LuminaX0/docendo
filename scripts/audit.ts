@@ -5,19 +5,20 @@
 //   pnpm events audit --from f.jsonl   from a file (the admin panel's JSONL export) instead of Upstash
 //
 // Code checks: an attempt that states a caveat's point (its `leak` pattern: P8's slowing) while none of Kai's notes
-// says it (its `covered` pattern); a misreading that says what Kai's notes leave out; a lesson term Kai used in the
-// chat before the learner did. The model check reads each attempt against Kai's own notes (as logged with it), and
+// says it (its `covered` pattern); a misreading that says what Kai's notes leave out; a wrong attempt that names what
+// its notes don't give it (gapNamed, 2026-11-17); a lesson term Kai used in the chat before the learner did; Kai's line
+// before a fixed question saying which way a rule goes where the learner's message didn't (addedClaims). The model check reads each attempt against Kai's own notes (as logged with it), and
 // each chat message against everything the learner had said so far (Kai's fixed questions taken out: asking states
 // nothing). Writes data/audit-<time>/flags.csv (one row per flag, the text and the notes beside it) and sessions.csv.
 // Both hold what learners wrote: data/ is ignored by git.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { z } from "zod";
 
 import { toCsv, type Ev } from "../lib/analytics";
 import { caveatsOf, PracticeFile, type PracticeItem } from "../content/practice";
-import { notesLeaveOut } from "../engine/tutor/solve";
+import { gapNamed, notesLeaveOut } from "../engine/tutor/solve";
+import { addedClaims } from "../engine/tutor/claims";
 
 type Flag = { sid: string; entry: string; condition: string; at: string; where: string; source: "code" | "model"; what: string; text: string; given: string };
 
@@ -54,10 +55,13 @@ function codeChecks(items: PracticeItem[], e: Ev): string[] {
     }
   const gap = e.caveat === "misread" ? notesLeaveOut(text) : null;
   if (gap) out.push(`its misreading says what its notes leave out ("${gap}")`);
+  // any wrong attempt naming what its notes don't give it (2026-11-17)
+  const item = items.find((p) => p.id === e.id);
+  const named = !e.correct && item ? gapNamed(text, `${item.prompt} ${notes}`, notes) : null;
+  if (named) out.push(`it names what its notes don't give it ("${named}")`);
   return out;
 }
 
-const Verdict = z.object({ leak: z.boolean(), what: z.string(), step: z.number().int() });
 
 export async function audit(events: Ev[], opts: { llm: boolean }) {
   const starts = new Map(events.filter((e) => e.t === "session_start").map((e) => [e.sid, e]));
@@ -79,6 +83,23 @@ export async function audit(events: Ev[], opts: { llm: boolean }) {
   }
   // the chat: lesson terms Kai used before the learner did (the writer's term check logs them; a fallback line replaced
   // the reply after two failures, so a logged leak may not have been shown: the text column has the reply as shown)
+  // and a way a rule goes that the learner's message didn't say (addedClaims; checked live since 2026-11-17, so this
+  // finds it in sessions from before): against the message and Kai's line before it
+  const bySid = new Map<string, Ev[]>();
+  for (const e of turns) bySid.set(e.sid, [...(bySid.get(e.sid) ?? []), e]);
+  for (const [sid, list] of bySid) {
+    const w = who(sid);
+    const sorted = [...list].sort((a, b) => Number(a.turn) - Number(b.turn));
+    sorted.forEach((e, i) => {
+      // Kai's own line before a fixed question, as shown: the writer's last draft (none: the fixed line, which says
+      // nothing of its own; older sessions' Kai worded its questions itself and logged no such line)
+      const drafts = (e.drafts as string[] | undefined) ?? [];
+      if (!e.script || e.fallback || !drafts.length) return;
+      const own = str(drafts.at(-1));
+      const claims = addedClaims(own, `${str(e.message)}\n${i ? str(sorted[i - 1]!.reply) : str(e.kaiBefore)}`);
+      if (claims.length) flags.push({ sid, entry: w.entry, condition: w.condition, at: e.at, where: `teaching turn ${Number(e.turn)}`, source: "code", what: `says which way a rule goes, which the learner's message didn't: ${claims.join(", ")}`, text: str(e.reply), given: str(e.message) });
+    });
+  }
   for (const e of turns) {
     const leaked = (e.leaked as string[] | undefined) ?? [];
     if (!leaked.length) continue;
@@ -89,21 +110,7 @@ export async function audit(events: Ev[], opts: { llm: boolean }) {
   let cost = 0;
   let read = 0;
   if (opts.llm) {
-    const { chatJson, MODELS } = await import("../engine/llm");
-    const ask = async (system: string, user: string) => {
-      const r = await chatJson({ model: MODELS.judge, name: "leak", schema: Verdict, maxTokens: 300, timeoutMs: 30_000, retries: 1, messages: [{ role: "system", content: system }, { role: "user", content: user }] });
-      cost += r.usage.costUsd ?? 0;
-      read++;
-      return r.data;
-    };
-    const ATTEMPT = `Kai is a student who knows only its notes, written from what a classmate told it. Kai solved a practice problem from them. Find knowledge Kai showed that its notes don't give it. Answer in JSON:
-- leak: true if a step states as true a rule or fact about how a strategy (greedy, UCB), the averages or the bonuses behave that no note states or clearly implies, or hints at such a rule by naming what the notes leave out ("my notes don't say whether the growth slows down"). NOT a leak: the problem's own numbers and the arithmetic on them; what follows from the notes; a guess, hunch or reading Kai presents as its own, even a wrong one; a wrong belief; naming a topic without saying how it behaves ("my notes don't cover this part").
-- what: the knowledge Kai showed and wasn't given, in a few words, or "".
-- step: that step's number, or 0.`;
-    const CHAT = `Kai is a student who missed a lecture and is being taught by a classmate. Kai may know only what the classmate has said, plus the setup from the slides: each round you pick one of a few options, the pick gives a random result, you only see how the one you picked did, and the strategies are called greedy and UCB. Answer in JSON:
-- leak: true if Kai's message states as true something about how the strategies, the averages, the bonuses or exploring work that the classmate has not said in any of their messages so far (Kai saying back what they said, in other words, is fine), or hints at what the right answer to something is.
-- what: what Kai showed and wasn't told, in a few words, or "".
-- step: 0.`;
+    const { readAttempt, readChat } = await import("./leak-read");
     // a few at a time
     const jobs: (() => Promise<void>)[] = [];
     for (const e of attempts) {
@@ -112,7 +119,8 @@ export async function audit(events: Ev[], opts: { llm: boolean }) {
       const item = itemsOf(w.topic).find((p) => p.id === e.id);
       const problem = item ? `${item.prompt}${item.options ? `\n${item.options.map((o, i) => `${"ABCDEF"[i]}) ${o}`).join("\n")}` : ""}` : "";
       jobs.push(async () => {
-        const v = await ask(ATTEMPT, `KAI'S NOTES:\n${notesText(e) || "(none)"}\n\nPROBLEM:\n${problem}\n\nKAI'S STEPS:\n${stepsText(e)}`).catch(() => null);
+        const v = await readAttempt(notesText(e), problem, stepsText(e)).catch(() => null);
+        if (v) (cost += v.cost), read++;
         if (v?.leak) flags.push({ sid: e.sid, entry: w.entry, condition: w.condition, at: e.at, where: `${whereOf(e)}${v.step ? `, step ${v.step}` : ""}`, source: "model", what: v.what, text: stepsText(e), given: notesText(e) });
       });
     }
@@ -128,9 +136,10 @@ export async function audit(events: Ev[], opts: { llm: boolean }) {
         for (const f of fixed) reply = reply.split(f).join(" ");
         reply = reply.replace(/\s+/g, " ").trim();
         if (reply.split(/\s+/).length < 4) return; // only a fixed question: nothing of Kai's own
-        const said = sorted.slice(0, i + 1).map((x) => `- ${str(x.message)}`).join("\n");
+        const said = sorted.slice(0, i + 1).map((x) => str(x.message));
         jobs.push(async () => {
-          const v = await ask(CHAT, `WHAT THE CLASSMATE HAS SAID SO FAR (oldest first):\n${said}\n\nKAI'S MESSAGE (its fixed question taken out):\n${reply}`).catch(() => null);
+          const v = await readChat(said, reply).catch(() => null);
+          if (v) (cost += v.cost), read++;
           if (v?.leak) flags.push({ sid, entry: w.entry, condition: w.condition, at: e.at, where: `teaching turn ${Number(e.turn)}`, source: "model", what: v.what, text: str(e.reply), given: str(e.message) });
         });
       });

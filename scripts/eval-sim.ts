@@ -5,6 +5,8 @@
 //   pnpm eval:sim --solve                        also let Kai solve the practice problems (live solver) from the final
 //                                                notebook, and after a wrong answer take one correction from the learner
 //   pnpm eval:sim --show                         print every conversation
+//   pnpm eval:sim --audit                        also the judge model reads every line of Kai's own and every wrong
+//                                                attempt for leaks (scripts/leak-read.ts; about $0.005 a conversation)
 // Each simulated learner is a model role-playing a student with a fixed knowledge sheet: the lesson's teachable facts
 // it knows (in a student's words, never the fact text), the wrong beliefs it holds, and a style (an expert who is
 // concise and impatient, a solid student, a terse one, a half-remembering one, a misled one). It talks to the real Kai
@@ -36,6 +38,7 @@ const { llmReact } = await import("../engine/tutor/writer");
 const { gate, solve, alts, beliefFor, caveatFor, caveatOnRetry } = await import("../engine/tutor/solve");
 const { checkPractice } = await import("../content/practice");
 const { chatJson, MODELS } = await import("../engine/llm");
+const { readAttempt, readChat } = await import("./leak-read");
 
 const args = process.argv.slice(2);
 const opt = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
@@ -44,6 +47,7 @@ const only = opt("--only")?.split(",");
 const show = args.includes("--show");
 const empty = args.includes("--empty"); // skip teaching: Kai starts practice with an empty notebook (the corrections' test)
 const withSolve = args.includes("--solve") || empty;
+const audit = args.includes("--audit");
 const LEARNER = opt("--learner") ?? "anthropic/claude-haiku-5.5";
 const scriptPath = opt("--script") ?? "topics/bandits/script.json";
 
@@ -147,6 +151,17 @@ type Run = {
   solvedAfterFix?: number;
   shouldSolve?: number;
   done: boolean;
+  // leaks (2026-11-17): Kai's own lines rewritten or replaced by the fixed line for saying what it wasn't told (terms,
+  // or which way a rule goes); with --audit, the model's flags on the lines shown and on wrong attempts; a retry right
+  // where the learner's own knowledge couldn't make it right (the correction carried something Kai showed it)
+  reactions: number;
+  reactionsCaught: number;
+  reactionsFixed: number;
+  chatFlags: string[];
+  attemptFlags: string[];
+  attemptsRead: number;
+  unearnedFix: string[];
+  kaiSetAside?: number;
   usd: number;
   state?: unknown;
   log: string[];
@@ -159,6 +174,11 @@ async function simulate(p: Persona): Promise<Run> {
   const history: { role: "kai" | "learner"; text: string }[] = [{ role: "kai", text: scriptOpening(script) }];
   const log = [`Kai: ${history[0]!.text}`];
   let words = 0;
+  let reactions = 0;
+  let reactionsCaught = 0;
+  let reactionsFixed = 0;
+  const chatFlags: string[] = [];
+  const learnerSaid: string[] = [];
   let repeated = 0;
   let confusing = 0;
   let turns = 0;
@@ -173,6 +193,20 @@ async function simulate(p: Persona): Promise<Run> {
     });
     history.push({ role: "learner", text: said.message }, { role: "kai", text: r.reply });
     state = r.state;
+    // Kai's own line before its fixed question, as shown (none when the fixed line stood in)
+    const drafts = r.trace.drafts ?? [];
+    if (drafts.length) {
+      reactions++;
+      if (r.trace.leaked.length) reactionsCaught++;
+      if (r.trace.fallback) reactionsFixed++;
+    }
+    learnerSaid.push(said.message);
+    const own = !r.trace.fallback && drafts.length ? drafts.at(-1)! : "";
+    if (audit && own.split(/\s+/).length >= 4) {
+      const v = await readChat(learnerSaid, own).catch(() => null);
+      if (v) cost.usd += v.cost;
+      if (v?.leak) chatFlags.push(`turn ${turns + 1}: ${v.what} | Kai: ${own} | learner: ${said.message.slice(0, 200)}`);
+    }
     log.push(
       `${said.alreadyAnswered ? "[REPEAT] " : ""}${said.confusing ? "[CONFUSING] " : ""}You: ${said.message}`,
       `   judge: ${r.trace.intent}; ${r.trace.judged.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"}${r.trace.misconceptions.length ? `; wrong: ${r.trace.misconceptions.map((m) => m.node).join(" ")}` : ""}${r.trace.dropped?.length ? `; dropped ${r.trace.dropped.length}` : ""}`,
@@ -207,7 +241,19 @@ async function simulate(p: Persona): Promise<Run> {
     if (open === truth) gateRight++;
     else (open ? gateFalseOpen : gateFalseShut).push(it.id);
   }
-  const run: Run = { understanding: Math.min(1, factScore(bundle, state).score / CONFIG.ready), persona: p.id, turns, words, repeated, confusing, recall, known: known.length, falseCredit, vagueAsCorrect, caught, wrongHeld: wrongIdeas.size, gateRight, gateFalseOpen, gateFalseShut, done: state.done, usd: 0, log };
+  const run: Run = { understanding: Math.min(1, factScore(bundle, state).score / CONFIG.ready), persona: p.id, turns, words, repeated, confusing, recall, known: known.length, falseCredit, vagueAsCorrect, caught, wrongHeld: wrongIdeas.size, gateRight, gateFalseOpen, gateFalseShut, done: state.done, reactions, reactionsCaught, reactionsFixed, chatFlags, attemptFlags: [], attemptsRead: 0, unearnedFix: [], usd: 0, log };
+  // a wrong attempt as the learner sees it, read for leaks against the notes it was written from
+  const readWrong = async (it: (typeof items)[number], sol: Awaited<ReturnType<typeof solve>>, label: string) => {
+    if (!audit || sol.correct || sol.by !== "model") return;
+    const problem = `${it.prompt}${it.options ? `\n${it.options.map((o, i) => `${"ABCDEF"[i]}) ${o}`).join("\n")}` : ""}`;
+    const v = await readAttempt(sol.notes.map((n, i) => `[${i + 1}] ${n}`).join("\n"), problem, sol.steps.map((x, i) => `${i + 1}. ${x.text}`).join("\n")).catch(() => null);
+    run.attemptsRead++;
+    if (v) cost.usd += v.cost;
+    if (v?.leak) run.attemptFlags.push(`${it.id} ${label}: ${v.what} | ${sol.steps.map((x) => x.text).join(" ").slice(0, 300)}`);
+  };
+  const setAside = (e: unknown) => {
+    if (/leak:/.test(String(e))) run.kaiSetAside = (run.kaiSetAside ?? 0) + 1;
+  };
   if (withSolve) {
     // Kai solves every problem from this notebook; after a wrong answer, the learner corrects it once and Kai retries
     let solved = 0;
@@ -219,7 +265,8 @@ async function simulate(p: Persona): Promise<Run> {
     for (const it of items) {
       // as the practice route does: a caveat comes into play when Kai would otherwise solve every problem
       const caveat = caveatFor(items, it, s, wrongSoFar);
-      const first = await solve(bundle, it, s, { demo: false, onCall, caveat });
+      const first = await solve(bundle, it, s, { demo: false, onCall, caveat, items, onError: setAside });
+      await readWrong(it, first, "first try");
       if (first.caveat) (run.caveats ??= []).push(`${it.id}${first.caveatId ? `/${first.caveatId}` : ""}:${first.caveat}`);
       if (!first.correct) wrongSoFar++;
       if (first.gate.canBeRight && !first.caveat) (openTried++, first.correct ? openRight++ : log.push(`[practice ${it.id}] gate open but Kai wrong (${first.by}), answered ${first.answer}: ${first.steps.map((x) => x.text).join(" | ")}`));
@@ -237,8 +284,11 @@ async function simulate(p: Persona): Promise<Run> {
       const before = s;
       s = applyJudgement(s, j);
       // as the practice route does: the first try's caveat while the correction leaves it open (wrongSoFar as then)
-      const second = await solve(bundle, it, s, { demo: false, onCall, caveat: caveatOnRetry(items, it, before, s, wrongSoFar - 1) });
+      const second = await solve(bundle, it, s, { demo: false, onCall, caveat: caveatOnRetry(items, it, before, s, wrongSoFar - 1), items, onError: setAside });
+      await readWrong(it, second, "retry");
       if (second.correct) afterFix++;
+      // right after a correction the learner's knowledge sheet couldn't give: the correction carried something else
+      if (second.correct && !truthOpen(it)) run.unearnedFix.push(`${it.id}: Kai's try "${first.steps.map((x) => x.text).join(" ").slice(0, 300)}" -> fix "${fix.message.slice(0, 200)}"`);
       log.push(`[practice ${it.id}] Kai: ${first.answer} (wrong; ${first.caveat ? `caveat ${first.caveatId ?? ""} ${first.caveat}` : `guess ${first.guess?.replaces ?? "-"}`}); fix: ${fix.message} → ${j.facts.map((v) => `${v.fact}:${v.verdict}`).join(" ") || "no facts"} → retry ${second.answer} ${second.correct ? "right" : "wrong"}${second.caveat ? ` (caveat ${second.caveatId ?? ""} ${second.caveat})` : ""}`);
     }
     run.solved = solved;
@@ -268,12 +318,20 @@ for (const r of ok)
     `  ${r.persona.padEnd(8)} recall ${r.recall}/${r.known}  false credit ${r.falseCredit.join(" ") || "-"}  vague→correct ${r.vagueAsCorrect.join(" ") || "-"}  wrong caught ${r.caught}/${r.wrongHeld}  ` +
       `repeats ${r.repeated}  confusing ${r.confusing}  messages ${r.turns}  words ${r.words}  gate ${r.gateRight}/${items.length}  understood ${Math.round(r.understanding * 100)}%${r.gateFalseShut.length ? ` shut:${r.gateFalseShut.join(",")}` : ""}${r.gateFalseOpen.length ? ` open:${r.gateFalseOpen.join(",")}` : ""}` +
       (r.solved !== undefined ? `  Kai solved ${r.solved}+${r.solvedAfterFix}/${items.length} (should ${r.shouldSolve})${r.caveats?.length ? ` caveat ${r.caveats.join(",")}` : ""}${r.failedOnce ? "" : "  NEVER WRONG"}` : "") +
+      `  reactions caught ${r.reactionsCaught}/${r.reactions} (fixed line ${r.reactionsFixed})` +
+      (r.kaiSetAside ? `  Kai's tries set aside for a leak ${r.kaiSetAside}` : "") +
+      (r.unearnedFix.length ? `  UNEARNED FIX ${r.unearnedFix.length}` : "") +
+      (audit ? `  audit: chat ${r.chatFlags.length}, attempts ${r.attemptFlags.length}/${r.attemptsRead}` : "") +
       `${r.done ? "" : "  NOT DONE"}  $${r.usd.toFixed(3)}`,
   );
+const flagged = ok.flatMap((r) => [...r.chatFlags.map((f) => `${r.persona} chat ${f}`), ...r.attemptFlags.map((f) => `${r.persona} practice ${f}`), ...r.unearnedFix.map((f) => `${r.persona} unearned ${f}`)]);
+if (flagged.length) console.log(`\nleaks to look at:\n  ${flagged.join("\n  ")}`);
 console.log(
   `TOTAL recall ${sum((r) => r.recall)}/${sum((r) => r.known)} (${Math.round((100 * sum((r) => r.recall)) / Math.max(1, sum((r) => r.known)))}%), false credit ${sum((r) => r.falseCredit.length)}, vague→correct ${sum((r) => r.vagueAsCorrect.length)}, wrong caught ${sum((r) => r.caught)}/${sum((r) => r.wrongHeld)}, repeats ${sum((r) => r.repeated)}, confusing ${sum((r) => r.confusing)}, messages ${sum((r) => r.turns)}, words ${sum((r) => r.words)}, gate ${sum((r) => r.gateRight)}/${ok.length * items.length}, understood ${Math.round((100 * sum((r) => r.understanding)) / Math.max(1, ok.length))}% on average` +
     (withSolve ? `, Kai wrong at least once in ${ok.filter((r) => r.failedOnce).length}/${ok.length} sessions` : "") +
-    (withSolve ? `, Kai solved ${sum((r) => r.solved ?? 0)} first try + ${sum((r) => r.solvedAfterFix ?? 0)} after a fix (should ${sum((r) => r.shouldSolve ?? 0)}), right when the gate was open ${sum((r) => r.openRight ?? 0)}/${sum((r) => r.openTried ?? 0)}` : "") +
+    (withSolve ? `, Kai solved ${sum((r) => r.solved ?? 0)} first try + ${sum((r) => r.solvedAfterFix ?? 0)} after a fix (should ${sum((r) => r.shouldSolve ?? 0)}), right when the gate was open ${sum((r) => r.openRight ?? 0)}/${sum((r) => r.openTried ?? 0)}, unearned after a fix ${sum((r) => r.unearnedFix.length)}, tries set aside for a leak ${sum((r) => r.kaiSetAside ?? 0)}` : "") +
+    `, reactions caught ${sum((r) => r.reactionsCaught)}/${sum((r) => r.reactions)} (fixed line ${sum((r) => r.reactionsFixed)})` +
+    (audit ? `, audit flags: chat ${sum((r) => r.chatFlags.length)}/${sum((r) => r.reactions)}, attempts ${sum((r) => r.attemptFlags.length)}/${sum((r) => r.attemptsRead)}` : "") +
     `, $${sum((r) => r.usd).toFixed(3)}`,
 );
 mkdirSync("data", { recursive: true });

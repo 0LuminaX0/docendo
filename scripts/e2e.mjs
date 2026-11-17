@@ -522,6 +522,10 @@ await skip.waitForSelector(".kcall button", { timeout: 60000 });
 await skip.$eval(".kcall button:first-of-type", (e) => e.click());
 const secondNotes = await skip.evaluate(() => JSON.parse(localStorage.getItem("docendo:session:v1")).chat.state.notebook.length);
 check(kaiWrong && hasNotebook && /notes don't cover|notes only say|guess|imagine|You told me/.test(knote) && secondNotes > 0, `Kai solves on its own from its notebook (shown beside it), takes one correction and tries again (${secondNotes} notes after the correction)`);
+// Kai says its notes don't cover a part, and nothing about what the part is (2026-11-17: "my notes don't say greedy
+// ever changes its choice" handed the learner the rule to correct it with; engine/tutor/solve.ts gapNamed)
+const namesGap = /notes? (?:don't|do not|doesn't) (?:say|mention|tell|explain)\b|notes don't cover (?!this part\b)|not sure (?:whether|if)\b|\b(?:rather than|instead of)\b/i.exec(knote);
+check(!namesGap, `Kai's wrong attempt says its notes don't cover a part without naming what it is${namesGap ? ` (found "${namesGap[0]}")` : ""}`);
 await wait(2500); // the steps and the new notes finish appearing
 await shot(skip, "07e-kai-second-try");
 // on to the test and the results: they report Kai's outcome on the problems Kai worked on
