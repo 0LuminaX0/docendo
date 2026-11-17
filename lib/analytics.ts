@@ -156,6 +156,7 @@ export function tables(events: Ev[]) {
       lastAt: evs[evs.length - 1]?.at ?? null, // the last thing logged (for the Live page)
       lastPath: [...of("client_page_view")].pop()?.path ?? null,
       consent: start?.consent ?? null,
+      infoSheetOpened: of("client_info_sheet_open").length, // opened the participant information sheet from the consent (2026-11-17: before Start, sent once the session began)
       daysSinceTest: start?.daysSinceTest ?? null, // delayed sessions: days between the final test and this one
       openedEarly: start?.openedEarly ?? null, // delayed sessions: opened early from the admin panel (Follow-up), not on the schedule
       since: grade?.since ?? null, // delayed sessions: studied the topic since? (no, a little, a lot)

@@ -34,6 +34,9 @@ export const TopicCopy = z.object({
   watchFocus: z.string(), // what to watch for (the watch page)
   correctionExample: z.string(), // the placeholder of the correction to Kai
   description: z.string(), // the page description (search results, link previews)
+  // the participant information sheet, a PDF in public/ that the welcome page's consent links to (report/render.mjs
+  // m4-info --web renders the bandits study's, without the access code: the welcome page is public)
+  infoSheet: z.string().regex(/^\/[A-Za-z0-9._-]+\.pdf$/).optional(),
 });
 export type TopicCopy = z.infer<typeof TopicCopy>;
 

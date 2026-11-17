@@ -179,6 +179,22 @@ async function start(page, welcomeShot = null) {
   const offBefore = await page.$eval("button[type=submit]", (b) => b.disabled);
   await page.click(".consent input");
   if (welcomeShot) check(offBefore && !(await page.$eval("button[type=submit]", (b) => b.disabled)), "Start waits for the study consent to be ticked");
+  if (welcomeShot) {
+    // the consent links the participant information sheet (the pack's infoSheet), served as a PDF without the page's CSP
+    const sheet = await page.$eval(".consent a", (a) => ({ href: a.href, blank: a.target === "_blank" })).catch(() => null);
+    const res = sheet ? await fetch(sheet.href) : null;
+    const pdf = !!res && res.ok && /application\/pdf/.test(res.headers.get("content-type") ?? "") && !res.headers.get("content-security-policy");
+    // a click on the link doesn't untick the box (it opens in a new tab, closed again here)
+    const ctx = page.browserContext();
+    const before = new Set(await ctx.pages());
+    if (sheet) {
+      await page.click(".consent a");
+      await wait(800);
+    }
+    for (const p of await ctx.pages()) if (!before.has(p)) await p.close().catch(() => {});
+    const stillTicked = await page.$eval(".consent input", (i) => i.checked);
+    check(!!sheet?.blank && pdf && stillTicked, "the consent links the participant information sheet, a PDF that opens in a new tab");
+  }
   await page.click("button[type=submit]");
   // the pretest: "I don't know" on the knowledge items, the second option on the screening questions (not excluded)
   await page.waitForFunction(() => location.pathname === "/pretest");
@@ -242,6 +258,15 @@ if (textLesson) {
     });
     await page.reload({ waitUntil: "load" });
     await page.waitForSelector(".lesson-nav .btn.primary:not([disabled])");
+    if (k === 2) {
+      // back to the chapter before and forward again: the furthest chapter's wait, already over, doesn't start again
+      const onSection = (id) => page.waitForFunction((x) => document.querySelector(".lesson-section")?.dataset.section === x, {}, id);
+      await page.click(".lesson-nav .btn.ghost");
+      await onSection(lessonFile.sections[0].id);
+      await page.click(".lesson-nav .btn.primary");
+      await onSection(lessonFile.sections[1].id);
+      seen.backForthOpen = await page.$eval(".lesson-nav .btn.primary", (b) => !b.disabled);
+    }
     await page.click(".lesson-nav .btn.primary");
     await page.waitForFunction((id) => document.querySelector(".lesson-section")?.dataset.section === id, {}, lessonFile.sections[k].id);
     const now = await look();
@@ -272,6 +297,7 @@ if (textLesson) {
     first.shown.length === 1 && first.waits && first.ahead === lessonFile.sections.length && seen.shown.join() === lessonFile.sections.map((s) => s.id).join() && seen.formulas === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.formula).length && seen.figures === lessonFile.sections.flatMap((x) => x.blocks).filter((b) => b.figure).length && first.select === "none" && lastWaits,
     `the lesson is a text read one chapter at a time (${seen.shown.length} chapters, ${seen.formulas} formulas, ${seen.figures} figures), the chapters ahead closed, that can't be selected; Next waits for a quick read and the last step for the reading time`,
   );
+  if (lessonFile.sections.length > 2) check(seen.backForthOpen === true, "a chapter's reading wait doesn't start again after going back and forth");
 } else {
   await wait(2500); // let the YouTube player paint
   check((await page.$$(".lb-part")).length === (bundle.segments?.length || bundle.videos.length), "the lesson plays as one video with a part per segment");

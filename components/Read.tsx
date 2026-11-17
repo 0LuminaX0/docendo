@@ -68,8 +68,9 @@ export default function Read({ lesson }: { lesson: Lesson }) {
   const elapsed = Math.max(0, (now - (saved?.readStartedAt ?? now)) / 1000);
   const left = Math.max(0, lesson.minSeconds - elapsed);
   const since = saved?.readChapterAt ?? saved?.readStartedAt ?? now; // when the chapter on screen opened
-  const onChapter = Math.max(0, (now - since) / 1000);
   const section = lesson.sections[at]!;
+  // time on this chapter in all: earlier visits plus this one, so going back and forth doesn't restart its wait
+  const onChapter = (saved?.readSpent?.[section.id] ?? 0) / 1000 + Math.max(0, (now - since) / 1000);
   // a chapter read before opens at once; a new one after a quick read of it
   const wait = at < max ? 0 : Math.max(0, chapterSeconds(section) - onChapter);
 
@@ -101,10 +102,17 @@ export default function Read({ lesson }: { lesson: Lesson }) {
 
   /** Leave the chapter on screen for chapter `to` (logged with the time spent on it). */
   function go(to: number, via: string) {
-    const sec = Math.round((Date.now() - since) / 1000);
+    const ms = Math.max(0, Date.now() - since);
+    const sec = Math.round(ms / 1000);
     perChapter.current[section.id] = (perChapter.current[section.id] ?? 0) + sec;
     track("read_chapter", { chapter: section.id, index: at, sec, to: lesson.sections[to]?.id ?? null, via });
-    update((s) => ({ ...s, readAt: to, readMax: Math.max(s.readMax ?? 0, to), readChapterAt: Date.now() }));
+    update((s) => ({
+      ...s,
+      readAt: to,
+      readMax: Math.max(s.readMax ?? 0, to),
+      readChapterAt: Date.now(),
+      readSpent: { ...s.readSpent, [section.id]: (s.readSpent?.[section.id] ?? 0) + ms },
+    }));
     window.scrollTo({ top: 0 });
   }
 

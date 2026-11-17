@@ -24,7 +24,9 @@ const config: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:path*",
+        // every path but a PDF (the participant information sheet in public/): a browser's PDF viewer may refuse to show a
+        // document served with the page's CSP (object-src 'none') or X-Frame-Options, and a PDF runs none of our code
+        source: "/:path((?!.*\\.pdf$).*)",
         headers: [
           { key: "Content-Security-Policy", value: csp },
           { key: "X-Content-Type-Options", value: "nosniff" },
@@ -34,6 +36,7 @@ const config: NextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
         ],
       },
+      { source: "/:file(.*\\.pdf)", headers: [{ key: "X-Content-Type-Options", value: "nosniff" }, { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }] },
     ];
   },
 };

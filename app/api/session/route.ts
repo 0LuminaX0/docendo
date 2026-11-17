@@ -24,7 +24,7 @@ const Body = z.object({
   prior: z.string().max(20).optional(), // the participant number this browser had before (a person starting again)
 });
 // the wording the learner agreed to is in components/Intro.tsx (CONSENT); change this date when it changes
-const CONSENT_VERSION = "2026-11-02"; // the note now names reading time (the text lesson)
+const CONSENT_VERSION = "2026-11-17"; // "I have read the participant information (a link to the pack's sheet) and agree to take part"; 2026-11-02: the note names reading time (the text lesson)
 
 // The participant number cookie (2026-11-17): set by the server when a participant code for everyone starts a session
 // (only after the consent), sent back by the browser with its next start, so a second start in the same browser is

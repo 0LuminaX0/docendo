@@ -53,6 +53,8 @@
   .start ol { margin: 2pt 0 6pt; padding-left: 14pt; } .start li { margin: 0 0 2.5pt; }
   a.here { color: var(--blue); font-weight: 700; text-decoration: underline; }
   .contact a { color: var(--blue); font-weight: 600; text-decoration: none; }
+  /* the copy on the website (node report/render.mjs m4-info --web) leaves the access code out: the welcome page is public */
+  html:not(.web) .no-code, html.web .with-code { display: none; }
 </style>
 </head>
 <body>
@@ -61,7 +63,8 @@
 <p class="lede">Thank you for considering taking part. We are a student team in EPFL's CS-411 Digital Education, studying how people learn by explaining a topic to an AI classmate. Please read this page before you start.</p>
 
 <dl class="facts">
-  <div><dt>Your access code</dt><dd><span class="code">STUDY2026-NBDMYNN7</span><span>on <a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a></span></dd></div>
+  <div class="with-code"><dt>Your access code</dt><dd><span class="code">STUDY2026-NBDMYNN7</span><span>on <a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a></span></dd></div>
+  <div class="no-code"><dt>Where</dt><dd><a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a><span>with the access code we sent you</span></dd></div>
   <div><dt>When</dt><dd>Tue 17 to Sun 29 November<span>finish by Sunday 23:59 (Swiss time)</span></dd></div>
   <div><dt>How long</dt><dd>At most 66 minutes<span>plus about 4 untimed minutes</span></dd></div>
 </dl>
@@ -112,7 +115,8 @@
 <div class="start">
 <h2>How to start</h2>
 <ol>
-  <li>When you have about 70 minutes, open the website (the link in our WhatsApp group, or docendo-jade.vercel.app) and enter the access code from the top of this page. Or simply <a class="here" href="https://docendo-jade.vercel.app/?code=STUDY2026-NBDMYNN7">click here</a>: the website opens with your code filled in.</li>
+  <li class="no-code">When you have about 70 minutes, open the website (the link in our WhatsApp group, or docendo-jade.vercel.app) and enter the access code we sent you.</li>
+  <li class="with-code">When you have about 70 minutes, open the website (the link in our WhatsApp group, or docendo-jade.vercel.app) and enter the access code from the top of this page. Or simply <a class="here" href="https://docendo-jade.vercel.app/?code=STUDY2026-NBDMYNN7">click here</a>: the website opens with your code filled in.</li>
   <li>Tick the consent box and press Start. Ticking it confirms that you have read this page and agree to take part.</li>
 </ol>
 </div>

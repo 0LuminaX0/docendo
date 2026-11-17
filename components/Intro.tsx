@@ -7,12 +7,32 @@ import { Header, KaiFace } from "./ui";
 import { keepNumber, keptNumber, newSession, post, save, useSaved } from "@/lib/client/store";
 import { useStudySettings } from "./SettingsContext";
 import { count } from "@/lib/words";
+import { track } from "@/lib/client/log";
 import { barsOf, currentStep, firstStep, pathOf, stepName } from "@/lib/flow";
 
 const CARD_ICON = { teach: MessagesSquare, practice: PencilLine, exercises: ListChecks } as const;
 
 const CONSENT =
   "I understand this is a study: what I write, my answers and how I use the app (clicks, timings, reading time and video playback) are recorded under a random session id, without my name. What I write to Kai is sent to an AI model to generate its replies, so I won't include personal details.";
+
+/** The consent's words, after a link to the pack's participant information sheet when it has one (a new tab, so the
+ *  tick and the code stay as they are). A link inside the label doesn't tick the box. */
+function Consent({ sheet }: { sheet?: string }) {
+  return (
+    <>
+      {sheet && (
+        <>
+          I have read the{" "}
+          <a href={sheet} target="_blank" rel="noopener" onClick={() => track("info_sheet_open")}>
+            participant information
+          </a>{" "}
+          (PDF) and agree to take part.{" "}
+        </>
+      )}
+      {CONSENT}
+    </>
+  );
+}
 
 // number: a participant code for everyone gives each person a participant number of their own
 type Started = { token: string; expiresAt: number; demo: boolean; team: boolean; condition: "direct" | "recursive"; phase?: "main" | "delayed"; debug?: boolean; soft?: boolean; number?: string };
@@ -135,11 +155,11 @@ export default function Intro({
         <div className="intro-act">
           {/* consent first: Start stays off until it is ticked (the server checks it too) */}
           {saved && !followUp ? (
-            <p className="note consent-note">{CONSENT}</p>
+            <p className="note consent-note"><Consent sheet={copy.infoSheet} /></p>
           ) : (
             <label className="consent">
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} />
-              <span>{CONSENT}</span>
+              <span><Consent sheet={copy.infoSheet} /></span>
             </label>
           )}
           {/* one height in every state (loading, a code to enter, a session to continue), so nothing jumps */}

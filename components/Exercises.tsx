@@ -231,6 +231,7 @@ export default function Exercises() {
             <span className="track" aria-hidden="true"><span className="fill" style={{ width: `${(answered / total) * 100}%` }} /></span>
             {answered} of {total} answered
           </span>
+          {reasons && <span className="note">Justify your answers for them to count.</span>}
           {current < groups - 1 && <span className="note">Part {current + 1} can&apos;t be changed after this.</span>}
           {error && <p className="error" role="alert">{error}</p>}
         </div>

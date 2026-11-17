@@ -161,7 +161,9 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   };
 
   const bundle = read("bundle.json", Bundle);
-  read("copy.json", TopicCopy);
+  const copy = read("copy.json", TopicCopy);
+  // the consent links the participant information sheet: it must be there to download
+  if (copy?.infoSheet && !existsSync(join(root, "public", copy.infoSheet))) err("copy.json", `infoSheet ${copy.infoSheet} isn't in public/`);
   read("survey.json", SurveyFile, false);
   const practice = read("practice.json", PracticeFile);
   const tests = read("exercises.json", ExercisesFile);
