@@ -391,7 +391,14 @@ await shot(page, "07c-practice-rewatch");
 await page.click(".modal header .iconbtn");
 await page.waitForSelector(".scrim", { hidden: true });
 await pick((p2.answer + 2) % p2.options.length);
+// before the retry the learner says what they think went wrong (2026-11-17, the counterpart of the correction to Kai):
+// Check again stays off until there's a sentence
+await wait(300);
+const retryHeld = await page.$eval(".pq .pact .btn.small:not(.ghost)", (b) => b.disabled);
+await page.focus(`#${p2.id}-wrong`);
+await page.keyboard.type("I thought greedy keeps its favourite for good.");
 await checkWhenReady();
+check(retryHeld, "after a wrong first try, practice asks what went wrong and allows the retry once there's a sentence");
 await page.waitForFunction(() => /after the final test/.test(document.querySelector(".pq .bulb.off")?.textContent ?? ""));
 const noMore = !(await page.$(".pq .pact .btn.small:not(.ghost)")) && !(await page.$(".solution"));
 const clock = await page.$eval(".clock", (e) => e.textContent);
@@ -1089,6 +1096,10 @@ if (existsSync(logFile)) {
   const starts = evs.filter((e) => e.t === "session_start" && e.phase === "main" && e.pretestSet);
   const preSets = [...new Set([...pres.flatMap((e) => e.sets), ...starts.map((e) => e.pretestSet)])];
   check(pres.length > 0 && pres.every((e) => e.of === 5 && e.setScores) && preSets.length === 1 && starts.every((e) => typeof e.softTiming === "boolean"), `the pretest logs its one set and the score (5 items; set ${preSets.join(", ")}), and each session its clocks`);
+  check(
+    evs.some((e) => e.t === "practice_check" && e.attempt === 2 && e.mistake === "I thought greedy keeps its favourite for good."),
+    "the retry's try in the log carries the sentence on what went wrong",
+  );
   const turn = evs.find((e) => e.t === "chat_turn");
   check(!missing.length && turn && "message" in turn && "reply" in turn && "mood" in turn && "elapsedMs" in turn, `research log has every kind of event (${evs.length} this run${missing.length ? `; missing ${missing.join(", ")}` : ""})`);
   const pilot = evs.find((e) => e.t === "grade" && Array.isArray(e.forms) && e.forms.length === 2);

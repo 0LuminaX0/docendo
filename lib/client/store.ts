@@ -63,6 +63,9 @@ export type PracticeEntry = {
   // after a right answer: why it is right, in a sentence (required to go on; any text counts). Okita & Schwartz's
   // direct-feedback groups also put their rule into words after each round they won (2026-11-12)
   why?: string;
+  // after a wrong first try, before the retry: what the learner thinks went wrong, in a sentence (required for the
+  // retry; any text counts). The counterpart of the correction to Kai in the recursive condition (2026-11-17)
+  mistake?: string;
 };
 export type Condition = "direct" | "recursive";
 

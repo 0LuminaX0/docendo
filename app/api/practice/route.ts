@@ -26,6 +26,8 @@ const Body = z.discriminatedUnion("action", [
     answer: z.union([z.string().max(40), z.number()]),
     attempt: z.number().int().min(1).max(20),
     work: z.string().max(4000).optional(),
+    // direct feedback, the retry: what the learner thinks went wrong in the first try (2026-11-17)
+    mistake: z.string().max(2000).optional(),
     msOnProblem: z.number().int().min(0).max(24 * 3600_000).optional(),
   }),
   z.object({ token: z.string().max(400), action: z.literal("hint"), id: z.string().max(20) }),
@@ -172,6 +174,8 @@ export async function POST(req: NextRequest) {
       correct,
       work: body.data.work ?? "",
       workChars: body.data.work?.length ?? 0,
+      // the learner's sentence on what went wrong, written before this try (direct feedback, the retry)
+      ...(body.data.mistake?.trim() ? { mistake: body.data.mistake.trim() } : {}),
       msOnProblem: body.data.msOnProblem ?? null,
     });
     return ok({ correct });

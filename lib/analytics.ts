@@ -412,6 +412,9 @@ export function tables(events: Ev[]) {
         // direct feedback: the learner's sentence on why their right answer is right (2026-11-12); the latest, since a
         // learner going back over the problems may rewrite it (2026-11-16)
         explanation: of("client_practice_explain").filter((e) => e.id === id).at(-1)?.text ?? null,
+        // direct feedback: what the learner thought went wrong after a wrong first try, written before the retry
+        // (2026-11-17, the counterpart of the correction to Kai in `reteach`)
+        mistake: checks.find((e) => typeof e.mistake === "string")?.mistake ?? null,
         retryCorrect: checks.length > 1 ? !!checks[1]!.correct : null,
         skipped: of("client_practice_skip").some((e) => e.id === id),
         checks: checks.length,
