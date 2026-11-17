@@ -25,7 +25,9 @@ const KEYS = "ABCDEF";
 /**
  * Chapter 3, one problem at a time, in two rounds (round 2 repeats round 1's
  * ideas in new settings). Direct feedback: the learner solves each problem, a
- * first try and one retry, each answered with a right/wrong light. Recursive
+ * first try and one retry, each answered with a right/wrong light; before the
+ * retry they say what they think went wrong, and after a right answer why it is
+ * right. Recursive
  * feedback (KaiSolve): Kai solves it from its notebook and gets the light; after
  * a wrong answer the learner finds the faulty step and reteaches once, and Kai
  * tries again. Same problems, time and number of tries. Worked solutions come
@@ -129,6 +131,7 @@ export default function Practice({ items }: { items: Item[] }) {
         firstTry: es.filter((e) => e.firstCorrect).length,
         tried: es.filter((e) => e.checks > 0).length,
         explained: es.filter((e) => e.why?.trim()).length, // direct: right answers with their reason
+        reflected: es.filter((e) => e.firstCorrect === false && e.mistake?.trim()).length, // direct: wrong first tries with the sentence on what went wrong
         reached: Math.min(Math.max(p?.furthest ?? 0, p?.current ?? 0) + 1, items.length),
       });
       const n = nextOf("practice");
@@ -172,7 +175,13 @@ export default function Practice({ items }: { items: Item[] }) {
   // as Okita & Schwartz's direct groups explained their rule after each round they won); any text counts
   const explain = mode === "direct" && e.correct === true;
   const unexplained = explain && !e.why?.trim();
-  const last = index === items.length - 1;
+  // direct feedback: after a wrong first try, before the retry, the learner says what they think went wrong (2026-11-17).
+  // The counterpart of the correction to Kai, so both conditions put a mistake into words before the second try (Okita
+  // & Schwartz's direct groups explained only after rounds they won: a stricter control). Required for the retry, any
+  // text counts; skipping the problem stays open, as in the recursive condition. Locked once the retry is checked
+  const reflect = mode === "direct" && e.firstCorrect === false && e.checks >= 1;
+  const unreflected = reflect && !finished && !e.mistake?.trim();
+  const last =index === items.length - 1;
   const inRound = items.filter((x) => x.round === q.round);
   const rounds = [...new Set(items.map((x) => x.round))];
   // one round: no round in the labels
@@ -197,12 +206,14 @@ export default function Practice({ items }: { items: Item[] }) {
   }
 
   async function check() {
-    if (!e.answer.trim() || busy || finished || over) return;
+    if (!e.answer.trim() || busy || finished || over || unreflected) return;
     setBusy(true);
     const attempt = e.checks + 1;
     const ms = shownAt.current ? Date.now() - shownAt.current.at : null;
-    track("practice_check_click", { id: q.id, attempt, answer: e.answer.slice(0, 40), workChars: e.work.length, msOnProblem: ms });
-    const d = await call<{ correct: boolean }>({ action: "check", id: q.id, answer: e.answer, attempt, work: e.work || undefined, msOnProblem: ms ?? undefined });
+    // the retry carries the sentence on what went wrong, so the log keeps it with the try it came before
+    const mistake = reflect ? e.mistake?.trim().slice(0, 2000) || undefined : undefined;
+    track("practice_check_click", { id: q.id, attempt, answer: e.answer.slice(0, 40), workChars: e.work.length, mistakeChars: mistake?.length ?? 0, msOnProblem: ms });
+    const d = await call<{ correct: boolean }>({ action: "check", id: q.id, answer: e.answer, attempt, work: e.work || undefined, mistake, msOnProblem: ms ?? undefined });
     setBusy(false);
     if (d) set(q.id, (x) => ({ ...x, checks: x.checks + 1, correct: d.correct, ...(x.checks === 0 ? { firstCorrect: d.correct } : {}) }));
   }
@@ -381,7 +392,8 @@ export default function Practice({ items }: { items: Item[] }) {
             ) : (
               <p className="lede">
                 {rounds.length > 1 && items.length % rounds.length === 0 ? `${Count(rounds.length, "round")} of ${count(items.length / rounds.length, "problem")}` : Count(items.length, "problem")}, {soft ? `about ${minutes} minutes (take longer if you need)` : `${minutes} minutes`}.{" "}
-                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right, and after a right answer you say in a sentence why. Solutions after the final test. {prepare}
+                {tries === 1 ? "One try each" : tries === 2 ? "A first try and one retry each" : `${Count(tries, "try", "tries")} each`}; a light says if you&apos;re right.{" "}
+                {tries > 1 ? "Before a retry you say in a sentence what you think went wrong, and after a right answer why it's right." : "After a right answer you say in a sentence why it's right."} Solutions after the final test. {prepare}
               </p>
             )}
           </div>
@@ -491,7 +503,7 @@ export default function Practice({ items }: { items: Item[] }) {
               )}
               <div className="pact">
                 {!finished && (
-                  <button className="btn small" onClick={() => void check()} disabled={over || busy || !e.answer.trim()}>
+                  <button className="btn small" onClick={() => void check()} disabled={over || busy || !e.answer.trim() || unreflected} title={unreflected ? "First say what you think went wrong" : undefined}>
                     <Check size={15} strokeWidth={2.6} /> {e.checks ? "Check again" : "Check"}
                   </button>
                 )}
@@ -502,6 +514,19 @@ export default function Practice({ items }: { items: Item[] }) {
                 <span className="grow" />
                 {video && rewatch}
               </div>
+              {reflect && (
+                <Scratchpad
+                  id={`${q.id}-wrong`}
+                  where={`practice-wrong:${q.id}`}
+                  label="What do you think went wrong?"
+                  value={e.mistake ?? ""}
+                  onChange={(v) => set(q.id, (x) => ({ ...x, mistake: v }))}
+                  rows={2}
+                  maxLength={1500}
+                  disabled={over || finished}
+                  placeholder="Before you try again: the idea you think you misunderstood or got wrong, not just this problem's answer"
+                />
+              )}
               {explain && (
                 <Scratchpad
                   id={`${q.id}-why`}
@@ -551,7 +576,7 @@ export default function Practice({ items }: { items: Item[] }) {
               {mode === "recursive" ? (
                 <li>Go back over the problems, Kai&apos;s tries and its notebook. Could you explain why each of Kai&apos;s answers was right or wrong?</li>
               ) : (
-                <li>Go back over the problems and your answers. Could you explain why each right answer is right?</li>
+                <li>Go back over the problems and your answers. Could you explain why each of your answers was right or wrong?</li>
               )}
               <li>Recall what you {lesson ? `${lesson} and what you ` : ""}taught Kai: how each idea works, and why.</li>
               <li>Think about what the test could ask, and how you would answer and explain it.</li>

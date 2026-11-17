@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/server/admin";
@@ -303,10 +304,14 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
               {skipped && <span className="adm-pill">skipped</span>}
             </h3>
             {checks.map((c, i) => (
-              <p key={i}>
-                Try {str(c.attempt)}: {p.kind === "choice" ? <Option i={Number(c.answer)} text={p.options?.[Number(c.answer)]} /> : str(c.answer)} <Verdict ok={!!c.correct} />
-                {c.work ? <span className="sd-work">working: {str(c.work)}</span> : null}
-              </p>
+              <Fragment key={i}>
+                {/* direct feedback: the learner's sentence on what went wrong, written before this retry (2026-11-17) */}
+                {c.mistake ? <p className="adm-you">What went wrong: {str(c.mistake)}</p> : null}
+                <p>
+                  Try {str(c.attempt)}: {p.kind === "choice" ? <Option i={Number(c.answer)} text={p.options?.[Number(c.answer)]} /> : str(c.answer)} <Verdict ok={!!c.correct} />
+                  {c.work ? <span className="sd-work">working: {str(c.work)}</span> : null}
+                </p>
+              </Fragment>
             ))}
             {kai.map((k, i) => {
               const call = calls.find((c) => c.id === p.id && Number(c.attempt) === Number(k.attempt ?? (k.t === "practice_kai_reteach" ? 2 : 1)));

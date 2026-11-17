@@ -149,7 +149,6 @@ export default function KaiSolve({
               maxLength={1500}
               disabled={disabled}
               placeholder={copy.correctionExample}
-              voice="fix"
             />
             <div className="pact">
               <span className="grow" />
