@@ -1,6 +1,7 @@
 // Render a report (default m4) to PDF with the page footer.
 // Run from the repository root: node report/render.mjs [m3|m4|m4-info|m4-info2]  (uses the installed Chrome)
-// node report/render.mjs m4-info --web: the copy the welcome page's consent links to (public/), without the access code
+// node report/render.mjs m4-info --web: the copy the welcome page's consent links to (public/); the same sheet as the
+// printed one, the access code included since 2026-11-17 (the `web` class it sets on the page now changes nothing)
 import puppeteer from "puppeteer-core";
 import { join } from "node:path";
 
