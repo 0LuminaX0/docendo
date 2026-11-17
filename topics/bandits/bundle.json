@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "06eaee69c937c655",
-  "builtAt": "2026-11-16T15:01:51.290Z",
+  "hash": "4c7105d5d4116f53",
+  "builtAt": "2026-11-17T10:30:35.012Z",
   "goals": [
     {
       "id": "G",
@@ -769,7 +769,7 @@
           "assumeVague": "The bonus of an option that is not picked grows at a steady rate, so a neglected option comes back at regular intervals.",
           "hunch": "I'd guess a bonus just stays put while its option isn't picked.",
           "hunchVague": "The way I picture it, the bonus grows at a steady pace, so a neglected option comes back every so often.",
-          "key": "the bonus of an option that isn't picked keeps growing over time, more and more slowly. \"It grows over time\" without the slowing is partial."
+          "key": "both parts: the bonus of an option that isn't picked keeps growing, and that growth slows down more and more (like ln(t)). A message that says only that the bonus grows, in any words and even with what it grows with (\"it grows over time\", \"it keeps growing\", \"it grows with the number of rounds\", \"it grows while the option isn't picked\", \"it grows otherwise\"), without saying the growth slows down, is partial."
         }
       ],
       "lexicon": [

@@ -190,10 +190,10 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
                   <p className="note">The questions were skipped.</p>
                 ) : (
                   <dl className="adm-dl">
-                    {pack.survey.map((q) => (
+                    {pack.survey.filter((q) => !q.condition || q.condition === (rec ? "recursive" : "direct")).map((q) => (
                       <div key={q.id} style={{ display: "contents" }}>
                         <dt>{q.prompt}</dt>
-                        <dd>{survey[q.id] === undefined ? "–" : q.kind === "scale" ? `${str(survey[q.id])} of 7` : (q.options?.[Number(survey[q.id])] ?? str(survey[q.id]))}</dd>
+                        <dd>{survey[q.id] === undefined ? "–" : q.kind === "scale" ? `${str(survey[q.id])} of ${q.points ?? 7}` : (q.options?.[Number(survey[q.id])] ?? str(survey[q.id]))}</dd>
                       </div>
                     ))}
                   </dl>

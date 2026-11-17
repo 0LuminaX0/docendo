@@ -11,7 +11,7 @@ import { useSaved } from "@/lib/client/store";
 /**
  * A few questions after the final test, before the score: effort, responsibility for Kai, how well the learner thinks
  * they understand, how much practice helped, enjoyment, and the manipulation check (what the practice's light was
- * about), what a call on Kai's answer rested on (recursive only), whether Kai seemed to know more than it was told,
+ * about), what a call on Kai's answer rested on and, in their words, what they did before it (recursive only), whether Kai seemed to know more than it was told,
  * help besides a dictionary, then open questions in the learner's words (optional, for the qualitative analysis). A
  * question with a `condition` is asked only in that practice (a team session: the view it practised in); optional as
  * a whole.
@@ -26,11 +26,11 @@ export default function Survey({ onDone }: { onDone: () => void }) {
   const send = (skipped: boolean) => {
     const answers = Object.fromEntries(Object.entries(a).map(([k, v]) => [k, typeof v === "string" ? v.trim().slice(0, 2000) : v]).filter(([, v]) => v !== ""));
     track("survey", { skipped, ...(skipped ? {} : answers) }); // one field per question (scales 1 to 7; choices: the option's index; open: the text)
-    // the rating and the last word (2026-11-16: moved here from the results page, so the questions after the test are
-    // one list) also go as the feedback event, for the admin panel's Feedback page and the export's feedback table
-    const rating = typeof answers.rating === "number" ? answers.rating : null;
+    // the last word (2026-11-16: moved here from the results page, so the questions after the test are one list) also
+    // goes as the feedback event, for the admin panel's Feedback page and the export's feedback table; no rating since
+    // 2026-11-17 (the session's rating went as a near duplicate of the enjoyment question)
     const text = typeof answers.anything === "string" ? answers.anything : "";
-    if (!skipped && (rating !== null || text)) track("feedback", { rating, text: text.slice(0, 1500) });
+    if (!skipped && text) track("feedback", { rating: null, text: text.slice(0, 1500) });
     flush();
     onDone();
   };
