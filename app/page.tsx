@@ -29,9 +29,10 @@ export default async function Page() {
       accessRequired={!!config.accessCode || !!config.pilotCode || !!config.codeSecret || !!config.adminPassword}
       demo={config.demo}
       cards={cards}
-      // the timed steps, to the nearest 5 minutes, as the invitations say (2026-11-16: "about 60 minutes"; before, the
-      // questions after the test and the results were added and the sum rounded up, which read "at most 70")
-      totalMinutes={Math.round(sum.flow.filter((k) => k !== "results").reduce((a, k) => a + sum.minutes[k], 0) / 5) * 5}
+      // the timed steps (2026-11-17: exact, "At most 66 minutes" under hard limits, as the participant information sheet
+      // says; Intro rounds it to the nearest 5 for soft clocks, where nothing ends by itself; before, it was rounded
+      // for everyone, and before 2026-11-16 the questions after the test were added and the sum rounded up)
+      totalMinutes={sum.flow.filter((k) => k !== "results").reduce((a, k) => a + sum.minutes[k], 0)}
       pretestMinutes={settings.pretest.on ? sum.minutes.pretest : 0}
       pretestItems={settings.pretest.on ? (settings.pretest.both && pack.pretestSets.length > 1 ? pack.pretestAll.length : pack.pretest.length) : 0}
       followUpOn={settings.test.followUp}
