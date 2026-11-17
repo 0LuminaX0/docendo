@@ -91,7 +91,11 @@ export const PretestItem = z.object({
   note: z.string().optional(),
 });
 export const PretestFile = z.object({ title: z.string(), items: z.array(PretestItem).min(1) });
-export const SurveyFile = z.object({ items: z.array(SurveyItem) });
+// `retired`: questions taken out, kept with the date of their last day so the admin panel can still put words to the
+// answers already given (never asked again; participants only see `items`)
+export const RetiredSurveyItem = SurveyItem.extend({ until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
+export type RetiredSurveyItem = z.infer<typeof RetiredSurveyItem>;
+export const SurveyFile = z.object({ items: z.array(SurveyItem), retired: z.array(RetiredSurveyItem).optional() });
 
 // Kai's fixed teaching questions (optional): with them Kai asks the same questions of everyone, in order, instead of
 // choosing its next question from the lesson's ideas (engine/tutor/script.ts).
@@ -164,7 +168,9 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
   const copy = read("copy.json", TopicCopy);
   // the consent links the participant information sheet: it must be there to download
   if (copy?.infoSheet && !existsSync(join(root, "public", copy.infoSheet))) err("copy.json", `infoSheet ${copy.infoSheet} isn't in public/`);
-  read("survey.json", SurveyFile, false);
+  const survey = read("survey.json", SurveyFile, false);
+  // an answer is stored under its question's id: a retired question can't share one with a question still asked
+  for (const r of survey?.retired ?? []) if (survey!.items.some((q) => q.id === r.id)) err("survey.json", `retired ${r.id} is also in items`);
   const practice = read("practice.json", PracticeFile);
   const tests = read("exercises.json", ExercisesFile);
   const lesson = read("lesson.json", LessonFile, false);

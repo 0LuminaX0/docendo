@@ -41,6 +41,7 @@ export async function viewTables(v: View) {
     test: keep(t.test),
     video: keep(t.video),
     feedback: keep(t.feedback),
+    survey: keep(t.survey),
     events: t.events.filter((e) => sids.has(e.sid)),
     allSessions: t.sessions,
   };

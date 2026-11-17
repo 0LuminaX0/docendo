@@ -36,7 +36,8 @@ function build(slug: string) {
   const pretest = pretestItems(pretestAll, pretestSets(pretestAll).slice(0, 1));
   const practiceFile = PracticeFile.parse(raw.practice);
   const practice = practiceFile.items;
-  const survey = SurveyFile.parse(raw.survey).items;
+  const surveyFile = SurveyFile.parse(raw.survey);
+  const survey = surveyFile.items;
   const lesson = raw.lesson ? LessonFile.parse(raw.lesson) : null;
   const copy = TopicCopy.parse(raw.copy);
   const script = raw.script ? ScriptFile.parse(raw.script) : null;
@@ -95,6 +96,8 @@ function build(slug: string) {
       steps: p.steps.map((s) => s.text),
     })),
     survey,
+    /** Questions after the test taken out of the pack, for labelling the answers already given (admin only). */
+    surveyRetired: surveyFile.retired ?? [],
     /** The text lesson, read instead of the videos (lesson.json), or null. */
     lesson,
     /** How much of a learner's message comes word for word from the text lesson (null without one). */

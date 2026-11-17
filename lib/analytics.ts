@@ -119,6 +119,7 @@ export function tables(events: Ev[]) {
   const reasons: Record<string, unknown>[] = [];
   const video: Record<string, unknown>[] = [];
   const feedback: Record<string, unknown>[] = [];
+  const survey: Record<string, unknown>[] = [];
 
   for (const [sid, evs] of bySid) {
     const of = (t: string) => evs.filter((e) => e.t === t);
@@ -165,6 +166,7 @@ export function tables(events: Ev[]) {
       // sure); calls (recursive only): what a call on Kai's answer rested on (0 its steps, 1 my own answer, 2 Kai sounded
       // sure, 3 a guess); leak: Kai seemed to know something it wasn't told (0 no, 1 yes, 2 not sure); help besides a
       // dictionary (0 none, 1 own notes, 2 the web or another AI, 3 something else)
+      surveyOn: (start?.config as { survey?: boolean } | undefined)?.survey ?? null, // the questions were on at the start (null: before 2026-11-17, not logged)
       surveySkipped: first("client_survey")?.skipped ?? null,
       surveyEffort: first("client_survey")?.effort ?? null,
       surveyResponsible: first("client_survey")?.responsible ?? null,
@@ -437,6 +439,17 @@ export function tables(events: Ev[]) {
       if (it.reason?.trim()) reasons.push({ ref, item: it.id, form: it.form ?? grade?.form ?? "A", chosen: letters(it.chosen), reason: it.reason.trim(), score: "" });
     }
 
+    // the questions after the test, one row per answer (the session's first client_survey; a skipped one gives no rows,
+    // sessions.csv has surveySkipped): every scale, choice and open answer under its question's id, retired ones too
+    const sv = first("client_survey");
+    if (sv && !sv.skipped) {
+      const practised = of("practice_kai_solve").length ? "recursive" : of("practice_check").length ? "direct" : null;
+      for (const [question, answer] of Object.entries(sv)) {
+        if (SURVEY_META.has(question) || answer === null || answer === undefined || answer === "") continue;
+        survey.push({ sid, at: new Date(ms(sv)!).toISOString(), pid: start?.pid ?? null, topic: start?.topic ?? "bandits", condition: start?.condition ?? "direct", practised, entry: start?.entry ?? null, demo: start?.demo ?? null, question, answer, testScore: grade?.score ?? null, testOf: grade?.of ?? null });
+      }
+    }
+
     for (const e of of("client_feedback"))
       feedback.push({ sid, at: e.at, pid: start?.pid ?? null, condition: start?.condition ?? "direct", entry: start?.entry ?? null, rating: e.rating ?? null, text: e.text ?? "", testScore: grade?.score ?? null, testOf: grade?.of ?? null });
 
@@ -446,8 +459,11 @@ export function tables(events: Ev[]) {
   // the reasons, for scoring against the rubrics without seeing who wrote them or in which condition: shuffled by ref
   reasons.sort((a, b) => String(a.ref).localeCompare(String(b.ref)));
   browserStarts(sessions);
-  return { sessions, turns, practice, test, video, feedback, reasons };
+  return { sessions, turns, practice, test, video, feedback, reasons, survey };
 }
+
+/** A client_survey event's own fields; everything else in it is an answer, under its question's id. */
+const SURVEY_META = new Set(["v", "t", "sid", "at", "clientAt", "path", "seq", "skipped"]);
 
 /** A short, stable key for one answer (session and item), that tells nothing about the session. */
 const refOf = (sid: string, id: string) => `${seedOf(`${sid}:${id}`).toString(36)}${seedOf(`${id}:${sid}`).toString(36)}`.slice(0, 12);

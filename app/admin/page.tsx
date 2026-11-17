@@ -240,7 +240,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           </section>
           {showSurvey && <section className="adm-card">
             <h2>After the test</h2>
-            <p className="note">The questions before the score, means from 1 to 7 (direct / recursive). Light: the manipulation check, 1 my own understanding to 7 Kai&apos;s; expected low in direct, high in recursive. If not, the manipulation didn&apos;t land. Discouraging: how discouraging a wrong mark in practice was; Okita and Schwartz&apos;s account (the pupil takes the blame) expects it lower in recursive.</p>
+            <p className="note">The questions before the score, means from 1 to 7 (direct / recursive). Light: the manipulation check, 1 my own understanding to 7 Kai&apos;s; expected low in direct, high in recursive. If not, the manipulation didn&apos;t land. Discouraging: how discouraging a wrong mark in practice was; Okita and Schwartz&apos;s account (the pupil takes the blame) expects it lower in recursive. Every answer, spreads and the learners&apos; own words: <Link href={viewHref("/admin/feedback", view)}>Feedback</Link>.</p>
             <ol className="ch-funnel">
               {c.survey.map((q) => (
                 <li key={q.key}>

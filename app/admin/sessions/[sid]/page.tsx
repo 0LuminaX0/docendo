@@ -6,6 +6,7 @@ import { loadTables } from "@/lib/server/admindata";
 import { TIME_PARTS } from "@/lib/analytics";
 import { eventStore } from "@/lib/server/events";
 import { keyText, packFor } from "@/lib/server/content";
+import { answerText, surveyQuestions, type SurveyQuestion } from "@/lib/server/survey";
 import AdminShell from "@/components/admin/AdminShell";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,28 @@ function Option({ i, text }: { i: number; text?: string }) {
     <>
       <span className="sd-letter">{LETTERS[i] ?? "?"}</span> {text ?? ""}
     </>
+  );
+}
+
+/** A rating as the scale the learner saw: one dot per point, theirs filled, the ends' words under it. */
+function Scale({ value, points, low, high, rec }: { value: number; points: number; low?: string; high?: string; rec: boolean }) {
+  return (
+    <span className="sv-scale" aria-label={`${value} of ${points}`}>
+      <span className={`sv-dots ${rec ? "rec" : "dir"}`}>
+        {Array.from({ length: points }, (_, i) => (
+          <i key={i} className={i + 1 === value ? "on" : undefined} />
+        ))}
+        <b>
+          {Number.isFinite(value) ? value : "–"} <span className="note">of {points}</span>
+        </b>
+      </span>
+      {(low || high) && (
+        <span className="sv-ends">
+          <span>{low}</span>
+          <span>{high}</span>
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -64,6 +87,20 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
   const calls = of("client_practice_kai_call");
   const rec = String(s.practiceView ?? s.condition) === "recursive";
   const device = start?.device as { browser?: string; os?: string; mobile?: boolean } | undefined;
+
+  // the questions after the test: every question this session was asked (its condition's) or answered (a retired one,
+  // or one a team session reached after switching views), and any answer whose question the pack no longer knows
+  const questions = surveyQuestions(pack);
+  const answered = (q: SurveyQuestion) => survey?.[q.id] !== undefined;
+  const shown = questions.filter((q) => answered(q) || (!q.until && (!q.condition || q.condition === (rec ? "recursive" : "direct")))).map((q) => ({ q, v: survey?.[q.id] }));
+  const rated = shown.filter(({ q }) => q.kind === "scale");
+  const chosen = shown.filter(({ q }) => q.kind === "choice");
+  const written = shown.filter(({ q }) => q.kind === "text");
+  const known = new Set(questions.map((q) => q.id));
+  const other = survey && !survey.skipped ? Object.entries(survey).filter(([k]) => !known.has(k) && !["t", "sid", "at", "v", "seq", "path", "clientAt", "skipped"].includes(k)) : [];
+  // the feedback box: since 16 November the survey's last answer (and until 17 November its rating) goes there too, so
+  // show only what the questions don't already hold
+  const box = feedback.filter((f) => !survey || survey.skipped || String(f.text ?? "").trim() !== String(survey.anything ?? "").trim() || (f.rating !== null && f.rating !== undefined && f.rating !== survey.rating));
 
   // practice, problem by problem, in the pack's order
   const problems = pack.practice
@@ -111,6 +148,11 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
               settings <code>{str(s.settingsVersion)}</code>
             </span>
             {device && <span>{[device.browser, device.os, device.mobile ? "phone" : null].filter(Boolean).join(", ")}</span>}
+            {survey && !survey.skipped && (
+              <span>
+                <a href="#after-test">questions after the test</a>
+              </span>
+            )}
             <span className="note">{sid}</span>
           </p>
         </div>
@@ -191,31 +233,6 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
             )}
           </section>
 
-          {(survey || feedback.length > 0) && (
-            <section className="adm-card">
-              <h2>After the test</h2>
-              {survey ? (
-                survey.skipped ? (
-                  <p className="note">The questions were skipped.</p>
-                ) : (
-                  <dl className="adm-dl">
-                    {pack.survey.filter((q) => !q.condition || q.condition === (rec ? "recursive" : "direct")).map((q) => (
-                      <div key={q.id} style={{ display: "contents" }}>
-                        <dt>{q.prompt}</dt>
-                        <dd>{survey[q.id] === undefined ? "–" : q.kind === "scale" ? `${str(survey[q.id])} of ${q.points ?? 7}` : (q.options?.[Number(survey[q.id])] ?? str(survey[q.id]))}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                )
-              ) : null}
-              {feedback.map((f, i) => (
-                <p key={i} className="sd-feedback">
-                  {f.rating ? <b>{str(f.rating)}/5 </b> : null}
-                  {str(f.text || "(rating only)")}
-                </p>
-              ))}
-            </section>
-          )}
         </div>
 
         <div className="adm-stack">
@@ -258,6 +275,79 @@ export default async function Page({ params }: { params: Promise<{ sid: string }
           </section>
         </div>
       </div>
+
+      {(grade || survey || feedback.length > 0) && (
+        <section className="adm-card" id="after-test">
+          <h2>Questions after the test</h2>
+          {survey ? (
+            survey.skipped ? (
+              <p className="note">Skipped, {off(survey)} into the session.</p>
+            ) : (
+              <>
+                <p className="note">Answered {off(survey)} into the session, before the score was shown.</p>
+                <div className="sv-two">
+                  <div>
+                    <h3 className="adm-sub">Ratings and choices</h3>
+                    <ol className="sv-list">
+                      {[...rated, ...chosen].map(({ q, v }) => (
+                        <li key={q.id}>
+                          <span className="sv-q">
+                            {q.prompt}
+                            {q.until && <span className="sv-tag"> asked until {q.until}</span>}
+                          </span>
+                          {/* ratings and choices are required to go on: one missing wasn't asked yet when this session ran */}
+                          {v === undefined ? (
+                            <span className="sv-a note">not asked then</span>
+                          ) : q.kind === "scale" ? (
+                            <Scale value={Number(v)} points={q.points ?? 7} low={q.low} high={q.high} rec={rec} />
+                          ) : (
+                            <span className="sv-a">{answerText(q, v)}</span>
+                          )}
+                        </li>
+                      ))}
+                      {other.map(([k, v]) => (
+                        <li key={k}>
+                          <span className="sv-q">
+                            <code>{k}</code> <span className="sv-tag">not in the pack</span>
+                          </span>
+                          <span className="sv-a">{str(v)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <div>
+                    <h3 className="adm-sub">In their own words</h3>
+                    <div className="sv-open">
+                      {written.map(({ q, v }) => (
+                        <div key={q.id}>
+                          <p className="sv-q">
+                            {q.prompt}
+                            {q.until && <span className="sv-tag"> asked until {q.until}</span>}
+                          </p>
+                          {v === undefined ? <p className="note sv-none">no answer</p> : <p className="sv-text">{String(v)}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )
+          ) : (
+            <p className="note">{s.phase === "delayed" ? "Not asked after the follow-up test." : "No answers logged: the session ended before the questions, or they were switched off."}</p>
+          )}
+          {box.length > 0 && (
+            <>
+              <h3 className="adm-sub">Feedback box</h3>
+              {box.map((f, i) => (
+                <p key={i} className="sd-feedback">
+                  {f.rating ? <b>{str(f.rating)}/5 </b> : null}
+                  {str(f.text || "(rating only)")}
+                </p>
+              ))}
+            </>
+          )}
+        </section>
+      )}
 
       <section className="adm-card">
         <h2>Teaching Kai</h2>

@@ -178,7 +178,8 @@ export async function POST(req: NextRequest) {
       ...(preBoth ? { pretestBoth: true } : {}), // the pretest takes every set (the pilot)
       softTiming: soft ?? st.settings.timing.soft, // the clocks this session runs with (a shared code fixes them)
       device: deviceOf(req.headers.get("user-agent")),
-      config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings) },
+      // survey: the questions after the test were on when the session started (2026-11-17; before, not logged)
+      config: { practiceTries: st.settings.practice.tries, practiceMinutes: st.settings.practice.minutes, flow: flowOf(st.settings), survey: st.settings.survey.on && pack.survey.length > 0 },
     });
     // the browser needs the condition to show the right practice (never displayed); team sessions may switch views
     // trial codes get a participant's experience: no shortcuts, no condition switch
