@@ -178,11 +178,22 @@ export function checkPack(slug: string, root = process.cwd()): Issue[] {
     for (const [i, c] of caveats.entries()) {
       const name = `${p.id}: its caveat${caveats.length > 1 ? ` ${c.id ?? i + 1}` : ""}`;
       if (p.kind === "choice" && !(c.answer >= 0 && c.answer < (p.options?.length ?? 0) && c.answer !== p.answer)) err("practice.json", `${name}'s misreading must lead to a wrong option`);
-      try {
-        new RegExp(c.covered, "iu");
-      } catch {
-        err("practice.json", `${name}'s covered pattern isn't a valid regular expression`);
+      for (const [field, pattern] of [["covered", c.covered], ["leak", c.leak]] as const) {
+        if (pattern === undefined) continue;
+        try {
+          new RegExp(pattern, "iu");
+        } catch {
+          err("practice.json", `${name}'s ${field} pattern isn't a valid regular expression`);
+        }
       }
+      // the misreading itself must not state the point (the offline attempt writes it word for word)
+      let leakRe: RegExp | null = null;
+      try {
+        leakRe = c.leak ? new RegExp(c.leak, "iu") : null;
+      } catch {
+        // reported above
+      }
+      if (leakRe?.test(`${c.misreading} ${c.opening ?? ""}`)) err("practice.json", `${name}'s misreading states the point its leak pattern forbids`);
       for (const f of c.requires ?? []) if (bundle && !facts.has(f)) err("practice.json", `${name} requires ${f}, which isn't a fact in the bundle`);
       for (const n of c.ideas ?? []) if (bundle && !bundle.nodes.some((x) => x.id === n)) err("practice.json", `${name} reads the notes on ${n}, which isn't an idea in the bundle`);
       if (caveats.length > 1 && !c.id) err("practice.json", `${name} needs an id (the log names which caveat was in play)`);

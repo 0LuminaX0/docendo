@@ -15,6 +15,7 @@ export const Caveat = z.object({
   ideas: z.array(z.string()).optional(),
   alone: z.boolean().optional(),
   always: z.boolean().optional(),
+  leak: z.string().optional(),
   opening: z.string().optional(),
 });
 export type Caveat = z.infer<typeof Caveat>;
@@ -44,7 +45,9 @@ export const PracticeItem = z
     // isn't greedy switching), `alone` puts it in play whenever Kai could solve this problem, whatever the problems
     // after it, `always` whenever Kai could solve this problem, whatever came before or after and on the retry too
     // (2026-11-16, P8's slowing: a part of a fact the judge may credit without it, so the gate's backstop rather than
-    // a planted slip), and `opening` is the offline attempt's first step (else the worked solution's).
+    // a planted slip), `leak` a pattern for the point said outright, which no wrong attempt at this problem may state
+    // while Kai's notes leave the point open (2026-11-17, P8: "My notes don't say that this build-up gets slower over
+    // time" handed a learner the slowing), and `opening` is the offline attempt's first step (else the worked solution's).
     caveat: z.union([Caveat, z.array(Caveat).min(1)]).optional(),
     title: z.string(),
     kind: z.enum(["choice", "number"]),

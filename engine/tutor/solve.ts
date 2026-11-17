@@ -180,7 +180,36 @@ const TURNAROUND = /\b(on second thought|actually,? (?:the|it)|the (?:correct|ri
 // the caveat: a nuance the notes may leave open. Kai follows its notes where they say it, in any words; where they
 // don't, it reads the gap this way, as its own understanding (never "I'm guessing", never against a note)
 const CAVEAT = (c: Caveat, item: PracticeItem) =>
-  `\n\nOne point matters here: ${c.about} Read your notes carefully for it. If they say it, in any words, follow them. If they leave it open, you understand it this way, as a student naturally would from your notes: "${c.misreading}" Then your answer is ${conclusion(item, c.answer)}. Never go against what a note says, and don't call it a guess: it is simply how you read your notes.`;
+  `\n\nOne point matters here: ${c.about} Read your notes carefully for it. If they say it, in any words, follow them. If they leave it open, you understand it this way, as a student naturally would from your notes: "${c.misreading}" Then your answer is ${conclusion(item, c.answer)}. Never go against what a note says, and don't call it a guess: it is simply how you read your notes. If you read it this way, write as someone who has never heard of the point above: never mention it or any reading other than yours, and never say what your notes don't say or leave out.`;
+
+// Kai saying what its notes leave out, in a misreading: it names the point by its absence (2026-11-17, a team test:
+// "My notes don't say that this build-up gets slower over time, so I take it at a steady pace")
+const SILENT = /\b(?:my )?notes (?:don'?t|do not|doesn'?t|does not|never) (?:say|mention|cover|tell|specify|state|explain|address|talk about|go into)\b|\b(?:nothing|not) in my notes\b|\bmy notes (?:are silent|leave)\b|\bmy notes (?:only|just) say\b/i;
+
+/**
+ * Why a wrong attempt would hand the learner something it wasn't taught (2026-11-17), else null. In a caveat's
+ * misreading: saying what the notes leave out (the solver is told the point so that it can find it in the notes, and
+ * named it as missing: the learner copied it into the correction). In any wrong attempt at a problem with a `leak`
+ * pattern (P8: the bonus's growth slowing down): stating that point while Kai's notes leave it open. Right attempts
+ * aren't checked: they follow notes that say it. A leak is a broken rule: the try is retried, then the offline attempt
+ * (fixed wording) answers.
+ */
+export function pointLeak(item: PracticeItem, state: State, steps: Step[], misread: boolean): string | null {
+  const text = steps.map((s) => s.text).join(" ");
+  const silent = misread ? SILENT.exec(text) : null;
+  if (silent) return `in its misreading it said what its notes leave out ("${silent[0]}")`;
+  for (const c of caveatsOf(item)) {
+    if (!c.leak || !caveatOpen(c, state)) continue;
+    let m: RegExpExecArray | null = null;
+    try {
+      m = new RegExp(c.leak, "iu").exec(text);
+    } catch {
+      continue; // pnpm content validate catches a broken pattern
+    }
+    if (m) return `it stated ${c.id ?? "the caveat"}'s point, which its notes leave open ("${m[0]}")`;
+  }
+  return null;
+}
 
 export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State, onCall?: OnCall, stricter = false, caveat?: Caveat): Promise<Solution> {
   const notes = notesOf(state);
@@ -230,6 +259,8 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     const misread = item.kind === "choice" ? LETTERS.indexOf(answer) === caveat.answer : sameNumber(answer, caveat.answer);
     if (!misread && !isRight(item, answer)) throw new Error(`the solver's answer is neither the key nor the caveat's misreading (answered ${answer})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
+    const leak = misread ? pointLeak(item, state, steps, true) : null;
+    if (leak) throw new Error(`leak: ${leak}`);
     return { steps, answer, correct: !misread, notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess: null, caveat: misread ? "misread" : "covered", caveatId: caveat.id };
   }
   if (guess) {
@@ -238,6 +269,8 @@ export async function llmSolve(bundle: Bundle, item: PracticeItem, state: State,
     if (!lands) throw new Error(`the solver didn't follow its guess (answered ${answer}, the guess leads to ${answerText(item, guess.answer)})`);
     if (steps.some((s) => TURNAROUND.test(s.text))) throw new Error("the solver argued for another answer and turned around");
   }
+  const leak = isRight(item, answer) ? null : pointLeak(item, state, steps, false);
+  if (leak) throw new Error(`leak: ${leak}`);
   return { steps, answer, correct: isRight(item, answer), notes, leaked: leaks(bundle, item, state, steps), by: "model", gate: g, guess };
 }
 
@@ -383,7 +416,10 @@ export async function solve(
   // caveat: the problem's caveat is in play for this attempt (the caller decides: app/api/practice/route.ts)
   opts: { demo: boolean; onCall?: OnCall; onError?: (e: unknown) => void; deadline?: number; caveat?: Caveat; model?: (b: Bundle, i: PracticeItem, s: State, onCall?: OnCall, stricter?: boolean, caveat?: Caveat) => Promise<Solution> },
 ): Promise<Solution> {
-  if (opts.demo) return offlineSolve(bundle, item, state, opts.caveat);
+  // a backstop (`always`) holds whoever calls: with its point left open the worked solution would state what the notes
+  // don't hold (a page from before a deploy sends no wrongSoFar with its correction, and the route then passes none)
+  const caveat = opts.caveat ?? (gate(item, state).canBeRight ? caveatsOf(item).find((c) => c.always && usable(c, state)) : undefined);
+  if (opts.demo) return offlineSolve(bundle, item, state, caveat);
   const model = opts.model ?? llmSolve;
   const t0 = Date.now();
   let lastError: unknown = null;
@@ -397,7 +433,7 @@ export async function solve(
   for (let tryNo = 0; tryNo < 3; tryNo++) {
     if (tryNo > 0 && deadline - Date.now() < SOLVE_TRY_MS) break;
     try {
-      const s = await model(bundle, item, state, opts.onCall, tryNo > 0, opts.caveat);
+      const s = await model(bundle, item, state, opts.onCall, tryNo > 0, caveat);
       if (s.caveat) return s; // checked in llmSolve: the key, or the caveat's misreading
       if (s.correct && !s.gate.canBeRight) throw new Error(`right without the facts it needs (missing ${s.gate.missing.join(", ") || "none"}, misled ${s.gate.misled.length})`);
       if (!s.correct && s.gate.canBeRight) throw new Error(`wrong with every fact it needs (answered ${s.answer}): a slip`);
@@ -410,7 +446,7 @@ export async function solve(
     }
   }
   void lastError;
-  return offlineSolve(bundle, item, state, opts.caveat);
+  return offlineSolve(bundle, item, state, caveat);
 }
 
 /**

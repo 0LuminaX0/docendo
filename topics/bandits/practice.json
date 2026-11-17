@@ -262,7 +262,8 @@
           "n11",
           "n12"
         ],
-        "always": true
+        "always": true,
+        "leak": "\\bslow(?:er|ing|s)\\b|\\bslows? down\\b|\\b(?:more and more|ever more|increasingly) slowly\\b|\\bdiminishing (?:growth|rate|increase)s?\\b|\\b(?:growth|growing|increase|build-?up|builds? up)\\b[^.,;]{0,25}\\b(?:slow\\w*|diminish\\w*|tapers?|tapering|levels? off|flattens?)\\b|\\bdecelerat\\w*|\\blog(?:arithm\\w*)?\\b|\\bln\\b|\\blonger and longer\\b"
       },
       "title": "Radio playlists",
       "kind": "choice",

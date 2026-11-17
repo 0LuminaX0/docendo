@@ -229,6 +229,9 @@ export function tables(events: Ev[]) {
       kaiStepClicks: of("client_practice_kai_step_click").length,
       kaiOffline: count([...of("practice_kai_solve"), ...of("practice_kai_reteach")], (e) => e.by === "offline"),
       kaiLeakSteps: count([...of("practice_kai_solve"), ...of("practice_kai_reteach")], (e) => ((e.leaked as unknown[]) ?? []).length > 0),
+      // the solver's replies set aside because they named a point Kai wasn't taught (2026-11-17: never shown; a high
+      // count means the model keeps trying, and learners wait for the retries or get the offline attempt)
+      kaiLeaksSetAside: [...of("practice_kai_solve"), ...of("practice_kai_reteach")].reduce((n, e) => n + ((e.errors as unknown[]) ?? []).filter((x) => String(x).startsWith("leak:")).length, 0),
       practiceHints: of("practice_hint").length,
       practiceSolutions: of("practice_solution").length, // older sessions only: solutions now come after the test
       practiceTimeUp: of("client_practice_time_up").length > 0,
