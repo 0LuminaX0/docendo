@@ -77,6 +77,34 @@ describe("the judge's verdict stands: no word lists around it (2026-11-16)", () 
     const m = "Uh, yes. So, every option needs to be picked at least once because on UCB, if it is not picked once, at the start, then it will cause problems because it is mathematically impossible to divide by zero.";
     for (const node of ["n11", "n03"]) expect(settleReply(bundle, m, "", reply([], [mis(node, "it will cause problems because it is mathematically impossible to divide by zero")])).misconceptions, node).toEqual([]);
   });
+  it("drops an unpicked option's bonus growing as a wrong belief, and keeps the real errors about the bonus (pilot session 10, 2026-11-17)", () => {
+    // the judge recorded it as "grows only while the option is not picked, without mentioning … the round number t";
+    // Kai then quoted it at P2 and concluded that all three scores fall, and no correction could retire it
+    const s10 = "it just picks the option with the highest bonus. the bonus grows when the arm is not picked and shrinks when it is picked.";
+    const j = settleReply(bundle, s10, "", reply([v("n12.f1", "correct", "shrinks when it is picked")], [{ ...mis("n12", "the bonus grows when the arm is not picked"), fact: "n12.f2" }, { ...mis("n11", "it just picks the option with the highest bonus"), fact: "n11.f1" }]));
+    expect(j.misconceptions!.map((m) => m.node)).toEqual(["n11"]); // the highest bonus alone is a real error: it stays
+    expect(j.dropped!.some((d) => /^n12 \(misconception dropped: a true remark\)/.test(d.fact))).toBe(true);
+    expect(verdictOf(j, "n12.f1")).toBe("correct");
+    // the same true remark in other words (the pilots' and the usual ones)
+    for (const [m, q] of [
+      ["No I said that a bonus shrinks when picked, it doesn't grow. It only grows when the arm is not picked.", "It only grows when the arm is not picked"],
+      ["The bonus grows when not picked and shrinks when picked", "The bonus grows when not picked"],
+      ["the bonus shrinks when an option is picked and logarithmically grows otherwise.", "logarithmically grows otherwise"],
+      ["the bonus of an option that isn't picked keeps growing", "the bonus of an option that isn't picked keeps growing"],
+      ["if it isn’t picked, its bonus gets bigger", "its bonus gets bigger"],
+    ] as const) expect(settleReply(bundle, m, "", reply([], [{ ...mis("n12", q), fact: "n12.f2" }])).misconceptions, m).toEqual([]);
+    // real errors about the bonus stay, whichever of its facts they are pinned on
+    for (const [m, q, f] of [
+      ["the bonus grows as the rounds go by but shrinks sometimes.", "shrinks sometimes", "n12.f2"], // session 6
+      ["it shrinks", "it shrinks", "n12.f2"], // session 6, to "what happens to the bonus of an option that isn't picked?"
+      ["When an option isn't picked it shrinks. It does not stay the same!", "When an option isn't picked it shrinks", "n12.f1"], // session 6
+      ["if it isn't picked it doesn't grow", "if it isn't picked it doesn't grow", "n12.f2"],
+      ["When an option isn't picked it shrinks, it doesn't grow", "When an option isn't picked it shrinks, it doesn't grow", "n12.f2"],
+      ["the bonus stays the same while the option is not picked", "the bonus stays the same while the option is not picked", "n12.f2"],
+      ["it grows when it is picked and when it is not picked it grows too", "it grows when it is picked", "n12.f1"],
+      ["The bonus grows when not picked. When it is picked it also grows.", "When it is picked it also grows", "n12.f1"],
+    ] as const) expect(settleReply(bundle, m, "", reply([], [{ ...mis("n12", q), fact: f }])).misconceptions, m).toHaveLength(1);
+  });
   it("keeps the real belief that greedy's averages fix themselves and it always ends up on the best", () => {
     for (const m of [
       "Greedy is fine in the long run, the averages fix themselves and it ends up at the best truck.",

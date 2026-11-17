@@ -1,8 +1,8 @@
 {
   "topic": "bandits",
   "title": "Multi-armed bandits",
-  "hash": "2b0fa545a9f0d7e7",
-  "builtAt": "2026-11-17T17:39:36.078Z",
+  "hash": "10d5556e4e80eb1d",
+  "builtAt": "2026-11-17T19:41:00.788Z",
   "goals": [
     {
       "id": "G",
@@ -784,6 +784,9 @@
         "whatIf": "What if I had tried an option only once so far, how much should its bonus count then?",
         "compute": "An arm tried 4 times at a round where ln(t) = 2 has bonus √(2 × 2/4) = 1. What's its bonus after 16 tries at the same round?"
       },
+      "trueRemarks": [
+        "^(?![^]*(?:\\bgrow\\w*\\s+(?:\\w+\\s+){0,2}when\\s+(?:it(?:['’]s|\\s+is)?\\s+|the\\s+\\w+\\s+is\\s+)?(?:picked|chosen|played|tried|pulled)\\b|\\bwhen\\s+(?:it(?:['’]s|\\s+is)?\\s+|the\\s+\\w+\\s+is\\s+)?(?:picked|chosen|played|tried|pulled)\\b[\\s,]+(?:(?!and\\b|but\\b|or\\b|otherwise\\b|then\\b)\\w+\\s+){0,3}grow))[^]*?(?:(?<!\\b(?:doesn['’]?t|does\\s+not|don['’]?t|do\\s+not|won['’]?t|will\\s+not|never|not|no\\s+longer|stops?)\\s+)\\b(?:grow\\w*|ris(?:es|ing)|increas\\w*|gets?\\s+(?:bigger|larger))\\b(?:(?!shrink|stay|drop|fall|decreas|smaller)[^.!?;]){0,40}\\b(?:not|never|un|isn['’]?t|aren['’]?t|wasn['’]?t)\\s*(?:being\\s+)?(?:picked|chosen|played|tried|selected|pulled)|(?<!\\b(?:doesn['’]?t|does\\s+not|don['’]?t|do\\s+not|won['’]?t|will\\s+not|never|not|no\\s+longer|stops?)\\s+)\\bgrow\\w*\\s+otherwise\\b|\\b(?:not|never|un|isn['’]?t|aren['’]?t|wasn['’]?t)\\s*(?:being\\s+)?(?:picked|chosen|played|tried|selected|pulled)\\b(?:(?!shrink|stay|drop|fall|decreas|smaller)[^.!?;]){0,30}(?<!\\b(?:doesn['’]?t|does\\s+not|don['’]?t|do\\s+not|won['’]?t|will\\s+not|never|not|no\\s+longer|stops?)\\s+)\\b(?:grow\\w*|ris(?:es|ing)|increas\\w*|gets?\\s+(?:bigger|larger)))"
+      ],
       "help": [
         {
           "video": "mab-dml",

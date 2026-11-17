@@ -145,6 +145,11 @@ button { font: inherit; color: inherit; }
 .consent input { flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--ink); cursor: pointer; }
 .consent:has(input:checked) { background: var(--green-soft); }
 .consent:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+/* a session still running: continue it, never start again (in the consent note's place, the same box) */
+.resume-warn { display: flex; gap: 12px; align-items: flex-start; margin: 0; max-width: 72ch; padding: 12px 14px; border-radius: 12px; background: #fff4dc; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.resume-warn svg { flex: none; margin-top: 1px; color: #8a5a00; }
+.resume-warn p { margin: 0; }
+.resume-warn b { color: #8a5a00; }
 .info { font-size: 14px; color: #1d5fa8; background: #eef5fc; padding: 10px 14px; border-radius: 12px; margin: 0; max-width: 46ch; }
 /* as tall as the code field with its label, whatever is shown in it */
 .intro-go { min-height: 78px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 10px; }

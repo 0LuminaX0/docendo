@@ -191,7 +191,7 @@ export function useSaved(): [Saved | null | undefined, (f: (s: Saved) => Saved) 
   return [value, update];
 }
 
-// The participant number also outlives the session in this browser (Start over, or the session's expiry): a new start
+// The participant number also outlives the session in this browser (its expiry, a team session's new start, or wiped storage): a new start
 // sends it along, so the log shows a browser starting again (priorNumber on session_start).
 const NUMBER_KEY = "docendo:number:v1";
 export function keepNumber(n: string) {

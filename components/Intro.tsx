@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, BookOpen, ListChecks, MessagesSquare, PencilLine, Play, RotateCcw } from "lucide-react";
+import { ArrowRight, BookOpen, ListChecks, MessagesSquare, PencilLine, Play, TriangleAlert } from "lucide-react";
 import { Header, KaiFace } from "./ui";
 import { keepNumber, keptNumber, newSession, post, save, useSaved } from "@/lib/client/store";
 import { useStudySettings } from "./SettingsContext";
@@ -105,6 +105,9 @@ export default function Intro({
   // only shown as a hint
   const followUp = followUpOn && saved && saved.step === "results" && saved.phase !== "delayed" && saved.result?.followUp ? saved.result.followUp.opensAt : null;
   const opensText = followUp ? new Date(followUp).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) : "";
+  // a session not finished yet (the main session or a follow-up test): no way to start over here (2026-11-17: a fresh
+  // start would be a second session for the same person), and a warning in place of the consent note
+  const running = !!saved && saved.step !== "results";
 
   return (
     <div className="shell">
@@ -154,7 +157,14 @@ export default function Intro({
 
         <div className="intro-act">
           {/* consent first: Start stays off until it is ticked (the server checks it too) */}
-          {saved && !followUp ? (
+          {running ? (
+            <div className="resume-warn" role="note">
+              <TriangleAlert size={18} aria-hidden="true" />
+              <p>
+                <b>Your session is still running.</b> Please continue it as soon as you can, and never start a new one, not in another browser either. If you can&apos;t continue, message one of us with your {saved?.number ? "participant number" : "access code"}.
+              </p>
+            </div>
+          ) : saved && !followUp ? (
             <p className="note consent-note"><Consent sheet={copy.infoSheet} /></p>
           ) : (
             <label className="consent">
@@ -173,9 +183,6 @@ export default function Intro({
                 )}
                 <button className={`btn${followUp ? "" : " primary"}`} onClick={() => router.push(saved.phase === "delayed" && saved.step !== "results" ? "/exercises" : pathOf(currentStep(flow, saved.step)))}>
                   {saved.step === "results" ? "See your results" : "Continue where you left off"} {!followUp && <ArrowRight size={17} />}
-                </button>
-                <button className="btn ghost" onClick={() => save(null)}>
-                  <RotateCcw size={15} /> Start over
                 </button>
               </div>
             ) : saved === null ? (

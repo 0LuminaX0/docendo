@@ -279,7 +279,7 @@ export default function Results() {
           </section>
         )}
 
-        {restart}
+        {saved.team && restart}
       </main>
     </div>
   );
