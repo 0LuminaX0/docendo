@@ -23,8 +23,8 @@
   p { margin: 0 0 4pt; }
   ul { margin: 0; padding-left: 13pt; } li { margin: 0 0 2.5pt; }
 
-  /* the three facts that matter first */
-  .facts { display: grid; grid-template-columns: 1.15fr 1.15fr 1fr; border: 1pt solid var(--ink); border-radius: 7pt; overflow: hidden; margin: 0 0 9pt; }
+  /* the facts that matter first */
+  .facts { display: grid; grid-template-columns: 1fr 1fr; border: 1pt solid var(--ink); border-radius: 7pt; overflow: hidden; margin: 0 0 9pt; }
   .facts div { padding: 7pt 11pt; border-right: 1pt solid var(--rule); }
   .facts div:last-child { border-right: 0; }
   .facts dt { font-size: 7.4pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 1pt; }
@@ -48,13 +48,12 @@
   .cols li { color: var(--ink2); }
   .fine { font-size: 8.5pt; color: var(--ink2); margin-top: 5pt; padding-top: 5pt; border-top: 0.8pt solid var(--rule); }
   .contact { display: flex; gap: 6pt 22pt; flex-wrap: wrap; margin: 0 0 6pt; }
-  .facts dd .code { display: inline-block; margin: 1pt 0 0; padding: 1pt 5pt; border-radius: 3pt; background: #fde8e6; color: #c42b22; font-size: 11.5pt; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
-  .facts dd a { color: var(--blue); text-decoration: none; }
   .start ol { margin: 2pt 0 6pt; padding-left: 14pt; } .start li { margin: 0 0 2.5pt; }
   a.here { color: var(--blue); font-weight: 700; text-decoration: underline; }
   .contact a { color: var(--blue); font-weight: 600; text-decoration: none; }
   .start .code { padding: 0 4pt; border-radius: 3pt; background: #fde8e6; color: #c42b22; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
-  /* one sheet for print and for the website (node report/render.mjs m4-info --web), the access code in both (2026-11-17) */
+  /* one sheet for print and for the website (node report/render.mjs m4-info --web), the access code in both (2026-11-17),
+     only in How to start, so it comes after the rest of the page has been read */
 </style>
 </head>
 <body>
@@ -63,7 +62,6 @@
 <p class="lede">Thank you for considering taking part. We are a student team in EPFL's CS-411 Digital Education, studying how people learn by explaining a topic to an AI classmate. Please read this page before you start.</p>
 
 <dl class="facts">
-  <div><dt>Your access code</dt><dd><span class="code">STUDY2026-NBDMYNN7</span><span>on <a href="https://docendo-jade.vercel.app">docendo-jade.vercel.app</a></span></dd></div>
   <div><dt>When</dt><dd>Tue 17 to Sun 29 November<span>finish by Sunday 23:59 (Swiss time)</span></dd></div>
   <div><dt>How long</dt><dd>At most 66 minutes<span>plus about 4 untimed minutes</span></dd></div>
 </dl>
