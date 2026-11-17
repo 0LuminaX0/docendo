@@ -29,7 +29,7 @@ export default function Results() {
   const items = useTestItems(allowed, setError);
   if (!allowed || !saved || !saved.result || !items) return <div className="center">{error ?? "Loading…"}</div>;
   const delayed = saved.phase === "delayed";
-  // the rating and the last word are the survey's last questions (2026-11-16): the box below only when none were asked
+  // the last word is the survey's last question (2026-11-16): the box below (with a rating) only when none were asked
   const asked = !delayed && !!survey;
 
   const r = saved.result;

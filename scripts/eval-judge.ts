@@ -56,6 +56,12 @@ const ALL_CASES: Case[] = [
   // F11: growth with the round number, ever more slowly; vague without the slowing; its misconception: it stays put
   { msg: "While you don't go to a truck, its bonus keeps growing with the day number, but slower and slower, and it never stops growing.", want: { "n12.f2": "correct" } },
   { msg: "The bonus of a truck you don't visit grows over time.", want: { "n12.f2": "partial" } },
+  // the growth without the slowing as the team's testers put it (2026-11-16 and 11-17, credited in full three times,
+  // while the case above, the key's own example, passed): partial, whatever it says the growth goes with
+  { kai: "The last one is UCB. How does it decide which option to pick?", msg: "It picks the arm with the highest estimated mean plus bonus, where the bonus grows with the number of rounds, when the option is not picked.", want: { "n11.f1": "correct", "n12.f2": "partial" } },
+  { kai: "Why would UCB give an option a bonus at all? What is it for?", msg: "it's for exploration. With the bonus, it can keep track of how much it already explored an arm. It shrinks when it is picked and grows otherwise.", want: { "n12.f2": "partial" } },
+  { msg: "Now the exploration bonus grows when an option is not being picked, but the number of rounds increases and shrinks when the option is being picked.", want: { "n12.f2": "partial" } },
+  { msg: "The bonus of an arm you don't pick grows with the number of rounds, but slower and slower, like a logarithm.", want: { "n12.f2": "correct" } },
   { msg: "If you don't pick a truck, its bonus just stays where it was.", not: ["n12.f2"], misconception: true },
   // the pilot's credits without the key (2026-11-12: the judge now names the words that state a key)
   { kai: "If greedy keeps going like that for many rounds, where does it end up?", msg: "Ideally it ends up choosing the best option all the time.\nHowever when it can happen that the option which is the best in reality has a bad round by chance.\nThis loweres the calculated average, which could prevent the Greedy rule from choosing this option again.\nTo solve this, there is the UCB rule, which applies bonuses", want: { "n06.f1": "correct" }, not: ["n11.f1"] },

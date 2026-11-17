@@ -452,6 +452,8 @@ check(blocked && hinted && open, "a question counts as answered with its reason,
 await shot(page, "08a-exercises");
 await page.click(".submitbar .btn.primary");
 await page.waitForFunction(() => location.pathname === "/results");
+await page.waitForSelector(".survey");
+const directAsksBefore = await page.$eval(".survey", (e) => /before you called Kai's answer/.test(e.textContent));
 const scoreHidden = await passSurvey(page);
 check(scoreHidden, "six questions come after the test, before the score");
 const score = (await page.$eval(".big", (e) => e.textContent)).replace(/\s+/g, "");
@@ -544,6 +546,9 @@ await skip.reload({ waitUntil: "load" });
 await skip.waitForFunction(() => !document.querySelector(".submitbar .btn.primary").disabled);
 await skip.$eval(".submitbar .btn.primary", (e) => e.click());
 await skip.waitForFunction(() => location.pathname === "/results");
+await skip.waitForSelector(".survey");
+const recursiveAsksBefore = await skip.$eval(".survey", (e) => /before you called Kai's answer/.test(e.textContent));
+check(recursiveAsksBefore && !directAsksBefore, "the open question on what the learner did before calling Kai's answer comes only after the recursive practice");
 await passSurvey(skip, false);
 await skip.waitForSelector(".review .pq");
 const kaiLine = await skip.$eval(".review .pq .tag", (e) => e.textContent);
